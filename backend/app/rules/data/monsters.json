@@ -1,0 +1,77 @@
+{
+  "Goblin": {
+    "size": "Small", "type": "humanoid", "ac": 15, "hp": 7, "speed": 30,
+    "abilities": {"STR": 8, "DEX": 14, "CON": 10, "INT": 10, "WIS": 8, "CHA": 8},
+    "cr": 0.25, "xp": 50,
+    "attacks": [{"name": "Scimitar", "bonus": 4, "damage": "1d6+2", "type": "slashing"},
+                {"name": "Shortbow", "bonus": 4, "damage": "1d6+2", "type": "piercing"}],
+    "traits": ["Nimble Escape"]
+  },
+  "Skeleton": {
+    "size": "Medium", "type": "undead", "ac": 13, "hp": 13, "speed": 30,
+    "abilities": {"STR": 10, "DEX": 14, "CON": 15, "INT": 6, "WIS": 8, "CHA": 5},
+    "cr": 0.25, "xp": 50,
+    "attacks": [{"name": "Shortsword", "bonus": 4, "damage": "1d6+2", "type": "piercing"},
+                {"name": "Shortbow", "bonus": 4, "damage": "1d6+2", "type": "piercing"}],
+    "vulnerabilities": ["bludgeoning"], "immunities": ["poison"]
+  },
+  "Zombie": {
+    "size": "Medium", "type": "undead", "ac": 8, "hp": 22, "speed": 20,
+    "abilities": {"STR": 13, "DEX": 6, "CON": 16, "INT": 3, "WIS": 6, "CHA": 5},
+    "cr": 0.25, "xp": 50,
+    "attacks": [{"name": "Slam", "bonus": 3, "damage": "1d6+1", "type": "bludgeoning"}],
+    "traits": ["Undead Fortitude"], "immunities": ["poison"]
+  },
+  "Wolf": {
+    "size": "Medium", "type": "beast", "ac": 13, "hp": 11, "speed": 40,
+    "abilities": {"STR": 12, "DEX": 15, "CON": 12, "INT": 3, "WIS": 12, "CHA": 6},
+    "cr": 0.25, "xp": 50,
+    "attacks": [{"name": "Bite", "bonus": 4, "damage": "2d4+2", "type": "piercing"}],
+    "traits": ["Pack Tactics", "Keen Hearing and Smell"]
+  },
+  "Kobold": {
+    "size": "Small", "type": "humanoid", "ac": 12, "hp": 5, "speed": 30,
+    "abilities": {"STR": 7, "DEX": 15, "CON": 9, "INT": 8, "WIS": 7, "CHA": 8},
+    "cr": 0.125, "xp": 25,
+    "attacks": [{"name": "Dagger", "bonus": 4, "damage": "1d4+2", "type": "piercing"},
+                {"name": "Sling", "bonus": 4, "damage": "1d4+2", "type": "bludgeoning"}],
+    "traits": ["Pack Tactics", "Sunlight Sensitivity"]
+  },
+  "Orc": {
+    "size": "Medium", "type": "humanoid", "ac": 13, "hp": 15, "speed": 30,
+    "abilities": {"STR": 16, "DEX": 12, "CON": 16, "INT": 7, "WIS": 11, "CHA": 10},
+    "cr": 0.5, "xp": 100,
+    "attacks": [{"name": "Greataxe", "bonus": 5, "damage": "1d12+3", "type": "slashing"},
+                {"name": "Javelin", "bonus": 5, "damage": "1d6+3", "type": "piercing"}],
+    "traits": ["Aggressive"]
+  },
+  "Ogre": {
+    "size": "Large", "type": "giant", "ac": 11, "hp": 59, "speed": 40,
+    "abilities": {"STR": 19, "DEX": 8, "CON": 16, "INT": 5, "WIS": 7, "CHA": 7},
+    "cr": 2, "xp": 450,
+    "attacks": [{"name": "Greatclub", "bonus": 6, "damage": "2d8+4", "type": "bludgeoning"},
+                {"name": "Javelin", "bonus": 6, "damage": "2d6+4", "type": "piercing"}]
+  },
+  "Giant Spider": {
+    "size": "Large", "type": "beast", "ac": 14, "hp": 26, "speed": 30,
+    "abilities": {"STR": 14, "DEX": 16, "CON": 12, "INT": 2, "WIS": 11, "CHA": 4},
+    "cr": 1, "xp": 200,
+    "attacks": [{"name": "Bite", "bonus": 5, "damage": "1d8+3", "type": "piercing"}],
+    "traits": ["Spider Climb", "Web Sense", "Web Walker"]
+  },
+  "Bandit": {
+    "size": "Medium", "type": "humanoid", "ac": 12, "hp": 11, "speed": 30,
+    "abilities": {"STR": 11, "DEX": 12, "CON": 12, "INT": 10, "WIS": 10, "CHA": 10},
+    "cr": 0.125, "xp": 25,
+    "attacks": [{"name": "Scimitar", "bonus": 3, "damage": "1d6+1", "type": "slashing"},
+                {"name": "Light Crossbow", "bonus": 3, "damage": "1d8+1", "type": "piercing"}]
+  },
+  "Mimic": {
+    "size": "Medium", "type": "monstrosity", "ac": 12, "hp": 58, "speed": 15,
+    "abilities": {"STR": 17, "DEX": 12, "CON": 15, "INT": 5, "WIS": 13, "CHA": 8},
+    "cr": 2, "xp": 450,
+    "attacks": [{"name": "Pseudopod", "bonus": 5, "damage": "1d8+3", "type": "bludgeoning"},
+                {"name": "Bite", "bonus": 5, "damage": "1d8+3", "type": "piercing"}],
+    "traits": ["Shapechanger", "Adhesive", "Grappler"]
+  }
+}

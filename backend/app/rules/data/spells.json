@@ -1,0 +1,87 @@
+{
+  "Fire Bolt": {
+    "level": 0, "school": "Evocation", "casting_time": "1 action", "range": "120 feet",
+    "components": "V, S", "duration": "Instantaneous",
+    "classes": ["Sorcerer", "Wizard"],
+    "description": "Hurl a mote of fire. Ranged spell attack, 1d10 fire damage. Scales at 5th, 11th, 17th level."
+  },
+  "Sacred Flame": {
+    "level": 0, "school": "Evocation", "casting_time": "1 action", "range": "60 feet",
+    "components": "V, S", "duration": "Instantaneous",
+    "classes": ["Cleric"],
+    "description": "Flame descends on a creature. DEX save or take 1d8 radiant damage. Scales at 5th, 11th, 17th."
+  },
+  "Eldritch Blast": {
+    "level": 0, "school": "Evocation", "casting_time": "1 action", "range": "120 feet",
+    "components": "V, S", "duration": "Instantaneous",
+    "classes": ["Warlock"],
+    "description": "Beam of crackling energy. Ranged spell attack, 1d10 force damage. Extra beams at 5th, 11th, 17th."
+  },
+  "Cure Wounds": {
+    "level": 1, "school": "Evocation", "casting_time": "1 action", "range": "Touch",
+    "components": "V, S", "duration": "Instantaneous",
+    "classes": ["Bard", "Cleric", "Druid", "Paladin", "Ranger"],
+    "description": "Heal 1d8 + spellcasting modifier HP. +1d8 per slot level above 1st."
+  },
+  "Magic Missile": {
+    "level": 1, "school": "Evocation", "casting_time": "1 action", "range": "120 feet",
+    "components": "V, S", "duration": "Instantaneous",
+    "classes": ["Sorcerer", "Wizard"],
+    "description": "Three darts of force, each dealing 1d4+1. Auto-hit. +1 dart per slot above 1st."
+  },
+  "Shield": {
+    "level": 1, "school": "Abjuration", "casting_time": "1 reaction", "range": "Self",
+    "components": "V, S", "duration": "1 round",
+    "classes": ["Sorcerer", "Wizard"],
+    "description": "+5 AC until start of your next turn, including against triggering attack. Immune to magic missile."
+  },
+  "Healing Word": {
+    "level": 1, "school": "Evocation", "casting_time": "1 bonus action", "range": "60 feet",
+    "components": "V", "duration": "Instantaneous",
+    "classes": ["Bard", "Cleric", "Druid"],
+    "description": "Heal 1d4 + spellcasting modifier HP at range. +1d4 per slot above 1st."
+  },
+  "Thunderwave": {
+    "level": 1, "school": "Evocation", "casting_time": "1 action", "range": "Self (15-foot cube)",
+    "components": "V, S", "duration": "Instantaneous",
+    "classes": ["Bard", "Druid", "Sorcerer", "Wizard"],
+    "description": "15-foot cube originating from you. CON save or 2d8 thunder damage and pushed 10 feet. Half on save."
+  },
+  "Burning Hands": {
+    "level": 1, "school": "Evocation", "casting_time": "1 action", "range": "Self (15-foot cone)",
+    "components": "V, S", "duration": "Instantaneous",
+    "classes": ["Sorcerer", "Wizard"],
+    "description": "15-foot cone. DEX save or 3d6 fire damage, half on save. +1d6 per slot above 1st."
+  },
+  "Hold Person": {
+    "level": 2, "school": "Enchantment", "casting_time": "1 action", "range": "60 feet",
+    "components": "V, S, M", "duration": "Concentration, up to 1 minute",
+    "classes": ["Bard", "Cleric", "Druid", "Sorcerer", "Warlock", "Wizard"],
+    "concentration": true,
+    "description": "Target humanoid must WIS save or be paralyzed. Repeat save at end of each turn."
+  },
+  "Spiritual Weapon": {
+    "level": 2, "school": "Evocation", "casting_time": "1 bonus action", "range": "60 feet",
+    "components": "V, S", "duration": "1 minute",
+    "classes": ["Cleric"],
+    "description": "Create floating weapon. Melee spell attack for 1d8 + spellcasting mod force damage. Move 20ft and attack as bonus action."
+  },
+  "Fireball": {
+    "level": 3, "school": "Evocation", "casting_time": "1 action", "range": "150 feet",
+    "components": "V, S, M", "duration": "Instantaneous",
+    "classes": ["Sorcerer", "Wizard"],
+    "description": "20-foot radius sphere. DEX save or 8d6 fire damage, half on save. +1d6 per slot above 3rd."
+  },
+  "Counterspell": {
+    "level": 3, "school": "Abjuration", "casting_time": "1 reaction", "range": "60 feet",
+    "components": "S", "duration": "Instantaneous",
+    "classes": ["Sorcerer", "Warlock", "Wizard"],
+    "description": "Counter a spell of 3rd level or lower. Higher level spells require ability check DC 10 + spell level."
+  },
+  "Revivify": {
+    "level": 3, "school": "Necromancy", "casting_time": "1 action", "range": "Touch",
+    "components": "V, S, M (diamonds worth 300 gp)", "duration": "Instantaneous",
+    "classes": ["Cleric", "Paladin"],
+    "description": "Return creature dead no longer than 1 minute to life with 1 HP. Cannot restore missing body parts."
+  }
+}

@@ -1,0 +1,47 @@
+.voice-control {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.voice-toggle,
+.voice-tts-toggle {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--border-color);
+  color: var(--text-secondary);
+  padding: 0.35rem 0.5rem;
+  border-radius: 6px;
+  font-size: 1rem;
+  transition: all 0.15s;
+}
+.voice-toggle.active,
+.voice-tts-toggle.active {
+  border-color: var(--accent-gold);
+  color: var(--accent-gold);
+  background: rgba(228, 168, 83, 0.1);
+}
+
+.voice-record-btn {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
+  padding: 0.35rem 0.75rem;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  transition: all 0.15s;
+  user-select: none;
+}
+.voice-record-btn:hover {
+  border-color: var(--accent-blue);
+}
+.voice-record-btn.recording {
+  background: rgba(231, 76, 60, 0.2);
+  border-color: var(--accent-red);
+  color: var(--accent-red);
+  animation: pulse 1s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
