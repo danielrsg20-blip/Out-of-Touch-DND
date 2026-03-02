@@ -273,7 +273,14 @@ async def websocket_endpoint(websocket: WebSocket, room_code: str, player_id: st
                 await websocket.send_json({"type": "error", "content": "Invalid JSON"})
                 continue
 
-            await handle_ws_message(session, player, msg)
+            try:
+                await handle_ws_message(session, player, msg)
+            except Exception as e:
+                logger.exception("Unhandled ws message error for room=%s player=%s", room_code, player_id)
+                await session.send_to_player(player.id, {
+                    "type": "error",
+                    "content": f"Server error while processing action: {e}",
+                })
 
     except WebSocketDisconnect:
         logger.info("Player %s disconnected from %s", player.name, room_code)

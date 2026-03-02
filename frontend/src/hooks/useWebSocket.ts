@@ -6,20 +6,37 @@ const WS_BASE = import.meta.env.VITE_WS_URL || 'ws://localhost:8000'
 
 export function useWebSocket() {
   const wsRef = useRef<WebSocket | null>(null)
-  const { roomCode, playerId, setConnected, addPlayer, removePlayer, setPlayers } = useSessionStore()
+  const { roomCode, playerId, setConnected, addPlayer, removePlayer, setPlayers, reset } = useSessionStore()
   const { setMap, updateEntity, addEntity, removeEntity, setCombat, addNarrative, syncState, setLoading } = useGameStore()
 
   useEffect(() => {
     if (!roomCode || !playerId) return
 
+    let intentionalClose = false
     const ws = new WebSocket(`${WS_BASE}/ws/${roomCode}/${playerId}`)
     wsRef.current = ws
 
-    ws.onopen = () => setConnected(true)
+    ws.onopen = () => {
+      setConnected(true)
+    }
 
-    ws.onclose = () => {
+    ws.onclose = (event) => {
+      if (intentionalClose) {
+        return
+      }
       setConnected(false)
       wsRef.current = null
+      if (event.code === 4004) {
+        addNarrative('system', `Session expired (${event.reason || 'session/player not found'}). Returning to lobby.`)
+        reset()
+      } else {
+        addNarrative('system', `Connection to server lost (${event.code}). Rejoin or refresh to reconnect.`)
+      }
+      setLoading(false)
+    }
+
+    ws.onerror = () => {
+      addNarrative('system', 'WebSocket error. Actions may not send until reconnected.')
     }
 
     ws.onmessage = (event) => {
@@ -28,6 +45,7 @@ export function useWebSocket() {
     }
 
     return () => {
+      intentionalClose = true
       ws.close()
       wsRef.current = null
     }
@@ -153,8 +171,12 @@ export function useWebSocket() {
     if (wsRef.current?.readyState === WebSocket.OPEN) {
       setLoading(true)
       wsRef.current.send(JSON.stringify({ type: 'player_action', content }))
+      return
     }
-  }, [])
+
+    addNarrative('system', 'Not connected to server. Unable to send action.')
+    setLoading(false)
+  }, [addNarrative, setLoading])
 
   const sendMoveToken = useCallback((characterId: string, x: number, y: number) => {
     if (wsRef.current?.readyState === WebSocket.OPEN) {

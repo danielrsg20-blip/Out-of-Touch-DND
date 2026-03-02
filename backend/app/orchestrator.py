@@ -274,6 +274,29 @@ class Orchestrator:
             next_result = self._dispatch_tool(dispatcher, "next_turn", {}, player_id, normalized_action)
             events.append({"type": "tool_result", "tool": "next_turn", "input": {}, "result": next_result})
 
+            if self.combat and self.combat.is_active:
+                current = self.combat.current_participant
+                if current and current.character.id.startswith("enemy_"):
+                    enemy_attack_result: dict[str, Any] | None = None
+                    enemy_attacker_id = current.character.id
+                    enemy_target_id = self._pick_target_id(enemy_attacker_id)
+                    if enemy_target_id:
+                        enemy_attack_input = {
+                            "attacker_id": enemy_attacker_id,
+                            "target_id": enemy_target_id,
+                            "damage_dice": "1d6",
+                            "ability": "STR",
+                        }
+                        enemy_attack_result = self._dispatch_tool(dispatcher, "attack", enemy_attack_input, player_id, normalized_action)
+                        events.append({"type": "tool_result", "tool": "attack", "input": enemy_attack_input, "result": enemy_attack_result})
+
+                    next_back_result = self._dispatch_tool(dispatcher, "next_turn", {}, player_id, normalized_action)
+                    events.append({"type": "tool_result", "tool": "next_turn", "input": {}, "result": next_back_result})
+
+                    if isinstance(enemy_attack_result, dict) and enemy_attack_result.get("target_hp") == 0:
+                        end_result = self._dispatch_tool(dispatcher, "end_combat", {}, player_id, normalized_action)
+                        events.append({"type": "tool_result", "tool": "end_combat", "input": {}, "result": end_result})
+
             if isinstance(attack_result, dict) and attack_result.get("target_hp") == 0:
                 end_result = self._dispatch_tool(dispatcher, "end_combat", {}, player_id, normalized_action)
                 events.append({"type": "tool_result", "tool": "end_combat", "input": {}, "result": end_result})
