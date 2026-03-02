@@ -27,6 +27,14 @@ Create a `.env` file in the project root (copy from `.env.example`):
 ANTHROPIC_API_KEY=sk-ant-your-actual-key-here
 ```
 
+For local development without external API keys, enable mock mode:
+
+```
+LOCAL_MOCK_MODE=true
+```
+
+When mock mode is enabled, the backend forces deterministic local DM + voice behavior and does not call Anthropic/OpenAI APIs.
+
 Start the server:
 
 ```bash

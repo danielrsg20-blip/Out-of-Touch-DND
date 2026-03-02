@@ -336,11 +336,17 @@ async def handle_ws_message(session: GameSession, player: Player, msg: dict[str,
                     })
 
                 elif tool_name in ("place_entity", "move_entity", "remove_entity", "update_tile"):
-                    await session.broadcast({
-                        "type": "map_change",
-                        "action": tool_name,
-                        "data": result,
-                    })
+                    if isinstance(result, dict) and result.get("error"):
+                        await session.send_to_player(player.id, {
+                            "type": "error",
+                            "content": str(result.get("error")),
+                        })
+                    else:
+                        await session.broadcast({
+                            "type": "map_change",
+                            "action": tool_name,
+                            "data": result,
+                        })
 
                 elif tool_name == "start_combat":
                     await session.broadcast({

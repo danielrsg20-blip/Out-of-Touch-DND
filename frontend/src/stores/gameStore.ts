@@ -76,7 +76,7 @@ export const useGameStore = create<GameState>((set) => ({
 
   syncState: (state) => set({
     characters: state.characters,
-    map: state.map ?? undefined as unknown as MapData | null,
+    map: state.map ?? null,
     combat: state.combat,
     usage: state.usage,
   }),

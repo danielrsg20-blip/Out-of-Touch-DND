@@ -72,15 +72,25 @@ export function useWebSocket() {
 
       case 'map_change': {
         const action = msg.action as string
-        const data = msg.data as Record<string, unknown>
+        const data = (msg.data as Record<string, unknown>) || {}
         if (action === 'move_entity') {
-          const to = data.to as { x: number; y: number }
-          updateEntity(data.moved as string, to.x, to.y)
+          const to = data.to as { x: number; y: number } | undefined
+          const moved = data.moved as string | undefined
+          if (to && moved) {
+            updateEntity(moved, to.x, to.y)
+          }
         } else if (action === 'place_entity') {
-          const placed = data.placed as Parameters<typeof addEntity>[0]
-          addEntity(placed)
+          const placed = data.placed as Parameters<typeof addEntity>[0] | undefined
+          if (placed) {
+            addEntity(placed)
+          }
         } else if (action === 'remove_entity') {
-          removeEntity(data.entity_id as string)
+          const entityId = data.entity_id as string | undefined
+          if (entityId) {
+            removeEntity(entityId)
+          }
+        } else if (action === 'update_tile') {
+          addNarrative('system', 'The environment shifts on the map.')
         }
         break
       }

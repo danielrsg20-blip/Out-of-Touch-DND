@@ -4,20 +4,26 @@ from __future__ import annotations
 
 import io
 import logging
+import hashlib
 from typing import Optional
 
-import openai
+try:
+    import openai
+except ModuleNotFoundError:  # pragma: no cover - optional in local mock mode
+    openai = None  # type: ignore[assignment]
 
-from .config import OPENAI_API_KEY
+from .config import OPENAI_API_KEY, LOCAL_MOCK_MODE
 
 logger = logging.getLogger(__name__)
 
-_client: openai.OpenAI | None = None
+_client: Optional[object] = None
 
 
-def _get_client() -> openai.OpenAI:
+def _get_client() -> object:
     global _client
     if _client is None:
+        if openai is None:
+            raise RuntimeError("openai package is not installed for voice features")
         if not OPENAI_API_KEY:
             raise RuntimeError("OPENAI_API_KEY not configured for voice features")
         _client = openai.OpenAI(api_key=OPENAI_API_KEY)
@@ -26,6 +32,10 @@ def _get_client() -> openai.OpenAI:
 
 async def speech_to_text(audio_bytes: bytes, filename: str = "audio.webm") -> str:
     """Transcribe audio bytes to text using OpenAI Whisper."""
+    if LOCAL_MOCK_MODE:
+        digest = hashlib.sha256(audio_bytes or b"mock-audio").hexdigest()[:8]
+        return f"[mock transcript {digest}] I look around carefully and proceed forward."
+
     client = _get_client()
     audio_file = io.BytesIO(audio_bytes)
     audio_file.name = filename
@@ -37,7 +47,7 @@ async def speech_to_text(audio_bytes: bytes, filename: str = "audio.webm") -> st
             response_format="text",
         )
         return transcript.strip()
-    except openai.APIError as e:
+    except Exception as e:
         logger.error("Whisper STT error: %s", e)
         raise
 
@@ -49,6 +59,11 @@ async def text_to_speech(
     response_format: str = "mp3",
 ) -> bytes:
     """Convert text to speech audio bytes using OpenAI TTS."""
+    if LOCAL_MOCK_MODE:
+        payload = f"MOCK_TTS::{voice}::{model}::{text}".encode("utf-8")
+        digest = hashlib.sha256(payload).hexdigest().encode("ascii")
+        return b"ID3" + digest[:64]
+
     client = _get_client()
 
     try:
@@ -59,7 +74,7 @@ async def text_to_speech(
             response_format=response_format,
         )
         return response.content
-    except openai.APIError as e:
+    except Exception as e:
         logger.error("TTS error: %s", e)
         raise
 
