@@ -142,6 +142,12 @@ export interface GameState {
   }
 }
 
+export interface UserData {
+  user_id: string
+  username: string
+  token: string
+}
+
 export interface NarrativeEntry {
   id: string
   type: 'dm' | 'player' | 'system' | 'dice'

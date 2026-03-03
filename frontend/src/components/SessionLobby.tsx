@@ -1,9 +1,11 @@
 import { useState } from 'react'
 import { useSessionStore } from '../stores/sessionStore'
+import { useAuthStore } from '../stores/authStore'
 import './SessionLobby.css'
 
 export default function SessionLobby() {
-  const [name, setName] = useState('')
+  const { username, logout } = useAuthStore()
+  const [name, setName] = useState(username ?? '')
   const [joinCode, setJoinCode] = useState('')
   const [mode, setMode] = useState<'menu' | 'create' | 'join'>('menu')
   const [error, setError] = useState('')
@@ -33,6 +35,11 @@ export default function SessionLobby() {
   return (
     <div className="lobby-wrapper">
       <div className="lobby-card">
+        <div className="lobby-user-bar">
+          <span className="lobby-user-name">Signed in as <strong>{username}</strong></span>
+          <button className="lobby-logout-btn" type="button" onClick={logout}>Sign out</button>
+        </div>
+
         <h1 className="lobby-title">Out of Touch DND</h1>
         <p className="lobby-subtitle">LLM-Powered Campaign Engine</p>
 

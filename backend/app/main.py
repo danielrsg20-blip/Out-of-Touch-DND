@@ -9,7 +9,7 @@ import uuid
 from contextlib import asynccontextmanager
 from typing import Any
 
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import Response
 from pydantic import BaseModel
@@ -29,6 +29,8 @@ from .rules.spells import (
     initialize_spell_slots,
     validate_spell_selections,
 )
+from .models.user import User  # noqa: F401 — ensures table is created by init_db
+from .auth import create_access_token, decode_token, hash_password, verify_password
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -56,6 +58,79 @@ app.add_middleware(
 
 
 # --- REST Endpoints ---
+
+# Auth
+
+class RegisterRequest(BaseModel):
+    username: str
+    password: str
+
+class LoginRequest(BaseModel):
+    username: str
+    password: str
+
+class AuthResponse(BaseModel):
+    token: str
+    user_id: str
+    username: str
+
+
+@app.post("/api/auth/register", response_model=AuthResponse)
+async def register(req: RegisterRequest):
+    if len(req.username) < 3:
+        from fastapi import HTTPException
+        raise HTTPException(status_code=400, detail="Username must be at least 3 characters")
+    if len(req.password) < 6:
+        from fastapi import HTTPException
+        raise HTTPException(status_code=400, detail="Password must be at least 6 characters")
+
+    from sqlalchemy import select
+    async with async_session() as db:
+        existing = await db.execute(select(User).where(User.username == req.username))
+        if existing.scalar_one_or_none():
+            from fastapi import HTTPException
+            raise HTTPException(status_code=409, detail="Username already taken")
+
+        user_id = str(uuid.uuid4())
+        user = User(id=user_id, username=req.username, hashed_password=hash_password(req.password))
+        db.add(user)
+        await db.commit()
+
+    token = create_access_token(user_id=user_id, username=req.username)
+    logger.info("User registered: %s", req.username)
+    return AuthResponse(token=token, user_id=user_id, username=req.username)
+
+
+@app.post("/api/auth/login", response_model=AuthResponse)
+async def login(req: LoginRequest):
+    from sqlalchemy import select
+    from fastapi import HTTPException
+    async with async_session() as db:
+        result = await db.execute(select(User).where(User.username == req.username))
+        user = result.scalar_one_or_none()
+
+    if not user or not verify_password(req.password, user.hashed_password):
+        raise HTTPException(status_code=401, detail="Invalid username or password")
+
+    token = create_access_token(user_id=user.id, username=user.username)
+    logger.info("User logged in: %s", req.username)
+    return AuthResponse(token=token, user_id=user.id, username=user.username)
+
+
+@app.get("/api/auth/me")
+async def auth_me(request: Request):
+    from fastapi import HTTPException
+    from jose import JWTError
+    auth_header = request.headers.get("Authorization", "")
+    if not auth_header.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Missing token")
+    token = auth_header.removeprefix("Bearer ")
+    try:
+        payload = decode_token(token)
+    except JWTError:
+        raise HTTPException(status_code=401, detail="Invalid or expired token")
+    return {"user_id": payload["sub"], "username": payload["username"]}
+
 
 class CreateSessionRequest(BaseModel):
     player_name: str

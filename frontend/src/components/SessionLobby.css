@@ -102,3 +102,34 @@
   margin-top: 0.75rem;
   font-size: 0.85rem;
 }
+
+.lobby-user-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1.25rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.lobby-user-name {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+.lobby-user-name strong {
+  color: var(--text-primary);
+}
+
+.lobby-logout-btn {
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  font-size: 0.75rem;
+  cursor: pointer;
+  padding: 0;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.lobby-logout-btn:hover {
+  color: var(--accent-red);
+}
