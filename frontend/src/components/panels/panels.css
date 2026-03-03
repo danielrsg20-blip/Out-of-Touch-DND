@@ -294,6 +294,134 @@
   margin-bottom: 0.2rem;
 }
 
+/* Character Sheet — header row with tab buttons */
+.char-header-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 0.5rem;
+}
+
+.char-tabs {
+  display: flex;
+  gap: 0.2rem;
+  flex-shrink: 0;
+}
+
+.char-tab {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--border-color);
+  color: var(--text-secondary);
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.char-tab.active {
+  background: rgba(228, 168, 83, 0.15);
+  border-color: var(--accent-gold);
+  color: var(--accent-gold);
+}
+.char-tab:hover:not(.active) {
+  border-color: var(--text-secondary);
+  color: var(--text-primary);
+}
+
+/* Inventory Panel */
+.inventory-panel {
+  font-size: 0.85rem;
+}
+
+.inv-section-title {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--text-secondary);
+  margin-bottom: 0.3rem;
+}
+
+.inv-equipped-slots {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.inv-equip-slot {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.25rem 0.4rem;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  min-height: 1.8rem;
+}
+
+.inv-slot-label {
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+  min-width: 44px;
+  flex-shrink: 0;
+}
+
+.inv-slot-item {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.3rem;
+  flex: 1;
+}
+
+.inv-slot-empty {
+  color: var(--text-secondary);
+  opacity: 0.4;
+}
+
+.inv-item-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  max-height: 160px;
+  overflow-y: auto;
+  padding-right: 2px;
+}
+
+.inv-item-row {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.15rem 0.4rem;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.02);
+}
+.inv-item-row:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.inv-item-name {
+  flex: 1;
+  color: var(--text-primary);
+  font-size: 0.82rem;
+}
+
+.inv-item-stat {
+  font-size: 0.72rem;
+  color: var(--accent-gold);
+  font-family: 'Consolas', 'Courier New', monospace;
+  flex-shrink: 0;
+}
+
+.inv-item-notes {
+  font-size: 0.7rem;
+  color: var(--accent-purple);
+  font-style: italic;
+  flex-shrink: 0;
+}
+
 /* Action Bar */
 .action-bar {
   margin-bottom: 0.5rem;

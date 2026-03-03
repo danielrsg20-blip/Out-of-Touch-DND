@@ -14,6 +14,11 @@ from .rules.combat import (
     roll_initiative,
 )
 from .rules.dice import roll
+from .rules.items import (
+    calculate_ac_from_inventory,
+    find_item_in_inventory,
+    lookup_catalog_item,
+)
 from .rules.spells import use_spell_slot, restore_all_slots
 from .memory import CampaignMemory, NPCMemory, QuestMemory, LocationMemory
 
@@ -273,6 +278,46 @@ TOOL_DEFINITIONS: list[dict[str, Any]] = [
                 "importance": {"type": "string", "enum": ["minor", "major", "critical"]},
             },
             "required": ["description"],
+        },
+    },
+    {
+        "name": "give_item",
+        "description": "Add an item to a character's inventory. Use when awarding loot, purchasing gear, or finding items. Specify the item by its SRD name or catalog ID (e.g. 'longsword', 'healing_potion', 'thieves_tools').",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "character_id": {"type": "string", "description": "ID of the character receiving the item"},
+                "item_id": {"type": "string", "description": "Item catalog ID or name (e.g. 'longsword', 'Potion of Healing', 'chain_mail')"},
+                "quantity": {"type": "integer", "default": 1, "description": "Number of items to add"},
+                "notes": {"type": "string", "default": "", "description": "Optional notes, e.g. '+1 magical', 'cursed', 'found in dragon hoard'"},
+            },
+            "required": ["character_id", "item_id"],
+        },
+    },
+    {
+        "name": "remove_item",
+        "description": "Remove an item from a character's inventory (consumed, lost, sold, destroyed).",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "character_id": {"type": "string"},
+                "item_id": {"type": "string", "description": "Item catalog ID or name"},
+                "quantity": {"type": "integer", "default": 1, "description": "Number to remove. Use -1 to remove all."},
+            },
+            "required": ["character_id", "item_id"],
+        },
+    },
+    {
+        "name": "equip_item",
+        "description": "Equip or unequip an item for a character. Equipping armor automatically recalculates AC. Only one weapon and one armor can be equipped at a time.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "character_id": {"type": "string"},
+                "item_id": {"type": "string", "description": "Item catalog ID or name to equip/unequip"},
+                "equip": {"type": "boolean", "default": True, "description": "True to equip, False to unequip"},
+            },
+            "required": ["character_id", "item_id"],
         },
     },
     {
@@ -536,6 +581,95 @@ class ToolDispatcher:
             importance=inp.get("importance", "minor"),
         )
         return {"recorded": True, "event": inp["description"]}
+
+    def _tool_give_item(self, inp: dict) -> dict:
+        char = self.characters.get(inp["character_id"])
+        if not char:
+            return {"error": f"Character {inp['character_id']} not found"}
+
+        item = lookup_catalog_item(inp["item_id"])
+        if item is None:
+            return {"error": f"Unknown item: {inp['item_id']}"}
+
+        qty = max(1, int(inp.get("quantity", 1)))
+        notes = inp.get("notes", "")
+
+        # Stack with existing unequipped item of same id
+        existing = find_item_in_inventory(char.inventory, item.id)
+        if existing and not existing.get("equipped"):
+            existing["quantity"] = existing.get("quantity", 1) + qty
+            if notes:
+                existing["notes"] = notes
+        else:
+            item_dict = item.to_dict()
+            item_dict["quantity"] = qty
+            item_dict["notes"] = notes
+            char.inventory.append(item_dict)
+
+        return {
+            "character": char.name,
+            "item": item.name,
+            "quantity": qty,
+            "message": f"{char.name} received {qty}x {item.name}.",
+        }
+
+    def _tool_remove_item(self, inp: dict) -> dict:
+        char = self.characters.get(inp["character_id"])
+        if not char:
+            return {"error": f"Character {inp['character_id']} not found"}
+
+        item_id = inp["item_id"]
+        qty = int(inp.get("quantity", 1))
+
+        target = find_item_in_inventory(char.inventory, item_id)
+        if target is None:
+            return {"error": f"{char.name} does not have '{item_id}' in inventory"}
+
+        item_name = target["name"]
+        if qty == -1 or qty >= target.get("quantity", 1):
+            char.inventory.remove(target)
+            return {"character": char.name, "removed": item_name, "message": f"{item_name} removed from {char.name}'s inventory."}
+        else:
+            target["quantity"] = target.get("quantity", 1) - qty
+            return {"character": char.name, "removed": item_name, "quantity": qty,
+                    "message": f"{qty}x {item_name} removed from {char.name}'s inventory."}
+
+    def _tool_equip_item(self, inp: dict) -> dict:
+        char = self.characters.get(inp["character_id"])
+        if not char:
+            return {"error": f"Character {inp['character_id']} not found"}
+
+        item_id = inp["item_id"]
+        equip = inp.get("equip", True)
+
+        target = find_item_in_inventory(char.inventory, item_id)
+        if target is None:
+            return {"error": f"{char.name} does not have '{item_id}' in inventory"}
+
+        category = target.get("category", "")
+
+        if equip:
+            # Unequip any existing item of same category (weapon/armor/shield)
+            for item in char.inventory:
+                if item is not target and item.get("category") == category:
+                    item["equipped"] = False
+            target["equipped"] = True
+        else:
+            target["equipped"] = False
+
+        # Recalculate AC whenever armor/shield changes
+        if category in ("armor", "shield"):
+            dex_mod = char.ability_modifier("DEX")
+            char.ac = calculate_ac_from_inventory(char.inventory, dex_mod)
+
+        action = "equipped" if equip else "unequipped"
+        return {
+            "character": char.name,
+            "item": target["name"],
+            "action": action,
+            "ac": char.ac,
+            "message": f"{char.name} {action} {target['name']}. AC is now {char.ac}.",
+        }
 
     def _tool_update_tile(self, inp: dict) -> dict:
         if not self.game_map:

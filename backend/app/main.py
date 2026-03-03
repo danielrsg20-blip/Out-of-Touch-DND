@@ -70,6 +70,15 @@ class CreateCharacterRequest(BaseModel):
     abilities: dict[str, int]
 
 
+@app.get("/api/items")
+async def list_items(category: str | None = None):
+    from .rules.items import ITEM_CATALOG
+    items = [item.to_dict() for item in ITEM_CATALOG.values()]
+    if category:
+        items = [i for i in items if i["category"] == category]
+    return {"items": items}
+
+
 @app.get("/api/health")
 async def health():
     return {"status": "ok", "sessions": len(session_manager.sessions)}
@@ -221,6 +230,9 @@ async def load_campaign(req: LoadCampaignRequest):
             temp_hp=cd.get("temp_hp", 0), ac=cd["ac"], speed=cd["speed"],
             skill_proficiencies=cd.get("skill_proficiencies", []),
             conditions=cd.get("conditions", []),
+            inventory=cd.get("inventory", []),
+            spell_slots=cd.get("spell_slots", {}),
+            spell_slots_used=cd.get("spell_slots_used", {}),
             traits=cd.get("traits", []), xp=cd.get("xp", 0),
         )
         session.orchestrator.characters[cid] = char
@@ -365,6 +377,13 @@ async def handle_ws_message(session: GameSession, player: Player, msg: dict[str,
                     await session.broadcast({
                         "type": "combat_update",
                         "action": tool_name,
+                        "data": result,
+                    })
+
+                elif tool_name in ("give_item", "remove_item", "equip_item"):
+                    await session.broadcast({
+                        "type": "inventory_update",
+                        "tool": tool_name,
                         "data": result,
                     })
 

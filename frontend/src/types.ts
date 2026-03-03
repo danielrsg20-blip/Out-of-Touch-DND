@@ -24,6 +24,30 @@ export interface MapData {
   visible?: { x: number; y: number }[]
 }
 
+export interface ItemData {
+  id: string
+  name: string
+  category: 'weapon' | 'armor' | 'shield' | 'tool' | 'gear' | 'ammunition'
+  subcategory: string
+  cost_gp: number
+  weight_lb: number
+  description: string
+  // Weapon fields
+  damage: string | null
+  damage_type: string | null
+  properties: string[]
+  // Armor fields
+  ac_base: number | null
+  dex_mod: boolean
+  max_dex: number | null
+  str_req: number | null
+  stealth_disadvantage: boolean
+  // Inventory state
+  equipped: boolean
+  quantity: number
+  notes: string
+}
+
 export interface CharacterData {
   id: string
   name: string
@@ -40,7 +64,7 @@ export interface CharacterData {
   proficiency_bonus: number
   skill_proficiencies: string[]
   conditions: string[]
-  inventory: Array<Record<string, unknown>>
+  inventory: ItemData[]
   spell_slots: Record<number, number>
   spell_slots_used: Record<number, number>
   traits: string[]

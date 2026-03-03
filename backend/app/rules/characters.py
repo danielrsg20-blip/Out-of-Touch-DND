@@ -186,6 +186,10 @@ def create_character(
     )
 
     from .spells import initialize_spell_slots
+    from .items import get_starting_inventory, calculate_ac_from_inventory
     initialize_spell_slots(char)
+
+    char.inventory = get_starting_inventory(char_class)
+    char.ac = calculate_ac_from_inventory(char.inventory, dex_mod)
 
     return char
