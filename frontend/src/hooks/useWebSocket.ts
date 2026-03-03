@@ -2,7 +2,7 @@ import { useEffect, useRef, useCallback } from 'react'
 import { useSessionStore } from '../stores/sessionStore'
 import { useGameStore } from '../stores/gameStore'
 
-const WS_BASE = import.meta.env.VITE_WS_URL || 'ws://localhost:8010'
+const WS_BASE = import.meta.env.VITE_WS_URL || 'ws://localhost:8000'
 
 export function useWebSocket() {
   const wsRef = useRef<WebSocket | null>(null)
