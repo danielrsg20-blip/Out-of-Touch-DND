@@ -9,7 +9,7 @@ interface ActionBarProps {
   onCastSpell: (spellName: string, slotLevel: number, targetId?: string) => void
 }
 
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8010'
+const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000'
 
 export default function ActionBar({ onSend, onCastSpell }: ActionBarProps) {
   const combat = useGameStore(s => s.combat)

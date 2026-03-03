@@ -4,7 +4,7 @@ import { useSessionStore } from '../../stores/sessionStore'
 import type { ItemData, SpellOption } from '../../types'
 import './panels.css'
 
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8010'
+const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000'
 
 function InventoryPanel({ inventory }: { readonly inventory: ItemData[] }) {
   const equipped = inventory.filter(i => i.equipped)

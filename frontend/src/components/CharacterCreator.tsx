@@ -3,7 +3,7 @@ import { useSessionStore } from '../stores/sessionStore'
 import type { SpellOption } from '../types'
 import './CharacterCreator.css'
 
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8010'
+const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000'
 
 const RACES = ['Human', 'Elf', 'Dwarf', 'Halfling', 'Dragonborn', 'Gnome', 'Half-Elf', 'Half-Orc', 'Tiefling']
 const CLASSES = ['Barbarian', 'Bard', 'Cleric', 'Druid', 'Fighter', 'Monk', 'Paladin', 'Ranger', 'Rogue', 'Sorcerer', 'Warlock', 'Wizard']
