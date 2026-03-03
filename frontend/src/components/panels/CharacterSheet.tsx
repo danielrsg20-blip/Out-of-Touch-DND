@@ -1,8 +1,10 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useGameStore } from '../../stores/gameStore'
 import { useSessionStore } from '../../stores/sessionStore'
-import type { ItemData } from '../../types'
+import type { ItemData, SpellOption } from '../../types'
 import './panels.css'
+
+const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8010'
 
 function InventoryPanel({ inventory }: { readonly inventory: ItemData[] }) {
   const equipped = inventory.filter(i => i.equipped)
@@ -89,12 +91,110 @@ function ItemRow({ item }: { readonly item: ItemData }) {
 export default function CharacterSheet() {
   const [tab, setTab] = useState<'stats' | 'inventory'>('stats')
   const characters = useGameStore(s => s.characters)
+  const combat = useGameStore(s => s.combat)
   const players = useSessionStore(s => s.players)
   const playerId = useSessionStore(s => s.playerId)
+  const roomCode = useSessionStore(s => s.roomCode)
+
+  const [isManagingPrepared, setIsManagingPrepared] = useState(false)
+  const [loadingPreparedOptions, setLoadingPreparedOptions] = useState(false)
+  const [savingPreparedOptions, setSavingPreparedOptions] = useState(false)
+  const [preparedError, setPreparedError] = useState<string | null>(null)
+  const [preparedLimit, setPreparedLimit] = useState(0)
+  const [availablePreparedSpells, setAvailablePreparedSpells] = useState<SpellOption[]>([])
+  const [selectedPreparedSpells, setSelectedPreparedSpells] = useState<string[]>([])
 
   const player = players.find(p => p.id === playerId)
   const charId = player?.character_id
   const char = charId ? characters[charId] : null
+
+  const isInCombat = !!combat?.is_active
+  const canManagePreparedSpells = !!char && char.spellcasting_mode === 'prepared' && !!roomCode && !!playerId
+
+  useEffect(() => {
+    if (isInCombat && isManagingPrepared) {
+      setPreparedError('You cannot change prepared spells during combat.')
+      setIsManagingPrepared(false)
+    }
+  }, [isInCombat, isManagingPrepared])
+
+  useEffect(() => {
+    if (!char || !isManagingPrepared) return
+    setPreparedError(null)
+    setLoadingPreparedOptions(true)
+
+    const run = async () => {
+      try {
+        const res = await fetch(`${API_BASE}/api/spells/options/${encodeURIComponent(char.class)}/${char.level}`)
+        const data = await res.json()
+        if (data.error) {
+          setPreparedError(String(data.error))
+          return
+        }
+
+        const spells = ((data.spells || []) as SpellOption[]).filter(s => Number(s.level) > 0)
+        setAvailablePreparedSpells(spells)
+        setPreparedLimit(Number(data.prepared_limit || 0))
+        setSelectedPreparedSpells(Array.isArray(char.prepared_spells) ? [...char.prepared_spells] : [])
+      } catch {
+        setPreparedError('Unable to load spell options right now.')
+      } finally {
+        setLoadingPreparedOptions(false)
+      }
+    }
+
+    run()
+  }, [isManagingPrepared, char?.class, char?.level, char?.prepared_spells])
+
+  const togglePreparedSpell = (spellName: string) => {
+    setSelectedPreparedSpells(prev => {
+      if (prev.includes(spellName)) return prev.filter(s => s !== spellName)
+      if (prev.length >= preparedLimit) return prev
+      return [...prev, spellName]
+    })
+  }
+
+  const savePreparedSpells = async () => {
+    if (!char || !roomCode || !playerId) return
+    if (isInCombat) {
+      setPreparedError('You cannot change prepared spells during combat.')
+      return
+    }
+    setPreparedError(null)
+    setSavingPreparedOptions(true)
+    try {
+      const res = await fetch(`${API_BASE}/api/character/level-up`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          room_code: roomCode,
+          player_id: playerId,
+          new_level: char.level,
+          prepared_spells: selectedPreparedSpells,
+        }),
+      })
+      const data = await res.json()
+      if (data.error) {
+        setPreparedError(String(data.error))
+        return
+      }
+
+      const state = useGameStore.getState()
+      const updated = {
+        ...state.characters,
+        [char.id]: {
+          ...state.characters[char.id],
+          prepared_spells: selectedPreparedSpells,
+        },
+      }
+      state.setCharacters(updated)
+      setIsManagingPrepared(false)
+    } catch {
+      setPreparedError('Unable to save prepared spells right now.')
+    } finally {
+      setSavingPreparedOptions(false)
+    }
+  }
 
   if (!char) {
     return (
@@ -106,6 +206,15 @@ export default function CharacterSheet() {
   }
 
   const hpPercent = char.max_hp > 0 ? (char.hp / char.max_hp) * 100 : 0
+  const slotRows = Object.entries(char.spell_slots || {})
+    .map(([level, total]) => {
+      const used = char.spell_slots_used?.[Number(level)] ?? 0
+      const remaining = Math.max(0, Number(total) - Number(used))
+      const restricted = !isInCombat && Number(level) > 0
+      const state = restricted ? 'restricted' : (remaining > 0 ? 'available' : 'unavailable')
+      return { level, total, used, remaining, state }
+    })
+    .sort((a, b) => Number(a.level) - Number(b.level))
 
   return (
     <div className="character-sheet">
@@ -181,6 +290,116 @@ export default function CharacterSheet() {
         </>
       ) : (
         <InventoryPanel inventory={char.inventory} />
+      )}
+
+      {slotRows.length > 0 && (
+        <div className="char-spell-slots">
+          <h4>Spell Slots</h4>
+          {slotRows.map(s => (
+            <div key={s.level} className={`slot-row slot-row-${s.state}`}>
+              <span>Level {s.level}</span>
+              <span>{s.remaining}/{s.total}</span>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {char.prepared_spells?.length > 0 && (
+        <div className="char-spells">
+          <h4>Prepared Spells</h4>
+          {char.prepared_spells.map(spell => (
+            <span key={spell} className="spell-tag">{spell}</span>
+          ))}
+        </div>
+      )}
+
+      {canManagePreparedSpells && (
+        <div className="prepared-manager">
+          {!isManagingPrepared ? (
+            <>
+              <button
+                className="prepared-manager-btn"
+                onClick={() => setIsManagingPrepared(true)}
+                disabled={isInCombat}
+              >
+              Manage Prepared Spells
+              </button>
+              {isInCombat && <div className="prepared-manager-note">Prepared spells cannot be changed during combat.</div>}
+            </>
+          ) : (
+            <div className="prepared-manager-editor">
+              <div className="prepared-manager-header">
+                <h4>Manage Prepared Spells</h4>
+                <span>{selectedPreparedSpells.length}/{preparedLimit}</span>
+              </div>
+
+              {loadingPreparedOptions ? (
+                <p className="panel-empty">Loading spell options...</p>
+              ) : (
+                <div className="prepared-manager-list">
+                  {availablePreparedSpells.map(spell => {
+                    const selected = selectedPreparedSpells.includes(spell.name)
+                    const disabled = !selected && selectedPreparedSpells.length >= preparedLimit
+                    return (
+                      <label key={spell.name} className={`prepared-manager-item ${disabled ? 'disabled' : ''}`}>
+                        <input
+                          type="checkbox"
+                          checked={selected}
+                          disabled={disabled}
+                          onChange={() => togglePreparedSpell(spell.name)}
+                        />
+                        <span>{spell.name}</span>
+                        <span className="prepared-manager-level">L{spell.level}</span>
+                      </label>
+                    )
+                  })}
+                </div>
+              )}
+
+              {preparedError && <div className="prepared-manager-error">{preparedError}</div>}
+
+              <div className="prepared-manager-actions">
+                <button
+                  className="prepared-manager-btn"
+                  onClick={savePreparedSpells}
+                  disabled={savingPreparedOptions || loadingPreparedOptions || isInCombat}
+                >
+                  {savingPreparedOptions ? 'Saving...' : 'Save'}
+                </button>
+                <button
+                  className="prepared-manager-btn secondary"
+                  onClick={() => {
+                    setPreparedError(null)
+                    setIsManagingPrepared(false)
+                  }}
+                  disabled={savingPreparedOptions}
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {char.known_spells?.length > 0 && (
+        <div className="char-spells">
+          <h4>Known Spells</h4>
+          {char.known_spells.map(spell => (
+            <span key={spell} className="spell-tag">{spell}</span>
+          ))}
+        </div>
+      )}
+
+      {char.class_features?.length > 0 && (
+        <div className="char-features">
+          <h4>Class Features</h4>
+          {char.class_features.map(feature => (
+            <div key={feature.id || feature.name} className="feature-item" title={feature.description || feature.name}>
+              <strong>{feature.name}</strong>{feature.level ? ` (L${feature.level})` : ''}
+            </div>
+          ))}
+        </div>
       )}
     </div>
   )

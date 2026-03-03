@@ -18,6 +18,17 @@ from .session import GameSession, Player, SessionManager
 from .voice import speech_to_text, text_to_speech, dm_speak
 from .models.database import init_db, async_session
 from .models.campaign import SavedCampaign
+from .tools import ToolDispatcher
+from .rules.spells import (
+    get_castable_spell_options,
+    get_known_spells_limit,
+    get_selectable_spells_for_character,
+    get_spell_slot_states,
+    get_spellcasting_mode,
+    get_prepared_spells_limit,
+    initialize_spell_slots,
+    validate_spell_selections,
+)
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -68,6 +79,22 @@ class CreateCharacterRequest(BaseModel):
     race: str
     char_class: str
     abilities: dict[str, int]
+    known_spells: list[str] | None = None
+    prepared_spells: list[str] | None = None
+
+
+class CharacterSpellOptionsRequest(BaseModel):
+    room_code: str
+    player_id: str
+    in_combat: bool = False
+
+
+class LevelUpRequest(BaseModel):
+    room_code: str
+    player_id: str
+    new_level: int
+    known_spells: list[str] | None = None
+    prepared_spells: list[str] | None = None
 
 
 @app.get("/api/items")
@@ -114,14 +141,19 @@ async def create_character(req: CreateCharacterRequest):
         return {"error": "Session not found"}
 
     char_id = f"pc_{req.player_id}"
-    char = session.create_character_for_player(
-        player_id=req.player_id,
-        char_id=char_id,
-        name=req.name,
-        race=req.race,
-        char_class=req.char_class,
-        abilities=req.abilities,
-    )
+    try:
+        char = session.create_character_for_player(
+            player_id=req.player_id,
+            char_id=char_id,
+            name=req.name,
+            race=req.race,
+            char_class=req.char_class,
+            abilities=req.abilities,
+            known_spells=req.known_spells,
+            prepared_spells=req.prepared_spells,
+        )
+    except ValueError as e:
+        return {"error": str(e)}
 
     await session.broadcast({
         "type": "character_created",
@@ -129,6 +161,106 @@ async def create_character(req: CreateCharacterRequest):
     })
 
     return {"character": char.to_dict()}
+
+
+@app.get("/api/spells/options/{char_class}/{level}")
+async def get_spell_options_for_class(char_class: str, level: int):
+    from .rules.characters import Character
+
+    probe = Character(
+        id="probe",
+        name="Probe",
+        race="Human",
+        char_class=char_class,
+        level=max(1, level),
+        abilities={"STR": 10, "DEX": 10, "CON": 10, "INT": 10, "WIS": 10, "CHA": 10},
+    )
+    initialize_spell_slots(probe)
+
+    mode = get_spellcasting_mode(char_class)
+    options = get_selectable_spells_for_character(probe, probe.rules_version)
+    known_limit = get_known_spells_limit(char_class, probe.level)
+    prepared_limit = get_prepared_spells_limit(probe)
+
+    return {
+        "class": char_class,
+        "level": probe.level,
+        "spellcasting_mode": mode,
+        "known_limit": known_limit,
+        "prepared_limit": prepared_limit,
+        "spells": options,
+    }
+
+
+@app.post("/api/character/spell-options")
+async def get_character_spell_options(req: CharacterSpellOptionsRequest):
+    session = session_manager.get_session(req.room_code)
+    if not session:
+        return {"error": "Session not found"}
+
+    player = session.players.get(req.player_id)
+    if not player or not player.character_id:
+        return {"error": "Character not found for player"}
+
+    character = session.orchestrator.characters.get(player.character_id)
+    if not character:
+        return {"error": "Character not found"}
+
+    in_combat = bool(req.in_combat)
+    return {
+        "character_id": character.id,
+        "spellcasting_mode": get_spellcasting_mode(character.char_class),
+        "castable_spells": get_castable_spell_options(character, in_combat=in_combat, rules_version=character.rules_version),
+        "slot_states": get_spell_slot_states(character, in_combat=in_combat),
+    }
+
+
+@app.post("/api/character/level-up")
+async def level_up_character(req: LevelUpRequest):
+    session = session_manager.get_session(req.room_code)
+    if not session:
+        return {"error": "Session not found"}
+
+    player = session.players.get(req.player_id)
+    if not player or not player.character_id:
+        return {"error": "Character not found for player"}
+
+    character = session.orchestrator.characters.get(player.character_id)
+    if not character:
+        return {"error": "Character not found"}
+
+    in_combat = bool(session.orchestrator.combat and session.orchestrator.combat.is_active)
+    if in_combat and req.prepared_spells is not None:
+        return {"error": "Prepared spells cannot be changed during active combat"}
+
+    if req.new_level < character.level or req.new_level > 20:
+        return {"error": "Invalid level value"}
+
+    character.level = req.new_level
+    initialize_spell_slots(character)
+
+    selection = validate_spell_selections(
+        character,
+        known_spells=req.known_spells if req.known_spells is not None else character.known_spells,
+        prepared_spells=req.prepared_spells if req.prepared_spells is not None else character.prepared_spells,
+        rules_version=character.rules_version,
+    )
+    if not selection.get("valid", False):
+        return {"error": selection.get("error", "Invalid spell selection")}
+
+    character.known_spells = list(selection.get("known_spells", character.known_spells))
+    character.prepared_spells = list(selection.get("prepared_spells", character.prepared_spells))
+
+    await session.broadcast({
+        "type": "character_updated",
+        "character": character.to_dict(),
+    })
+    await session.broadcast({
+        "type": "state_sync",
+        "state": session.orchestrator.get_full_state(),
+    })
+
+    return {"character": character.to_dict()}
 
 
 class TTSRequest(BaseModel):
@@ -231,9 +363,13 @@ async def load_campaign(req: LoadCampaignRequest):
             skill_proficiencies=cd.get("skill_proficiencies", []),
             conditions=cd.get("conditions", []),
             inventory=cd.get("inventory", []),
-            spell_slots=cd.get("spell_slots", {}),
-            spell_slots_used=cd.get("spell_slots_used", {}),
+            spell_slots={int(k): int(v) for k, v in cd.get("spell_slots", {}).items()},
+            spell_slots_used={int(k): int(v) for k, v in cd.get("spell_slots_used", {}).items()},
+            known_spells=cd.get("known_spells", []),
+            prepared_spells=cd.get("prepared_spells", []),
+            class_features=cd.get("class_features", []),
             traits=cd.get("traits", []), xp=cd.get("xp", 0),
+            rules_version=cd.get("rules_version", "2024"),
         )
         session.orchestrator.characters[cid] = char
 
@@ -307,6 +443,49 @@ async def websocket_endpoint(websocket: WebSocket, room_code: str, player_id: st
 async def handle_ws_message(session: GameSession, player: Player, msg: dict[str, Any]) -> None:
     msg_type = msg.get("type", "")
 
+    if msg_type == "cast_spell":
+        if not player.character_id:
+            await session.send_to_player(player.id, {"type": "error", "content": "No character assigned"})
+            return
+
+        spell_name = str(msg.get("spell_name", "")).strip()
+        slot_level = int(msg.get("slot_level", 0))
+        target_id = msg.get("target_id")
+        if not spell_name:
+            await session.send_to_player(player.id, {"type": "error", "content": "Spell name is required"})
+            return
+
+        dispatcher = ToolDispatcher(
+            session.orchestrator.characters,
+            session.orchestrator.game_map,
+            session.orchestrator.combat,
+            session.orchestrator.memory,
+        )
+        result = dispatcher.dispatch("cast_spell", {
+            "caster_id": player.character_id,
+            "spell_name": spell_name,
+            "slot_level": slot_level,
+            "target_id": target_id,
+            "enforce_restrictions": True,
+        })
+
+        session.orchestrator.game_map = dispatcher.game_map
+        session.orchestrator.combat = dispatcher.combat
+        session.orchestrator.memory = dispatcher.memory
+
+        if isinstance(result, dict) and result.get("error"):
+            await session.send_to_player(player.id, {"type": "error", "content": str(result.get("error"))})
+        else:
+            await session.broadcast({
+                "type": "dice_result",
+                "tool": "cast_spell",
+                "data": result,
+            })
+
+        state = session.orchestrator.get_full_state()
+        await session.broadcast({"type": "state_sync", "state": state})
+        return
+
     if msg_type == "player_action":
         action_text = msg.get("content", "").strip()
         if not action_text:
@@ -374,10 +553,12 @@ async def handle_ws_message(session: GameSession, player: Player, msg: dict[str,
                     })
 
                 elif tool_name in ("next_turn", "end_combat"):
+                    combat_state = session.orchestrator.combat.to_dict() if session.orchestrator.combat else None
                     await session.broadcast({
                         "type": "combat_update",
                         "action": tool_name,
                         "data": result,
+                        "combat": combat_state,
                     })
 
                 elif tool_name in ("give_item", "remove_item", "equip_item"):
@@ -440,17 +621,67 @@ async def handle_ws_message(session: GameSession, player: Player, msg: dict[str,
 
     elif msg_type == "move_token":
         char_id = msg.get("character_id")
-        x, y = msg.get("x", 0), msg.get("y", 0)
+        try:
+            x, y = int(msg.get("x", 0)), int(msg.get("y", 0))
+        except (TypeError, ValueError):
+            await session.send_to_player(player.id, {
+                "type": "error",
+                "content": "Invalid movement coordinates.",
+            })
+            return
         gmap = session.orchestrator.game_map
 
         if gmap and char_id and player.character_id == char_id:
+            entity = gmap.entities.get(char_id)
+            if entity is None:
+                await session.send_to_player(player.id, {
+                    "type": "error",
+                    "content": "Character token not found on map.",
+                })
+                return
+
+            combat = session.orchestrator.combat
+            if combat and combat.is_active:
+                current = combat.current_participant
+                if not current or current.character.id != char_id:
+                    await session.send_to_player(player.id, {
+                        "type": "error",
+                        "content": "You can only move on your turn during combat.",
+                    })
+                    return
+
+                original_x, original_y = entity.x, entity.y
+                move_cost_feet = (abs(original_x - x) + abs(original_y - y)) * 5
+                if move_cost_feet > current.movement_remaining:
+                    await session.send_to_player(player.id, {
+                        "type": "error",
+                        "content": f"Not enough movement remaining ({current.movement_remaining} ft left).",
+                    })
+                    return
+            else:
+                original_x, original_y = entity.x, entity.y
+
             if gmap.is_walkable(x, y):
                 gmap.move_entity(char_id, x, y)
+
+                if combat and combat.is_active:
+                    current = combat.current_participant
+                    if current and current.character.id == char_id:
+                        move_cost_feet = (abs(original_x - x) + abs(original_y - y)) * 5
+                        current.movement_remaining = max(0, current.movement_remaining - move_cost_feet)
+
                 await session.broadcast({
                     "type": "map_change",
                     "action": "move_entity",
                     "data": {"moved": char_id, "to": {"x": x, "y": y}},
                 })
+
+                if combat and combat.is_active:
+                    await session.broadcast({
+                        "type": "combat_update",
+                        "action": "move_token",
+                        "combat": combat.to_dict(),
+                    })
 
     elif msg_type == "ping":
         await session.send_to_player(player.id, {"type": "pong"})

@@ -60,13 +60,24 @@ class CombatState:
 
     def to_dict(self) -> dict:
         current = self.current_participant
+        current_total_movement = current.character.speed if current else 0
+        current_remaining_movement = current.movement_remaining if current else 0
         return {
             "is_active": self.is_active,
             "round": self.round_number,
             "turn_index": self.turn_index,
             "current_turn": current.character.id if current else None,
+            "current_movement_total": current_total_movement,
+            "current_movement_remaining": current_remaining_movement,
             "initiative_order": [
-                {"id": p.character.id, "name": p.character.name, "initiative": p.initiative, "hp": p.character.hp, "max_hp": p.character.max_hp}
+                {
+                    "id": p.character.id,
+                    "name": p.character.name,
+                    "initiative": p.initiative,
+                    "hp": p.character.hp,
+                    "max_hp": p.character.max_hp,
+                    "movement_remaining": p.movement_remaining,
+                }
                 for p in self.participants
             ],
         }

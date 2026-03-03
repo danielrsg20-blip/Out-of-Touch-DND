@@ -1,5 +1,4 @@
 import MapCanvas from './map/MapCanvas'
-import NarrativeLog from './panels/NarrativeLog'
 import CombatTracker from './panels/CombatTracker'
 import { useWebSocket } from '../hooks/useWebSocket'
 import { useGameStore } from '../stores/gameStore'

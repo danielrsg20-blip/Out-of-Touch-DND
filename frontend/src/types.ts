@@ -67,9 +67,37 @@ export interface CharacterData {
   inventory: ItemData[]
   spell_slots: Record<number, number>
   spell_slots_used: Record<number, number>
+  known_spells: string[]
+  prepared_spells: string[]
+  class_features: Array<{ id?: string; name: string; level?: number; description?: string }>
   traits: string[]
   xp: number
   is_alive: boolean
+  rules_version?: string
+  spellcasting_mode?: 'none' | 'known' | 'prepared'
+}
+
+export interface SpellOption {
+  name: string
+  level: number
+  school?: string
+}
+
+export interface CastableSpellOption {
+  name: string
+  level: number
+  castable: boolean
+  reason?: string | null
+  slot_options: number[]
+}
+
+export interface SpellSlotState {
+  level: number
+  total: number
+  used: number
+  remaining: number
+  state: 'available' | 'unavailable' | 'restricted'
+  restricted: boolean
 }
 
 export interface CombatData {
@@ -77,12 +105,15 @@ export interface CombatData {
   round: number
   turn_index: number
   current_turn: string | null
+  current_movement_total?: number
+  current_movement_remaining?: number
   initiative_order: Array<{
     id: string
     name: string
     initiative: number
     hp: number
     max_hp: number
+    movement_remaining?: number
   }>
 }
 

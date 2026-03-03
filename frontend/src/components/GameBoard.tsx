@@ -11,7 +11,7 @@ import { useSessionStore } from '../stores/sessionStore'
 import './GameBoard.css'
 
 export default function GameBoard() {
-  const { sendAction, sendMoveToken } = useWebSocket()
+  const { sendAction, sendMoveToken, sendSpellCast } = useWebSocket()
   const { roomCode, playerId, players } = useSessionStore()
   const { selectedEntityId, setSelectedEntity, usage } = useGameStore()
 
@@ -41,6 +41,11 @@ export default function GameBoard() {
       </header>
 
       <div className="game-content">
+        <div className="adventure-rail">
+          <NarrativeLog />
+          <ChatInput onSend={sendAction} />
+        </div>
+
         <div className="map-area">
           <MapCanvas onTileClick={handleTileClick} onEntityClick={handleEntityClick} />
         </div>
@@ -51,9 +56,7 @@ export default function GameBoard() {
             <CharacterSheet />
           </div>
           <div className="sidebar-bottom">
-            <ActionBar onSend={sendAction} />
-            <NarrativeLog />
-            <ChatInput onSend={sendAction} />
+            <ActionBar onSend={sendAction} onCastSpell={sendSpellCast} />
           </div>
         </div>
       </div>

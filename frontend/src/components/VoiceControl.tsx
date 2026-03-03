@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback, useEffect } from 'react'
+import { useState, useRef, useCallback } from 'react'
 import './VoiceControl.css'
 
 interface VoiceControlProps {
@@ -12,7 +12,6 @@ export default function VoiceControl({ enabled, onToggle, onTranscript }: VoiceC
   const [ttsEnabled, setTtsEnabled] = useState(true)
   const mediaRecorderRef = useRef<MediaRecorder | null>(null)
   const chunksRef = useRef<Blob[]>([])
-  const audioContextRef = useRef<AudioContext | null>(null)
 
   const startRecording = useCallback(async () => {
     try {

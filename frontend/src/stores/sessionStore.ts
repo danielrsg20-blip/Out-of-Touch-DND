@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 import type { PlayerData } from '../types'
 
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000'
+const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8010'
 
 interface SessionState {
   roomCode: string | null
@@ -22,7 +22,7 @@ interface SessionState {
   reset: () => void
 }
 
-export const useSessionStore = create<SessionState>((set, get) => ({
+export const useSessionStore = create<SessionState>((set) => ({
   roomCode: null,
   playerId: null,
   playerName: null,

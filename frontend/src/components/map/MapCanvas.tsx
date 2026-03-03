@@ -3,7 +3,7 @@ import { useGameStore } from '../../stores/gameStore'
 import { useSessionStore } from '../../stores/sessionStore'
 import { useMapInteraction } from '../../hooks/useMapInteraction'
 import { drawOverlays } from './OverlayLayer'
-import type { TileData, EntityData } from '../../types'
+import type { TileData } from '../../types'
 import './MapCanvas.css'
 
 const TILE_SIZE = 40
@@ -38,6 +38,7 @@ export default function MapCanvas({ onTileClick, onEntityClick }: MapCanvasProps
   const containerRef = useRef<HTMLDivElement>(null)
   const map = useGameStore(s => s.map)
   const combat = useGameStore(s => s.combat)
+  const characters = useGameStore(s => s.characters)
   const selectedEntityId = useGameStore(s => s.selectedEntityId)
   const playerId = useSessionStore(s => s.playerId)
   const players = useSessionStore(s => s.players)
@@ -139,8 +140,9 @@ export default function MapCanvas({ onTileClick, onEntityClick }: MapCanvasProps
       ctx.font = `bold ${Math.max(9, 11 * interaction.zoom) / interaction.zoom}px sans-serif`
       ctx.textAlign = 'center'
       ctx.textBaseline = 'middle'
-      const initial = entity.name.charAt(0).toUpperCase()
-      ctx.fillText(initial, px, py)
+      const isDeadEnemyInCombat = !!combat?.is_active && entity.type === 'enemy' && (characters[entity.id]?.hp ?? 1) <= 0
+      const tokenGlyph = isDeadEnemyInCombat ? 'X' : entity.name.charAt(0).toUpperCase()
+      ctx.fillText(tokenGlyph, px, py)
 
       ctx.fillStyle = 'rgba(255,255,255,0.85)'
       ctx.font = `${Math.max(8, 10 * interaction.zoom) / interaction.zoom}px sans-serif`
@@ -150,7 +152,7 @@ export default function MapCanvas({ onTileClick, onEntityClick }: MapCanvasProps
     drawOverlays(ctx, map, combat, selectedEntityId, myCharacterId)
 
     ctx.restore()
-  }, [map, combat, interaction.offsetX, interaction.offsetY, interaction.zoom, selectedEntityId, myCharacterId])
+  }, [map, combat, characters, interaction.offsetX, interaction.offsetY, interaction.zoom, selectedEntityId, myCharacterId])
 
   useEffect(() => {
     let frameId: number

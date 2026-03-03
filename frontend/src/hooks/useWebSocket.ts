@@ -2,7 +2,7 @@ import { useEffect, useRef, useCallback } from 'react'
 import { useSessionStore } from '../stores/sessionStore'
 import { useGameStore } from '../stores/gameStore'
 
-const WS_BASE = import.meta.env.VITE_WS_URL || 'ws://localhost:8000'
+const WS_BASE = import.meta.env.VITE_WS_URL || 'ws://localhost:8010'
 
 export function useWebSocket() {
   const wsRef = useRef<WebSocket | null>(null)
@@ -119,6 +119,9 @@ export function useWebSocket() {
         break
 
       case 'combat_update':
+        if (msg.combat) {
+          setCombat(msg.combat as Parameters<typeof setCombat>[0])
+        }
         if (msg.data) {
           const data = msg.data as Record<string, unknown>
           if (data.message) addNarrative('system', data.message as string)
@@ -145,6 +148,10 @@ export function useWebSocket() {
           text = `${data.target} takes ${data.damage_taken} ${data.damage_type || ''} damage. HP: ${data.current_hp}`
         } else if (tool === 'heal_character') {
           text = `${data.target} heals for ${data.healed}. HP: ${data.current_hp}`
+        } else if (tool === 'cast_spell') {
+          const slotLevel = Number(data.slot_level || 0)
+          const slotText = slotLevel > 0 ? `using level ${slotLevel} slot` : 'as a cantrip'
+          text = `${data.character} casts ${data.spell} ${slotText}.`
         }
         if (text) addNarrative('dice', text)
         break
@@ -184,5 +191,20 @@ export function useWebSocket() {
     }
   }, [])
 
-  return { sendAction, sendMoveToken }
+  const sendSpellCast = useCallback((spellName: string, slotLevel: number, targetId?: string) => {
+    if (wsRef.current?.readyState === WebSocket.OPEN) {
+      setLoading(true)
+      wsRef.current.send(JSON.stringify({
+        type: 'cast_spell',
+        spell_name: spellName,
+        slot_level: slotLevel,
+        target_id: targetId,
+      }))
+      return
+    }
+    addNarrative('system', 'Not connected to server. Unable to cast spell.')
+    setLoading(false)
+  }, [addNarrative, setLoading])
+
+  return { sendAction, sendMoveToken, sendSpellCast }
 }

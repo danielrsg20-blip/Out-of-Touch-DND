@@ -52,6 +52,23 @@
   overflow: hidden;
 }
 
+.adventure-rail {
+  width: 300px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  border-right: 1px solid var(--border-color);
+  background: var(--bg-secondary);
+  padding: 0.75rem;
+  min-height: 0;
+}
+
+.adventure-rail .narrative-log {
+  flex: 1;
+  min-height: 0;
+}
+
 .map-area {
   flex: 1;
   min-width: 0;
@@ -67,14 +84,28 @@
 }
 
 .sidebar-top {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
   padding: 0.75rem;
   border-bottom: 1px solid var(--border-color);
   overflow-y: auto;
-  max-height: 40%;
+}
+
+.sidebar-top .combat-tracker {
+  flex: 0 0 auto;
+}
+
+.sidebar-top .character-sheet {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
 }
 
 .sidebar-bottom {
-  flex: 1;
+  flex: 0 0 auto;
   display: flex;
   flex-direction: column;
   padding: 0.75rem;
@@ -84,6 +115,12 @@
 @media (max-width: 900px) {
   .game-content {
     flex-direction: column;
+  }
+  .adventure-rail {
+    width: 100%;
+    border-right: none;
+    border-bottom: 1px solid var(--border-color);
+    min-height: 220px;
   }
   .map-area {
     height: 50%;

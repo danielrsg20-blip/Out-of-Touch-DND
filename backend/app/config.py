@@ -10,6 +10,7 @@ load_dotenv(Path(__file__).resolve().parents[2] / ".env")
 ANTHROPIC_API_KEY: str = os.getenv("ANTHROPIC_API_KEY", "")
 OPENAI_API_KEY: str = os.getenv("OPENAI_API_KEY", "")
 LOCAL_MOCK_MODE: bool = os.getenv("LOCAL_MOCK_MODE", "false").strip().lower() in {"1", "true", "yes", "on"}
+SRD_RULES_VERSION: str = os.getenv("SRD_RULES_VERSION", "2024").strip() or "2024"
 
 CLAUDE_MODEL: str = os.getenv("CLAUDE_MODEL", "claude-sonnet-4-20250514")
 

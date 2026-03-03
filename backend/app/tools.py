@@ -19,7 +19,11 @@ from .rules.items import (
     find_item_in_inventory,
     lookup_catalog_item,
 )
-from .rules.spells import use_spell_slot, restore_all_slots
+from .rules.spells import (
+    evaluate_cast_permission,
+    restore_all_slots,
+    use_spell_slot,
+)
 from .memory import CampaignMemory, NPCMemory, QuestMemory, LocationMemory
 
 TOOL_DEFINITIONS: list[dict[str, Any]] = [
@@ -462,13 +466,40 @@ class ToolDispatcher:
         if not caster:
             return {"error": f"Caster {inp['caster_id']} not found"}
 
+        spell_name = inp["spell_name"]
         slot_level = inp.get("slot_level", 0)
+        enforce_noncombat_restrictions = bool(inp.get("enforce_restrictions", False))
+        in_combat = bool(self.combat and self.combat.is_active)
+
+        if in_combat and self.combat and self.combat.current_turn != caster.id:
+            return {"error": f"It is not {caster.name}'s turn", "reason": "not_your_turn"}
+
+        permission = evaluate_cast_permission(
+            caster,
+            spell_name,
+            slot_level,
+            in_combat=in_combat,
+            enforce_noncombat_restrictions=enforce_noncombat_restrictions,
+            rules_version=caster.rules_version,
+        )
+        if not permission.get("allowed", False):
+            return {"error": str(permission.get("error", "Spell cannot be cast")), "reason": permission.get("reason")}
+
+        required_level = int(permission.get("spell_level", 0))
+
         if slot_level == 0:
-            return {"character": caster.name, "spell": inp["spell_name"], "slot_level": 0, "message": f"{caster.name} casts {inp['spell_name']} (cantrip)."}
+            return {
+                "character": caster.name,
+                "spell": spell_name,
+                "slot_level": 0,
+                "spell_level": required_level,
+                "message": f"{caster.name} casts {spell_name} (cantrip).",
+            }
 
         result = use_spell_slot(caster, slot_level)
         if "error" not in result:
-            result["spell"] = inp["spell_name"]
+            result["spell"] = spell_name
+            result["spell_level"] = required_level
         return result
 
     def _tool_long_rest(self, inp: dict) -> dict:

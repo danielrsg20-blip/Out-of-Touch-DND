@@ -156,3 +156,38 @@
   opacity: 0.4;
   cursor: default;
 }
+
+.spell-picker-group {
+  margin-top: 0.2rem;
+}
+
+.spell-picker-list {
+  max-height: 180px;
+  overflow-y: auto;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.spell-option {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.35rem 0.5rem;
+  font-size: 0.85rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.spell-option:last-child {
+  border-bottom: none;
+}
+
+.spell-option.disabled {
+  opacity: 0.45;
+}
+
+.spell-option-level {
+  margin-left: auto;
+  color: var(--text-secondary);
+  font-size: 0.75rem;
+}

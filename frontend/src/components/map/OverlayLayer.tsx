@@ -1,14 +1,6 @@
-import { useGameStore } from '../../stores/gameStore'
-import { useSessionStore } from '../../stores/sessionStore'
 import type { MapData, CombatData } from '../../types'
 
 const TILE_SIZE = 40
-
-interface OverlayProps {
-  ctx: CanvasRenderingContext2D
-  map: MapData
-  combat: CombatData | null
-}
 
 export function drawOverlays(ctx: CanvasRenderingContext2D, map: MapData, combat: CombatData | null, selectedEntityId: string | null, myCharacterId: string | null) {
   if (!combat?.is_active || !selectedEntityId || !myCharacterId) return
@@ -24,7 +16,6 @@ export function drawOverlays(ctx: CanvasRenderingContext2D, map: MapData, combat
   const speed = 30
   const moveTiles = Math.floor(speed / 5)
 
-  const tileSet = new Set(map.tiles.map(t => `${t.x},${t.y}`))
   const wallSet = new Set(
     map.tiles.filter(t => t.type === 'wall' || (t.type === 'door' && t.state === 'closed') || t.type === 'pillar' || t.type === 'pit' || t.type === 'rubble')
       .map(t => `${t.x},${t.y}`)

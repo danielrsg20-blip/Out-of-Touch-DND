@@ -31,9 +31,35 @@ For local development without external API keys, enable mock mode:
 
 ```
 LOCAL_MOCK_MODE=true
+SRD_RULES_VERSION=2024
 ```
 
 When mock mode is enabled, the backend forces deterministic local DM + voice behavior and does not call Anthropic/OpenAI APIs.
+
+### SRD Content (2024)
+
+The backend loads versioned SRD spell/class data from `backend/app/rules/data`.
+
+To refresh 2024 SRD datasets from open API sources:
+
+```bash
+cd backend
+python scripts/import_srd_2024.py
+```
+
+If 2024 upstream endpoints are unavailable, you can import currently available open SRD content with explicit fallback:
+
+```bash
+cd backend
+python scripts/import_srd_2024.py --allow-2014-fallback
+```
+
+Imported records include `source_rules_version` metadata so you can distinguish true 2024 source data from fallback content.
+
+This updates:
+- `backend/app/rules/data/spells.2024.json`
+- `backend/app/rules/data/class_spell_lists.2024.json`
+- `backend/app/rules/data/class_features.2024.json`
 
 Start the server:
 

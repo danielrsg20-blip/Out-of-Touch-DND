@@ -1,8 +1,9 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useSessionStore } from '../stores/sessionStore'
+import type { SpellOption } from '../types'
 import './CharacterCreator.css'
 
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000'
+const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8010'
 
 const RACES = ['Human', 'Elf', 'Dwarf', 'Halfling', 'Dragonborn', 'Gnome', 'Half-Elf', 'Half-Orc', 'Tiefling']
 const CLASSES = ['Barbarian', 'Bard', 'Cleric', 'Druid', 'Fighter', 'Monk', 'Paladin', 'Ranger', 'Rogue', 'Sorcerer', 'Warlock', 'Wizard']
@@ -20,9 +21,71 @@ export default function CharacterCreator() {
     return obj
   })
   const [creating, setCreating] = useState(false)
+  const [spellcastingMode, setSpellcastingMode] = useState<'none' | 'known' | 'prepared'>('none')
+  const [knownLimit, setKnownLimit] = useState(0)
+  const [preparedLimit, setPreparedLimit] = useState(0)
+  const [availableSpells, setAvailableSpells] = useState<SpellOption[]>([])
+  const [selectedKnownSpells, setSelectedKnownSpells] = useState<string[]>([])
+  const [selectedPreparedSpells, setSelectedPreparedSpells] = useState<string[]>([])
 
   const handleAbilityChange = (ability: string, value: number) => {
     setAbilities(prev => ({ ...prev, [ability]: Math.max(3, Math.min(20, value)) }))
+  }
+
+  const loadSpellOptions = async (nextClass: string) => {
+    try {
+      const res = await fetch(`${API_BASE}/api/spells/options/${encodeURIComponent(nextClass)}/1`)
+      const data = await res.json()
+      setSpellcastingMode(data.spellcasting_mode || 'none')
+      setKnownLimit(Number(data.known_limit || 0))
+      setPreparedLimit(Number(data.prepared_limit || 0))
+      setAvailableSpells((data.spells || []) as SpellOption[])
+
+      if ((data.spellcasting_mode || 'none') === 'known') {
+        const picks = ((data.spells || []) as SpellOption[])
+          .filter(s => s.level > 0)
+          .slice(0, Number(data.known_limit || 0))
+          .map(s => s.name)
+        setSelectedKnownSpells(picks)
+        setSelectedPreparedSpells([])
+      } else if ((data.spellcasting_mode || 'none') === 'prepared') {
+        const picks = ((data.spells || []) as SpellOption[])
+          .filter(s => s.level > 0)
+          .slice(0, Number(data.prepared_limit || 0))
+          .map(s => s.name)
+        setSelectedPreparedSpells(picks)
+        setSelectedKnownSpells([])
+      } else {
+        setSelectedKnownSpells([])
+        setSelectedPreparedSpells([])
+      }
+    } catch {
+      setSpellcastingMode('none')
+      setKnownLimit(0)
+      setPreparedLimit(0)
+      setAvailableSpells([])
+      setSelectedKnownSpells([])
+      setSelectedPreparedSpells([])
+    }
+  }
+
+  const toggleSpell = (spellName: string) => {
+    if (spellcastingMode === 'known') {
+      setSelectedKnownSpells(prev => {
+        if (prev.includes(spellName)) return prev.filter(s => s !== spellName)
+        if (prev.length >= knownLimit) return prev
+        return [...prev, spellName]
+      })
+      return
+    }
+
+    if (spellcastingMode === 'prepared') {
+      setSelectedPreparedSpells(prev => {
+        if (prev.includes(spellName)) return prev.filter(s => s !== spellName)
+        if (prev.length >= preparedLimit) return prev
+        return [...prev, spellName]
+      })
+    }
   }
 
   const handleCreate = async () => {
@@ -39,6 +102,8 @@ export default function CharacterCreator() {
           race,
           char_class: charClass,
           abilities,
+          known_spells: spellcastingMode === 'known' ? selectedKnownSpells : undefined,
+          prepared_spells: spellcastingMode === 'prepared' ? selectedPreparedSpells : undefined,
         }),
       })
       useSessionStore.getState().setPhase('playing')
@@ -46,6 +111,10 @@ export default function CharacterCreator() {
       setCreating(false)
     }
   }
+
+  useEffect(() => {
+    loadSpellOptions(charClass)
+  }, [])
 
   return (
     <div className="creator-wrapper">
@@ -78,11 +147,53 @@ export default function CharacterCreator() {
             </div>
             <div className="form-group">
               <label>Class</label>
-              <select value={charClass} onChange={e => setCharClass(e.target.value)} className="creator-select">
+              <select
+                value={charClass}
+                onChange={e => {
+                  const nextClass = e.target.value
+                  setCharClass(nextClass)
+                  loadSpellOptions(nextClass)
+                }}
+                className="creator-select"
+              >
                 {CLASSES.map(c => <option key={c} value={c}>{c}</option>)}
               </select>
             </div>
           </div>
+
+          {spellcastingMode !== 'none' && (
+            <div className="form-group spell-picker-group">
+              <label>
+                Level 1 Spell Selection
+                {spellcastingMode === 'known'
+                  ? ` (choose up to ${knownLimit} known spells)`
+                  : ` (choose up to ${preparedLimit} prepared spells)`}
+              </label>
+              <div className="spell-picker-list">
+                {availableSpells.filter(s => s.level > 0).map(spell => {
+                  const selected = spellcastingMode === 'known'
+                    ? selectedKnownSpells.includes(spell.name)
+                    : selectedPreparedSpells.includes(spell.name)
+                  const disabled = spellcastingMode === 'known'
+                    ? !selected && selectedKnownSpells.length >= knownLimit
+                    : !selected && selectedPreparedSpells.length >= preparedLimit
+
+                  return (
+                    <label key={spell.name} className={`spell-option ${disabled ? 'disabled' : ''}`}>
+                      <input
+                        type="checkbox"
+                        checked={selected}
+                        disabled={disabled}
+                        onChange={() => toggleSpell(spell.name)}
+                      />
+                      <span>{spell.name}</span>
+                      <span className="spell-option-level">L{spell.level}</span>
+                    </label>
+                  )
+                })}
+              </div>
+            </div>
+          )}
 
           <div className="form-group">
             <label>Ability Scores (Standard Array: 15, 14, 13, 12, 10, 8)</label>

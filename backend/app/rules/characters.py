@@ -5,6 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any
 
+from ..config import SRD_RULES_VERSION
 from .dice import modifier_for
 
 ABILITY_NAMES = ("STR", "DEX", "CON", "INT", "WIS", "CHA")
@@ -72,10 +73,14 @@ class Character:
     inventory: list[dict[str, Any]] = field(default_factory=list)
     spell_slots: dict[int, int] = field(default_factory=dict)
     spell_slots_used: dict[int, int] = field(default_factory=dict)
+    known_spells: list[str] = field(default_factory=list)
+    prepared_spells: list[str] = field(default_factory=list)
+    class_features: list[dict[str, Any]] = field(default_factory=list)
     conditions: list[str] = field(default_factory=list)
     death_saves: dict[str, int] = field(default_factory=lambda: {"successes": 0, "failures": 0})
     xp: int = 0
     traits: list[str] = field(default_factory=list)
+    rules_version: str = SRD_RULES_VERSION
     player_id: str | None = None
 
     @property
@@ -117,6 +122,8 @@ class Character:
         return {"healed": self.hp - old_hp, "current_hp": self.hp}
 
     def to_dict(self) -> dict:
+        from .spells import get_spellcasting_mode
+
         return {
             "id": self.id,
             "name": self.name,
@@ -136,9 +143,14 @@ class Character:
             "inventory": self.inventory,
             "spell_slots": self.spell_slots,
             "spell_slots_used": self.spell_slots_used,
+            "known_spells": self.known_spells,
+            "prepared_spells": self.prepared_spells,
+            "class_features": self.class_features,
             "traits": self.traits,
             "xp": self.xp,
             "is_alive": self.is_alive(),
+            "rules_version": self.rules_version,
+            "spellcasting_mode": get_spellcasting_mode(self.char_class),
         }
 
 
@@ -150,6 +162,8 @@ def create_character(
     abilities: dict[str, int],
     level: int = 1,
     player_id: str | None = None,
+    known_spells: list[str] | None = None,
+    prepared_spells: list[str] | None = None,
 ) -> Character:
     race_data = RACES.get(race, {})
     class_data = CLASSES.get(char_class, {})
@@ -185,10 +199,39 @@ def create_character(
         player_id=player_id,
     )
 
-    from .spells import initialize_spell_slots
     from .items import get_starting_inventory, calculate_ac_from_inventory
+    from .spells import (
+        get_class_features_for_level,
+        get_spellcasting_mode,
+        get_selectable_spells_for_character,
+        initialize_spell_slots,
+        validate_spell_selections,
+    )
     initialize_spell_slots(char)
 
+    all_selectable_spells = [s["name"] for s in get_selectable_spells_for_character(char, char.rules_version)]
+    mode = get_spellcasting_mode(char.char_class)
+
+    validation = validate_spell_selections(
+        char,
+        known_spells=known_spells,
+        prepared_spells=prepared_spells,
+        rules_version=char.rules_version,
+    )
+    if not validation.get("valid", False):
+        raise ValueError(str(validation.get("error", "Invalid spell selection")))
+
+    if mode == "known":
+        char.known_spells = list(validation.get("known_spells", []))
+        char.prepared_spells = []
+    elif mode == "prepared":
+        char.known_spells = list(all_selectable_spells)
+        char.prepared_spells = list(validation.get("prepared_spells", []))
+    else:
+        char.known_spells = []
+        char.prepared_spells = []
+
+    char.class_features = get_class_features_for_level(char.char_class, char.level)
     char.inventory = get_starting_inventory(char_class)
     char.ac = calculate_ac_from_inventory(char.inventory, dex_mod)
 
