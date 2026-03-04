@@ -105,6 +105,18 @@ const PC_SPRITE_CATALOG: Array<{ id: string; races: string[]; classes: string[];
   { id: 'pc_monk', label: 'Monk', races: ['human', 'elf', 'gnome', 'half-orc'], classes: ['monk', 'rogue'] },
   { id: 'pc_druid', label: 'Druid', races: ['elf', 'gnome', 'halfling', 'half-elf'], classes: ['druid', 'ranger', 'cleric'] },
   { id: 'pc_rogue', label: 'Rogue', races: ['halfling', 'human', 'tiefling', 'half-elf'], classes: ['rogue', 'ranger', 'bard'] },
+  { id: 'pc_human_barbarian', label: 'Human Barbarian', races: ['human'], classes: ['barbarian'] },
+  { id: 'pc_human_bard', label: 'Human Bard', races: ['human'], classes: ['bard'] },
+  { id: 'pc_human_cleric', label: 'Human Cleric', races: ['human'], classes: ['cleric'] },
+  { id: 'pc_human_druid', label: 'Human Druid', races: ['human'], classes: ['druid'] },
+  { id: 'pc_human_fighter', label: 'Human Fighter', races: ['human'], classes: ['fighter'] },
+  { id: 'pc_human_monk', label: 'Human Monk', races: ['human'], classes: ['monk'] },
+  { id: 'pc_human_paladin', label: 'Human Paladin', races: ['human'], classes: ['paladin'] },
+  { id: 'pc_human_ranger', label: 'Human Ranger', races: ['human'], classes: ['ranger'] },
+  { id: 'pc_human_rogue', label: 'Human Rogue', races: ['human'], classes: ['rogue'] },
+  { id: 'pc_human_sorcerer', label: 'Human Sorcerer', races: ['human'], classes: ['sorcerer'] },
+  { id: 'pc_human_warlock', label: 'Human Warlock', races: ['human'], classes: ['warlock'] },
+  { id: 'pc_human_wizard', label: 'Human Wizard', races: ['human'], classes: ['wizard'] },
 ]
 
 const ENEMY_SPRITES_BY_THEME: Record<string, Array<{ id: string; name: string; hp: number }>> = {

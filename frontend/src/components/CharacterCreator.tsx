@@ -3,6 +3,7 @@ import { useSessionStore } from '../stores/sessionStore'
 import { useGameStore } from '../stores/gameStore'
 import { invokeEdgeFunction } from '../lib/supabaseClient'
 import { API_BASE } from '../config/endpoints'
+import { getCharacterSpriteId } from '../config/characterSprites'
 import type { CharacterData, SpellOption } from '../types'
 import './CharacterCreator.css'
 
@@ -30,6 +31,18 @@ const CHARACTER_SPRITES: CharacterSpriteOption[] = [
 ]
 
 function getSpriteOptionsFor(race: string, charClass: string): CharacterSpriteOption[] {
+  const mappedSpriteId = getCharacterSpriteId(charClass, race)
+  if (mappedSpriteId) {
+    return [
+      {
+        id: mappedSpriteId,
+        label: `Human ${charClass}`,
+        races: ['Human'],
+        classes: [charClass],
+      },
+    ]
+  }
+
   const raceNorm = race.trim().toLowerCase()
   const classNorm = charClass.trim().toLowerCase()
   const filtered = CHARACTER_SPRITES.filter((option) =>
@@ -156,6 +169,7 @@ export default function CharacterCreator() {
     if (!name.trim() || !roomCode || !playerId) return
     setCreating(true)
     setError('')
+    const resolvedSpriteId = getCharacterSpriteId(charClass, race) ?? spriteId
     try {
       let payload: Record<string, unknown> = {}
       try {
@@ -166,7 +180,7 @@ export default function CharacterCreator() {
           name: name.trim(),
           race,
           char_class: charClass,
-          sprite_id: spriteId,
+          sprite_id: resolvedSpriteId,
           abilities,
           known_spells: spellcastingMode === 'known' ? selectedKnownSpells : undefined,
           prepared_spells: spellcastingMode === 'prepared' ? selectedPreparedSpells : undefined,
