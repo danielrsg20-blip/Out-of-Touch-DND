@@ -37,13 +37,18 @@ export async function invokeEdgeFunction<T = Record<string, unknown>>(
   const { data: sessionData } = await supabase.auth.getSession()
   const accessToken = sessionData.session?.access_token
 
+  const headers: HeadersInit = {
+    'Content-Type': 'application/json',
+    'apikey': anonKey,
+  }
+
+  if (accessToken) {
+    headers.Authorization = `Bearer ${accessToken}`
+  }
+
   const response = await fetch(`${url}/functions/v1/${functionName}`, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'apikey': anonKey,
-      'Authorization': `Bearer ${accessToken ?? anonKey}`,
-    },
+    headers,
     body: JSON.stringify(body),
   })
 
