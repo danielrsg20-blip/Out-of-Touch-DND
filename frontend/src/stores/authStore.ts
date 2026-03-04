@@ -1,8 +1,10 @@
 import { create } from 'zustand'
 import type { User } from '@supabase/supabase-js'
 import { getSupabaseClient } from '../lib/supabaseClient'
+import { API_BASE } from '../config/endpoints'
 
 const USERNAME_ALIAS_DOMAIN = 'example.com'
+const LOCAL_TOKEN_KEY = 'auth_token'
 
 interface AuthState {
   token: string | null
@@ -46,6 +48,41 @@ function usernameFromUser(user: User): string {
   return user.email ?? user.id
 }
 
+// --- Local FastAPI auth fallback ---
+
+async function localRegister(username: string, password: string) {
+  const res = await fetch(`${API_BASE}/api/auth/register`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ username, password }),
+  })
+  const data = await res.json() as { token?: string; user_id?: string; username?: string; detail?: string }
+  if (!res.ok) throw new Error(typeof data.detail === 'string' ? data.detail : 'Registration failed.')
+  return data as { token: string; user_id: string; username: string }
+}
+
+async function localLogin(username: string, password: string) {
+  const res = await fetch(`${API_BASE}/api/auth/login`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ username, password }),
+  })
+  const data = await res.json() as { token?: string; user_id?: string; username?: string; detail?: string }
+  if (!res.ok) throw new Error(typeof data.detail === 'string' ? data.detail : 'Login failed.')
+  return data as { token: string; user_id: string; username: string }
+}
+
+async function localHydrate(token: string) {
+  const res = await fetch(`${API_BASE}/api/auth/me`, {
+    headers: { Authorization: `Bearer ${token}` },
+  })
+  if (!res.ok) throw new Error('Session expired.')
+  const data = await res.json() as { user_id: string; username: string }
+  return data
+}
+
+// ---
+
 export const useAuthStore = create<AuthState>((set) => ({
   token: null,
   userId: null,
@@ -56,31 +93,22 @@ export const useAuthStore = create<AuthState>((set) => ({
   register: async (username, password) => {
     const supabase = getSupabaseClient()
     if (!supabase) {
-      throw new Error('Supabase auth is not configured. Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY.')
+      const data = await localRegister(username, password)
+      localStorage.setItem(LOCAL_TOKEN_KEY, data.token)
+      set({ token: data.token, userId: data.user_id, username: data.username, isAuthenticated: true })
+      return
     }
 
     const aliasEmail = usernameToAliasEmail(username)
     const { data, error } = await supabase.auth.signUp({
       email: aliasEmail,
       password,
-      options: {
-        data: {
-          username: username.trim(),
-        },
-      },
+      options: { data: { username: username.trim() } },
     })
 
-    if (error) {
-      throw new Error(error.message)
-    }
-
-    if (!data.user) {
-      throw new Error('Registration failed. Please try again.')
-    }
-
-    if (!data.session) {
-      throw new Error('Registration created. Please sign in to continue.')
-    }
+    if (error) throw new Error(error.message)
+    if (!data.user) throw new Error('Registration failed. Please try again.')
+    if (!data.session) throw new Error('Registration created. Please sign in to continue.')
 
     set({
       token: data.session.access_token,
@@ -93,22 +121,17 @@ export const useAuthStore = create<AuthState>((set) => ({
   login: async (username, password) => {
     const supabase = getSupabaseClient()
     if (!supabase) {
-      throw new Error('Supabase auth is not configured. Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY.')
+      const data = await localLogin(username, password)
+      localStorage.setItem(LOCAL_TOKEN_KEY, data.token)
+      set({ token: data.token, userId: data.user_id, username: data.username, isAuthenticated: true })
+      return
     }
 
     const aliasEmail = usernameToAliasEmail(username)
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email: aliasEmail,
-      password,
-    })
+    const { data, error } = await supabase.auth.signInWithPassword({ email: aliasEmail, password })
 
-    if (error) {
-      throw new Error(error.message)
-    }
-
-    if (!data.session || !data.user) {
-      throw new Error('Login failed. Please check your credentials.')
-    }
+    if (error) throw new Error(error.message)
+    if (!data.session || !data.user) throw new Error('Login failed. Please check your credentials.')
 
     set({
       token: data.session.access_token,
@@ -122,6 +145,8 @@ export const useAuthStore = create<AuthState>((set) => ({
     const supabase = getSupabaseClient()
     if (supabase) {
       supabase.auth.signOut()
+    } else {
+      localStorage.removeItem(LOCAL_TOKEN_KEY)
     }
     set({ token: null, userId: null, username: null, isAuthenticated: false })
   },
@@ -129,15 +154,24 @@ export const useAuthStore = create<AuthState>((set) => ({
   hydrateFromStorage: async () => {
     const supabase = getSupabaseClient()
     if (!supabase) {
-      set({ isLoading: false })
+      const token = localStorage.getItem(LOCAL_TOKEN_KEY)
+      if (!token) {
+        set({ isLoading: false })
+        return
+      }
+      try {
+        const data = await localHydrate(token)
+        set({ token, userId: data.user_id, username: data.username, isAuthenticated: true, isLoading: false })
+      } catch {
+        localStorage.removeItem(LOCAL_TOKEN_KEY)
+        set({ token: null, userId: null, username: null, isAuthenticated: false, isLoading: false })
+      }
       return
     }
 
     try {
       const { data, error } = await supabase.auth.getSession()
-      if (error || !data.session?.user) {
-        throw new Error('No active session')
-      }
+      if (error || !data.session?.user) throw new Error('No active session')
 
       set({
         token: data.session.access_token,
