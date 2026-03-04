@@ -1,8 +1,19 @@
+import { useEffect, useState } from 'react'
 import { useGameStore } from '../../stores/gameStore'
 import './panels.css'
 
 export default function CombatTracker() {
   const combat = useGameStore(s => s.combat)
+  const [roundPulse, setRoundPulse] = useState(false)
+
+  useEffect(() => {
+    if (!combat?.is_active) {
+      return
+    }
+    setRoundPulse(true)
+    const timeout = window.setTimeout(() => setRoundPulse(false), 900)
+    return () => window.clearTimeout(timeout)
+  }, [combat?.is_active, combat?.round])
 
   if (!combat || !combat.is_active) return null
 
@@ -12,8 +23,11 @@ export default function CombatTracker() {
 
   return (
     <div className="combat-tracker">
-      <h3 className="panel-title">
-        Combat - Round {combat.round}
+      <h3 className="panel-title combat-title-row">
+        <span>Combat</span>
+        <span className={`combat-round-badge ${roundPulse ? 'round-transition' : ''}`}>
+          Round {combat.round}
+        </span>
       </h3>
       <div className="movement-status">
         Movement: {currentUsed}/{currentTotal} ft

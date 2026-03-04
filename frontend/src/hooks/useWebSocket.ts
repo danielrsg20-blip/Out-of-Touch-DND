@@ -155,17 +155,41 @@ export function useWebSocket() {
         break
 
       case 'combat_update':
+        {
+        const action = typeof msg.action === 'string' ? msg.action : ''
+        const previousCombat = useGameStore.getState().combat
+        const nextCombat = msg.combat as Parameters<typeof setCombat>[0] | undefined
+
         if (msg.combat) {
-          setCombat(msg.combat as Parameters<typeof setCombat>[0])
+          setCombat(nextCombat ?? null)
         }
-        if (msg.data) {
-          const data = msg.data as Record<string, unknown>
-          if (data.message) addNarrative('system', data.message as string)
-          if (msg.action === 'end_combat') {
-            setCombat(null)
+
+        const data = (msg.data as Record<string, unknown> | undefined) ?? {}
+        const message = typeof data.message === 'string' ? data.message : ''
+
+        if (action === 'next_turn') {
+          const prevRound = Number(previousCombat?.round ?? 0)
+          const nextRound = Number(nextCombat?.round ?? prevRound)
+          if (nextRound > prevRound) {
+            addNarrative('system', `Round ${nextRound} begins.`)
           }
+
+          if (message) {
+            addNarrative('system', message)
+          } else {
+            const turnName = nextCombat?.initiative_order?.[nextCombat.turn_index]?.name
+            if (turnName) {
+              addNarrative('system', `${turnName}'s turn.`)
+            }
+          }
+        } else if (action === 'end_combat') {
+          setCombat(null)
+          addNarrative('system', message || 'Combat ends.')
+        } else if (message) {
+          addNarrative('system', message)
         }
         break
+        }
 
       case 'dice_result': {
         const data = msg.data as Record<string, unknown>

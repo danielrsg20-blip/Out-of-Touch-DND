@@ -96,6 +96,627 @@ const CLASS_SPELL_CATALOG: Record<string, Array<{ name: string; level: number; s
   ],
 }
 
+const PC_SPRITE_CATALOG: Array<{ id: string; races: string[]; classes: string[]; label: string }> = [
+  { id: 'pc_knight', label: 'Knight', races: ['human', 'dragonborn', 'half-orc'], classes: ['fighter', 'paladin', 'barbarian'] },
+  { id: 'pc_ranger', label: 'Ranger', races: ['elf', 'half-elf', 'human', 'halfling'], classes: ['ranger', 'druid', 'rogue'] },
+  { id: 'pc_mage', label: 'Mage', races: ['human', 'elf', 'gnome', 'tiefling'], classes: ['wizard', 'sorcerer', 'warlock'] },
+  { id: 'pc_cleric', label: 'Cleric', races: ['human', 'dwarf', 'half-elf'], classes: ['cleric', 'paladin'] },
+  { id: 'pc_bard', label: 'Bard', races: ['human', 'elf', 'half-elf', 'tiefling'], classes: ['bard', 'rogue'] },
+  { id: 'pc_monk', label: 'Monk', races: ['human', 'elf', 'gnome', 'half-orc'], classes: ['monk', 'rogue'] },
+  { id: 'pc_druid', label: 'Druid', races: ['elf', 'gnome', 'halfling', 'half-elf'], classes: ['druid', 'ranger', 'cleric'] },
+  { id: 'pc_rogue', label: 'Rogue', races: ['halfling', 'human', 'tiefling', 'half-elf'], classes: ['rogue', 'ranger', 'bard'] },
+]
+
+const ENEMY_SPRITES_BY_THEME: Record<string, Array<{ id: string; name: string; hp: number }>> = {
+  dungeon: [
+    { id: 'enemy_skeleton', name: 'Skeleton', hp: 13 },
+    { id: 'enemy_goblin', name: 'Goblin', hp: 7 },
+    { id: 'enemy_orc', name: 'Orc Raider', hp: 15 },
+    { id: 'enemy_bat', name: 'Cave Bat', hp: 5 },
+  ],
+  forest: [
+    { id: 'enemy_wolf', name: 'Wolf', hp: 11 },
+    { id: 'enemy_bandit', name: 'Bandit', hp: 11 },
+    { id: 'enemy_spider', name: 'Giant Spider', hp: 14 },
+    { id: 'enemy_boar', name: 'Boar', hp: 13 },
+  ],
+  crypt: [
+    { id: 'enemy_ghoul', name: 'Ghoul', hp: 22 },
+    { id: 'enemy_skeleton', name: 'Skeleton', hp: 13 },
+    { id: 'enemy_wraith', name: 'Restless Spirit', hp: 21 },
+    { id: 'enemy_zombie', name: 'Zombie', hp: 22 },
+  ],
+  cave: [
+    { id: 'enemy_kobold', name: 'Kobold', hp: 5 },
+    { id: 'enemy_bat', name: 'Cave Bat', hp: 5 },
+    { id: 'enemy_spider', name: 'Giant Spider', hp: 14 },
+    { id: 'enemy_orc', name: 'Orc Scout', hp: 15 },
+  ],
+}
+
+const PROP_SPRITES_BY_THEME: Record<string, Array<{ id: string; name: string }>> = {
+  dungeon: [
+    { id: 'prop_torch', name: 'Torch' },
+    { id: 'prop_crate', name: 'Crate' },
+    { id: 'prop_barrel', name: 'Barrel' },
+    { id: 'prop_rubble', name: 'Rubble' },
+  ],
+  forest: [
+    { id: 'prop_tree', name: 'Tree' },
+    { id: 'prop_bush', name: 'Bush' },
+    { id: 'prop_log', name: 'Fallen Log' },
+    { id: 'prop_stone', name: 'Stone' },
+  ],
+  crypt: [
+    { id: 'prop_urn', name: 'Urn' },
+    { id: 'prop_brazier', name: 'Brazier' },
+    { id: 'prop_tomb', name: 'Tomb Marker' },
+    { id: 'prop_bones', name: 'Bone Pile' },
+  ],
+  cave: [
+    { id: 'prop_stalagmite', name: 'Stalagmite' },
+    { id: 'prop_crystal', name: 'Crystal' },
+    { id: 'prop_stone', name: 'Stone' },
+    { id: 'prop_mushroom', name: 'Mushroom Patch' },
+  ],
+}
+
+function randomInt(min: number, max: number): number {
+  const floorMin = Math.ceil(min)
+  const floorMax = Math.floor(max)
+  return Math.floor(Math.random() * (floorMax - floorMin + 1)) + floorMin
+}
+
+function parseBool(value: unknown): boolean | null {
+  if (typeof value === 'boolean') {
+    return value
+  }
+  if (typeof value !== 'string') {
+    return null
+  }
+  const normalized = value.trim().toLowerCase()
+  if (['1', 'true', 'yes', 'on'].includes(normalized)) {
+    return true
+  }
+  if (['0', 'false', 'no', 'off'].includes(normalized)) {
+    return false
+  }
+  return null
+}
+
+function isMockModeEnabled(body: Record<string, unknown>): boolean {
+  const bodyValue = parseBool(body.mock_mode)
+  if (bodyValue !== null) {
+    return bodyValue
+  }
+
+  const localMock = parseBool(Deno.env.get('LOCAL_MOCK_MODE'))
+  if (localMock !== null) {
+    return localMock
+  }
+
+  const edgeMock = parseBool(Deno.env.get('OTDND_MOCK_MODE'))
+  return edgeMock === true
+}
+
+function pickCharacterSpriteId(race: string, charClass: string, requestedSpriteId: string): string {
+  if (requestedSpriteId && PC_SPRITE_CATALOG.some((entry) => entry.id === requestedSpriteId)) {
+    return requestedSpriteId
+  }
+
+  const raceKey = race.trim().toLowerCase()
+  const classKey = charClass.trim().toLowerCase()
+  const match = PC_SPRITE_CATALOG.find((entry) => entry.races.includes(raceKey) || entry.classes.includes(classKey))
+  return match?.id ?? 'pc_knight'
+}
+
+function isEnemyEntityId(entityId: string): boolean {
+  return entityId.startsWith('enemy_')
+}
+
+type InitiativeEntry = {
+  id: string
+  name: string
+  initiative: number
+  hp: number
+  max_hp: number
+  movement_remaining?: number
+}
+
+type CombatState = {
+  is_active: boolean
+  round: number
+  turn_index: number
+  current_turn: string | null
+  current_movement_total?: number
+  current_movement_remaining?: number
+  initiative_order: InitiativeEntry[]
+}
+
+function normalizeCombat(raw: unknown): CombatState | null {
+  if (!raw || typeof raw !== 'object') {
+    return null
+  }
+
+  const combat = raw as Record<string, unknown>
+  if (!Array.isArray(combat.initiative_order)) {
+    return null
+  }
+
+  const initiativeOrder: InitiativeEntry[] = combat.initiative_order
+    .map((entry): InitiativeEntry | null => {
+      if (!entry || typeof entry !== 'object') {
+        return null
+      }
+      const row = entry as Record<string, unknown>
+      const id = typeof row.id === 'string' ? row.id : ''
+      const name = typeof row.name === 'string' ? row.name : id
+      if (!id) {
+        return null
+      }
+      return {
+        id,
+        name,
+        initiative: Number(row.initiative ?? 0),
+        hp: Number(row.hp ?? 0),
+        max_hp: Number(row.max_hp ?? 0),
+        movement_remaining: Number(row.movement_remaining ?? 30),
+      }
+    })
+    .filter((entry): entry is InitiativeEntry => entry !== null)
+
+  if (!initiativeOrder.length) {
+    return null
+  }
+
+  const turnIndexRaw = Number(combat.turn_index ?? 0)
+  const turnIndex = Number.isFinite(turnIndexRaw)
+    ? ((turnIndexRaw % initiativeOrder.length) + initiativeOrder.length) % initiativeOrder.length
+    : 0
+  const current = initiativeOrder[turnIndex]
+
+  return {
+    is_active: Boolean(combat.is_active),
+    round: Math.max(1, Number(combat.round ?? 1) || 1),
+    turn_index: turnIndex,
+    current_turn: typeof combat.current_turn === 'string' ? combat.current_turn : current.id,
+    current_movement_total: Number(combat.current_movement_total ?? current.movement_remaining ?? 30),
+    current_movement_remaining: Number(combat.current_movement_remaining ?? current.movement_remaining ?? 30),
+    initiative_order: initiativeOrder,
+  }
+}
+
+function setCurrentTurnFields(combat: CombatState): CombatState {
+  const index = ((combat.turn_index % combat.initiative_order.length) + combat.initiative_order.length) % combat.initiative_order.length
+  const current = combat.initiative_order[index]
+  const movement = Number(current?.movement_remaining ?? 30)
+  return {
+    ...combat,
+    turn_index: index,
+    current_turn: current?.id ?? null,
+    current_movement_total: movement,
+    current_movement_remaining: movement,
+  }
+}
+
+function checkCombatOutcome(combat: CombatState): { winner: 'players' | 'enemies' | null; playersAlive: number; enemiesAlive: number } {
+  let playersAlive = 0
+  let enemiesAlive = 0
+
+  for (const entry of combat.initiative_order) {
+    if (entry.hp <= 0) {
+      continue
+    }
+    if (isEnemyEntityId(entry.id)) {
+      enemiesAlive += 1
+    } else {
+      playersAlive += 1
+    }
+  }
+
+  if (playersAlive > 0 && enemiesAlive > 0) {
+    return { winner: null, playersAlive, enemiesAlive }
+  }
+  if (playersAlive > 0 && enemiesAlive === 0) {
+    return { winner: 'players', playersAlive, enemiesAlive }
+  }
+  if (playersAlive === 0 && enemiesAlive > 0) {
+    return { winner: 'enemies', playersAlive, enemiesAlive }
+  }
+  return { winner: null, playersAlive, enemiesAlive }
+}
+
+function applyEnemyAutoTurn(combat: CombatState, snapshot: SnapshotState): { combat: CombatState; snapshot: SnapshotState; message: string } {
+  const current = combat.initiative_order[combat.turn_index]
+  if (!current || !isEnemyEntityId(current.id) || current.hp <= 0) {
+    return { combat, snapshot, message: '' }
+  }
+
+  const target = combat.initiative_order.find((entry) => !isEnemyEntityId(entry.id) && entry.hp > 0)
+  if (!target) {
+    return { combat, snapshot, message: `${current.name} scans for targets.` }
+  }
+
+  const attackRoll = randomInt(1, 20)
+  const damage = randomInt(2, 7)
+  const hit = attackRoll >= 10
+
+  if (!hit) {
+    return {
+      combat,
+      snapshot,
+      message: `${current.name} attacks ${target.name} but misses.`,
+    }
+  }
+
+  const nextOrder = combat.initiative_order.map((entry) => {
+    if (entry.id !== target.id) {
+      return entry
+    }
+    const nextHp = Math.max(0, Number(entry.hp) - damage)
+    return {
+      ...entry,
+      hp: nextHp,
+    }
+  })
+
+  const nextCharacters: Record<string, Record<string, unknown>> = {
+    ...(snapshot.characters ?? {}),
+  }
+  const targetCharacter = nextCharacters[target.id]
+  if (targetCharacter) {
+    nextCharacters[target.id] = {
+      ...targetCharacter,
+      hp: Math.max(0, Number(targetCharacter.hp ?? target.hp) - damage),
+      is_alive: Math.max(0, Number(targetCharacter.hp ?? target.hp) - damage) > 0,
+    }
+  }
+
+  const dropped = nextOrder.find((entry) => entry.id === target.id)?.hp === 0
+  const message = dropped
+    ? `${current.name} hits ${target.name} for ${damage} damage. ${target.name} falls unconscious.`
+    : `${current.name} hits ${target.name} for ${damage} damage.`
+
+  return {
+    combat: {
+      ...combat,
+      initiative_order: nextOrder,
+    },
+    snapshot: {
+      ...snapshot,
+      characters: nextCharacters,
+    },
+    message,
+  }
+}
+
+function advanceCombatState(
+  snapshot: SnapshotState,
+  actorCharacterId: string | null,
+  autoResolveEnemyTurn: boolean,
+): { nextSnapshot: SnapshotState; combat: CombatState | null; messages: string[]; ended: boolean; endReason?: string } {
+  const combat = normalizeCombat(snapshot.combat)
+  if (!combat || !combat.is_active) {
+    throw new Error('Combat is not currently active.')
+  }
+
+  const current = combat.initiative_order[combat.turn_index]
+  if (!current) {
+    throw new Error('Combat turn state is invalid.')
+  }
+
+  if (!isEnemyEntityId(current.id) && current.id !== actorCharacterId) {
+    throw new Error('It is not your turn.')
+  }
+
+  const messages: string[] = []
+  let workingCombat: CombatState = { ...combat, initiative_order: combat.initiative_order.map((entry) => ({ ...entry })) }
+  let workingSnapshot: SnapshotState = { ...snapshot, characters: { ...(snapshot.characters ?? {}) } }
+
+  const stepTurn = () => {
+    const previousIndex = workingCombat.turn_index
+    const nextIndex = (previousIndex + 1) % workingCombat.initiative_order.length
+    const wrapped = nextIndex === 0
+    workingCombat = {
+      ...workingCombat,
+      turn_index: nextIndex,
+      round: wrapped ? workingCombat.round + 1 : workingCombat.round,
+    }
+    workingCombat = setCurrentTurnFields(workingCombat)
+  }
+
+  stepTurn()
+
+  if (autoResolveEnemyTurn) {
+    let guard = 0
+    while (guard < workingCombat.initiative_order.length) {
+      guard += 1
+      const outcome = checkCombatOutcome(workingCombat)
+      if (outcome.winner === 'players') {
+        return {
+          nextSnapshot: {
+            ...workingSnapshot,
+            combat: null,
+          },
+          combat: null,
+          messages,
+          ended: true,
+          endReason: 'The enemies are defeated. Combat ends.',
+        }
+      }
+      if (outcome.winner === 'enemies') {
+        return {
+          nextSnapshot: {
+            ...workingSnapshot,
+            combat: null,
+          },
+          combat: null,
+          messages,
+          ended: true,
+          endReason: 'The party has fallen. Combat ends.',
+        }
+      }
+
+      const acting = workingCombat.initiative_order[workingCombat.turn_index]
+      if (!acting || !isEnemyEntityId(acting.id) || acting.hp <= 0) {
+        break
+      }
+
+      const enemyResult = applyEnemyAutoTurn(workingCombat, workingSnapshot)
+      workingCombat = enemyResult.combat
+      workingSnapshot = enemyResult.snapshot
+      if (enemyResult.message) {
+        messages.push(enemyResult.message)
+      }
+      stepTurn()
+    }
+  }
+
+  const postOutcome = checkCombatOutcome(workingCombat)
+  if (postOutcome.winner === 'players') {
+    return {
+      nextSnapshot: {
+        ...workingSnapshot,
+        combat: null,
+      },
+      combat: null,
+      messages,
+      ended: true,
+      endReason: 'The enemies are defeated. Combat ends.',
+    }
+  }
+  if (postOutcome.winner === 'enemies') {
+    return {
+      nextSnapshot: {
+        ...workingSnapshot,
+        combat: null,
+      },
+      combat: null,
+      messages,
+      ended: true,
+      endReason: 'The party has fallen. Combat ends.',
+    }
+  }
+
+  return {
+    nextSnapshot: {
+      ...workingSnapshot,
+      combat: workingCombat,
+    },
+    combat: workingCombat,
+    messages,
+    ended: false,
+  }
+}
+
+function inferEnvironment(content: string, existingEnvironment: string): string {
+  const source = `${existingEnvironment} ${content}`.toLowerCase()
+  if (source.includes('forest') || source.includes('woods') || source.includes('grove')) {
+    return 'forest'
+  }
+  if (source.includes('crypt') || source.includes('grave') || source.includes('tomb') || source.includes('undead')) {
+    return 'crypt'
+  }
+  if (source.includes('cave') || source.includes('mine') || source.includes('tunnel')) {
+    return 'cave'
+  }
+  return 'dungeon'
+}
+
+function shouldStartCombat(content: string, snapshot: SnapshotState): boolean {
+  const active = Boolean((snapshot.combat as { is_active?: boolean } | null)?.is_active)
+  if (active) {
+    return false
+  }
+  const trigger = /(attack|strike|fight|combat|initiative|battle|ambush|draw my|swing|shoot|charge)/i
+  return trigger.test(content)
+}
+
+function getMapEntities(map: Record<string, unknown> | null): Array<Record<string, unknown>> {
+  if (!map || !Array.isArray(map.entities)) {
+    return []
+  }
+  return map.entities.filter((entity): entity is Record<string, unknown> => typeof entity === 'object' && entity !== null)
+}
+
+function ensureMapForSnapshot(snapshot: SnapshotState): Record<string, unknown> {
+  const existingMap = snapshot.map && typeof snapshot.map === 'object' ? { ...snapshot.map } : {
+    width: 20,
+    height: 14,
+    tiles: [],
+    entities: [],
+    metadata: {
+      environment: 'dungeon',
+      grid_size: 5,
+      grid_units: 'ft',
+    },
+  }
+
+  const mapWidth = Number(existingMap.width ?? 20)
+  const mapHeight = Number(existingMap.height ?? 14)
+  const existingEntities = getMapEntities(existingMap)
+  const nextEntities = [...existingEntities]
+
+  const characters = snapshot.characters ?? {}
+  const existingPcEntityIds = new Set(
+    nextEntities
+      .filter((entity) => entity.type === 'pc')
+      .map((entity) => String(entity.id ?? '')),
+  )
+
+  const characterEntries = Object.entries(characters)
+  let pcOffset = 0
+  for (const [characterKey, rawCharacter] of characterEntries) {
+    const character = (rawCharacter ?? {}) as Record<string, unknown>
+    const charId = typeof character.id === 'string' && character.id ? character.id : characterKey
+    const charName = typeof character.name === 'string' && character.name ? character.name : 'Adventurer'
+    const race = typeof character.race === 'string' ? character.race : 'Human'
+    const charClass = typeof character.class === 'string' ? character.class : 'Fighter'
+    const chosenSprite = typeof character.sprite_id === 'string' ? character.sprite_id : ''
+    const spriteId = pickCharacterSpriteId(race, charClass, chosenSprite)
+
+    if (existingPcEntityIds.has(charId)) {
+      pcOffset += 1
+      continue
+    }
+
+    const x = Math.min(Math.max(1, 2 + (pcOffset % 3)), Math.max(1, mapWidth - 2))
+    const y = Math.min(Math.max(1, 2 + Math.floor(pcOffset / 3)), Math.max(1, mapHeight - 2))
+    pcOffset += 1
+
+    nextEntities.push({
+      id: charId,
+      name: charName,
+      x,
+      y,
+      type: 'pc',
+      sprite: spriteId,
+      visible: true,
+    })
+  }
+
+  return {
+    ...existingMap,
+    width: mapWidth,
+    height: mapHeight,
+    tiles: Array.isArray(existingMap.tiles) ? existingMap.tiles : [],
+    entities: nextEntities,
+    metadata: typeof existingMap.metadata === 'object' && existingMap.metadata !== null
+      ? existingMap.metadata
+      : { environment: 'dungeon', grid_size: 5, grid_units: 'ft' },
+  }
+}
+
+function buildMockEncounter(snapshot: SnapshotState, content: string): { nextSnapshot: SnapshotState; combat: Record<string, unknown>; intro: string } {
+  const map = ensureMapForSnapshot(snapshot)
+  const metadata = (map.metadata as Record<string, unknown> | undefined) ?? {}
+  const environment = inferEnvironment(content, String(metadata.environment ?? 'dungeon'))
+  const width = Number(map.width ?? 20)
+  const height = Number(map.height ?? 14)
+
+  const enemyPool = ENEMY_SPRITES_BY_THEME[environment] ?? ENEMY_SPRITES_BY_THEME.dungeon
+  const propPool = PROP_SPRITES_BY_THEME[environment] ?? PROP_SPRITES_BY_THEME.dungeon
+  const enemyCount = randomInt(1, 5)
+  const propCount = randomInt(2, 4)
+
+  const baseEntities = getMapEntities(map).filter((entity) => entity.type === 'pc')
+  const enemyEntities: Array<Record<string, unknown>> = []
+  const propEntities: Array<Record<string, unknown>> = []
+
+  for (let i = 0; i < enemyCount; i += 1) {
+    const enemy = enemyPool[randomInt(0, enemyPool.length - 1)]
+    const enemyId = `enemy_${Date.now()}_${i}`
+    const x = Math.max(1, Math.min(width - 2, width - 3 - (i % 3)))
+    const y = Math.max(1, Math.min(height - 2, 2 + Math.floor(i / 3) * 2))
+    enemyEntities.push({
+      id: enemyId,
+      name: enemy.name,
+      x,
+      y,
+      type: 'enemy',
+      sprite: enemy.id,
+      visible: true,
+      hp: enemy.hp,
+      max_hp: enemy.hp,
+    })
+  }
+
+  for (let i = 0; i < propCount; i += 1) {
+    const prop = propPool[randomInt(0, propPool.length - 1)]
+    const propId = `prop_${Date.now()}_${i}`
+    const x = randomInt(2, Math.max(2, width - 3))
+    const y = randomInt(2, Math.max(2, height - 3))
+    propEntities.push({
+      id: propId,
+      name: prop.name,
+      x,
+      y,
+      type: 'object',
+      sprite: prop.id,
+      visible: true,
+    })
+  }
+
+  const characters = snapshot.characters ?? {}
+  const initiativeOrder: Array<Record<string, unknown>> = []
+  for (const entity of baseEntities) {
+    const entityId = String(entity.id ?? '')
+    const character = (characters[entityId] ?? {}) as Record<string, unknown>
+    const hp = Number(character.hp ?? character.max_hp ?? 10)
+    const maxHp = Number(character.max_hp ?? hp)
+    initiativeOrder.push({
+      id: entityId,
+      name: String(entity.name ?? character.name ?? 'Adventurer'),
+      initiative: randomInt(8, 20),
+      hp,
+      max_hp: maxHp,
+      movement_remaining: Number(character.speed ?? 30),
+    })
+  }
+
+  for (const enemyEntity of enemyEntities) {
+    initiativeOrder.push({
+      id: String(enemyEntity.id),
+      name: String(enemyEntity.name),
+      initiative: randomInt(6, 18),
+      hp: Number(enemyEntity.hp ?? 10),
+      max_hp: Number(enemyEntity.max_hp ?? 10),
+      movement_remaining: 30,
+    })
+  }
+
+  initiativeOrder.sort((a, b) => Number(b.initiative ?? 0) - Number(a.initiative ?? 0))
+  const firstTurn = initiativeOrder[0]
+  const movementTotal = Number(firstTurn?.movement_remaining ?? 30)
+
+  const combat = {
+    is_active: true,
+    round: 1,
+    turn_index: 0,
+    current_turn: String(firstTurn?.id ?? ''),
+    current_movement_total: movementTotal,
+    current_movement_remaining: movementTotal,
+    initiative_order: initiativeOrder,
+  }
+
+  const nextSnapshot: SnapshotState = {
+    ...snapshot,
+    map: {
+      ...map,
+      entities: [...baseEntities, ...propEntities, ...enemyEntities],
+      metadata: {
+        ...metadata,
+        environment,
+        encounter_type: 'ambush',
+      },
+    },
+    combat,
+  }
+
+  const intro = `Combat erupts in the ${environment}. ${enemyCount} foe${enemyCount === 1 ? '' : 's'} close in from the shadows.`
+  return { nextSnapshot, combat, intro }
+}
+
 function toClassKey(value: string): string {
   return value.trim().toLowerCase()
 }
@@ -232,6 +853,7 @@ function getSpellcastingProfile(charClass: string) {
 function buildCharacter(input: {
   charId: string
   playerId: string
+  spriteId?: string
   name: string
   race: string
   charClass: string
@@ -253,6 +875,7 @@ function buildCharacter(input: {
 
   return {
     id: input.charId,
+    sprite_id: input.spriteId ?? '',
     name: input.name,
     race: input.race,
     class: input.charClass,
@@ -322,6 +945,8 @@ async function actionCreateCharacter(body: Record<string, unknown>) {
 
   const knownSpells = asStringArray(body.known_spells)
   const preparedSpells = asStringArray(body.prepared_spells)
+  const requestedSpriteId = typeof body.sprite_id === 'string' ? body.sprite_id.trim() : ''
+  const spriteId = pickCharacterSpriteId(race, charClass, requestedSpriteId)
 
   const { sessionId } = await resolveSession(roomCode)
   const member = await resolveMember(sessionId, playerId)
@@ -331,6 +956,7 @@ async function actionCreateCharacter(body: Record<string, unknown>) {
   const character = buildCharacter({
     charId,
     playerId,
+    spriteId,
     name,
     race,
     charClass,
@@ -339,12 +965,17 @@ async function actionCreateCharacter(body: Record<string, unknown>) {
     preparedSpells,
   })
 
-  const nextSnapshot: SnapshotState = {
+  const nextSnapshotBase: SnapshotState = {
     ...snapshot,
     characters: {
       ...(snapshot.characters ?? {}),
       [charId]: character,
     },
+  }
+
+  const nextSnapshot: SnapshotState = {
+    ...nextSnapshotBase,
+    map: ensureMapForSnapshot(nextSnapshotBase),
   }
 
   await saveSnapshot(sessionId, version, nextSnapshot)
@@ -557,6 +1188,31 @@ async function actionPlayerAction(body: Record<string, unknown>) {
 
   const { sessionId } = await resolveSession(roomCode)
   const member = await resolveMember(sessionId, playerId)
+  const { version, snapshot } = await loadSnapshot(sessionId)
+
+  const mockModeEnabled = isMockModeEnabled(body)
+  const startCombat = mockModeEnabled && shouldStartCombat(content, snapshot)
+
+  let nextSnapshot = snapshot
+  let combatPayload: Record<string, unknown> | null = null
+  let narrative = `The DM considers your action: "${content}"`
+  let combatAdvanceMessage: string | null = null
+
+  if (startCombat) {
+    const encounter = buildMockEncounter(snapshot, content)
+    nextSnapshot = encounter.nextSnapshot
+    combatPayload = encounter.combat
+    narrative = encounter.intro
+    await saveSnapshot(sessionId, version, nextSnapshot)
+  } else if (/\bend\s*(my\s*)?turn\b/i.test(content) && snapshot.combat) {
+    const advanced = advanceCombatState(snapshot, member.characterId, true)
+    nextSnapshot = advanced.nextSnapshot
+    combatPayload = advanced.combat
+    combatAdvanceMessage = advanced.ended
+      ? (advanced.endReason ?? 'Combat ends.')
+      : (advanced.messages.join(' ') || `${advanced.combat?.initiative_order[advanced.combat?.turn_index ?? 0]?.name ?? 'Next combatant'} takes the next turn.`)
+    await saveSnapshot(sessionId, version, nextSnapshot)
+  }
 
   await publishEvent(sessionId, 'player_message', {
     player_id: playerId,
@@ -564,11 +1220,81 @@ async function actionPlayerAction(body: Record<string, unknown>) {
     content,
   }, playerId)
 
+  if (startCombat && combatPayload) {
+    await publishEvent(sessionId, 'combat_start', {
+      combat: combatPayload,
+    }, playerId)
+    await publishEvent(sessionId, 'state_sync', {
+      state: nextSnapshot,
+    }, playerId)
+  }
+
+  if (combatAdvanceMessage !== null) {
+    if (nextSnapshot.combat) {
+      await publishEvent(sessionId, 'combat_update', {
+        action: 'next_turn',
+        combat: nextSnapshot.combat as Record<string, unknown>,
+        data: { message: combatAdvanceMessage },
+      }, playerId)
+    } else {
+      await publishEvent(sessionId, 'combat_update', {
+        action: 'end_combat',
+        data: { message: combatAdvanceMessage },
+      }, playerId)
+    }
+    await publishEvent(sessionId, 'state_sync', {
+      state: nextSnapshot,
+    }, playerId)
+  }
+
   await publishEvent(sessionId, 'dm_narrative', {
-    content: `The DM considers your action: "${content}"`,
+    content: narrative,
   }, null)
 
-  return { ok: true }
+  return { ok: true, combat_started: startCombat, combat_advanced: combatAdvanceMessage !== null }
+}
+
+async function actionNextCombatTurn(body: Record<string, unknown>) {
+  const roomCode = typeof body.room_code === 'string' ? body.room_code : ''
+  const playerId = typeof body.player_id === 'string' ? body.player_id : ''
+  if (!roomCode || !playerId) {
+    throw new Error('room_code and player_id are required')
+  }
+
+  const { sessionId } = await resolveSession(roomCode)
+  const member = await resolveMember(sessionId, playerId)
+  const { version, snapshot } = await loadSnapshot(sessionId)
+
+  const advanced = advanceCombatState(snapshot, member.characterId, true)
+  await saveSnapshot(sessionId, version, advanced.nextSnapshot)
+
+  if (advanced.ended || !advanced.combat) {
+    await publishEvent(sessionId, 'combat_update', {
+      action: 'end_combat',
+      data: {
+        message: advanced.endReason ?? 'Combat ends.',
+      },
+    }, playerId)
+  } else {
+    const turnName = advanced.combat.initiative_order[advanced.combat.turn_index]?.name ?? 'Next combatant'
+    const message = advanced.messages.join(' ') || `${turnName} takes the next turn.`
+    await publishEvent(sessionId, 'combat_update', {
+      action: 'next_turn',
+      combat: advanced.combat as Record<string, unknown>,
+      data: {
+        message,
+      },
+    }, playerId)
+  }
+
+  await publishEvent(sessionId, 'state_sync', { state: advanced.nextSnapshot }, playerId)
+
+  return {
+    ok: true,
+    combat_active: Boolean(advanced.nextSnapshot.combat),
+    round: advanced.combat?.round ?? null,
+    turn_index: advanced.combat?.turn_index ?? null,
+  }
 }
 
 async function actionMoveToken(body: Record<string, unknown>) {
@@ -636,6 +1362,10 @@ Deno.serve(async (req) => {
 
     if (action === 'move_token') {
       return Response.json(await actionMoveToken(body), { headers: corsHeaders })
+    }
+
+    if (action === 'next_combat_turn') {
+      return Response.json(await actionNextCombatTurn(body), { headers: corsHeaders })
     }
 
     return Response.json({ error: `Unsupported action: ${action}` }, { status: 400, headers: corsHeaders })

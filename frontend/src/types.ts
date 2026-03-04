@@ -73,6 +73,7 @@ export interface ItemData {
 
 export interface CharacterData {
   id: string
+  sprite_id?: string
   name: string
   race: string
   class: string

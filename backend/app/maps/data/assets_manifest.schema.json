@@ -1,0 +1,81 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://out-of-touch-dnd/schemas/assets_manifest.schema.json",
+  "title": "Sprite Assets Manifest",
+  "type": "object",
+  "required": ["version", "generated_at", "assets"],
+  "additionalProperties": false,
+  "properties": {
+    "version": { "type": "string" },
+    "generated_at": { "type": "string", "format": "date-time" },
+    "assets": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "name",
+          "creator",
+          "source_platform",
+          "source_url",
+          "license",
+          "attribution_required",
+          "attribution_text",
+          "redistribution_allowed",
+          "modification_allowed",
+          "sprite_resolutions",
+          "animation_support",
+          "asset_coverage",
+          "modular_spritesheets",
+          "token_overlay_compatible",
+          "suitability_notes",
+          "licensing_risks",
+          "import_policy"
+        ],
+        "properties": {
+          "id": { "type": "string" },
+          "name": { "type": "string" },
+          "creator": { "type": "string" },
+          "source_platform": { "type": "string" },
+          "source_url": { "type": "string", "format": "uri" },
+          "license": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["spdx_expression", "exact_license", "license_url"],
+            "properties": {
+              "spdx_expression": { "type": "string" },
+              "exact_license": { "type": "string" },
+              "license_url": { "type": "string", "format": "uri" }
+            }
+          },
+          "attribution_required": { "type": "boolean" },
+          "attribution_text": { "type": "string" },
+          "redistribution_allowed": { "type": "boolean" },
+          "modification_allowed": { "type": "boolean" },
+          "sprite_resolutions": {
+            "type": "array",
+            "items": { "type": "string" }
+          },
+          "animation_support": { "type": "string" },
+          "asset_coverage": {
+            "type": "array",
+            "items": { "type": "string" }
+          },
+          "modular_spritesheets": { "type": "boolean" },
+          "token_overlay_compatible": { "type": "boolean" },
+          "suitability_notes": { "type": "string" },
+          "licensing_risks": {
+            "type": "array",
+            "items": { "type": "string" }
+          },
+          "import_policy": {
+            "type": "string",
+            "enum": ["approved", "conditional", "blocked"]
+          }
+        }
+      }
+    }
+  }
+}

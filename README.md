@@ -39,6 +39,7 @@ When mock mode is enabled, the backend forces deterministic local DM + voice beh
 ### Map Packs & Attribution Validation
 
 The automated map catalog uses open-license pack metadata from `backend/app/maps/data/map_library.json`.
+Sprite-source import policy metadata is tracked in `backend/app/maps/data/assets_manifest.json`.
 
 Current starter pack metadata targets a Kenney CC0-licensed source and maps to local static assets under `frontend/public/maps/kenney`.
 
@@ -48,6 +49,8 @@ Validate map pack licensing/attribution metadata:
 cd backend
 python scripts/validate_map_packs.py
 ```
+
+The same command validates both map manifests and sprite asset import policy metadata.
 
 Startup validation mode is controlled by `MAP_PACK_VALIDATION_MODE`:
 

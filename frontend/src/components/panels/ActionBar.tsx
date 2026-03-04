@@ -13,6 +13,7 @@ interface ActionBarProps {
 export default function ActionBar({ onSend, onCastSpell }: ActionBarProps) {
   const combat = useGameStore(s => s.combat)
   const characters = useGameStore(s => s.characters)
+  const addNarrative = useGameStore(s => s.addNarrative)
   const playerId = useSessionStore(s => s.playerId)
   const players = useSessionStore(s => s.players)
   const roomCode = useSessionStore(s => s.roomCode)
@@ -20,6 +21,7 @@ export default function ActionBar({ onSend, onCastSpell }: ActionBarProps) {
   const [slotStates, setSlotStates] = useState<SpellSlotState[]>([])
   const [selectedSpell, setSelectedSpell] = useState('')
   const [selectedSlot, setSelectedSlot] = useState(0)
+  const [advancingTurn, setAdvancingTurn] = useState(false)
 
   const combatActive = !!combat?.is_active
 
@@ -62,6 +64,24 @@ export default function ActionBar({ onSend, onCastSpell }: ActionBarProps) {
     onCastSpell(spell.name, slotLevel)
   }
 
+  const handleEndTurn = async () => {
+    if (!roomCode || !playerId || advancingTurn) {
+      return
+    }
+    setAdvancingTurn(true)
+    try {
+      await invokeEdgeFunction<Record<string, unknown>>('dm-action', {
+        action: 'next_combat_turn',
+        room_code: roomCode,
+        player_id: playerId,
+      })
+    } catch (error) {
+      addNarrative('system', `Unable to advance turn: ${error instanceof Error ? error.message : 'Unknown error'}`)
+    } finally {
+      setAdvancingTurn(false)
+    }
+  }
+
   const actions = [
     { label: 'Attack', action: 'I attack the nearest enemy', icon: '⚔' },
     { label: 'Dash', action: 'I use my action to Dash, doubling my movement', icon: '💨' },
@@ -102,11 +122,18 @@ export default function ActionBar({ onSend, onCastSpell }: ActionBarProps) {
             <button
               key={a.label}
               className="action-btn"
-              onClick={() => onSend(a.action)}
+              onClick={() => {
+                if (a.label === 'End Turn') {
+                  handleEndTurn().catch(() => {})
+                  return
+                }
+                onSend(a.action)
+              }}
               title={a.action}
+              disabled={a.label === 'End Turn' && (!isMyTurn || advancingTurn)}
             >
               <span className="action-icon">{a.icon}</span>
-              <span className="action-label">{a.label}</span>
+              <span className="action-label">{a.label === 'End Turn' && advancingTurn ? 'Advancing...' : a.label}</span>
             </button>
           ))}
 

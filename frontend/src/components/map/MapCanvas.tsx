@@ -4,6 +4,7 @@ import { useSessionStore } from '../../stores/sessionStore'
 import { useMapInteraction } from '../../hooks/useMapInteraction'
 import { drawOverlays } from './OverlayLayer'
 import type { TileData } from '../../types'
+import { resolveSpriteUrl } from '../../data/spriteManifest'
 import './MapCanvas.css'
 
 const TILE_SIZE = 40
@@ -39,6 +40,7 @@ export default function MapCanvas({ onTileClick, onEntityClick }: MapCanvasProps
   const fittedMapKeyRef = useRef<string | null>(null)
   const imageRef = useRef<HTMLImageElement | null>(null)
   const imageUrlRef = useRef<string | null>(null)
+  const spriteCacheRef = useRef<Map<string, HTMLImageElement | 'loading' | null>>(new Map())
   const map = useGameStore(s => s.map)
   const combat = useGameStore(s => s.combat)
   const characters = useGameStore(s => s.characters)
@@ -178,6 +180,8 @@ export default function MapCanvas({ onTileClick, onEntityClick }: MapCanvasProps
       const py = entity.y * TILE_SIZE + TILE_SIZE / 2
       const radius = TILE_SIZE * 0.35
       const color = ENTITY_COLORS[entity.type] || '#fff'
+      const spriteKey = entity.sprite?.trim()
+      const resolvedSpriteUrl = spriteKey ? resolveSpriteUrl(spriteKey) : null
 
       if (entity.id === selectedEntityId) {
         ctx.beginPath()
@@ -187,21 +191,47 @@ export default function MapCanvas({ onTileClick, onEntityClick }: MapCanvasProps
         ctx.stroke()
       }
 
-      ctx.beginPath()
-      ctx.arc(px, py, radius, 0, Math.PI * 2)
-      ctx.fillStyle = color
-      ctx.fill()
-      ctx.strokeStyle = 'rgba(0,0,0,0.5)'
-      ctx.lineWidth = 1.5
-      ctx.stroke()
+      let drewSprite = false
+      if (resolvedSpriteUrl) {
+        const cached = spriteCacheRef.current.get(resolvedSpriteUrl)
+        if (cached && cached !== 'loading') {
+          const size = TILE_SIZE * 0.86
+          const left = px - size / 2
+          const top = py - size / 2
+          ctx.imageSmoothingEnabled = false
+          ctx.drawImage(cached, left, top, size, size)
+          drewSprite = true
+        } else if (!cached) {
+          spriteCacheRef.current.set(resolvedSpriteUrl, 'loading')
+          const img = new Image()
+          img.decoding = 'async'
+          img.onload = () => {
+            spriteCacheRef.current.set(resolvedSpriteUrl, img)
+          }
+          img.onerror = () => {
+            spriteCacheRef.current.set(resolvedSpriteUrl, null)
+          }
+          img.src = resolvedSpriteUrl
+        }
+      }
 
-      ctx.fillStyle = '#fff'
-      ctx.font = `bold ${Math.max(9, 11 * interaction.zoom) / interaction.zoom}px sans-serif`
-      ctx.textAlign = 'center'
-      ctx.textBaseline = 'middle'
-      const isDeadEnemyInCombat = !!combat?.is_active && entity.type === 'enemy' && (characters[entity.id]?.hp ?? 1) <= 0
-      const tokenGlyph = isDeadEnemyInCombat ? 'X' : entity.name.charAt(0).toUpperCase()
-      ctx.fillText(tokenGlyph, px, py)
+      if (!drewSprite) {
+        ctx.beginPath()
+        ctx.arc(px, py, radius, 0, Math.PI * 2)
+        ctx.fillStyle = color
+        ctx.fill()
+        ctx.strokeStyle = 'rgba(0,0,0,0.5)'
+        ctx.lineWidth = 1.5
+        ctx.stroke()
+
+        ctx.fillStyle = '#fff'
+        ctx.font = `bold ${Math.max(9, 11 * interaction.zoom) / interaction.zoom}px sans-serif`
+        ctx.textAlign = 'center'
+        ctx.textBaseline = 'middle'
+        const isDeadEnemyInCombat = !!combat?.is_active && entity.type === 'enemy' && (characters[entity.id]?.hp ?? 1) <= 0
+        const tokenGlyph = isDeadEnemyInCombat ? 'X' : entity.name.charAt(0).toUpperCase()
+        ctx.fillText(tokenGlyph, px, py)
+      }
 
       ctx.fillStyle = 'rgba(255,255,255,0.85)'
       ctx.font = `${Math.max(8, 10 * interaction.zoom) / interaction.zoom}px sans-serif`

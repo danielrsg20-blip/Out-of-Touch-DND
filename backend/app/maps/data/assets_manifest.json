@@ -1,0 +1,126 @@
+{
+  "version": "1.0.0",
+  "generated_at": "2026-03-03T00:00:00Z",
+  "assets": [
+    {
+      "id": "lpc-universal-character-generator",
+      "name": "Universal LPC Spritesheet Character Generator",
+      "creator": "Liberated Pixel Cup community contributors",
+      "source_platform": "github",
+      "source_url": "https://github.com/LiberatedPixelCup/Universal-LPC-Spritesheet-Character-Generator",
+      "license": {
+        "spdx_expression": "CC0-1.0 OR CC-BY-4.0 OR CC-BY-SA-4.0 OR OGA-BY-3.0 OR GPL-3.0-or-later",
+        "exact_license": "Per-asset mixed licensing; see upstream CREDITS.csv for exact attribution and terms.",
+        "license_url": "https://github.com/LiberatedPixelCup/Universal-LPC-Spritesheet-Character-Generator/blob/master/CREDITS.csv"
+      },
+      "attribution_required": true,
+      "attribution_text": "Credit all contributors listed for the imported assets in upstream CREDITS.csv.",
+      "redistribution_allowed": true,
+      "modification_allowed": true,
+      "sprite_resolutions": ["64x64"],
+      "animation_support": "extensive",
+      "asset_coverage": ["player_characters", "npc_variants", "equipment_layers", "weapons", "animation_frames"],
+      "modular_spritesheets": true,
+      "token_overlay_compatible": true,
+      "suitability_notes": "Primary source for class/race character sprite selection and modular customization.",
+      "licensing_risks": ["mixed_license_provenance", "copyleft_obligations", "attribution_required"],
+      "import_policy": "conditional"
+    },
+    {
+      "id": "lpc-monsters",
+      "name": "[LPC] Monsters",
+      "creator": "bluecarrot16 and LPC contributors",
+      "source_platform": "opengameart",
+      "source_url": "https://opengameart.org/content/lpc-monsters",
+      "license": {
+        "spdx_expression": "CC-BY-SA-3.0 OR GPL-3.0-or-later",
+        "exact_license": "OpenGameArt page lists dual license: CC-BY-SA 3.0+ or GPL 3.0+.",
+        "license_url": "https://opengameart.org/content/lpc-monsters"
+      },
+      "attribution_required": true,
+      "attribution_text": "Attribute the listed LPC monster contributors from the source page.",
+      "redistribution_allowed": true,
+      "modification_allowed": true,
+      "sprite_resolutions": ["64x64"],
+      "animation_support": "partial",
+      "asset_coverage": ["monsters", "creatures", "enemy_animations"],
+      "modular_spritesheets": false,
+      "token_overlay_compatible": true,
+      "suitability_notes": "Bestiary coverage for AI DM encounter spawning in LPC style.",
+      "licensing_risks": ["copyleft_obligations", "attribution_required", "dual_license_choice_required"],
+      "import_policy": "conditional"
+    },
+    {
+      "id": "lpc-terrain-extension",
+      "name": "LPC Terrain Extension",
+      "creator": "caeles and contributors listed in source COPYRIGHT",
+      "source_platform": "opengameart",
+      "source_url": "https://opengameart.org/content/lpc-terrain-extension",
+      "license": {
+        "spdx_expression": "CC-BY-SA-3.0 OR GPL-3.0-only",
+        "exact_license": "OpenGameArt page lists dual license: CC-BY-SA 3.0 and GPL 3.0.",
+        "license_url": "https://opengameart.org/content/lpc-terrain-extension"
+      },
+      "attribution_required": true,
+      "attribution_text": "Credit all listed terrain contributors and include license notice.",
+      "redistribution_allowed": true,
+      "modification_allowed": true,
+      "sprite_resolutions": ["32x32"],
+      "animation_support": "none",
+      "asset_coverage": ["tilesets", "terrain_transitions", "environmental_props"],
+      "modular_spritesheets": true,
+      "token_overlay_compatible": true,
+      "suitability_notes": "Map/environment overlays for dungeon and terrain context.",
+      "licensing_risks": ["copyleft_obligations", "attribution_required", "dual_license_choice_required"],
+      "import_policy": "conditional"
+    },
+    {
+      "id": "0x72-dungeontileset-ii",
+      "name": "DungeonTileset II",
+      "creator": "0x72",
+      "source_platform": "itch.io",
+      "source_url": "https://0x72.itch.io/dungeontileset-ii",
+      "license": {
+        "spdx_expression": "CC0-1.0",
+        "exact_license": "Creator states the pack is CC0.",
+        "license_url": "https://creativecommons.org/publicdomain/zero/1.0/"
+      },
+      "attribution_required": false,
+      "attribution_text": "",
+      "redistribution_allowed": true,
+      "modification_allowed": true,
+      "sprite_resolutions": ["16x16", "16x32"],
+      "animation_support": "limited",
+      "asset_coverage": ["tilesets", "dungeon_props", "monsters", "player_tokens"],
+      "modular_spritesheets": true,
+      "token_overlay_compatible": true,
+      "suitability_notes": "Low-friction CC0 pack for combat maps, props, and mock/demo content.",
+      "licensing_risks": ["none"],
+      "import_policy": "approved"
+    },
+    {
+      "id": "0x72-16x16-dungeon-tileset",
+      "name": "16x16 Dungeon Tileset",
+      "creator": "0x72",
+      "source_platform": "itch.io",
+      "source_url": "https://0x72.itch.io/16x16-dungeon-tileset",
+      "license": {
+        "spdx_expression": "CC0-1.0",
+        "exact_license": "Creator states the pack is CC0.",
+        "license_url": "https://creativecommons.org/publicdomain/zero/1.0/"
+      },
+      "attribution_required": false,
+      "attribution_text": "",
+      "redistribution_allowed": true,
+      "modification_allowed": true,
+      "sprite_resolutions": ["16x16"],
+      "animation_support": "none",
+      "asset_coverage": ["tilesets", "dungeon_props", "tokens"],
+      "modular_spritesheets": true,
+      "token_overlay_compatible": true,
+      "suitability_notes": "Compact CC0 dungeon tiles and token-friendly assets for grid overlays.",
+      "licensing_risks": ["none"],
+      "import_policy": "approved"
+    }
+  ]
+}

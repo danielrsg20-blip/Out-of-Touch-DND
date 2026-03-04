@@ -9,11 +9,40 @@ const CLASSES = ['Barbarian', 'Bard', 'Cleric', 'Druid', 'Fighter', 'Monk', 'Pal
 const ABILITIES = ['STR', 'DEX', 'CON', 'INT', 'WIS', 'CHA']
 const STANDARD_ARRAY = [15, 14, 13, 12, 10, 8]
 
+type CharacterSpriteOption = {
+  id: string
+  label: string
+  races: string[]
+  classes: string[]
+}
+
+const CHARACTER_SPRITES: CharacterSpriteOption[] = [
+  { id: 'pc_knight', label: 'Knight', races: ['Human', 'Dragonborn', 'Half-Orc'], classes: ['Fighter', 'Paladin', 'Barbarian'] },
+  { id: 'pc_ranger', label: 'Ranger', races: ['Elf', 'Half-Elf', 'Human', 'Halfling'], classes: ['Ranger', 'Druid', 'Rogue'] },
+  { id: 'pc_mage', label: 'Mage', races: ['Human', 'Elf', 'Gnome', 'Tiefling'], classes: ['Wizard', 'Sorcerer', 'Warlock'] },
+  { id: 'pc_cleric', label: 'Cleric', races: ['Human', 'Dwarf', 'Half-Elf'], classes: ['Cleric', 'Paladin'] },
+  { id: 'pc_bard', label: 'Bard', races: ['Human', 'Elf', 'Half-Elf', 'Tiefling'], classes: ['Bard', 'Rogue'] },
+  { id: 'pc_monk', label: 'Monk', races: ['Human', 'Elf', 'Gnome', 'Half-Orc'], classes: ['Monk', 'Rogue'] },
+  { id: 'pc_druid', label: 'Druid', races: ['Elf', 'Gnome', 'Halfling', 'Half-Elf'], classes: ['Druid', 'Ranger', 'Cleric'] },
+  { id: 'pc_rogue', label: 'Rogue', races: ['Halfling', 'Human', 'Tiefling', 'Half-Elf'], classes: ['Rogue', 'Ranger', 'Bard'] },
+]
+
+function getSpriteOptionsFor(race: string, charClass: string): CharacterSpriteOption[] {
+  const raceNorm = race.trim().toLowerCase()
+  const classNorm = charClass.trim().toLowerCase()
+  const filtered = CHARACTER_SPRITES.filter((option) =>
+    option.races.some((item) => item.toLowerCase() === raceNorm)
+    || option.classes.some((item) => item.toLowerCase() === classNorm),
+  )
+  return filtered.length > 0 ? filtered : CHARACTER_SPRITES
+}
+
 export default function CharacterCreator() {
   const { roomCode, playerId, players, getSession } = useSessionStore()
   const [name, setName] = useState('')
   const [race, setRace] = useState('Human')
   const [charClass, setCharClass] = useState('Fighter')
+  const [spriteId, setSpriteId] = useState('pc_knight')
   const [abilities, setAbilities] = useState<Record<string, number>>(() => {
     const obj: Record<string, number> = {}
     ABILITIES.forEach((a, i) => { obj[a] = STANDARD_ARRAY[i] })
@@ -109,6 +138,7 @@ export default function CharacterCreator() {
         name: name.trim(),
         race,
         char_class: charClass,
+        sprite_id: spriteId,
         abilities,
         known_spells: spellcastingMode === 'known' ? selectedKnownSpells : undefined,
         prepared_spells: spellcastingMode === 'prepared' ? selectedPreparedSpells : undefined,
@@ -127,6 +157,15 @@ export default function CharacterCreator() {
   useEffect(() => {
     loadSpellOptions(charClass)
   }, [])
+
+  useEffect(() => {
+    const options = getSpriteOptionsFor(race, charClass)
+    if (!options.some((option) => option.id === spriteId)) {
+      setSpriteId(options[0].id)
+    }
+  }, [race, charClass, spriteId])
+
+  const spriteOptions = getSpriteOptionsFor(race, charClass)
 
   useEffect(() => {
     if (!roomCode) {
@@ -178,6 +217,20 @@ export default function CharacterCreator() {
                 {CLASSES.map(c => <option key={c} value={c}>{c}</option>)}
               </select>
             </div>
+          </div>
+
+          <div className="form-group">
+            <label>Sprite</label>
+            <select
+              value={spriteId}
+              onChange={e => setSpriteId(e.target.value)}
+              className="creator-select"
+            >
+              {spriteOptions.map(option => (
+                <option key={option.id} value={option.id}>{option.label}</option>
+              ))}
+            </select>
+            <p className="sprite-hint">Options are filtered by your current race/class.</p>
           </div>
 
           {spellcastingMode !== 'none' && (

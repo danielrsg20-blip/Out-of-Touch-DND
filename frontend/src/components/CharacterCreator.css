@@ -201,3 +201,9 @@
   padding: 0.45rem 0.6rem;
   border-radius: 4px;
 }
+
+.sprite-hint {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 0.75rem;
+}

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import re
 from pathlib import Path
 from typing import Any
 
@@ -24,6 +25,21 @@ REQUIRED_MAP_FIELDS = {
     "height",
     "pack_id",
 }
+
+ALLOWED_IMPORT_POLICIES = {"approved", "conditional", "blocked"}
+
+SUPPORTED_SPDX_PREFIXES = (
+    "CC0",
+    "CC-BY",
+    "CC-BY-SA",
+    "OGA-BY",
+    "GPL",
+    "MIT",
+    "Apache-2.0",
+)
+
+COPYLEFT_HINTS = ("BY-SA", "GPL", "OGA-BY")
+DISALLOWED_TERMS_RE = re.compile(r"(^|[^A-Z0-9])(NC|ND|ARR)([^A-Z0-9]|$)|all rights reserved", re.IGNORECASE)
 
 
 def _effective_license(entry: dict[str, Any], pack: dict[str, Any] | None) -> dict[str, Any] | None:
@@ -141,3 +157,86 @@ def validate_map_library_manifest(manifest_path: Path) -> list[str]:
                 errors.append(f"[{map_id}] image_url points to missing file: {candidate}")
 
     return errors
+
+
+def _looks_supported_spdx_expression(expression: str) -> bool:
+    parts = re.split(r"\s+(?:AND|OR|WITH)\s+|[()]", expression, flags=re.IGNORECASE)
+    tokens = [part.strip() for part in parts if part.strip()]
+    if not tokens:
+        return False
+    for token in tokens:
+        if not token.upper().startswith(SUPPORTED_SPDX_PREFIXES):
+            return False
+    return True
+
+
+def validate_assets_manifest(manifest_path: Path) -> tuple[list[str], list[str]]:
+    if not manifest_path.exists():
+        return [f"Assets manifest file not found: {manifest_path}"], []
+
+    try:
+        payload = json.loads(manifest_path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as exc:
+        return [f"Invalid JSON in assets manifest: {exc}"], []
+
+    assets = payload.get("assets")
+    if not isinstance(assets, list):
+        return ["Assets manifest field 'assets' must be a list"], []
+
+    errors: list[str] = []
+    warnings: list[str] = []
+    seen_ids: set[str] = set()
+
+    for idx, asset in enumerate(assets):
+        if not isinstance(asset, dict):
+            errors.append(f"Asset entry at index {idx} must be an object")
+            continue
+
+        asset_id = str(asset.get("id", "")).strip()
+        asset_label = asset_id or f"index_{idx}"
+
+        if not asset_id:
+            errors.append(f"[{asset_label}] Missing id")
+        elif asset_id in seen_ids:
+            errors.append(f"[{asset_label}] Duplicate asset id")
+        else:
+            seen_ids.add(asset_id)
+
+        source_url = str(asset.get("source_url", "")).strip()
+        if not (source_url.startswith("http://") or source_url.startswith("https://")):
+            errors.append(f"[{asset_label}] source_url must be http/https")
+
+        if asset.get("redistribution_allowed") is not True:
+            errors.append(f"[{asset_label}] redistribution_allowed must be true")
+
+        if asset.get("modification_allowed") is not True:
+            errors.append(f"[{asset_label}] modification_allowed must be true")
+
+        attribution_required = bool(asset.get("attribution_required", False))
+        attribution_text = str(asset.get("attribution_text", "")).strip()
+        if attribution_required and not attribution_text:
+            errors.append(f"[{asset_label}] attribution_text required when attribution_required is true")
+
+        license_data = asset.get("license")
+        if not isinstance(license_data, dict):
+            errors.append(f"[{asset_label}] license must be an object")
+            continue
+
+        spdx_expression = str(license_data.get("spdx_expression", "")).strip()
+        if not spdx_expression:
+            errors.append(f"[{asset_label}] license.spdx_expression is required")
+        elif DISALLOWED_TERMS_RE.search(spdx_expression):
+            errors.append(f"[{asset_label}] license.spdx_expression contains disallowed NC/ND/ARR terms")
+        elif not _looks_supported_spdx_expression(spdx_expression):
+            errors.append(f"[{asset_label}] Unsupported license.spdx_expression: {spdx_expression}")
+
+        if any(hint in spdx_expression.upper() for hint in COPYLEFT_HINTS):
+            warnings.append(f"[{asset_label}] Copyleft/share-alike license detected ({spdx_expression})")
+
+        import_policy = str(asset.get("import_policy", "")).strip().lower()
+        if import_policy not in ALLOWED_IMPORT_POLICIES:
+            errors.append(f"[{asset_label}] import_policy must be one of {sorted(ALLOWED_IMPORT_POLICIES)}")
+        elif import_policy == "conditional":
+            warnings.append(f"[{asset_label}] Conditional import policy requires manual compliance review")
+
+    return errors, warnings

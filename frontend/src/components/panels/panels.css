@@ -60,6 +60,15 @@
   font-size: 0.85rem;
 }
 
+.narrative-round-start {
+  color: var(--accent-gold);
+  background: rgba(228, 168, 83, 0.12);
+  border-left: 2px solid var(--accent-gold);
+  padding: 0.25rem 0.45rem;
+  border-radius: 4px;
+  font-style: normal;
+}
+
 .narrative-dice {
   color: var(--accent-purple);
   font-family: 'Consolas', 'Courier New', monospace;
@@ -131,6 +140,27 @@
   margin-top: 0.2rem;
   font-size: 0.78rem;
   color: var(--text-secondary);
+}
+
+.combat-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.combat-round-badge {
+  font-size: 0.72rem;
+  color: var(--accent-gold);
+  border: 1px solid rgba(228, 168, 83, 0.35);
+  background: rgba(228, 168, 83, 0.1);
+  border-radius: 999px;
+  padding: 0.12rem 0.45rem;
+  transition: transform 0.2s ease, background-color 0.2s ease;
+}
+
+.combat-round-badge.round-transition {
+  transform: scale(1.06);
+  background: rgba(228, 168, 83, 0.24);
 }
 
 .initiative-entry {

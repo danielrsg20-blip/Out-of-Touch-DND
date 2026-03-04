@@ -7,20 +7,29 @@ BACKEND_ROOT = Path(__file__).resolve().parents[1]
 if str(BACKEND_ROOT) not in sys.path:
     sys.path.insert(0, str(BACKEND_ROOT))
 
-from app.maps.license_validation import validate_map_library_manifest
+from app.maps.license_validation import validate_assets_manifest, validate_map_library_manifest
 
 
 def main() -> int:
-    manifest_path = Path(__file__).resolve().parents[1] / "app" / "maps" / "data" / "map_library.json"
-    errors = validate_map_library_manifest(manifest_path)
+    maps_manifest_path = Path(__file__).resolve().parents[1] / "app" / "maps" / "data" / "map_library.json"
+    assets_manifest_path = Path(__file__).resolve().parents[1] / "app" / "maps" / "data" / "assets_manifest.json"
+
+    errors = validate_map_library_manifest(maps_manifest_path)
+    asset_errors, asset_warnings = validate_assets_manifest(assets_manifest_path)
+    errors.extend(asset_errors)
 
     if errors:
-        print("Map manifest validation failed:")
+        print("Manifest validation failed:")
         for error in errors:
             print(f"- {error}")
         return 1
 
-    print("Map manifest validation passed.")
+    if asset_warnings:
+        print("Manifest validation warnings:")
+        for warning in asset_warnings:
+            print(f"- {warning}")
+
+    print("Manifest validation passed.")
     return 0
 
 
