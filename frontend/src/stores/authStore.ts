@@ -40,7 +40,7 @@ function errorFromResponse(action: string, res: Response, payload: Record<string
   }
 
   if (!import.meta.env.DEV && API_BASE === window.location.origin) {
-    return new Error(`${generic} Backend URL is not configured. Set VITE_API_URL and VITE_WS_URL in Vercel.`)
+    return new Error(`${generic} Backend URL is not configured. Set VITE_API_URL and VITE_WS_URL in frontend environment settings.`)
   }
 
   return new Error(generic)

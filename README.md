@@ -105,20 +105,20 @@ Or use the root helper script to start both services:
 
 Frontend: `http://127.0.0.1:5174`  Backend docs: `http://127.0.0.1:8010/docs`
 
-## Deployment (Vercel + Render)
+## Deployment (Vercel Frontend + Local Backend via Cloudflare Tunnel)
 
 This app is designed for split deployment:
 
 - **Frontend (Vite SPA)** on Vercel
-- **Backend (FastAPI + WebSocket)** on Render
+- **Backend (FastAPI + WebSocket)** running locally, exposed via Cloudflare Named Tunnel
 
-### 1) Deploy backend to Render
+Use the tunnel runbook:
 
-Use the included `render.yaml` blueprint or manual setup.
+- `docs/deploy-local-cloudflare-tunnel.md`
 
-Required backend env vars:
+### Required backend env vars
 
-- `DATABASE_URL` (recommended: managed Postgres)
+- `DATABASE_URL` (local SQLite is recommended for zero-cost start)
 - `JWT_SECRET_KEY`
 - `CORS_ALLOW_ORIGINS` (set to your Vercel frontend URL)
 - `ANTHROPIC_API_KEY` (or use `LOCAL_MOCK_MODE=true` for mock mode)
@@ -126,19 +126,15 @@ Required backend env vars:
 
 Health endpoint: `/api/health`
 
-### 2) Deploy frontend to Vercel
+### Vercel frontend env vars
 
-The repo includes `vercel.json` that builds from `frontend/`.
+- `VITE_API_URL=https://<your-tunnel-domain>`
+- `VITE_WS_URL=wss://<your-tunnel-domain>`
 
-Set frontend env vars in Vercel project settings:
-
-- `VITE_API_URL=https://<your-render-backend-domain>`
-- `VITE_WS_URL=wss://<your-render-backend-domain>`
-
-### 3) Verify
+### Verify
 
 - Frontend loads from Vercel URL
-- `GET https://<backend>/api/health` returns status ok
+- `GET https://<your-tunnel-domain>/api/health` returns status ok
 - Create/login account works
 - Create/join session works
 - WebSocket actions and map updates work
