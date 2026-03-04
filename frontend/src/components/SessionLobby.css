@@ -133,3 +133,50 @@
 .lobby-logout-btn:hover {
   color: var(--accent-red);
 }
+
+.lobby-roster {
+  margin-top: 1rem;
+  border-top: 1px solid var(--border-color);
+  padding-top: 0.8rem;
+  text-align: left;
+}
+
+.lobby-roster-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 0.45rem;
+}
+
+.lobby-roster-room {
+  color: var(--text-primary);
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.lobby-roster-count {
+  color: var(--text-secondary);
+  font-size: 0.78rem;
+}
+
+.lobby-roster-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.lobby-roster-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  color: var(--text-primary);
+  font-size: 0.83rem;
+}
+
+.lobby-roster-meta {
+  color: var(--text-secondary);
+  font-size: 0.75rem;
+}

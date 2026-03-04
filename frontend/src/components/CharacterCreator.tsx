@@ -10,7 +10,7 @@ const ABILITIES = ['STR', 'DEX', 'CON', 'INT', 'WIS', 'CHA']
 const STANDARD_ARRAY = [15, 14, 13, 12, 10, 8]
 
 export default function CharacterCreator() {
-  const { roomCode, playerId, players } = useSessionStore()
+  const { roomCode, playerId, players, getSession } = useSessionStore()
   const [name, setName] = useState('')
   const [race, setRace] = useState('Human')
   const [charClass, setCharClass] = useState('Fighter')
@@ -114,6 +114,13 @@ export default function CharacterCreator() {
   useEffect(() => {
     loadSpellOptions(charClass)
   }, [])
+
+  useEffect(() => {
+    if (!roomCode) {
+      return
+    }
+    getSession(roomCode).catch(() => {})
+  }, [roomCode, getSession])
 
   return (
     <div className="creator-wrapper">

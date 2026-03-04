@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useSessionStore } from '../stores/sessionStore'
 import { useAuthStore } from '../stores/authStore'
 import './SessionLobby.css'
@@ -10,7 +10,14 @@ export default function SessionLobby() {
   const [mode, setMode] = useState<'menu' | 'create' | 'join'>('menu')
   const [error, setError] = useState('')
 
-  const { createSession, joinSession } = useSessionStore()
+  const { roomCode, players, createSession, joinSession, getSession } = useSessionStore()
+
+  useEffect(() => {
+    if (!roomCode) {
+      return
+    }
+    getSession(roomCode).catch(() => {})
+  }, [roomCode, getSession])
 
   const handleCreate = async () => {
     if (!name.trim()) return
@@ -105,6 +112,23 @@ export default function SessionLobby() {
         )}
 
         {error && <p className="lobby-error">{error}</p>}
+
+        {roomCode && (
+          <div className="lobby-roster">
+            <div className="lobby-roster-head">
+              <span className="lobby-roster-room">Room: {roomCode}</span>
+              <span className="lobby-roster-count">{players.length} player(s)</span>
+            </div>
+            <ul className="lobby-roster-list">
+              {players.map((player) => (
+                <li key={player.id} className="lobby-roster-item">
+                  <span>{player.name}</span>
+                  <span className="lobby-roster-meta">{player.character_id ? 'Character ready' : 'No character yet'}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
       </div>
     </div>
   )

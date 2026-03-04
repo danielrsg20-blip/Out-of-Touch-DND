@@ -105,20 +105,33 @@ Or use the root helper script to start both services:
 
 Frontend: `http://127.0.0.1:5174`  Backend docs: `http://127.0.0.1:8010/docs`
 
-## Deployment (Vercel Frontend + Local Backend via Cloudflare Tunnel)
+## Deployment (Vercel + Railway + Supabase)
 
 This app is designed for split deployment:
 
 - **Frontend (Vite SPA)** on Vercel
-- **Backend (FastAPI + WebSocket)** running locally, exposed via Cloudflare Named Tunnel
+- **Backend (FastAPI + WebSocket)** on Railway
+- **Database** on Supabase Postgres
 
-Use the tunnel runbook:
+Use the production runbook:
+
+- `docs/deploy-vercel-railway-supabase.md`
+
+Exact dashboard-click checklist:
+
+- `docs/deploy-dashboard-clicks-vercel-railway-supabase.md`
+
+Local fallback runbook (optional):
 
 - `docs/deploy-local-cloudflare-tunnel.md`
 
+Supabase-only rewrite scaffold (work in progress):
+
+- `docs/supabase-rewrite-phase-1.md`
+
 ### Required backend env vars
 
-- `DATABASE_URL` (local SQLite is recommended for zero-cost start)
+- `DATABASE_URL` (Supabase Postgres direct URL recommended for production)
 - `JWT_SECRET_KEY`
 - `CORS_ALLOW_ORIGINS` (set to your Vercel frontend URL)
 - `ANTHROPIC_API_KEY` (or use `LOCAL_MOCK_MODE=true` for mock mode)
@@ -128,13 +141,13 @@ Health endpoint: `/api/health`
 
 ### Vercel frontend env vars
 
-- `VITE_API_URL=https://<your-tunnel-domain>`
-- `VITE_WS_URL=wss://<your-tunnel-domain>`
+- `VITE_API_URL=https://<your-railway-backend-domain>`
+- `VITE_WS_URL=wss://<your-railway-backend-domain>`
 
 ### Verify
 
 - Frontend loads from Vercel URL
-- `GET https://<your-tunnel-domain>/api/health` returns status ok
+- `GET https://<your-railway-backend-domain>/api/health` returns status ok
 - Create/login account works
 - Create/join session works
 - WebSocket actions and map updates work
