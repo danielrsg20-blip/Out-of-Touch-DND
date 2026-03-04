@@ -67,6 +67,7 @@ class GameMap:
     tiles: dict[tuple[int, int], Tile] = field(default_factory=dict)
     entities: dict[str, MapEntity] = field(default_factory=dict)
     revealed: set[tuple[int, int]] = field(default_factory=set)
+    metadata: dict[str, Any] = field(default_factory=dict)
 
     def get_tile(self, x: int, y: int) -> Tile | None:
         return self.tiles.get((x, y))
@@ -163,11 +164,13 @@ class GameMap:
             "entities": entities_list,
             "revealed": revealed_list,
             "visible": [{"x": v[0], "y": v[1]} for v in visible_tiles] if visible_tiles else [],
+            "metadata": dict(self.metadata),
         }
 
 
 def build_map_from_data(data: dict) -> GameMap:
     gmap = GameMap(width=data["width"], height=data["height"])
+    gmap.metadata = dict(data.get("metadata", {}))
 
     for td in data.get("tiles", []):
         gmap.set_tile(td["x"], td["y"], td["type"], td.get("state"))

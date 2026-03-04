@@ -122,7 +122,10 @@ class Character:
         return {"healed": self.hp - old_hp, "current_hp": self.hp}
 
     def to_dict(self) -> dict:
-        from .spells import get_spellcasting_mode
+        from .spells import get_spellcasting_mode, get_class_features_for_level
+
+        if not self.class_features:
+            self.class_features = get_class_features_for_level(self.char_class, self.level)
 
         return {
             "id": self.id,

@@ -14,6 +14,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import Response
 from pydantic import BaseModel
 
+from .map_catalog import validate_map_catalog_startup
 from .session import GameSession, Player, SessionManager
 from .voice import speech_to_text, text_to_speech, dm_speak
 from .models.database import init_db, async_session
@@ -41,6 +42,7 @@ session_manager = SessionManager()
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     logger.info("Out-of-Touch-DND server starting")
+    validate_map_catalog_startup()
     await init_db()
     yield
     logger.info("Server shutting down")
@@ -241,6 +243,7 @@ async def create_character(req: CreateCharacterRequest):
 @app.get("/api/spells/options/{char_class}/{level}")
 async def get_spell_options_for_class(char_class: str, level: int):
     from .rules.characters import Character
+    from .rules.spells import get_class_features_for_level
 
     probe = Character(
         id="probe",
@@ -446,6 +449,8 @@ async def load_campaign(req: LoadCampaignRequest):
             traits=cd.get("traits", []), xp=cd.get("xp", 0),
             rules_version=cd.get("rules_version", "2024"),
         )
+        if not char.class_features:
+            char.class_features = get_class_features_for_level(char.char_class, char.level)
         session.orchestrator.characters[cid] = char
 
     map_data = campaign.get_map()

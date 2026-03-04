@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from .map_catalog import build_automated_map
 from .map_engine import GameMap, MapEntity, build_map_from_data
 from .rules.characters import Character
 from .rules.combat import (
@@ -158,11 +159,19 @@ TOOL_DEFINITIONS: list[dict[str, Any]] = [
     },
     {
         "name": "generate_map",
-        "description": "Generate a new map grid. Provide a JSON map definition with tiles and entities. The frontend will render it.",
+        "description": "Generate or select a new map grid automatically. If tiles are provided, they are used directly. Otherwise, the system auto-selects a library map or generates one based on context.",
         "input_schema": {
             "type": "object",
             "properties": {
                 "description": {"type": "string", "description": "Narrative description of the area for the players"},
+                "environment": {"type": "string", "description": "Optional environment hint (dungeon/forest/tavern/cave/city)"},
+                "encounter_type": {"type": "string", "description": "Optional encounter type hint (combat/exploration/social)"},
+                "encounter_scale": {"type": "string", "description": "Optional scale hint (small/medium/large)"},
+                "tactical_tags": {
+                    "type": "array",
+                    "description": "Optional tactical tags (cover/chokepoints/line_of_sight/flanking)",
+                    "items": {"type": "string"},
+                },
                 "width": {"type": "integer", "description": "Map width in tiles (5-40)", "default": 20},
                 "height": {"type": "integer", "description": "Map height in tiles (5-30)", "default": 15},
                 "tiles": {
@@ -196,7 +205,7 @@ TOOL_DEFINITIONS: list[dict[str, Any]] = [
                     },
                 },
             },
-            "required": ["description", "tiles"],
+            "required": ["description"],
         },
     },
     {
@@ -526,12 +535,35 @@ class ToolDispatcher:
         return char.to_dict()
 
     def _tool_generate_map(self, inp: dict) -> dict:
-        map_data = {
-            "width": inp.get("width", 20),
-            "height": inp.get("height", 15),
-            "tiles": inp.get("tiles", []),
-            "entities": inp.get("entities", []),
-        }
+        user_tiles = inp.get("tiles") or []
+        if user_tiles:
+            map_data = {
+                "width": inp.get("width", 20),
+                "height": inp.get("height", 15),
+                "tiles": user_tiles,
+                "entities": inp.get("entities", []),
+                "metadata": {
+                    "map_source": "manual",
+                    "map_id": "manual_input",
+                    "grid_size": 5,
+                    "grid_units": "ft",
+                    "cache_hit": False,
+                },
+            }
+        else:
+            map_data = build_automated_map({
+                "description": str(inp.get("description", "")),
+                "environment": str(inp.get("environment", "")).strip().lower(),
+                "encounter_type": str(inp.get("encounter_type", "")).strip().lower(),
+                "encounter_scale": str(inp.get("encounter_scale", "")).strip().lower(),
+                "tactical_tags": [str(t) for t in inp.get("tactical_tags", [])],
+                "width": int(inp.get("width", 20)),
+                "height": int(inp.get("height", 15)),
+            })
+
+            if inp.get("entities"):
+                map_data["entities"] = inp.get("entities", [])
+
         self.game_map = build_map_from_data(map_data)
         result = self.game_map.to_dict()
         result["description"] = inp["description"]

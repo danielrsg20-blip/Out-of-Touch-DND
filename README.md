@@ -36,6 +36,25 @@ SRD_RULES_VERSION=2024
 
 When mock mode is enabled, the backend forces deterministic local DM + voice behavior and does not call Anthropic/OpenAI APIs.
 
+### Map Packs & Attribution Validation
+
+The automated map catalog uses open-license pack metadata from `backend/app/maps/data/map_library.json`.
+
+Current starter pack metadata targets a Kenney CC0-licensed source and maps to local static assets under `frontend/public/maps/kenney`.
+
+Validate map pack licensing/attribution metadata:
+
+```bash
+cd backend
+python scripts/validate_map_packs.py
+```
+
+Startup validation mode is controlled by `MAP_PACK_VALIDATION_MODE`:
+
+- `off`: skip validation
+- `warn`: log issues and continue startup (default)
+- `error`: fail startup when validation errors exist
+
 ### SRD Content (2024)
 
 The backend loads versioned SRD spell/class data from `backend/app/rules/data`.

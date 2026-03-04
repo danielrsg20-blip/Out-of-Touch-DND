@@ -17,6 +17,97 @@
   display: block;
 }
 
+.map-metadata-badge {
+  position: absolute;
+  top: 0.6rem;
+  left: 0.6rem;
+  z-index: 2;
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.2rem;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.72rem;
+  line-height: 1;
+  color: var(--text-secondary);
+  background: rgba(0, 0, 0, 0.48);
+  border: 1px solid var(--border-color);
+  pointer-events: auto;
+}
+
+.map-badge-main {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.map-badge-source {
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.map-badge-status {
+  color: var(--accent-gold);
+}
+
+.map-badge-env {
+  text-transform: capitalize;
+}
+
+.map-badge-sep {
+  opacity: 0.55;
+}
+
+.map-badge-attribution {
+  font-size: 0.66rem;
+  line-height: 1.2;
+  color: var(--text-secondary);
+  opacity: 0.92;
+}
+
+.map-recenter-btn {
+  position: absolute;
+  top: 0.6rem;
+  right: 0.6rem;
+  z-index: 2;
+  border: 1px solid var(--border-color);
+  background: rgba(0, 0, 0, 0.58);
+  color: var(--text-primary);
+  border-radius: 4px;
+  padding: 0.25rem 0.5rem;
+  font-size: 0.72rem;
+  cursor: pointer;
+}
+
+.map-recenter-btn:hover {
+  border-color: var(--accent-gold);
+  color: var(--accent-gold);
+}
+
+.map-attribution-panel {
+  position: absolute;
+  left: 0.6rem;
+  bottom: 0.6rem;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  max-width: 230px;
+  padding: 0.35rem 0.5rem;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.55);
+  color: var(--text-secondary);
+  font-size: 0.68rem;
+  line-height: 1.2;
+}
+
+.map-attribution-link {
+  color: var(--accent-gold);
+  text-decoration: underline;
+}
+
 .map-placeholder {
   width: 100%;
   height: 100%;

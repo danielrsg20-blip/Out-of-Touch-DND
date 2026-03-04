@@ -7,6 +7,7 @@ interface MapInteraction {
   offsetY: number
   zoom: number
   isPanning: boolean
+  fitToView: (mapWidthTiles: number, mapHeightTiles: number, viewportWidth: number, viewportHeight: number) => void
   handleWheel: (e: WheelEvent) => void
   handlePointerDown: (e: React.PointerEvent) => void
   handlePointerMove: (e: React.PointerEvent) => void
@@ -20,6 +21,21 @@ export function useMapInteraction(): MapInteraction {
   const [zoom, setZoom] = useState(1)
   const [isPanning, setIsPanning] = useState(false)
   const lastPos = useRef({ x: 0, y: 0 })
+
+  const fitToView = useCallback((mapWidthTiles: number, mapHeightTiles: number, viewportWidth: number, viewportHeight: number) => {
+    const mapWidthPx = Math.max(1, mapWidthTiles * TILE_SIZE)
+    const mapHeightPx = Math.max(1, mapHeightTiles * TILE_SIZE)
+
+    const fitScale = Math.min(viewportWidth / mapWidthPx, viewportHeight / mapHeightPx)
+    const targetZoom = Math.max(0.25, Math.min(4, fitScale * 0.98))
+
+    const centeredOffsetX = (viewportWidth - mapWidthPx * targetZoom) / 2
+    const centeredOffsetY = (viewportHeight - mapHeightPx * targetZoom) / 2
+
+    setZoom(targetZoom)
+    setOffsetX(centeredOffsetX)
+    setOffsetY(centeredOffsetY)
+  }, [])
 
   const handleWheel = useCallback((e: WheelEvent) => {
     e.preventDefault()
@@ -60,5 +76,5 @@ export function useMapInteraction(): MapInteraction {
     }
   }, [offsetX, offsetY, zoom])
 
-  return { offsetX, offsetY, zoom, isPanning, handleWheel, handlePointerDown, handlePointerMove, handlePointerUp, screenToGrid }
+  return { offsetX, offsetY, zoom, isPanning, fitToView, handleWheel, handlePointerDown, handlePointerMove, handlePointerUp, screenToGrid }
 }

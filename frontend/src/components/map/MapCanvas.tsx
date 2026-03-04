@@ -36,6 +36,9 @@ interface MapCanvasProps {
 export default function MapCanvas({ onTileClick, onEntityClick }: MapCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
+  const fittedMapKeyRef = useRef<string | null>(null)
+  const imageRef = useRef<HTMLImageElement | null>(null)
+  const imageUrlRef = useRef<string | null>(null)
   const map = useGameStore(s => s.map)
   const combat = useGameStore(s => s.combat)
   const characters = useGameStore(s => s.characters)
@@ -45,6 +48,49 @@ export default function MapCanvas({ onTileClick, onEntityClick }: MapCanvasProps
   const interaction = useMapInteraction()
 
   const myCharacterId = players.find(p => p.id === playerId)?.character_id ?? null
+
+  const mapMetadata = map?.metadata
+  const imageUrl = mapMetadata?.image_url
+  const imageOpacity = Math.min(1, Math.max(0, mapMetadata?.image_opacity ?? 0.85))
+
+  useEffect(() => {
+    if (!imageUrl) {
+      imageRef.current = null
+      imageUrlRef.current = null
+      return
+    }
+
+    if (imageUrlRef.current === imageUrl && imageRef.current) {
+      return
+    }
+
+    const img = new Image()
+    img.decoding = 'async'
+    img.onload = () => {
+      imageRef.current = img
+      imageUrlRef.current = imageUrl
+    }
+    img.onerror = () => {
+      imageRef.current = null
+      imageUrlRef.current = null
+    }
+    img.src = imageUrl
+  }, [imageUrl])
+
+  useEffect(() => {
+    if (!map) return
+    const container = containerRef.current
+    if (!container) return
+
+    const mapKey = `${map.metadata?.map_id || 'map'}:${map.width}x${map.height}`
+    if (fittedMapKeyRef.current === mapKey) return
+
+    const rect = container.getBoundingClientRect()
+    if (rect.width <= 0 || rect.height <= 0) return
+
+    interaction.fitToView(map.width, map.height, rect.width, rect.height)
+    fittedMapKeyRef.current = mapKey
+  }, [map, interaction])
 
   const draw = useCallback(() => {
     const canvas = canvasRef.current
@@ -61,6 +107,15 @@ export default function MapCanvas({ onTileClick, onEntityClick }: MapCanvasProps
     ctx.save()
     ctx.translate(interaction.offsetX, interaction.offsetY)
     ctx.scale(interaction.zoom, interaction.zoom)
+
+    const loadedImage = imageRef.current
+    if (loadedImage && imageUrlRef.current === imageUrl) {
+      ctx.save()
+      ctx.globalAlpha = imageOpacity
+      ctx.imageSmoothingEnabled = false
+      ctx.drawImage(loadedImage, 0, 0, map.width * TILE_SIZE, map.height * TILE_SIZE)
+      ctx.restore()
+    }
 
     const visibleSet = new Set(
       (map.visible || []).map(v => `${v.x},${v.y}`)
@@ -89,8 +144,12 @@ export default function MapCanvas({ onTileClick, onEntityClick }: MapCanvasProps
         }
 
         const color = tile ? (TILE_COLORS[tile.type] || '#3a3a4a') : '#0a0a0a'
+        const hasBackgroundImage = !!loadedImage
+        const lowOpacityTile = tile?.type === 'floor' || tile?.type === 'water'
+        ctx.globalAlpha = hasBackgroundImage && lowOpacityTile ? 0.35 : 1
         ctx.fillStyle = color
         ctx.fillRect(px, py, TILE_SIZE, TILE_SIZE)
+        ctx.globalAlpha = 1
 
         if (hasVisibility && revealedSet.has(key) && !visibleSet.has(key)) {
           ctx.fillStyle = 'rgba(0, 0, 0, 0.5)'
@@ -152,7 +211,7 @@ export default function MapCanvas({ onTileClick, onEntityClick }: MapCanvasProps
     drawOverlays(ctx, map, combat, selectedEntityId, myCharacterId)
 
     ctx.restore()
-  }, [map, combat, characters, interaction.offsetX, interaction.offsetY, interaction.zoom, selectedEntityId, myCharacterId])
+  }, [map, combat, characters, interaction.offsetX, interaction.offsetY, interaction.zoom, selectedEntityId, myCharacterId, imageUrl, imageOpacity])
 
   useEffect(() => {
     let frameId: number
@@ -188,6 +247,15 @@ export default function MapCanvas({ onTileClick, onEntityClick }: MapCanvasProps
     onTileClick?.(gx, gy)
   }, [map, interaction, onTileClick, onEntityClick])
 
+  const handleRecenter = useCallback(() => {
+    if (!map) return
+    const container = containerRef.current
+    if (!container) return
+    const rect = container.getBoundingClientRect()
+    if (rect.width <= 0 || rect.height <= 0) return
+    interaction.fitToView(map.width, map.height, rect.width, rect.height)
+  }, [map, interaction])
+
   if (!map) {
     return (
       <div className="map-placeholder">
@@ -195,6 +263,23 @@ export default function MapCanvas({ onTileClick, onEntityClick }: MapCanvasProps
       </div>
     )
   }
+
+  const sourceLabel = (() => {
+    const src = mapMetadata?.map_source
+    if (src === 'library') return 'Library Map'
+    if (src === 'generated') return 'AI Generated'
+    if (src === 'manual') return 'Manual Map'
+    if (src) return src
+    return 'Map'
+  })()
+
+  const statusLabel = mapMetadata?.cache_hit ? 'Cached' : 'Fresh'
+  const environmentLabel = mapMetadata?.environment || 'unknown'
+  const attributionRequired = !!mapMetadata?.attribution_required
+  const attributionLine = attributionRequired
+    ? (mapMetadata?.attribution_text?.trim() || `Map art by ${mapMetadata?.author || 'Unknown source'}`)
+    : ''
+  const hasAttributionPanel = !!(mapMetadata?.author || mapMetadata?.license_spdx || mapMetadata?.source_url || attributionLine)
 
   return (
     <div
@@ -204,6 +289,42 @@ export default function MapCanvas({ onTileClick, onEntityClick }: MapCanvasProps
       onPointerMove={interaction.handlePointerMove}
       onPointerUp={interaction.handlePointerUp}
     >
+      <div className="map-metadata-badge" aria-live="polite">
+        <div className="map-badge-main">
+          <span className="map-badge-source">{sourceLabel}</span>
+          <span className="map-badge-sep">•</span>
+          <span className="map-badge-status">{statusLabel}</span>
+          <span className="map-badge-sep">•</span>
+          <span className="map-badge-env">{environmentLabel}</span>
+        </div>
+        {attributionLine && (
+          <div className="map-badge-attribution">{attributionLine}</div>
+        )}
+      </div>
+      <button
+        type="button"
+        className="map-recenter-btn"
+        onClick={handleRecenter}
+        title="Recenter and fit map"
+      >
+        Recenter map
+      </button>
+      {hasAttributionPanel && (
+        <div className="map-attribution-panel">
+          {mapMetadata?.author && <div>Art: {mapMetadata.author}</div>}
+          {mapMetadata?.license_spdx && <div>License: {mapMetadata.license_spdx}</div>}
+          {mapMetadata?.source_url && (
+            <a
+              className="map-attribution-link"
+              href={mapMetadata.source_url}
+              target="_blank"
+              rel="noreferrer"
+            >
+              Source
+            </a>
+          )}
+        </div>
+      )}
       <canvas
         ref={canvasRef}
         className="map-canvas"

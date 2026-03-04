@@ -22,3 +22,5 @@ DATABASE_URL: str = os.getenv("DATABASE_URL", "sqlite+aiosqlite:///./campaign.db
 JWT_SECRET_KEY: str = os.getenv("JWT_SECRET_KEY", "change-me-to-a-long-random-secret")
 JWT_ALGORITHM: str = os.getenv("JWT_ALGORITHM", "HS256")
 ACCESS_TOKEN_EXPIRE_MINUTES: int = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "10080"))
+
+MAP_PACK_VALIDATION_MODE: str = os.getenv("MAP_PACK_VALIDATION_MODE", "warn").strip().lower() or "warn"

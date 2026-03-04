@@ -354,25 +354,16 @@ class Orchestrator:
             random.setstate(state)
 
     def _build_mock_map_input(self, seed: int) -> dict[str, Any]:
-        width = 20
-        height = 15
-        tiles: list[dict[str, Any]] = []
-
-        for y in range(height):
-            for x in range(width):
-                border = x == 0 or y == 0 or x == width - 1 or y == height - 1
-                tile_type = "wall" if border else "floor"
-                tiles.append({"x": x, "y": y, "type": tile_type})
-
-        door_x = 1 + (seed % (width - 2))
-        tiles.append({"x": door_x, "y": 0, "type": "door", "state": "open"})
-
+        environments = ["dungeon", "forest", "cave", "tavern", "city"]
+        environment = environments[seed % len(environments)]
         return {
-            "description": "You step into a quiet stone chamber lit by flickering sconces.",
-            "width": width,
-            "height": height,
-            "tiles": tiles,
-            "entities": [],
+            "description": f"You step into a {environment} encounter area prepared for exploration and potential combat.",
+            "environment": environment,
+            "encounter_type": "exploration",
+            "encounter_scale": "medium",
+            "tactical_tags": ["cover", "line_of_sight"],
+            "width": 20,
+            "height": 15,
         }
 
     def _ensure_mock_entities(self, dispatcher: ToolDispatcher, player_id: str, action: str) -> list[dict[str, Any]]:

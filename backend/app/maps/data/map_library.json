@@ -1,0 +1,98 @@
+{
+  "version": "2026-03-03",
+  "packs": [
+    {
+      "id": "kenney_topdown_cc0",
+      "name": "Kenney Top-Down RPG (Starter Selection)",
+      "license": {
+        "spdx": "CC0-1.0",
+        "author": "Kenney",
+        "source_url": "https://kenney.nl/assets",
+        "attribution_required": false,
+        "attribution_text": ""
+      }
+    }
+  ],
+  "maps": [
+    {
+      "id": "lib_dungeon_halls_small",
+      "name": "Dungeon Halls",
+      "pack_id": "kenney_topdown_cc0",
+      "environment": "dungeon",
+      "encounter_types": ["combat", "exploration"],
+      "size_class": "small",
+      "difficulty": "normal",
+      "tags": ["chokepoints", "line_of_sight", "cover"],
+      "layout": "room_cluster",
+      "width": 20,
+      "height": 15,
+      "source": "kenney",
+      "image_url": "/maps/kenney/dungeon_halls.svg",
+      "image_opacity": 0.85
+    },
+    {
+      "id": "lib_cave_split_medium",
+      "name": "Split Cavern",
+      "pack_id": "kenney_topdown_cc0",
+      "environment": "cave",
+      "encounter_types": ["combat", "exploration"],
+      "size_class": "medium",
+      "difficulty": "hard",
+      "tags": ["cover", "chokepoints"],
+      "layout": "cave",
+      "width": 24,
+      "height": 18,
+      "source": "kenney",
+      "image_url": "/maps/kenney/split_cavern.svg",
+      "image_opacity": 0.85
+    },
+    {
+      "id": "lib_forest_ambush_medium",
+      "name": "Forest Ambush",
+      "pack_id": "kenney_topdown_cc0",
+      "environment": "forest",
+      "encounter_types": ["combat", "exploration"],
+      "size_class": "medium",
+      "difficulty": "normal",
+      "tags": ["cover", "flanking", "line_of_sight"],
+      "layout": "forest",
+      "width": 24,
+      "height": 18,
+      "source": "kenney",
+      "image_url": "/maps/kenney/forest_ambush.svg",
+      "image_opacity": 0.8
+    },
+    {
+      "id": "lib_tavern_brawl_small",
+      "name": "Tavern Floor",
+      "pack_id": "kenney_topdown_cc0",
+      "environment": "tavern",
+      "encounter_types": ["social", "combat"],
+      "size_class": "small",
+      "difficulty": "easy",
+      "tags": ["cover", "line_of_sight"],
+      "layout": "tavern",
+      "width": 18,
+      "height": 14,
+      "source": "kenney",
+      "image_url": "/maps/kenney/tavern_floor.svg",
+      "image_opacity": 0.85
+    },
+    {
+      "id": "lib_city_crossroads_large",
+      "name": "City Crossroads",
+      "pack_id": "kenney_topdown_cc0",
+      "environment": "city",
+      "encounter_types": ["combat", "social", "exploration"],
+      "size_class": "large",
+      "difficulty": "normal",
+      "tags": ["line_of_sight", "flanking"],
+      "layout": "crossroads",
+      "width": 30,
+      "height": 22,
+      "source": "kenney",
+      "image_url": "/maps/kenney/city_crossroads.svg",
+      "image_opacity": 0.78
+    }
+  ]
+}
