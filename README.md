@@ -143,6 +143,25 @@ Health endpoint: `/api/health`
 
 - `VITE_API_URL=https://<your-railway-backend-domain>`
 - `VITE_WS_URL=wss://<your-railway-backend-domain>`
+- `VITE_SUPABASE_URL=https://<your-project-ref>.supabase.co`
+- `VITE_SUPABASE_ANON_KEY=<your-supabase-anon-key>`
+
+Auth note:
+
+- Frontend login/register now uses Supabase Auth with username-style UX.
+- Existing legacy accounts from pre-migration auth must re-register once.
+
+### Supabase Auth troubleshooting
+
+- **Invalid anon key / auth not configured**
+	- Confirm `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` are set in Vercel project env vars and redeploy.
+	- Ensure the values are from the same Supabase project.
+- **Email already registered**
+	- Registration uses a username alias email (`<normalized-username>@otdnd.local`).
+	- If taken, sign in with that username or choose a different username.
+- **Bad credentials (invalid login credentials)**
+	- Check username/password exactly; usernames are normalized (trimmed/lowercased).
+	- If this is a pre-migration account, re-register once under Supabase Auth.
 
 ### Verify
 

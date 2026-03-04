@@ -13,6 +13,9 @@ This phase establishes migration scaffolding without breaking the current FastAP
   - `supabase/functions/voice-tts/index.ts`
 - Frontend Supabase adapter:
   - `frontend/src/lib/supabaseClient.ts`
+- Frontend Supabase Auth integration:
+  - `frontend/src/stores/authStore.ts`
+  - `frontend/src/components/AuthScreen.tsx`
 - Session compatibility routing (non-breaking fallback):
   - `frontend/src/stores/sessionStore.ts`
 
@@ -20,15 +23,26 @@ This phase establishes migration scaffolding without breaking the current FastAP
 
 1. Run Supabase migration in your Supabase project.
 2. Deploy Edge Function stubs.
-3. Enable session cutover toggle in frontend env:
+3. Configure frontend Supabase env:
 
 ```env
 VITE_SUPABASE_URL=https://<project-ref>.supabase.co
 VITE_SUPABASE_ANON_KEY=<anon-key>
+```
+
+4. Optionally enable session cutover toggle:
+
+```env
 VITE_USE_SUPABASE_SESSIONS=true
 ```
 
-4. Keep current FastAPI backend active while parity migration proceeds.
+5. Keep current FastAPI backend active while parity migration proceeds.
+
+Auth migration note:
+
+- Frontend login/register is now handled by Supabase Auth.
+- The username field maps to a deterministic alias email (`<normalized-username>@otdnd.local`) with `user_metadata.username` preserved for display.
+- Legacy accounts from pre-Supabase auth must re-register once.
 
 ## Next implementation target
 

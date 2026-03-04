@@ -65,6 +65,7 @@ Use this checklist in order.
 
 ## 5) If something fails quickly
 
+- Supabase Auth troubleshooting (anon key, existing username/email alias, bad credentials): see [docs/deploy-vercel-railway-supabase.md](docs/deploy-vercel-railway-supabase.md#3-configure-vercel-frontend).
 - `405`/auth parse errors: Vercel env vars missing or no redeploy after setting env vars.
 - CORS errors: add Vercel domain to `CORS_ALLOW_ORIGINS` in Railway variables and redeploy.
 - DB connection errors: verify Supabase URL uses `postgresql+asyncpg` and includes `sslmode=require`.

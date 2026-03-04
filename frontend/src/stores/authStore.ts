@@ -1,7 +1,6 @@
 import { create } from 'zustand'
-import { API_BASE } from '../config/endpoints'
-
-const STORAGE_KEY = 'dnd_auth_token'
+import type { User } from '@supabase/supabase-js'
+import { getSupabaseClient } from '../lib/supabaseClient'
 
 interface AuthState {
   token: string | null
@@ -16,34 +15,33 @@ interface AuthState {
   hydrateFromStorage: () => Promise<void>
 }
 
-async function parseJsonBody(res: Response): Promise<Record<string, unknown>> {
-  const text = await res.text()
-  if (!text.trim()) {
-    return {}
+function normalizeUsername(username: string): string {
+  return username
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, '-')
+    .replace(/[^a-z0-9._-]/g, '')
   }
-  try {
-    const parsed = JSON.parse(text)
-    if (parsed && typeof parsed === 'object') {
-      return parsed as Record<string, unknown>
-    }
-    return {}
-  } catch {
-    return {}
+
+function usernameToAliasEmail(username: string): string {
+  const normalized = normalizeUsername(username)
+  if (!normalized || normalized.length < 3) {
+    throw new Error('Username must be at least 3 valid characters.')
   }
+  return `${normalized}@otdnd.local`
 }
 
-function errorFromResponse(action: string, res: Response, payload: Record<string, unknown>): Error {
-  const detail = typeof payload.detail === 'string' ? payload.detail : ''
-  const generic = `${action} failed (${res.status}).`
-  if (detail) {
-    return new Error(detail)
+function usernameFromUser(user: User): string {
+  const metadataUsername = user.user_metadata?.username
+  if (typeof metadataUsername === 'string' && metadataUsername.trim()) {
+    return metadataUsername
   }
 
-  if (!import.meta.env.DEV && API_BASE === window.location.origin) {
-    return new Error(`${generic} Backend URL is not configured. Set VITE_API_URL and VITE_WS_URL in frontend environment settings.`)
+  if (user.email && user.email.endsWith('@otdnd.local')) {
+    return user.email.replace(/@otdnd\.local$/i, '')
   }
 
-  return new Error(generic)
+  return user.email ?? user.id
 }
 
 export const useAuthStore = create<AuthState>((set) => ({
@@ -54,59 +52,100 @@ export const useAuthStore = create<AuthState>((set) => ({
   isLoading: true,
 
   register: async (username, password) => {
-    const res = await fetch(`${API_BASE}/api/auth/register`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username, password }),
-    })
-    const data = await parseJsonBody(res)
-    if (!res.ok) throw errorFromResponse('Registration', res, data)
-    if (typeof data.token !== 'string' || typeof data.user_id !== 'string' || typeof data.username !== 'string') {
-      throw new Error('Registration failed (invalid server response).')
+    const supabase = getSupabaseClient()
+    if (!supabase) {
+      throw new Error('Supabase auth is not configured. Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY.')
     }
-    localStorage.setItem(STORAGE_KEY, data.token)
-    set({ token: data.token, userId: data.user_id, username: data.username, isAuthenticated: true })
+
+    const aliasEmail = usernameToAliasEmail(username)
+    const { data, error } = await supabase.auth.signUp({
+      email: aliasEmail,
+      password,
+      options: {
+        data: {
+          username: username.trim(),
+        },
+      },
+    })
+
+    if (error) {
+      throw new Error(error.message)
+    }
+
+    if (!data.user) {
+      throw new Error('Registration failed. Please try again.')
+    }
+
+    if (!data.session) {
+      throw new Error('Registration created. Please sign in to continue.')
+    }
+
+    set({
+      token: data.session.access_token,
+      userId: data.user.id,
+      username: usernameFromUser(data.user),
+      isAuthenticated: true,
+    })
   },
 
   login: async (username, password) => {
-    const res = await fetch(`${API_BASE}/api/auth/login`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username, password }),
-    })
-    const data = await parseJsonBody(res)
-    if (!res.ok) throw errorFromResponse('Login', res, data)
-    if (typeof data.token !== 'string' || typeof data.user_id !== 'string' || typeof data.username !== 'string') {
-      throw new Error('Login failed (invalid server response).')
+    const supabase = getSupabaseClient()
+    if (!supabase) {
+      throw new Error('Supabase auth is not configured. Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY.')
     }
-    localStorage.setItem(STORAGE_KEY, data.token)
-    set({ token: data.token, userId: data.user_id, username: data.username, isAuthenticated: true })
+
+    const aliasEmail = usernameToAliasEmail(username)
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email: aliasEmail,
+      password,
+    })
+
+    if (error) {
+      throw new Error(error.message)
+    }
+
+    if (!data.session || !data.user) {
+      throw new Error('Login failed. Please check your credentials.')
+    }
+
+    set({
+      token: data.session.access_token,
+      userId: data.user.id,
+      username: usernameFromUser(data.user),
+      isAuthenticated: true,
+    })
   },
 
   logout: () => {
-    localStorage.removeItem(STORAGE_KEY)
+    const supabase = getSupabaseClient()
+    if (supabase) {
+      supabase.auth.signOut()
+    }
     set({ token: null, userId: null, username: null, isAuthenticated: false })
   },
 
   hydrateFromStorage: async () => {
-    const token = localStorage.getItem(STORAGE_KEY)
-    if (!token) {
+    const supabase = getSupabaseClient()
+    if (!supabase) {
       set({ isLoading: false })
       return
     }
+
     try {
-      const res = await fetch(`${API_BASE}/api/auth/me`, {
-        headers: { Authorization: `Bearer ${token}` },
-      })
-      if (!res.ok) throw new Error('Token invalid')
-      const data = await parseJsonBody(res)
-      if (typeof data.user_id !== 'string' || typeof data.username !== 'string') {
-        throw new Error('Token invalid')
+      const { data, error } = await supabase.auth.getSession()
+      if (error || !data.session?.user) {
+        throw new Error('No active session')
       }
-      set({ token, userId: data.user_id, username: data.username, isAuthenticated: true, isLoading: false })
+
+      set({
+        token: data.session.access_token,
+        userId: data.session.user.id,
+        username: usernameFromUser(data.session.user),
+        isAuthenticated: true,
+        isLoading: false,
+      })
     } catch {
-      localStorage.removeItem(STORAGE_KEY)
-      set({ isLoading: false })
+      set({ token: null, userId: null, username: null, isAuthenticated: false, isLoading: false })
     }
   },
 }))

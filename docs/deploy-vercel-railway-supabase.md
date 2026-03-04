@@ -67,6 +67,25 @@ In Vercel Project → Settings → Environment Variables:
 
 - `VITE_API_URL=https://<your-backend>`
 - `VITE_WS_URL=wss://<your-backend>`
+- `VITE_SUPABASE_URL=https://<your-project-ref>.supabase.co`
+- `VITE_SUPABASE_ANON_KEY=<your-supabase-anon-key>`
+
+Auth note:
+
+- Frontend login/register uses Supabase Auth with username-style UX.
+- Existing legacy accounts from pre-migration auth must re-register once.
+
+Supabase Auth troubleshooting:
+
+- **Invalid anon key / auth not configured**
+	- Confirm `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` are set in Vercel and redeploy.
+	- Ensure both values belong to the same Supabase project.
+- **Email already registered**
+	- Registration uses username alias email (`<normalized-username>@otdnd.local`).
+	- If it already exists, sign in with that username or pick a different username.
+- **Bad credentials (invalid login credentials)**
+	- Verify username/password exactly; usernames are normalized (trimmed/lowercased).
+	- If this account is from pre-migration auth, re-register once.
 
 Then redeploy Vercel so build-time env vars are applied.
 

@@ -42,6 +42,14 @@
   font-weight: 400;
 }
 
+.auth-migration-note {
+  margin-top: -1.1rem;
+  margin-bottom: 1rem;
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  text-align: center;
+}
+
 .auth-form {
   width: 100%;
   display: flex;
