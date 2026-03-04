@@ -4,7 +4,10 @@ import { API_BASE } from '../config/endpoints'
 import { getSupabaseClient, hasSupabaseConfig } from '../lib/supabaseClient'
 import type { RealtimeChannel } from '@supabase/supabase-js'
 
-const USE_SUPABASE_SESSIONS = import.meta.env.VITE_USE_SUPABASE_SESSIONS === 'true'
+const SUPABASE_SESSIONS_FLAG = import.meta.env.VITE_USE_SUPABASE_SESSIONS
+const USE_SUPABASE_SESSIONS = SUPABASE_SESSIONS_FLAG
+  ? SUPABASE_SESSIONS_FLAG === 'true'
+  : true
 let sessionEventsChannel: RealtimeChannel | null = null
 
 function shouldUseSupabaseSessions(): boolean {
@@ -173,6 +176,7 @@ export const useSessionStore = create<SessionState>((set) => ({
 
   createSession: async (playerName) => {
     let data: Record<string, unknown> = {}
+    let supabaseCreateError: string | null = null
 
     if (shouldUseSupabaseSessions()) {
       try {
@@ -190,19 +194,30 @@ export const useSessionStore = create<SessionState>((set) => ({
           data = (supabaseData ?? {}) as Record<string, unknown>
         }
       } catch (error) {
+        supabaseCreateError = error instanceof Error ? error.message : 'Supabase create_session failed.'
         console.warn('Supabase create_session failed; falling back to FastAPI endpoint.', error)
       }
     }
 
     if (!data.room_code || !data.player_id) {
-      const res = await fetch(`${API_BASE}/api/session/create`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ player_name: playerName }),
-      })
-      data = await parseJsonBody(res)
-      if (!res.ok) {
-        throw new Error('Unable to create session.')
+      try {
+        const res = await fetch(`${API_BASE}/api/session/create`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ player_name: playerName }),
+        })
+        data = await parseJsonBody(res)
+        if (!res.ok) {
+          const backendError = typeof data.error === 'string' ? data.error : `FastAPI create failed (${res.status}).`
+          const fallbackDetail = supabaseCreateError ? ` Supabase error: ${supabaseCreateError}` : ''
+          throw new Error(`${backendError}${fallbackDetail}`)
+        }
+      } catch (error) {
+        if (error instanceof Error) {
+          throw error
+        }
+        const fallbackDetail = supabaseCreateError ? ` Supabase error: ${supabaseCreateError}` : ''
+        throw new Error(`Unable to create session.${fallbackDetail}`)
       }
     }
 
@@ -226,6 +241,7 @@ export const useSessionStore = create<SessionState>((set) => ({
 
   joinSession: async (roomCode, playerName) => {
     let data: Record<string, unknown> = {}
+    let supabaseJoinError: string | null = null
 
     if (shouldUseSupabaseSessions()) {
       try {
@@ -244,19 +260,30 @@ export const useSessionStore = create<SessionState>((set) => ({
           data = (supabaseData ?? {}) as Record<string, unknown>
         }
       } catch (error) {
+        supabaseJoinError = error instanceof Error ? error.message : 'Supabase join_session failed.'
         console.warn('Supabase join_session failed; falling back to FastAPI endpoint.', error)
       }
     }
 
     if (!data.player_id || !data.session) {
-      const res = await fetch(`${API_BASE}/api/session/join`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ room_code: roomCode, player_name: playerName }),
-      })
-      data = await parseJsonBody(res)
-      if (!res.ok) {
-        throw new Error('Unable to join session.')
+      try {
+        const res = await fetch(`${API_BASE}/api/session/join`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ room_code: roomCode, player_name: playerName }),
+        })
+        data = await parseJsonBody(res)
+        if (!res.ok) {
+          const backendError = typeof data.error === 'string' ? data.error : `FastAPI join failed (${res.status}).`
+          const fallbackDetail = supabaseJoinError ? ` Supabase error: ${supabaseJoinError}` : ''
+          throw new Error(`${backendError}${fallbackDetail}`)
+        }
+      } catch (error) {
+        if (error instanceof Error) {
+          throw error
+        }
+        const fallbackDetail = supabaseJoinError ? ` Supabase error: ${supabaseJoinError}` : ''
+        throw new Error(`Unable to join session.${fallbackDetail}`)
       }
     }
 

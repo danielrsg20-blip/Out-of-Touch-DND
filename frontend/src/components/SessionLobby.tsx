@@ -24,8 +24,8 @@ export default function SessionLobby() {
     try {
       await createSession(name.trim())
       useSessionStore.getState().setPhase('character_create')
-    } catch {
-      setError('Failed to create session.')
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Failed to create session.')
     }
   }
 
@@ -34,8 +34,8 @@ export default function SessionLobby() {
     try {
       await joinSession(joinCode.trim(), name.trim())
       useSessionStore.getState().setPhase('character_create')
-    } catch {
-      setError('Failed to join session. Check the room code.')
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Failed to join session. Check the room code.')
     }
   }
 
