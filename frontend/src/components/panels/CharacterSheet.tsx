@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useGameStore } from '../../stores/gameStore'
 import { useSessionStore } from '../../stores/sessionStore'
-import { getSupabaseClient } from '../../lib/supabaseClient'
+import { invokeEdgeFunction } from '../../lib/supabaseClient'
 import type { ItemData, SpellOption } from '../../types'
 import './panels.css'
 
@@ -124,24 +124,11 @@ export default function CharacterSheet() {
 
     const run = async () => {
       try {
-        const supabase = getSupabaseClient()
-        if (!supabase) {
-          throw new Error('Supabase is not configured.')
-        }
-
-        const { data, error } = await supabase.functions.invoke('dm-action', {
-          body: {
-            action: 'get_spell_options',
-            char_class: char.class,
-            level: char.level,
-          },
+        const payload = await invokeEdgeFunction<Record<string, unknown>>('dm-action', {
+          action: 'get_spell_options',
+          char_class: char.class,
+          level: char.level,
         })
-
-        if (error) {
-          throw new Error(error.message)
-        }
-
-        const payload = (data ?? {}) as Record<string, unknown>
         if (typeof payload.error === 'string') {
           setPreparedError(String(payload.error))
           return
@@ -178,26 +165,13 @@ export default function CharacterSheet() {
     setPreparedError(null)
     setSavingPreparedOptions(true)
     try {
-      const supabase = getSupabaseClient()
-      if (!supabase) {
-        throw new Error('Supabase is not configured.')
-      }
-
-      const { data, error } = await supabase.functions.invoke('dm-action', {
-        body: {
-          action: 'level_up_prepared_spells',
-          room_code: roomCode,
-          player_id: playerId,
-          new_level: char.level,
-          prepared_spells: selectedPreparedSpells,
-        },
+      const payload = await invokeEdgeFunction<Record<string, unknown>>('dm-action', {
+        action: 'level_up_prepared_spells',
+        room_code: roomCode,
+        player_id: playerId,
+        new_level: char.level,
+        prepared_spells: selectedPreparedSpells,
       })
-
-      if (error) {
-        throw new Error(error.message)
-      }
-
-      const payload = (data ?? {}) as Record<string, unknown>
       if (typeof payload.error === 'string') {
         setPreparedError(String(payload.error))
         return

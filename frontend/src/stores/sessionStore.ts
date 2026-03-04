@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 import type { PlayerData } from '../types'
 import { API_BASE } from '../config/endpoints'
-import { getSupabaseClient, hasSupabaseConfig } from '../lib/supabaseClient'
+import { getSupabaseClient, hasSupabaseConfig, invokeEdgeFunction } from '../lib/supabaseClient'
 import type { RealtimeChannel } from '@supabase/supabase-js'
 
 const SUPABASE_SESSIONS_FLAG = import.meta.env.VITE_USE_SUPABASE_SESSIONS
@@ -129,16 +129,10 @@ export const useSessionStore = create<SessionState>((set) => ({
       try {
         const supabase = getSupabaseClient()
         if (supabase) {
-          const { data, error } = await supabase.functions.invoke('session-actions', {
-            body: {
-              action: 'get_session',
-              room_code: normalizedRoomCode,
-            },
+          const payload = await invokeEdgeFunction<Record<string, unknown>>('session-actions', {
+            action: 'get_session',
+            room_code: normalizedRoomCode,
           })
-          if (error) {
-            throw new Error(error.message)
-          }
-          const payload = (data ?? {}) as Record<string, unknown>
           const session = payload.session as Record<string, unknown> | undefined
           const sessionId = typeof payload.session_id === 'string'
             ? payload.session_id
@@ -187,16 +181,10 @@ export const useSessionStore = create<SessionState>((set) => ({
       try {
         const supabase = getSupabaseClient()
         if (supabase) {
-          const { data: supabaseData, error } = await supabase.functions.invoke('session-actions', {
-            body: {
-              action: 'create_session',
-              player_name: playerName,
-            },
+          data = await invokeEdgeFunction<Record<string, unknown>>('session-actions', {
+            action: 'create_session',
+            player_name: playerName,
           })
-          if (error) {
-            throw new Error(error.message)
-          }
-          data = (supabaseData ?? {}) as Record<string, unknown>
         }
       } catch (error) {
         supabaseCreateError = error instanceof Error ? error.message : 'Supabase create_session failed.'
@@ -255,17 +243,11 @@ export const useSessionStore = create<SessionState>((set) => ({
       try {
         const supabase = getSupabaseClient()
         if (supabase) {
-          const { data: supabaseData, error } = await supabase.functions.invoke('session-actions', {
-            body: {
-              action: 'join_session',
-              room_code: roomCode,
-              player_name: playerName,
-            },
+          data = await invokeEdgeFunction<Record<string, unknown>>('session-actions', {
+            action: 'join_session',
+            room_code: roomCode,
+            player_name: playerName,
           })
-          if (error) {
-            throw new Error(error.message)
-          }
-          data = (supabaseData ?? {}) as Record<string, unknown>
         }
       } catch (error) {
         supabaseJoinError = error instanceof Error ? error.message : 'Supabase join_session failed.'

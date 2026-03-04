@@ -1,7 +1,7 @@
 import { useEffect, useRef, useCallback } from 'react'
 import { useSessionStore } from '../stores/sessionStore'
 import { useGameStore } from '../stores/gameStore'
-import { getSupabaseClient } from '../lib/supabaseClient'
+import { getSupabaseClient, invokeEdgeFunction } from '../lib/supabaseClient'
 import type { RealtimeChannel } from '@supabase/supabase-js'
 
 export function useWebSocket() {
@@ -219,19 +219,11 @@ export function useWebSocket() {
     }
 
     setLoading(true)
-    supabase.functions.invoke('dm-action', {
-      body: { action: 'player_action', room_code: roomCode, player_id: playerId, content },
-    }).then(({ data, error }) => {
-      if (error) {
-        addNarrative('system', `Unable to send action: ${error.message}`)
-        setLoading(false)
-        return
-      }
-      const payload = (data ?? {}) as Record<string, unknown>
-      if (typeof payload.error === 'string') {
-        addNarrative('system', `Unable to send action: ${payload.error}`)
-        setLoading(false)
-      }
+    invokeEdgeFunction<Record<string, unknown>>('dm-action', {
+      action: 'player_action',
+      room_code: roomCode,
+      player_id: playerId,
+      content,
     }).catch((err: unknown) => {
       addNarrative('system', `Unable to send action: ${err instanceof Error ? err.message : 'Unknown error'}`)
       setLoading(false)
@@ -244,15 +236,15 @@ export function useWebSocket() {
       return
     }
 
-    supabase.functions.invoke('dm-action', {
-      body: {
-        action: 'move_token',
-        room_code: roomCode,
-        player_id: playerId,
-        character_id: characterId,
-        x,
-        y,
-      },
+    invokeEdgeFunction<Record<string, unknown>>('dm-action', {
+      action: 'move_token',
+      room_code: roomCode,
+      player_id: playerId,
+      character_id: characterId,
+      x,
+      y,
+    }).catch(() => {
+      addNarrative('system', 'Unable to move token right now.')
     })
   }, [playerId, roomCode])
 
@@ -265,26 +257,13 @@ export function useWebSocket() {
     }
 
     setLoading(true)
-    supabase.functions.invoke('dm-action', {
-      body: {
-        action: 'cast_spell',
-        room_code: roomCode,
-        player_id: playerId,
-        spell_name: spellName,
-        slot_level: slotLevel,
-        target_id: targetId,
-      },
-    }).then(({ data, error }) => {
-      if (error) {
-        addNarrative('system', `Unable to cast spell: ${error.message}`)
-        setLoading(false)
-        return
-      }
-      const payload = (data ?? {}) as Record<string, unknown>
-      if (typeof payload.error === 'string') {
-        addNarrative('system', `Unable to cast spell: ${payload.error}`)
-        setLoading(false)
-      }
+    invokeEdgeFunction<Record<string, unknown>>('dm-action', {
+      action: 'cast_spell',
+      room_code: roomCode,
+      player_id: playerId,
+      spell_name: spellName,
+      slot_level: slotLevel,
+      target_id: targetId,
     }).catch((err: unknown) => {
       addNarrative('system', `Unable to cast spell: ${err instanceof Error ? err.message : 'Unknown error'}`)
       setLoading(false)

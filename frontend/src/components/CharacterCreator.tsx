@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useSessionStore } from '../stores/sessionStore'
-import { getSupabaseClient } from '../lib/supabaseClient'
+import { invokeEdgeFunction } from '../lib/supabaseClient'
 import type { SpellOption } from '../types'
 import './CharacterCreator.css'
 
@@ -34,24 +34,11 @@ export default function CharacterCreator() {
 
   const loadSpellOptions = async (nextClass: string) => {
     try {
-      const supabase = getSupabaseClient()
-      if (!supabase) {
-        throw new Error('Supabase is not configured.')
-      }
-
-      const { data, error: invokeError } = await supabase.functions.invoke('dm-action', {
-        body: {
-          action: 'get_spell_options',
-          char_class: nextClass,
-          level: 1,
-        },
+      const payload = await invokeEdgeFunction<Record<string, unknown>>('dm-action', {
+        action: 'get_spell_options',
+        char_class: nextClass,
+        level: 1,
       })
-
-      if (invokeError) {
-        throw new Error(invokeError.message)
-      }
-
-      const payload = (data ?? {}) as Record<string, unknown>
       if (typeof payload.error === 'string') {
         throw new Error(payload.error)
       }
@@ -115,29 +102,17 @@ export default function CharacterCreator() {
     setCreating(true)
     setError('')
     try {
-      const supabase = getSupabaseClient()
-      if (!supabase) {
-        throw new Error('Supabase is not configured.')
-      }
-
-      const { data, error: invokeError } = await supabase.functions.invoke('dm-action', {
-        body: {
-          action: 'create_character',
-          room_code: roomCode,
-          player_id: playerId,
-          name: name.trim(),
-          race,
-          char_class: charClass,
-          abilities,
-          known_spells: spellcastingMode === 'known' ? selectedKnownSpells : undefined,
-          prepared_spells: spellcastingMode === 'prepared' ? selectedPreparedSpells : undefined,
-        },
+      const payload = await invokeEdgeFunction<Record<string, unknown>>('dm-action', {
+        action: 'create_character',
+        room_code: roomCode,
+        player_id: playerId,
+        name: name.trim(),
+        race,
+        char_class: charClass,
+        abilities,
+        known_spells: spellcastingMode === 'known' ? selectedKnownSpells : undefined,
+        prepared_spells: spellcastingMode === 'prepared' ? selectedPreparedSpells : undefined,
       })
-
-      if (invokeError) {
-        throw new Error(invokeError.message)
-      }
-      const payload = (data ?? {}) as Record<string, unknown>
       if (typeof payload.error === 'string') {
         throw new Error(payload.error)
       }
