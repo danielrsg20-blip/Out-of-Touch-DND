@@ -10,11 +10,9 @@ export function drawOverlays(ctx: CanvasRenderingContext2D, map: MapData, combat
   const entity = map.entities.find(e => e.id === selectedEntityId)
   if (!entity) return
 
-  const charData = combat.initiative_order.find(e => e.id === selectedEntityId)
-  if (!charData) return
-
-  const speed = 30
-  const moveTiles = Math.floor(speed / 5)
+  const remainingFeet = Number(combat.current_movement_remaining ?? 0)
+  const moveTiles = Math.max(0, Math.floor(remainingFeet / 5))
+  if (moveTiles <= 0) return
 
   const wallSet = new Set(
     map.tiles.filter(t => t.type === 'wall' || (t.type === 'door' && t.state === 'closed') || t.type === 'pillar' || t.type === 'pit' || t.type === 'rubble')

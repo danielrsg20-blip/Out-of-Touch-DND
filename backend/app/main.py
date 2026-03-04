@@ -416,6 +416,25 @@ class LoadCampaignRequest(BaseModel):
     campaign_id: str
     room_code: str
 
+
+class PlayerActionRequest(BaseModel):
+    room_code: str
+    player_id: str
+    content: str
+
+
+class NextTurnRequest(BaseModel):
+    room_code: str
+    player_id: str
+
+
+class MoveTokenRequest(BaseModel):
+    room_code: str
+    player_id: str
+    character_id: str
+    x: int
+    y: int
+
 @app.post("/api/campaign/load")
 async def load_campaign(req: LoadCampaignRequest):
     session = session_manager.get_session(req.room_code)
@@ -462,6 +481,205 @@ async def load_campaign(req: LoadCampaignRequest):
     session.orchestrator.conversation_history = conversation
 
     return {"loaded": True, "name": campaign.name, "characters": len(chars_data)}
+
+
+@app.post("/api/action")
+async def action_endpoint(req: PlayerActionRequest):
+    session = session_manager.get_session(req.room_code)
+    if not session:
+        return {"error": "Session not found"}
+
+    player = session.players.get(req.player_id)
+    if not player:
+        return {"error": "Player not found in session"}
+
+    action_text = req.content.strip()
+    if not action_text:
+        return {"error": "Action text is required"}
+
+    await session.broadcast({
+        "type": "player_message",
+        "player_id": player.id,
+        "player_name": player.name,
+        "content": action_text,
+    })
+
+    events = await session.orchestrator.process_player_action(
+        player_id=player.id,
+        player_name=player.name,
+        action=action_text,
+    )
+
+    narratives: list[str] = []
+    dice_results: list[dict[str, Any]] = []
+
+    for event in events:
+        if event.get("type") == "narrative":
+            content = str(event.get("content", "")).strip()
+            if content:
+                narratives.append(content)
+                await session.broadcast({
+                    "type": "dm_narrative",
+                    "content": content,
+                })
+        elif event.get("type") == "tool_result":
+            tool_name = str(event.get("tool", ""))
+            result = event.get("result")
+            if tool_name in ("attack", "apply_damage", "heal_character", "check_ability", "roll_dice", "cast_spell"):
+                payload = {
+                    "type": "dice_result",
+                    "tool": tool_name,
+                    "data": result,
+                }
+                dice_results.append(payload)
+                await session.broadcast(payload)
+
+    state = session.orchestrator.get_full_state()
+    await session.broadcast({"type": "state_sync", "state": state})
+
+    return {
+        "ok": True,
+        "narratives": narratives,
+        "dice_results": dice_results,
+        "state": state,
+    }
+
+
+@app.post("/api/combat/next-turn")
+async def combat_next_turn(req: NextTurnRequest):
+    session = session_manager.get_session(req.room_code)
+    if not session:
+        return {"error": "Session not found"}
+
+    player = session.players.get(req.player_id)
+    if not player:
+        return {"error": "Player not found in session"}
+
+    dispatcher = ToolDispatcher(
+        session.orchestrator.characters,
+        session.orchestrator.game_map,
+        session.orchestrator.combat,
+        session.orchestrator.memory,
+    )
+    result = dispatcher.dispatch("next_turn", {})
+    if isinstance(result, dict) and result.get("error"):
+        return {"error": str(result.get("error"))}
+
+    if dispatcher.combat and dispatcher.combat.is_active:
+        safety = 0
+        while dispatcher.combat.current_participant and dispatcher.combat.current_participant.character.id.startswith("enemy_") and safety < 12:
+            safety += 1
+            result = dispatcher.dispatch("next_turn", {})
+            if isinstance(result, dict) and result.get("error"):
+                break
+
+    session.orchestrator.game_map = dispatcher.game_map
+    session.orchestrator.combat = dispatcher.combat
+    session.orchestrator.memory = dispatcher.memory
+
+    combat_state = session.orchestrator.combat.to_dict() if session.orchestrator.combat else None
+    await session.broadcast({
+        "type": "combat_update",
+        "action": "next_turn",
+        "data": result if isinstance(result, dict) else {"message": "Turn advanced."},
+        "combat": combat_state,
+    })
+
+    state = session.orchestrator.get_full_state()
+    await session.broadcast({"type": "state_sync", "state": state})
+
+    return {
+        "ok": True,
+        "combat": combat_state,
+        "state": state,
+        "data": result if isinstance(result, dict) else {"message": "Turn advanced."},
+    }
+
+
+@app.post("/api/move-token")
+async def move_token_endpoint(req: MoveTokenRequest):
+    session = session_manager.get_session(req.room_code)
+    if not session:
+        return {"error": "Session not found"}
+
+    player = session.players.get(req.player_id)
+    if not player:
+        return {"error": "Player not found in session"}
+
+    if player.character_id and req.character_id != player.character_id:
+        return {"error": "You can only move your own character token"}
+
+    game_map = session.orchestrator.game_map
+    if not game_map:
+        return {"error": "No map loaded"}
+
+    entity = game_map.entities.get(req.character_id)
+    if entity is None:
+        return {"error": f"Entity {req.character_id} not found"}
+
+    distance_tiles = abs(int(req.x) - int(entity.x)) + abs(int(req.y) - int(entity.y))
+    combat = session.orchestrator.combat
+    if combat and combat.is_active:
+        current = combat.current_participant
+        if current is None:
+            return {"error": "Combat turn state is invalid"}
+        if current.character.id != req.character_id:
+            return {"error": "It is not your turn"}
+
+        remaining_feet = int(current.movement_remaining)
+        required_feet = distance_tiles * 5
+        if required_feet > remaining_feet:
+            return {"error": f"Not enough movement remaining ({remaining_feet} ft left)"}
+
+    dispatcher = ToolDispatcher(
+        session.orchestrator.characters,
+        session.orchestrator.game_map,
+        session.orchestrator.combat,
+        session.orchestrator.memory,
+    )
+    result = dispatcher.dispatch("move_entity", {
+        "entity_id": req.character_id,
+        "x": req.x,
+        "y": req.y,
+    })
+
+    session.orchestrator.game_map = dispatcher.game_map
+    session.orchestrator.combat = dispatcher.combat
+    session.orchestrator.memory = dispatcher.memory
+
+    if isinstance(result, dict) and result.get("error"):
+        return {"error": str(result.get("error"))}
+
+    if combat and combat.is_active:
+        current = combat.current_participant
+        if current and current.character.id == req.character_id:
+            required_feet = distance_tiles * 5
+            current.movement_remaining = max(0, int(current.movement_remaining) - required_feet)
+
+    await session.broadcast({
+        "type": "map_change",
+        "action": "move_entity",
+        "data": result,
+    })
+
+    if combat and combat.is_active:
+        await session.broadcast({
+            "type": "combat_update",
+            "action": "movement_update",
+            "combat": combat.to_dict(),
+            "data": {
+                "message": f"Movement remaining: {combat.current_participant.movement_remaining if combat.current_participant else 0} ft",
+            },
+        })
+
+    state = session.orchestrator.get_full_state()
+    await session.broadcast({"type": "state_sync", "state": state})
+
+    return {
+        "ok": True,
+        "data": result,
+        "state": state,
+    }
 
 
 # --- WebSocket ---

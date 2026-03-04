@@ -34,6 +34,30 @@ interface MapCanvasProps {
   onEntityClick?: (entityId: string) => void
 }
 
+function inferEnemySpriteIdByName(name: string): string {
+  const key = name.toLowerCase()
+  if (key.includes('skeleton') || key.includes('zombie') || key.includes('ghoul') || key.includes('wraith')) return 'enemy_skeleton'
+  if (key.includes('goblin')) return 'enemy_goblin'
+  if (key.includes('orc')) return 'enemy_orc'
+  if (key.includes('kobold')) return 'enemy_kobold'
+  if (key.includes('bandit')) return 'enemy_bandit'
+  if (key.includes('wolf') || key.includes('boar') || key.includes('bat')) return 'enemy_wolf'
+  if (key.includes('spider')) return 'enemy_spider'
+  return 'enemy_goblin'
+}
+
+function inferPropSpriteIdByName(name: string): string {
+  const key = name.toLowerCase()
+  if (key.includes('tree') || key.includes('bush') || key.includes('log')) return 'prop_tree'
+  if (key.includes('urn') || key.includes('tomb') || key.includes('bones') || key.includes('brazier')) return 'prop_urn'
+  if (key.includes('stalagmite') || key.includes('crystal') || key.includes('mushroom')) return 'prop_stalagmite'
+  if (key.includes('torch')) return 'prop_torch'
+  if (key.includes('crate')) return 'prop_crate'
+  if (key.includes('barrel')) return 'prop_barrel'
+  if (key.includes('rubble')) return 'prop_rubble'
+  return 'prop_stone'
+}
+
 export default function MapCanvas({ onTileClick, onEntityClick }: MapCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
@@ -181,7 +205,30 @@ export default function MapCanvas({ onTileClick, onEntityClick }: MapCanvasProps
       const radius = TILE_SIZE * 0.35
       const color = ENTITY_COLORS[entity.type] || '#fff'
       const spriteKey = entity.sprite?.trim()
-      const resolvedSpriteUrl = spriteKey ? resolveSpriteUrl(spriteKey) : null
+      const inferredSpriteKey = (() => {
+        if (entity.type === 'pc') {
+          const characterSprite = characters[entity.id]?.sprite_id
+          if (typeof characterSprite === 'string' && characterSprite.trim()) {
+            return characterSprite
+          }
+          return 'pc_knight'
+        }
+
+        if (entity.type === 'enemy') {
+          return inferEnemySpriteIdByName(entity.name)
+        }
+
+        if (entity.type === 'object') {
+          return inferPropSpriteIdByName(entity.name)
+        }
+
+        return ''
+      })()
+
+      const resolvedSpriteUrl = [spriteKey, inferredSpriteKey]
+        .filter((candidate): candidate is string => typeof candidate === 'string' && candidate.trim().length > 0)
+        .map((candidate) => resolveSpriteUrl(candidate))
+        .find((candidate) => typeof candidate === 'string' && candidate.length > 0) ?? null
 
       if (entity.id === selectedEntityId) {
         ctx.beginPath()

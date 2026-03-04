@@ -2,8 +2,21 @@ import { useEffect, useMemo, useState } from 'react'
 import { useGameStore } from '../../stores/gameStore'
 import { useSessionStore } from '../../stores/sessionStore'
 import { invokeEdgeFunction } from '../../lib/supabaseClient'
+import { API_BASE } from '../../config/endpoints'
 import type { CastableSpellOption, SpellSlotState } from '../../types'
 import './panels.css'
+
+async function parseJsonBody(res: Response): Promise<Record<string, unknown>> {
+  const text = await res.text()
+  if (!text.trim()) {
+    return {}
+  }
+  try {
+    return JSON.parse(text) as Record<string, unknown>
+  } catch {
+    return {}
+  }
+}
 
 interface ActionBarProps {
   onSend: (message: string) => void
@@ -14,6 +27,8 @@ export default function ActionBar({ onSend, onCastSpell }: ActionBarProps) {
   const combat = useGameStore(s => s.combat)
   const characters = useGameStore(s => s.characters)
   const addNarrative = useGameStore(s => s.addNarrative)
+  const syncState = useGameStore(s => s.syncState)
+  const setCombat = useGameStore(s => s.setCombat)
   const playerId = useSessionStore(s => s.playerId)
   const players = useSessionStore(s => s.players)
   const roomCode = useSessionStore(s => s.roomCode)
@@ -69,6 +84,32 @@ export default function ActionBar({ onSend, onCastSpell }: ActionBarProps) {
       return
     }
     setAdvancingTurn(true)
+    const fallbackAdvanceTurn = async () => {
+      const res = await fetch(`${API_BASE}/api/combat/next-turn`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          room_code: roomCode,
+          player_id: playerId,
+        }),
+      })
+      const payload = await parseJsonBody(res)
+      if (!res.ok || typeof payload.error === 'string') {
+        throw new Error(typeof payload.error === 'string' ? payload.error : `Unable to advance turn (${res.status})`)
+      }
+
+      if (payload.state) {
+        syncState(payload.state as Parameters<typeof syncState>[0])
+      }
+      if (payload.combat) {
+        setCombat(payload.combat as Parameters<typeof setCombat>[0])
+      }
+      const msg = (payload.data as Record<string, unknown> | undefined)?.message
+      if (typeof msg === 'string' && msg.trim()) {
+        addNarrative('system', msg)
+      }
+    }
+
     try {
       await invokeEdgeFunction<Record<string, unknown>>('dm-action', {
         action: 'next_combat_turn',
@@ -76,7 +117,17 @@ export default function ActionBar({ onSend, onCastSpell }: ActionBarProps) {
         player_id: playerId,
       })
     } catch (error) {
-      addNarrative('system', `Unable to advance turn: ${error instanceof Error ? error.message : 'Unknown error'}`)
+      const message = error instanceof Error ? error.message : 'Unknown error'
+      if (message.includes('(401)')) {
+        try {
+          await fallbackAdvanceTurn()
+          return
+        } catch (fallbackError: unknown) {
+          addNarrative('system', `Unable to advance turn: ${fallbackError instanceof Error ? fallbackError.message : 'Unknown error'}`)
+          return
+        }
+      }
+      addNarrative('system', `Unable to advance turn: ${message}`)
     } finally {
       setAdvancingTurn(false)
     }
@@ -103,14 +154,13 @@ export default function ActionBar({ onSend, onCastSpell }: ActionBarProps) {
           </span>
         )}
       </div>
-      {isMyTurn && (
-        <div className="action-buttons">
+      <div className="action-buttons">
           {quickSpells.map(spell => (
             <button
               key={`spell-${spell.name}`}
               className={`action-btn spell-action-btn ${!spell.castable ? 'disabled-action' : ''}`}
-              onClick={() => spell.castable && castSpell(spell)}
-              disabled={!spell.castable}
+              onClick={() => spell.castable && isMyTurn && castSpell(spell)}
+              disabled={!spell.castable || !isMyTurn}
               title={spell.castable ? `Cast ${spell.name}` : `${spell.name}: ${spell.reason || 'Unavailable'}`}
             >
               <span className="action-icon">✨</span>
@@ -130,7 +180,7 @@ export default function ActionBar({ onSend, onCastSpell }: ActionBarProps) {
                 onSend(a.action)
               }}
               title={a.action}
-              disabled={a.label === 'End Turn' && (!isMyTurn || advancingTurn)}
+              disabled={a.label === 'End Turn' ? (!isMyTurn || advancingTurn) : !isMyTurn}
             >
               <span className="action-icon">{a.icon}</span>
               <span className="action-label">{a.label === 'End Turn' && advancingTurn ? 'Advancing...' : a.label}</span>
@@ -172,7 +222,7 @@ export default function ActionBar({ onSend, onCastSpell }: ActionBarProps) {
 
               <button
                 className="action-btn cast-selected-btn"
-                disabled={!selectedSpellOption || !selectedSpellOption.castable}
+                disabled={!selectedSpellOption || !selectedSpellOption.castable || !isMyTurn}
                 onClick={() => {
                   if (!selectedSpellOption) return
                   const slot = selectedSpellOption.level === 0 ? 0 : selectedSlot
@@ -194,8 +244,7 @@ export default function ActionBar({ onSend, onCastSpell }: ActionBarProps) {
               ))}
             </div>
           )}
-        </div>
-      )}
+      </div>
     </div>
   )
 }

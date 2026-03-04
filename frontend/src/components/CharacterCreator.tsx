@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react'
 import { useSessionStore } from '../stores/sessionStore'
+import { useGameStore } from '../stores/gameStore'
 import { invokeEdgeFunction } from '../lib/supabaseClient'
-import type { SpellOption } from '../types'
+import { API_BASE } from '../config/endpoints'
+import type { CharacterData, SpellOption } from '../types'
 import './CharacterCreator.css'
 
 const RACES = ['Human', 'Elf', 'Dwarf', 'Halfling', 'Dragonborn', 'Gnome', 'Half-Elf', 'Half-Orc', 'Tiefling']
@@ -37,8 +39,21 @@ function getSpriteOptionsFor(race: string, charClass: string): CharacterSpriteOp
   return filtered.length > 0 ? filtered : CHARACTER_SPRITES
 }
 
+async function parseJsonBody(res: Response): Promise<Record<string, unknown>> {
+  const text = await res.text()
+  if (!text.trim()) {
+    return {}
+  }
+  try {
+    return JSON.parse(text) as Record<string, unknown>
+  } catch {
+    return {}
+  }
+}
+
 export default function CharacterCreator() {
   const { roomCode, playerId, players, getSession } = useSessionStore()
+  const setCharacters = useGameStore(s => s.setCharacters)
   const [name, setName] = useState('')
   const [race, setRace] = useState('Human')
   const [charClass, setCharClass] = useState('Fighter')
@@ -63,11 +78,21 @@ export default function CharacterCreator() {
 
   const loadSpellOptions = async (nextClass: string) => {
     try {
-      const payload = await invokeEdgeFunction<Record<string, unknown>>('dm-action', {
-        action: 'get_spell_options',
-        char_class: nextClass,
-        level: 1,
-      })
+      let payload: Record<string, unknown> = {}
+      try {
+        payload = await invokeEdgeFunction<Record<string, unknown>>('dm-action', {
+          action: 'get_spell_options',
+          char_class: nextClass,
+          level: 1,
+        })
+      } catch {
+        const res = await fetch(`${API_BASE}/api/spells/options/${encodeURIComponent(nextClass)}/1`)
+        payload = await parseJsonBody(res)
+        if (!res.ok) {
+          throw new Error(typeof payload.error === 'string' ? payload.error : 'Unable to load spell options.')
+        }
+      }
+
       if (typeof payload.error === 'string') {
         throw new Error(payload.error)
       }
@@ -96,14 +121,14 @@ export default function CharacterCreator() {
         setSelectedKnownSpells([])
         setSelectedPreparedSpells([])
       }
-    } catch {
+    } catch (err: unknown) {
       setSpellcastingMode('none')
       setKnownLimit(0)
       setPreparedLimit(0)
       setAvailableSpells([])
       setSelectedKnownSpells([])
       setSelectedPreparedSpells([])
-      setError('Unable to load spell options right now.')
+      setError(err instanceof Error ? err.message : 'Unable to load spell options right now.')
     }
   }
 
@@ -131,18 +156,59 @@ export default function CharacterCreator() {
     setCreating(true)
     setError('')
     try {
-      const payload = await invokeEdgeFunction<Record<string, unknown>>('dm-action', {
-        action: 'create_character',
-        room_code: roomCode,
-        player_id: playerId,
-        name: name.trim(),
-        race,
-        char_class: charClass,
-        sprite_id: spriteId,
-        abilities,
-        known_spells: spellcastingMode === 'known' ? selectedKnownSpells : undefined,
-        prepared_spells: spellcastingMode === 'prepared' ? selectedPreparedSpells : undefined,
-      })
+      let payload: Record<string, unknown> = {}
+      try {
+        payload = await invokeEdgeFunction<Record<string, unknown>>('dm-action', {
+          action: 'create_character',
+          room_code: roomCode,
+          player_id: playerId,
+          name: name.trim(),
+          race,
+          char_class: charClass,
+          sprite_id: spriteId,
+          abilities,
+          known_spells: spellcastingMode === 'known' ? selectedKnownSpells : undefined,
+          prepared_spells: spellcastingMode === 'prepared' ? selectedPreparedSpells : undefined,
+        })
+      } catch {
+        const res = await fetch(`${API_BASE}/api/character/create`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            room_code: roomCode,
+            player_id: playerId,
+            name: name.trim(),
+            race,
+            char_class: charClass,
+            abilities,
+            known_spells: spellcastingMode === 'known' ? selectedKnownSpells : [],
+            prepared_spells: spellcastingMode === 'prepared' ? selectedPreparedSpells : [],
+          }),
+        })
+        payload = await parseJsonBody(res)
+        if (!res.ok) {
+          throw new Error(typeof payload.error === 'string' ? payload.error : 'Unable to create character right now.')
+        }
+
+        const created = payload.character as CharacterData | undefined
+        if (created?.id && typeof created.id === 'string') {
+          const current = useGameStore.getState().characters
+          setCharacters({
+            ...current,
+            [created.id]: created,
+          })
+
+          const sessionState = useSessionStore.getState()
+          sessionState.setPlayers(
+            sessionState.players.map((player) =>
+              player.id === playerId
+                ? { ...player, character_id: created.id as string }
+                : player,
+            ),
+          )
+        }
+      }
+
       if (typeof payload.error === 'string') {
         throw new Error(payload.error)
       }

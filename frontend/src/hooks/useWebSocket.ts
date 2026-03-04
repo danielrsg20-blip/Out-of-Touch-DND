@@ -2,7 +2,20 @@ import { useEffect, useRef, useCallback } from 'react'
 import { useSessionStore } from '../stores/sessionStore'
 import { useGameStore } from '../stores/gameStore'
 import { getSupabaseClient, invokeEdgeFunction } from '../lib/supabaseClient'
+import { API_BASE } from '../config/endpoints'
 import type { RealtimeChannel } from '@supabase/supabase-js'
+
+async function parseJsonBody(res: Response): Promise<Record<string, unknown>> {
+  const text = await res.text()
+  if (!text.trim()) {
+    return {}
+  }
+  try {
+    return JSON.parse(text) as Record<string, unknown>
+  } catch {
+    return {}
+  }
+}
 
 export function useWebSocket() {
   const channelRef = useRef<RealtimeChannel | null>(null)
@@ -235,28 +248,117 @@ export function useWebSocket() {
   }, [addNarrative, addEntity, addPlayer, removeEntity, setCombat, setLoading, setMap, setPlayers, syncState, updateEntity])
 
   const sendAction = useCallback((content: string) => {
-    const supabase = getSupabaseClient()
-    if (!supabase || !roomCode || !playerId) {
-      addNarrative('system', 'Not connected to Supabase session. Unable to send action.')
+    if (!roomCode || !playerId) {
+      addNarrative('system', 'Missing room or player identity. Unable to send action.')
       setLoading(false)
       return
     }
 
+    const supabase = getSupabaseClient()
     setLoading(true)
+
+    const fallbackToLocal = async () => {
+      try {
+        const res = await fetch(`${API_BASE}/api/action`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            room_code: roomCode,
+            player_id: playerId,
+            content,
+          }),
+        })
+        const payload = await parseJsonBody(res)
+        if (!res.ok || typeof payload.error === 'string') {
+          throw new Error(typeof payload.error === 'string' ? payload.error : `Local action failed (${res.status})`)
+        }
+
+        const playerName = useSessionStore.getState().players.find((p) => p.id === playerId)?.name ?? 'You'
+        addNarrative('player', content, playerName)
+
+        if (Array.isArray(payload.narratives)) {
+          for (const line of payload.narratives) {
+            if (typeof line === 'string' && line.trim()) {
+              addNarrative('dm', line, 'DM')
+            }
+          }
+        }
+
+        if (Array.isArray(payload.dice_results)) {
+          for (const row of payload.dice_results) {
+            const typed = row as Record<string, unknown>
+            handleMessage({
+              type: 'dice_result',
+              tool: typed.tool,
+              data: typed.data,
+            })
+          }
+        }
+
+        if (payload.state) {
+          syncState(payload.state as Parameters<typeof syncState>[0])
+        }
+      } catch (localErr: unknown) {
+        addNarrative('system', `Unable to send action: ${localErr instanceof Error ? localErr.message : 'Unknown error'}`)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    if (!supabase) {
+      fallbackToLocal().catch(() => {})
+      return
+    }
+
     invokeEdgeFunction<Record<string, unknown>>('dm-action', {
       action: 'player_action',
       room_code: roomCode,
       player_id: playerId,
       content,
     }).catch((err: unknown) => {
-      addNarrative('system', `Unable to send action: ${err instanceof Error ? err.message : 'Unknown error'}`)
+      const message = err instanceof Error ? err.message : 'Unknown error'
+      if (message.includes('(401)')) {
+        fallbackToLocal().catch(() => {})
+        return
+      }
+      addNarrative('system', `Unable to send action: ${message}`)
       setLoading(false)
     })
-  }, [addNarrative, playerId, roomCode, setLoading])
+  }, [addNarrative, handleMessage, playerId, roomCode, setLoading, syncState])
 
   const sendMoveToken = useCallback((characterId: string, x: number, y: number) => {
     const supabase = getSupabaseClient()
-    if (!supabase || !roomCode || !playerId) {
+    if (!roomCode || !playerId) {
+      return
+    }
+
+    const fallbackMoveToken = async () => {
+      try {
+        const res = await fetch(`${API_BASE}/api/move-token`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            room_code: roomCode,
+            player_id: playerId,
+            character_id: characterId,
+            x,
+            y,
+          }),
+        })
+        const payload = await parseJsonBody(res)
+        if (!res.ok || typeof payload.error === 'string') {
+          throw new Error(typeof payload.error === 'string' ? payload.error : `Move failed (${res.status})`)
+        }
+        if (payload.state) {
+          syncState(payload.state as Parameters<typeof syncState>[0])
+        }
+      } catch (localErr: unknown) {
+        addNarrative('system', `Unable to move token: ${localErr instanceof Error ? localErr.message : 'Unknown error'}`)
+      }
+    }
+
+    if (!supabase) {
+      fallbackMoveToken().catch(() => {})
       return
     }
 
@@ -268,9 +370,9 @@ export function useWebSocket() {
       x,
       y,
     }).catch(() => {
-      addNarrative('system', 'Unable to move token right now.')
+      fallbackMoveToken().catch(() => {})
     })
-  }, [playerId, roomCode])
+  }, [addNarrative, playerId, roomCode, syncState])
 
   const sendSpellCast = useCallback((spellName: string, slotLevel: number, targetId?: string) => {
     const supabase = getSupabaseClient()
