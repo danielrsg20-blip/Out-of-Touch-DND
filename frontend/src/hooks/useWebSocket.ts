@@ -22,6 +22,29 @@ export function useWebSocket() {
   const { roomCode, sessionId, playerId, setConnected, addPlayer, setPlayers, getSession, mockMode } = useSessionStore()
   const { setMap, updateEntity, addEntity, removeEntity, setCombat, addNarrative, syncState, setLoading } = useGameStore()
 
+  // Local FastAPI mode: fetch initial game state on mount (no Supabase Realtime)
+  useEffect(() => {
+    if (!roomCode || !playerId) return
+    if (getSupabaseClient()) return
+
+    const fetchInitialState = async () => {
+      try {
+        const res = await fetch(`${API_BASE}/api/session/${roomCode}`)
+        if (!res.ok) return
+        const payload = await parseJsonBody(res)
+        const session = payload.session as { players: Array<{ id: string; name: string; character_id: string | null }> } | undefined
+        if (session?.players) {
+          setPlayers(session.players)
+        }
+        syncState(payload as Parameters<typeof syncState>[0])
+      } catch {
+        // non-critical
+      }
+    }
+
+    fetchInitialState().catch(() => {})
+  }, [roomCode, playerId, setPlayers, syncState])
+
   useEffect(() => {
     if (!roomCode || !playerId) return
 
