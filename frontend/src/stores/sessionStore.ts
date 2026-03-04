@@ -2,6 +2,22 @@ import { create } from 'zustand'
 import type { PlayerData } from '../types'
 import { API_BASE } from '../config/endpoints'
 
+async function parseJsonBody(res: Response): Promise<Record<string, unknown>> {
+  const text = await res.text()
+  if (!text.trim()) {
+    return {}
+  }
+  try {
+    const parsed = JSON.parse(text)
+    if (parsed && typeof parsed === 'object') {
+      return parsed as Record<string, unknown>
+    }
+    return {}
+  } catch {
+    return {}
+  }
+}
+
 interface SessionState {
   roomCode: string | null
   playerId: string | null
@@ -38,7 +54,13 @@ export const useSessionStore = create<SessionState>((set) => ({
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ player_name: playerName }),
     })
-    const data = await res.json()
+    const data = await parseJsonBody(res)
+    if (!res.ok) {
+      throw new Error('Unable to create session.')
+    }
+    if (typeof data.room_code !== 'string' || typeof data.player_id !== 'string') {
+      throw new Error('Unable to create session (invalid server response).')
+    }
     set({
       roomCode: data.room_code,
       playerId: data.player_id,
@@ -54,16 +76,26 @@ export const useSessionStore = create<SessionState>((set) => ({
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ room_code: roomCode, player_name: playerName }),
     })
-    const data = await res.json()
-    if (data.session?.error) {
-      throw new Error(data.session.error)
+    const data = await parseJsonBody(res)
+    if (!res.ok) {
+      throw new Error('Unable to join session.')
     }
+
+    const session = data.session as Record<string, unknown> | undefined
+    if (session?.error && typeof session.error === 'string') {
+      throw new Error(session.error)
+    }
+    if (typeof data.player_id !== 'string') {
+      throw new Error('Unable to join session (invalid server response).')
+    }
+
+    const players = Array.isArray(session?.players) ? (session?.players as PlayerData[]) : []
     set({
       roomCode: roomCode.toUpperCase(),
       playerId: data.player_id,
       playerName: playerName,
       isHost: false,
-      players: data.session.players || [],
+      players,
     })
   },
 
