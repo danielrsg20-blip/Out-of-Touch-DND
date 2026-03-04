@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32">
+  <!-- shield body (heater shape) -->
+  <path d="M16 2 L28 6 L28 18 Q28 29 16 31 Q4 29 4 18 L4 6 Z" fill="#4a6888"/>
+  <!-- border rim -->
+  <path d="M16 2 L28 6 L28 18 Q28 29 16 31 Q4 29 4 18 L4 6 Z" stroke="#d4a843" stroke-width="2" fill="none"/>
+  <!-- boss (center) -->
+  <circle cx="16" cy="17" r="5" fill="#3a5878"/>
+  <circle cx="16" cy="17" r="2.5" fill="#d4a843"/>
+  <!-- rivets -->
+  <circle cx="8" cy="10" r="1.2" fill="#d4a843"/>
+  <circle cx="24" cy="10" r="1.2" fill="#d4a843"/>
+</svg>

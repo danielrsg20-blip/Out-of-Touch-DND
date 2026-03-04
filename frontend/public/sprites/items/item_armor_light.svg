@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32">
+  <!-- body -->
+  <path d="M8 11 Q8 4 16 4 Q24 4 24 11 L25 28 Q16 31 7 28 Z" fill="#7a4a20"/>
+  <!-- shoulders -->
+  <ellipse cx="8" cy="11" rx="4" ry="5" fill="#8b5a28"/>
+  <ellipse cx="24" cy="11" rx="4" ry="5" fill="#8b5a28"/>
+  <!-- collar -->
+  <path d="M11 4 Q16 9 21 4" stroke="#5a3010" stroke-width="2" fill="none" stroke-linecap="round"/>
+  <!-- center lacing -->
+  <line x1="16" y1="9" x2="16" y2="26" stroke="#5a3010" stroke-width="1.5" opacity="0.6"/>
+  <!-- lace knots -->
+  <circle cx="16" cy="13" r="1" fill="#5a3010" opacity="0.7"/>
+  <circle cx="16" cy="18" r="1" fill="#5a3010" opacity="0.7"/>
+  <circle cx="16" cy="23" r="1" fill="#5a3010" opacity="0.7"/>
+</svg>

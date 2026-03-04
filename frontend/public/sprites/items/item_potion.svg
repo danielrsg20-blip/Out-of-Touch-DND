@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32">
+  <!-- flask body -->
+  <ellipse cx="16" cy="22" rx="10" ry="9" fill="#1a3a1a"/>
+  <!-- liquid fill -->
+  <ellipse cx="16" cy="23" rx="8.5" ry="7.5" fill="#28b428"/>
+  <!-- flask glass overlay -->
+  <ellipse cx="16" cy="22" rx="10" ry="9" fill="none" stroke="#5a8a5a" stroke-width="1.5"/>
+  <!-- neck -->
+  <rect x="13" y="11" width="6" height="8" rx="2" fill="#2a3a2a"/>
+  <rect x="13" y="11" width="6" height="8" rx="2" fill="none" stroke="#4a6a4a" stroke-width="1"/>
+  <!-- cork -->
+  <rect x="13" y="7.5" width="6" height="4.5" rx="1.5" fill="#8b5a2b"/>
+  <!-- shine on flask -->
+  <ellipse cx="11.5" cy="19" rx="2.5" ry="4" fill="#60e860" opacity="0.25"/>
+  <ellipse cx="11" cy="18" rx="1" ry="2" fill="#90ff90" opacity="0.2"/>
+</svg>

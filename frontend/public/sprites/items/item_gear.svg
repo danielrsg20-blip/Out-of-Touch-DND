@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32">
+  <!-- bag body -->
+  <rect x="7" y="13" width="18" height="17" rx="4" fill="#7a5a30"/>
+  <!-- top flap -->
+  <ellipse cx="16" cy="13" rx="9" ry="4.5" fill="#8b6a3a"/>
+  <!-- shoulder strap loop -->
+  <path d="M11 8 Q16 3 21 8" stroke="#5a3a10" stroke-width="3" fill="none" stroke-linecap="round"/>
+  <!-- center buckle -->
+  <rect x="12.5" y="20" width="7" height="5" rx="1.5" fill="#d4a843"/>
+  <rect x="14" y="21.5" width="4" height="2" rx="0.75" fill="#8b5a2b"/>
+  <!-- stitching lines -->
+  <line x1="7" y1="18" x2="25" y2="18" stroke="#5a3a10" stroke-width="0.8" opacity="0.5"/>
+</svg>

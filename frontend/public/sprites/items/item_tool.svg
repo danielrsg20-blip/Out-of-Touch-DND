@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32">
+  <!-- handle -->
+  <rect x="14.5" y="16" width="3" height="14" rx="1.5" fill="#8b5a2b"/>
+  <!-- hammer head -->
+  <rect x="8" y="8" width="16" height="10" rx="2" fill="#8a9aaa"/>
+  <!-- peen (back of head) -->
+  <rect x="8" y="8" width="5" height="10" rx="2" fill="#9aacbc"/>
+  <!-- face highlight -->
+  <rect x="21" y="9" width="2" height="8" rx="1" fill="#aabccc" opacity="0.5"/>
+  <!-- handle wrap -->
+  <rect x="14" y="22" width="4" height="2" rx="1" fill="#6b3a1a"/>
+</svg>

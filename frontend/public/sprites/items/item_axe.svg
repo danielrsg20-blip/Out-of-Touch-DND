@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32">
+  <!-- handle -->
+  <rect x="15" y="8" width="3" height="22" rx="1.5" fill="#8b5a2b"/>
+  <!-- axe head -->
+  <path d="M16 3 Q6 7 6 16 L16 14 Z" fill="#9aacbc"/>
+  <!-- blade edge highlight -->
+  <path d="M16 3 Q6 7 6 16" stroke="#c0c8d0" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+  <!-- top spike -->
+  <polygon points="16,3 20,6 16,8" fill="#8a9aaa"/>
+  <!-- pommel -->
+  <rect x="14.5" y="28" width="4" height="2.5" rx="1.2" fill="#d4a843"/>
+</svg>

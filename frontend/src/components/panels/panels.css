@@ -458,6 +458,14 @@
   background: rgba(255, 255, 255, 0.05);
 }
 
+.inv-item-icon {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  image-rendering: pixelated;
+  opacity: 0.85;
+}
+
 .inv-item-name {
   flex: 1;
   color: var(--text-primary);

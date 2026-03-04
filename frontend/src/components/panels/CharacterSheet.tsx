@@ -2,8 +2,15 @@ import { useEffect, useState } from 'react'
 import { useGameStore } from '../../stores/gameStore'
 import { useSessionStore } from '../../stores/sessionStore'
 import { invokeEdgeFunction } from '../../lib/supabaseClient'
+import { getItemSpriteKey, resolveSpriteUrl } from '../../data/spriteManifest'
 import type { ItemData, SpellOption } from '../../types'
 import './panels.css'
+
+function ItemIcon({ item }: { readonly item: ItemData }) {
+  const url = resolveSpriteUrl(getItemSpriteKey(item))
+  if (!url) return null
+  return <img className="inv-item-icon" src={url} alt={item.name} />
+}
 
 function InventoryPanel({ inventory }: { readonly inventory: ItemData[] }) {
   const equipped = inventory.filter(i => i.equipped)
@@ -48,6 +55,7 @@ function EquipSlot({ label, item }: { readonly label: string; readonly item: Ite
       <span className="inv-slot-label">{label}</span>
       {item ? (
         <div className="inv-slot-item">
+          <ItemIcon item={item} />
           <span className="inv-item-name">{item.name}</span>
           {item.damage && (
             <span className="inv-item-stat">{item.damage} {item.damage_type}</span>
@@ -80,6 +88,7 @@ function ItemRow({ item }: { readonly item: ItemData }) {
 
   return (
     <div className="inv-item-row">
+      <ItemIcon item={item} />
       <span className="inv-item-name">{item.name}{qty}</span>
       {stat && <span className="inv-item-stat">{stat}</span>}
       {item.notes && <span className="inv-item-notes">{item.notes}</span>}

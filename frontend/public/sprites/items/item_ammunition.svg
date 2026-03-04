@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32">
+  <!-- main arrow shaft -->
+  <rect x="15" y="7" width="2" height="18" rx="1" fill="#8b5a2b"/>
+  <!-- arrowhead -->
+  <polygon points="16,2 19,9 13,9" fill="#c0c8d0"/>
+  <!-- fletching left -->
+  <path d="M14 23 Q10 27 13.5 25.5" stroke="#e8d5a0" stroke-width="1.8" fill="none" stroke-linecap="round"/>
+  <!-- fletching right -->
+  <path d="M18 23 Q22 27 18.5 25.5" stroke="#e8d5a0" stroke-width="1.8" fill="none" stroke-linecap="round"/>
+  <!-- nock -->
+  <rect x="14.5" y="25" width="3" height="3.5" rx="0.75" fill="#6b3a1a"/>
+  <!-- second arrow (bundle) -->
+  <rect x="18.5" y="9" width="1.5" height="16" rx="0.75" fill="#7a4a20" opacity="0.6"/>
+  <polygon points="19.25,5 21,10 17.5,10" fill="#aab8c0" opacity="0.6"/>
+</svg>

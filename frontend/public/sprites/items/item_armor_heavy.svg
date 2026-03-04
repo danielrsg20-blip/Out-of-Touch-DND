@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32">
+  <!-- body -->
+  <path d="M7 11 Q7 4 16 4 Q25 4 25 11 L24 28 Q16 31 8 28 Z" fill="#6a7888"/>
+  <!-- pauldrons -->
+  <ellipse cx="7" cy="10" rx="4.5" ry="5.5" fill="#5a6878"/>
+  <ellipse cx="25" cy="10" rx="4.5" ry="5.5" fill="#5a6878"/>
+  <!-- central ridge -->
+  <line x1="16" y1="6" x2="16" y2="27" stroke="#8a9aaa" stroke-width="2.5" stroke-linecap="round"/>
+  <!-- horizontal bands -->
+  <path d="M8 16 L24 16" stroke="#4a5868" stroke-width="1.5"/>
+  <path d="M9 21 L23 21" stroke="#4a5868" stroke-width="1.5"/>
+  <!-- sheen highlight -->
+  <path d="M10 6 Q13 4 16 6 Q14 11 11 13 Q8 9 10 6" fill="#9aacbb" opacity="0.35"/>
+  <!-- gorget (neck guard) -->
+  <path d="M11 4 Q16 8 21 4" stroke="#3a4858" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+</svg>

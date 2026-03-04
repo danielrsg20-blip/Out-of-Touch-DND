@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32">
+  <!-- blade -->
+  <polygon points="16,4 17.8,18 14.2,18" fill="#c0c8d0"/>
+  <!-- fuller -->
+  <line x1="16" y1="6" x2="16" y2="17" stroke="#dde4ea" stroke-width="0.7" opacity="0.5"/>
+  <!-- crossguard -->
+  <rect x="10" y="18" width="12" height="2.5" rx="1.25" fill="#888898"/>
+  <!-- grip -->
+  <rect x="14.5" y="20.5" width="3" height="5" rx="1.5" fill="#8b5a2b"/>
+  <!-- pommel -->
+  <circle cx="16" cy="27.5" r="1.8" fill="#888898"/>
+</svg>

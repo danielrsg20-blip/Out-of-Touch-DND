@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32">
+  <!-- body -->
+  <path d="M7 11 Q7 4 16 4 Q25 4 25 11 L26 28 Q16 31 6 28 Z" fill="#5a6a78"/>
+  <!-- shoulders -->
+  <ellipse cx="7" cy="11" rx="4" ry="5" fill="#4a5a68"/>
+  <ellipse cx="25" cy="11" rx="4" ry="5" fill="#4a5a68"/>
+  <!-- scale rows -->
+  <path d="M8 13 Q10 11 12 13 Q14 11 16 13 Q18 11 20 13 Q22 11 24 13" stroke="#7a8a98" stroke-width="1.5" fill="none"/>
+  <path d="M8 17 Q10 15 12 17 Q14 15 16 17 Q18 15 20 17 Q22 15 24 17" stroke="#7a8a98" stroke-width="1.5" fill="none"/>
+  <path d="M8 21 Q10 19 12 21 Q14 19 16 21 Q18 19 20 21 Q22 19 24 21" stroke="#7a8a98" stroke-width="1.5" fill="none"/>
+  <!-- collar -->
+  <path d="M11 4 Q16 8 21 4" stroke="#3a4a58" stroke-width="2" fill="none" stroke-linecap="round"/>
+</svg>

@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32">
+  <!-- staff body -->
+  <rect x="14.5" y="4" width="3" height="26" rx="1.5" fill="#8b5a2b"/>
+  <!-- wrap bands -->
+  <rect x="14" y="9" width="4" height="1.5" rx="0.75" fill="#6b3a1a"/>
+  <rect x="14" y="15" width="4" height="1.5" rx="0.75" fill="#6b3a1a"/>
+  <rect x="14" y="21" width="4" height="1.5" rx="0.75" fill="#6b3a1a"/>
+  <!-- top cap with glow -->
+  <circle cx="16" cy="4" r="4" fill="#c86420"/>
+  <circle cx="16" cy="4" r="2.5" fill="#e88040"/>
+  <circle cx="15" cy="3" r="1" fill="#ffb060" opacity="0.6"/>
+  <!-- bottom ferrule -->
+  <rect x="14" y="28" width="4" height="3" rx="1" fill="#d4a843"/>
+</svg>

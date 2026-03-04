@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32">
+  <!-- shaft -->
+  <rect x="15" y="8" width="2" height="22" rx="1" fill="#8b5a2b"/>
+  <!-- spearhead -->
+  <polygon points="16,1 19.5,10 12.5,10" fill="#c0c8d0"/>
+  <!-- blade fuller -->
+  <line x1="16" y1="3" x2="16" y2="9" stroke="#dde4ea" stroke-width="0.8" opacity="0.6"/>
+  <!-- crosspiece -->
+  <rect x="11" y="10" width="10" height="2" rx="1" fill="#d4a843"/>
+  <!-- ferrule -->
+  <rect x="14.5" y="28" width="3" height="2.5" rx="1" fill="#d4a843"/>
+</svg>
