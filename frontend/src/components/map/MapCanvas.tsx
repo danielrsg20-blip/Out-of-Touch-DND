@@ -9,7 +9,7 @@ import {
   CHARACTER_CELLS,
   CHARACTER_SPRITESHEET_COLUMNS,
   CHARACTER_SPRITESHEET_ROWS,
-  CHARACTER_SPRITESHEET_URL,
+  getCharacterSpritesheetUrl,
 } from '../../config/characterSprites'
 import './MapCanvas.css'
 
@@ -72,7 +72,7 @@ export default function MapCanvas({ onTileClick, onEntityClick }: MapCanvasProps
   const fittedMapKeyRef = useRef<string | null>(null)
   const imageRef = useRef<HTMLImageElement | null>(null)
   const imageUrlRef = useRef<string | null>(null)
-  const characterSheetRef = useRef<HTMLImageElement | null>(null)
+  const characterSheetCacheRef = useRef<Map<string, HTMLImageElement | 'loading' | null>>(new Map())
   const spriteCacheRef = useRef<Map<string, HTMLImageElement | 'loading' | null>>(new Map())
   const map = useGameStore(s => s.map)
   const combat = useGameStore(s => s.combat)
@@ -87,18 +87,6 @@ export default function MapCanvas({ onTileClick, onEntityClick }: MapCanvasProps
   const mapMetadata = map?.metadata
   const imageUrl = mapMetadata?.image_url
   const imageOpacity = Math.min(1, Math.max(0, mapMetadata?.image_opacity ?? 0.85))
-
-  useEffect(() => {
-    const img = new Image()
-    img.decoding = 'async'
-    img.onload = () => {
-      characterSheetRef.current = img
-    }
-    img.onerror = () => {
-      characterSheetRef.current = null
-    }
-    img.src = CHARACTER_SPRITESHEET_URL
-  }, [])
 
   useEffect(() => {
     if (!imageUrl) {
@@ -292,7 +280,9 @@ export default function MapCanvas({ onTileClick, onEntityClick }: MapCanvasProps
         .filter((candidate): candidate is string => typeof candidate === 'string' && candidate.trim().length > 0)
         .find((candidate) => Boolean(CHARACTER_CELLS[candidate]))
       const characterCell = characterFrameKey ? CHARACTER_CELLS[characterFrameKey] : null
-      const isCharacterSheetSprite = Boolean(characterCell && characterSheetRef.current)
+      const characterSheetUrl = characterFrameKey ? getCharacterSpritesheetUrl(characterFrameKey) : null
+      const characterSheetImage = characterSheetUrl ? characterSheetCacheRef.current.get(characterSheetUrl) : null
+      const isCharacterSheetSprite = Boolean(characterCell && characterSheetImage && characterSheetImage !== 'loading')
       const spriteSize = isCharacterSheetSprite
         ? BASE_TOKEN_SPRITE_SIZE * CHARACTER_SPRITE_SCALE
         : BASE_TOKEN_SPRITE_SIZE
@@ -306,16 +296,16 @@ export default function MapCanvas({ onTileClick, onEntityClick }: MapCanvasProps
       }
 
       let drewSprite = false
-      if (characterCell && characterSheetRef.current) {
-        const sourceW = characterSheetRef.current.naturalWidth / CHARACTER_SPRITESHEET_COLUMNS
-        const sourceH = characterSheetRef.current.naturalHeight / CHARACTER_SPRITESHEET_ROWS
+      if (characterCell && characterSheetUrl && characterSheetImage && characterSheetImage !== 'loading') {
+        const sourceW = characterSheetImage.naturalWidth / CHARACTER_SPRITESHEET_COLUMNS
+        const sourceH = characterSheetImage.naturalHeight / CHARACTER_SPRITESHEET_ROWS
         const sourceX = characterCell.col * sourceW
         const sourceY = characterCell.row * sourceH
         const left = px - spriteSize / 2
         const top = py - spriteSize / 2
         ctx.imageSmoothingEnabled = false
         ctx.drawImage(
-          characterSheetRef.current,
+          characterSheetImage,
           sourceX,
           sourceY,
           sourceW,
@@ -326,6 +316,17 @@ export default function MapCanvas({ onTileClick, onEntityClick }: MapCanvasProps
           spriteSize,
         )
         drewSprite = true
+      } else if (characterCell && characterSheetUrl && !characterSheetImage) {
+        characterSheetCacheRef.current.set(characterSheetUrl, 'loading')
+        const img = new Image()
+        img.decoding = 'async'
+        img.onload = () => {
+          characterSheetCacheRef.current.set(characterSheetUrl, img)
+        }
+        img.onerror = () => {
+          characterSheetCacheRef.current.set(characterSheetUrl, null)
+        }
+        img.src = characterSheetUrl
       } else if (resolvedSpriteUrl) {
         const cached = spriteCacheRef.current.get(resolvedSpriteUrl)
         if (cached && cached !== 'loading') {

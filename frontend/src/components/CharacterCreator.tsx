@@ -36,8 +36,8 @@ function getSpriteOptionsFor(race: string, charClass: string): CharacterSpriteOp
     return [
       {
         id: mappedSpriteId,
-        label: `Human ${charClass}`,
-        races: ['Human'],
+        label: `${race} ${charClass}`,
+        races: [race],
         classes: [charClass],
       },
     ]
