@@ -118,6 +118,43 @@ export default function MapCanvas({ onTileClick, onEntityClick }: MapCanvasProps
     fittedMapKeyRef.current = mapKey
   }, [map, interaction])
 
+  useEffect(() => {
+    if (!map) return
+    const container = containerRef.current
+    if (!container) return
+
+    const fit = () => {
+      const rect = container.getBoundingClientRect()
+      if (rect.width <= 0 || rect.height <= 0) return
+      interaction.fitToView(map.width, map.height, rect.width, rect.height)
+    }
+
+    let frameId = 0
+    const scheduleFit = () => {
+      if (frameId) {
+        cancelAnimationFrame(frameId)
+      }
+      frameId = requestAnimationFrame(() => {
+        fit()
+      })
+    }
+
+    const resizeObserver = new ResizeObserver(() => {
+      scheduleFit()
+    })
+    resizeObserver.observe(container)
+
+    window.addEventListener('resize', scheduleFit)
+
+    return () => {
+      resizeObserver.disconnect()
+      window.removeEventListener('resize', scheduleFit)
+      if (frameId) {
+        cancelAnimationFrame(frameId)
+      }
+    }
+  }, [map?.width, map?.height, interaction])
+
   const draw = useCallback(() => {
     const canvas = canvasRef.current
     if (!canvas || !map) return

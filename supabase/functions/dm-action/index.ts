@@ -523,6 +523,41 @@ function inferEnvironment(content: string, existingEnvironment: string): string 
   return 'dungeon'
 }
 
+function buildProceduralTiles(environment: string, width: number, height: number): Array<Record<string, unknown>> {
+  const tiles: Array<Record<string, unknown>> = []
+
+  for (let y = 0; y < height; y += 1) {
+    for (let x = 0; x < width; x += 1) {
+      const edge = x === 0 || y === 0 || x === width - 1 || y === height - 1
+      if (edge) {
+        tiles.push({ x, y, type: 'wall' })
+        continue
+      }
+
+      let type = 'floor'
+      const roll = randomInt(1, 100)
+
+      if (environment === 'forest') {
+        if (roll <= 12) type = 'rubble'
+        else if (roll <= 20) type = 'water'
+      } else if (environment === 'crypt') {
+        if (roll <= 15) type = 'pillar'
+        else if (roll <= 22) type = 'pit'
+      } else if (environment === 'cave') {
+        if (roll <= 18) type = 'rubble'
+        else if (roll <= 28) type = 'water'
+      } else {
+        if (roll <= 14) type = 'rubble'
+        else if (roll <= 20) type = 'pillar'
+      }
+
+      tiles.push({ x, y, type })
+    }
+  }
+
+  return tiles
+}
+
 function shouldStartCombat(content: string, snapshot: SnapshotState): boolean {
   const active = Boolean((snapshot.combat as { is_active?: boolean } | null)?.is_active)
   if (active) {
@@ -554,6 +589,10 @@ function ensureMapForSnapshot(snapshot: SnapshotState): Record<string, unknown> 
 
   const mapWidth = Number(existingMap.width ?? 20)
   const mapHeight = Number(existingMap.height ?? 14)
+  const metadata = typeof existingMap.metadata === 'object' && existingMap.metadata !== null
+    ? existingMap.metadata as Record<string, unknown>
+    : { environment: 'dungeon', grid_size: 5, grid_units: 'ft' }
+  const environment = typeof metadata.environment === 'string' ? metadata.environment : 'dungeon'
   const existingEntities = getMapEntities(existingMap)
   const nextEntities = [...existingEntities]
 
@@ -599,11 +638,11 @@ function ensureMapForSnapshot(snapshot: SnapshotState): Record<string, unknown> 
     ...existingMap,
     width: mapWidth,
     height: mapHeight,
-    tiles: Array.isArray(existingMap.tiles) ? existingMap.tiles : [],
+    tiles: Array.isArray(existingMap.tiles) && existingMap.tiles.length > 0
+      ? existingMap.tiles
+      : buildProceduralTiles(environment, mapWidth, mapHeight),
     entities: nextEntities,
-    metadata: typeof existingMap.metadata === 'object' && existingMap.metadata !== null
-      ? existingMap.metadata
-      : { environment: 'dungeon', grid_size: 5, grid_units: 'ft' },
+    metadata,
   }
 }
 
@@ -703,6 +742,7 @@ function buildMockEncounter(snapshot: SnapshotState, content: string): { nextSna
     ...snapshot,
     map: {
       ...map,
+      tiles: buildProceduralTiles(environment, width, height),
       entities: [...baseEntities, ...propEntities, ...enemyEntities],
       metadata: {
         ...metadata,
