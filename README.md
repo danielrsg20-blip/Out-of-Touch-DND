@@ -157,7 +157,7 @@ Auth note:
 	- Confirm `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` are set in Vercel project env vars and redeploy.
 	- Ensure the values are from the same Supabase project.
 - **Email already registered**
-	- Registration uses a username alias email (`<normalized-username>@otdnd.local`).
+	- Registration uses a username alias email (`<normalized-username>@example.com`).
 	- If taken, sign in with that username or choose a different username.
 - **Bad credentials (invalid login credentials)**
 	- Check username/password exactly; usernames are normalized (trimmed/lowercased).

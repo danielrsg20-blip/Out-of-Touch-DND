@@ -81,7 +81,7 @@ Supabase Auth troubleshooting:
 	- Confirm `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` are set in Vercel and redeploy.
 	- Ensure both values belong to the same Supabase project.
 - **Email already registered**
-	- Registration uses username alias email (`<normalized-username>@otdnd.local`).
+	- Registration uses username alias email (`<normalized-username>@example.com`).
 	- If it already exists, sign in with that username or pick a different username.
 - **Bad credentials (invalid login credentials)**
 	- Verify username/password exactly; usernames are normalized (trimmed/lowercased).

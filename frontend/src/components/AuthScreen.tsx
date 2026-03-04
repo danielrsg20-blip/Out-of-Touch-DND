@@ -57,9 +57,6 @@ export default function AuthScreen() {
         <div className="auth-logo">⚔️</div>
         <h1 className="auth-title">Out of Touch DND</h1>
         <h2 className="auth-subtitle">{mode === 'login' ? 'Sign In' : 'Create Account'}</h2>
-        <p className="auth-migration-note">
-          Supabase auth migration: legacy accounts need to re-register once.
-        </p>
 
         <form className="auth-form" onSubmit={handleSubmit}>
           <div className="auth-field">

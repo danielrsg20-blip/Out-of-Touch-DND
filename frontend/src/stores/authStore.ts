@@ -2,6 +2,8 @@ import { create } from 'zustand'
 import type { User } from '@supabase/supabase-js'
 import { getSupabaseClient } from '../lib/supabaseClient'
 
+const USERNAME_ALIAS_DOMAIN = 'example.com'
+
 interface AuthState {
   token: string | null
   userId: string | null
@@ -28,7 +30,7 @@ function usernameToAliasEmail(username: string): string {
   if (!normalized || normalized.length < 3) {
     throw new Error('Username must be at least 3 valid characters.')
   }
-  return `${normalized}@otdnd.local`
+  return `${normalized}@${USERNAME_ALIAS_DOMAIN}`
 }
 
 function usernameFromUser(user: User): string {
@@ -37,8 +39,8 @@ function usernameFromUser(user: User): string {
     return metadataUsername
   }
 
-  if (user.email && user.email.endsWith('@otdnd.local')) {
-    return user.email.replace(/@otdnd\.local$/i, '')
+  if (user.email && user.email.endsWith(`@${USERNAME_ALIAS_DOMAIN}`)) {
+    return user.email.replace(new RegExp(`@${USERNAME_ALIAS_DOMAIN.replace('.', '\\.')}$`, 'i'), '')
   }
 
   return user.email ?? user.id

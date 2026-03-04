@@ -41,7 +41,7 @@ VITE_USE_SUPABASE_SESSIONS=true
 Auth migration note:
 
 - Frontend login/register is now handled by Supabase Auth.
-- The username field maps to a deterministic alias email (`<normalized-username>@otdnd.local`) with `user_metadata.username` preserved for display.
+- The username field maps to a deterministic alias email (`<normalized-username>@example.com`) with `user_metadata.username` preserved for display.
 - Legacy accounts from pre-Supabase auth must re-register once.
 
 ## Next implementation target
