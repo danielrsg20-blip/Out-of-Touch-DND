@@ -14,6 +14,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import Response
 from pydantic import BaseModel
 
+from .config import CORS_ALLOW_ORIGINS
 from .map_catalog import validate_map_catalog_startup
 from .session import GameSession, Player, SessionManager
 from .voice import speech_to_text, text_to_speech, dm_speak
@@ -52,8 +53,8 @@ app = FastAPI(title="Out-of-Touch-DND", version="0.1.0", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
+    allow_origins=CORS_ALLOW_ORIGINS,
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )

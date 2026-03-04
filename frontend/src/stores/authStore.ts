@@ -1,6 +1,6 @@
 import { create } from 'zustand'
+import { API_BASE } from '../config/endpoints'
 
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8010'
 const STORAGE_KEY = 'dnd_auth_token'
 
 interface AuthState {

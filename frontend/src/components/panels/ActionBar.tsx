@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useGameStore } from '../../stores/gameStore'
 import { useSessionStore } from '../../stores/sessionStore'
+import { API_BASE } from '../../config/endpoints'
 import type { CastableSpellOption, SpellSlotState } from '../../types'
 import './panels.css'
 
@@ -8,8 +9,6 @@ interface ActionBarProps {
   onSend: (message: string) => void
   onCastSpell: (spellName: string, slotLevel: number, targetId?: string) => void
 }
-
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8010'
 
 export default function ActionBar({ onSend, onCastSpell }: ActionBarProps) {
   const combat = useGameStore(s => s.combat)

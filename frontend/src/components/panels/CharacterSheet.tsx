@@ -1,10 +1,9 @@
 import { useEffect, useState } from 'react'
 import { useGameStore } from '../../stores/gameStore'
 import { useSessionStore } from '../../stores/sessionStore'
+import { API_BASE } from '../../config/endpoints'
 import type { ItemData, SpellOption } from '../../types'
 import './panels.css'
-
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8010'
 
 function InventoryPanel({ inventory }: { readonly inventory: ItemData[] }) {
   const equipped = inventory.filter(i => i.equipped)

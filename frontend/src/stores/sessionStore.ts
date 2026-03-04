@@ -1,7 +1,6 @@
 import { create } from 'zustand'
 import type { PlayerData } from '../types'
-
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8010'
+import { API_BASE } from '../config/endpoints'
 
 interface SessionState {
   roomCode: string | null

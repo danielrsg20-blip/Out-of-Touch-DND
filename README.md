@@ -84,7 +84,7 @@ Start the server:
 
 ```bash
 cd backend
-uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+uvicorn app.main:app --reload --host 0.0.0.0 --port 8010
 ```
 
 ### Frontend Setup
@@ -95,7 +95,53 @@ npm install
 npm run dev
 ```
 
-Open `http://localhost:5173` in your browser.
+Open `http://localhost:5174` in your browser.
+
+Or use the root helper script to start both services:
+
+```bash
+./start-dev.ps1
+```
+
+Frontend: `http://127.0.0.1:5174`  Backend docs: `http://127.0.0.1:8010/docs`
+
+## Deployment (Vercel + Render)
+
+This app is designed for split deployment:
+
+- **Frontend (Vite SPA)** on Vercel
+- **Backend (FastAPI + WebSocket)** on Render
+
+### 1) Deploy backend to Render
+
+Use the included `render.yaml` blueprint or manual setup.
+
+Required backend env vars:
+
+- `DATABASE_URL` (recommended: managed Postgres)
+- `JWT_SECRET_KEY`
+- `CORS_ALLOW_ORIGINS` (set to your Vercel frontend URL)
+- `ANTHROPIC_API_KEY` (or use `LOCAL_MOCK_MODE=true` for mock mode)
+- `OPENAI_API_KEY` (optional depending on features)
+
+Health endpoint: `/api/health`
+
+### 2) Deploy frontend to Vercel
+
+The repo includes `vercel.json` that builds from `frontend/`.
+
+Set frontend env vars in Vercel project settings:
+
+- `VITE_API_URL=https://<your-render-backend-domain>`
+- `VITE_WS_URL=wss://<your-render-backend-domain>`
+
+### 3) Verify
+
+- Frontend loads from Vercel URL
+- `GET https://<backend>/api/health` returns status ok
+- Create/login account works
+- Create/join session works
+- WebSocket actions and map updates work
 
 ### Playing
 
