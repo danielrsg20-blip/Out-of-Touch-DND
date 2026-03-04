@@ -52,7 +52,7 @@ async function parseJsonBody(res: Response): Promise<Record<string, unknown>> {
 }
 
 export default function CharacterCreator() {
-  const { roomCode, playerId, players, getSession } = useSessionStore()
+  const { roomCode, playerId, players, getSession, mockMode } = useSessionStore()
   const setCharacters = useGameStore(s => s.setCharacters)
   const [name, setName] = useState('')
   const [race, setRace] = useState('Human')
@@ -84,6 +84,7 @@ export default function CharacterCreator() {
           action: 'get_spell_options',
           char_class: nextClass,
           level: 1,
+          mock_mode: mockMode,
         })
       } catch {
         const res = await fetch(`${API_BASE}/api/spells/options/${encodeURIComponent(nextClass)}/1`)
@@ -169,6 +170,7 @@ export default function CharacterCreator() {
           abilities,
           known_spells: spellcastingMode === 'known' ? selectedKnownSpells : undefined,
           prepared_spells: spellcastingMode === 'prepared' ? selectedPreparedSpells : undefined,
+          mock_mode: mockMode,
         })
       } catch {
         const res = await fetch(`${API_BASE}/api/character/create`, {
@@ -189,28 +191,28 @@ export default function CharacterCreator() {
         if (!res.ok) {
           throw new Error(typeof payload.error === 'string' ? payload.error : 'Unable to create character right now.')
         }
-
-        const created = payload.character as CharacterData | undefined
-        if (created?.id && typeof created.id === 'string') {
-          const current = useGameStore.getState().characters
-          setCharacters({
-            ...current,
-            [created.id]: created,
-          })
-
-          const sessionState = useSessionStore.getState()
-          sessionState.setPlayers(
-            sessionState.players.map((player) =>
-              player.id === playerId
-                ? { ...player, character_id: created.id as string }
-                : player,
-            ),
-          )
-        }
       }
 
       if (typeof payload.error === 'string') {
         throw new Error(payload.error)
+      }
+
+      const created = payload.character as CharacterData | undefined
+      if (created?.id && typeof created.id === 'string') {
+        const current = useGameStore.getState().characters
+        setCharacters({
+          ...current,
+          [created.id]: created,
+        })
+
+        const sessionState = useSessionStore.getState()
+        sessionState.setPlayers(
+          sessionState.players.map((player) =>
+            player.id === playerId
+              ? { ...player, character_id: created.id as string }
+              : player,
+          ),
+        )
       }
 
       useSessionStore.getState().setPhase('playing')

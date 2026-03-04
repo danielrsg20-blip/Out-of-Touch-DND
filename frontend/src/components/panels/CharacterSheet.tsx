@@ -94,6 +94,7 @@ export default function CharacterSheet() {
   const players = useSessionStore(s => s.players)
   const playerId = useSessionStore(s => s.playerId)
   const roomCode = useSessionStore(s => s.roomCode)
+  const mockMode = useSessionStore(s => s.mockMode)
 
   const [isManagingPrepared, setIsManagingPrepared] = useState(false)
   const [loadingPreparedOptions, setLoadingPreparedOptions] = useState(false)
@@ -128,6 +129,7 @@ export default function CharacterSheet() {
           action: 'get_spell_options',
           char_class: char.class,
           level: char.level,
+          mock_mode: mockMode,
         })
         if (typeof payload.error === 'string') {
           setPreparedError(String(payload.error))
@@ -146,7 +148,7 @@ export default function CharacterSheet() {
     }
 
     run()
-  }, [isManagingPrepared, char?.class, char?.level, char?.prepared_spells])
+  }, [isManagingPrepared, char?.class, char?.level, char?.prepared_spells, mockMode])
 
   const togglePreparedSpell = (spellName: string) => {
     setSelectedPreparedSpells(prev => {
@@ -171,6 +173,7 @@ export default function CharacterSheet() {
         player_id: playerId,
         new_level: char.level,
         prepared_spells: selectedPreparedSpells,
+        mock_mode: mockMode,
       })
       if (typeof payload.error === 'string') {
         setPreparedError(String(payload.error))

@@ -59,6 +59,19 @@
   border-color: var(--accent-gold);
 }
 
+.lobby-toggle-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  justify-content: center;
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+}
+
+.lobby-toggle-row input[type='checkbox'] {
+  accent-color: var(--accent-gold);
+}
+
 .lobby-btn {
   padding: 0.7rem 1.5rem;
   border-radius: 8px;

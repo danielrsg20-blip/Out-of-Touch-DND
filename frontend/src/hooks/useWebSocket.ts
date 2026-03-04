@@ -19,7 +19,7 @@ async function parseJsonBody(res: Response): Promise<Record<string, unknown>> {
 
 export function useWebSocket() {
   const channelRef = useRef<RealtimeChannel | null>(null)
-  const { roomCode, sessionId, playerId, setConnected, addPlayer, setPlayers, getSession } = useSessionStore()
+  const { roomCode, sessionId, playerId, setConnected, addPlayer, setPlayers, getSession, mockMode } = useSessionStore()
   const { setMap, updateEntity, addEntity, removeEntity, setCombat, addNarrative, syncState, setLoading } = useGameStore()
 
   useEffect(() => {
@@ -315,6 +315,7 @@ export function useWebSocket() {
       room_code: roomCode,
       player_id: playerId,
       content,
+      mock_mode: mockMode,
     }).catch((err: unknown) => {
       const message = err instanceof Error ? err.message : 'Unknown error'
       if (message.includes('(401)')) {
@@ -324,7 +325,7 @@ export function useWebSocket() {
       addNarrative('system', `Unable to send action: ${message}`)
       setLoading(false)
     })
-  }, [addNarrative, handleMessage, playerId, roomCode, setLoading, syncState])
+  }, [addNarrative, handleMessage, mockMode, playerId, roomCode, setLoading, syncState])
 
   const sendMoveToken = useCallback((characterId: string, x: number, y: number) => {
     const supabase = getSupabaseClient()
@@ -369,10 +370,11 @@ export function useWebSocket() {
       character_id: characterId,
       x,
       y,
+      mock_mode: mockMode,
     }).catch(() => {
       fallbackMoveToken().catch(() => {})
     })
-  }, [addNarrative, playerId, roomCode, syncState])
+  }, [addNarrative, mockMode, playerId, roomCode, syncState])
 
   const sendSpellCast = useCallback((spellName: string, slotLevel: number, targetId?: string) => {
     const supabase = getSupabaseClient()
@@ -390,11 +392,12 @@ export function useWebSocket() {
       spell_name: spellName,
       slot_level: slotLevel,
       target_id: targetId,
+      mock_mode: mockMode,
     }).catch((err: unknown) => {
       addNarrative('system', `Unable to cast spell: ${err instanceof Error ? err.message : 'Unknown error'}`)
       setLoading(false)
     })
-  }, [addNarrative, playerId, roomCode, setLoading])
+  }, [addNarrative, mockMode, playerId, roomCode, setLoading])
 
   return { sendAction, sendMoveToken, sendSpellCast }
 }

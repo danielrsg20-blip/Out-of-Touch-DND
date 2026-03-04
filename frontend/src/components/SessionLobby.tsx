@@ -3,14 +3,39 @@ import { useSessionStore } from '../stores/sessionStore'
 import { useAuthStore } from '../stores/authStore'
 import './SessionLobby.css'
 
+const MOCK_MODE_STORAGE_KEY = 'otdnd.mockMode'
+
 export default function SessionLobby() {
   const { username, logout } = useAuthStore()
   const [name, setName] = useState(username ?? '')
   const [joinCode, setJoinCode] = useState('')
+  const [mockMode, setMockMode] = useState(false)
   const [mode, setMode] = useState<'menu' | 'create' | 'join'>('menu')
   const [error, setError] = useState('')
 
   const { roomCode, players, createSession, joinSession, getSession } = useSessionStore()
+
+  useEffect(() => {
+    try {
+      const saved = window.localStorage.getItem(MOCK_MODE_STORAGE_KEY)
+      if (saved === 'true') {
+        setMockMode(true)
+      }
+      if (saved === 'false') {
+        setMockMode(false)
+      }
+    } catch {
+      // Ignore storage access errors.
+    }
+  }, [])
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(MOCK_MODE_STORAGE_KEY, String(mockMode))
+    } catch {
+      // Ignore storage access errors.
+    }
+  }, [mockMode])
 
   useEffect(() => {
     if (!roomCode) {
@@ -22,7 +47,7 @@ export default function SessionLobby() {
   const handleCreate = async () => {
     if (!name.trim()) return
     try {
-      await createSession(name.trim())
+      await createSession(name.trim(), mockMode)
       useSessionStore.getState().setPhase('character_create')
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Failed to create session.')
@@ -73,6 +98,14 @@ export default function SessionLobby() {
               autoFocus
               onKeyDown={e => e.key === 'Enter' && handleCreate()}
             />
+            <label className="lobby-toggle-row">
+              <input
+                type="checkbox"
+                checked={mockMode}
+                onChange={(e) => setMockMode(e.target.checked)}
+              />
+              <span>Enable mock mode</span>
+            </label>
             <button className="lobby-btn primary" onClick={handleCreate} disabled={!name.trim()}>
               Create
             </button>

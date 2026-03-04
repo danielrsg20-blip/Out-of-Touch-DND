@@ -32,6 +32,7 @@ export default function ActionBar({ onSend, onCastSpell }: ActionBarProps) {
   const playerId = useSessionStore(s => s.playerId)
   const players = useSessionStore(s => s.players)
   const roomCode = useSessionStore(s => s.roomCode)
+  const mockMode = useSessionStore(s => s.mockMode)
   const [castableSpells, setCastableSpells] = useState<CastableSpellOption[]>([])
   const [slotStates, setSlotStates] = useState<SpellSlotState[]>([])
   const [selectedSpell, setSelectedSpell] = useState('')
@@ -53,6 +54,7 @@ export default function ActionBar({ onSend, onCastSpell }: ActionBarProps) {
           room_code: roomCode,
           player_id: playerId,
           in_combat: true,
+          mock_mode: mockMode,
         })
         if (!payload.error) {
           setCastableSpells((payload.castable_spells as CastableSpellOption[]) || [])
@@ -64,7 +66,7 @@ export default function ActionBar({ onSend, onCastSpell }: ActionBarProps) {
       }
     }
     fetchSpellOptions()
-  }, [roomCode, playerId, combatActive, myChar?.spell_slots_used, myChar?.prepared_spells, myChar?.known_spells])
+  }, [roomCode, playerId, combatActive, myChar?.spell_slots_used, myChar?.prepared_spells, myChar?.known_spells, mockMode])
 
   const quickSpells = useMemo(() => castableSpells.slice(0, 4), [castableSpells])
   const overflowSpells = useMemo(() => castableSpells.slice(4), [castableSpells])
@@ -115,6 +117,7 @@ export default function ActionBar({ onSend, onCastSpell }: ActionBarProps) {
         action: 'next_combat_turn',
         room_code: roomCode,
         player_id: playerId,
+        mock_mode: mockMode,
       })
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unknown error'

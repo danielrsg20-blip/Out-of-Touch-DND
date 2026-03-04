@@ -850,6 +850,175 @@ function getSpellcastingProfile(charClass: string) {
   return { mode, knownLimit: mode === 'known' ? 2 : 0, preparedLimit: mode === 'prepared' ? 3 : 0, slots: { 1: 2 } as Record<number, number> }
 }
 
+type InventoryItem = {
+  id: string
+  name: string
+  category: 'weapon' | 'armor' | 'shield' | 'tool' | 'gear' | 'ammunition'
+  subcategory: string
+  cost_gp: number
+  weight_lb: number
+  description: string
+  damage: string | null
+  damage_type: string | null
+  properties: string[]
+  ac_base: number | null
+  dex_mod: boolean
+  max_dex: number | null
+  str_req: number | null
+  stealth_disadvantage: boolean
+  equipped: boolean
+  quantity: number
+  notes: string
+}
+
+function makeItem(
+  id: string,
+  name: string,
+  category: InventoryItem['category'],
+  subcategory: string,
+  overrides: Partial<InventoryItem> = {},
+): InventoryItem {
+  return {
+    id,
+    name,
+    category,
+    subcategory,
+    cost_gp: 0,
+    weight_lb: 0,
+    description: '',
+    damage: null,
+    damage_type: null,
+    properties: [],
+    ac_base: null,
+    dex_mod: false,
+    max_dex: null,
+    str_req: null,
+    stealth_disadvantage: false,
+    equipped: false,
+    quantity: 1,
+    notes: '',
+    ...overrides,
+  }
+}
+
+function buildStarterInventory(charId: string, classKey: string): InventoryItem[] {
+  const item = (
+    slot: string,
+    name: string,
+    category: InventoryItem['category'],
+    subcategory: string,
+    overrides: Partial<InventoryItem> = {},
+  ) => makeItem(`${charId}_${slot}`, name, category, subcategory, overrides)
+
+  if (classKey === 'barbarian') {
+    return [
+      item('weapon_main', 'Greataxe', 'weapon', 'martial_melee', { damage: '1d12', damage_type: 'slashing', properties: ['heavy', 'two-handed'], equipped: true, weight_lb: 7, cost_gp: 30 }),
+      item('ammo_javelin', 'Javelin', 'weapon', 'simple_melee', { damage: '1d6', damage_type: 'piercing', properties: ['thrown(30/120)'], quantity: 4, weight_lb: 2, cost_gp: 1 }),
+      item('armor_hide', 'Hide Armor', 'armor', 'medium', { ac_base: 12, dex_mod: true, max_dex: 2, weight_lb: 12, cost_gp: 10 }),
+    ]
+  }
+
+  if (classKey === 'fighter') {
+    return [
+      item('weapon_main', 'Longsword', 'weapon', 'martial_melee', { damage: '1d8', damage_type: 'slashing', properties: ['versatile(1d10)'], equipped: true, weight_lb: 3, cost_gp: 15 }),
+      item('armor_main', 'Chain Mail', 'armor', 'heavy', { ac_base: 16, dex_mod: false, str_req: 13, stealth_disadvantage: true, equipped: true, weight_lb: 55, cost_gp: 75 }),
+      item('shield_main', 'Shield', 'shield', 'shield', { equipped: true, weight_lb: 6, cost_gp: 10, notes: '+2 AC while equipped' }),
+    ]
+  }
+
+  if (classKey === 'paladin') {
+    return [
+      item('weapon_main', 'Longsword', 'weapon', 'martial_melee', { damage: '1d8', damage_type: 'slashing', properties: ['versatile(1d10)'], equipped: true, weight_lb: 3, cost_gp: 15 }),
+      item('armor_main', 'Chain Mail', 'armor', 'heavy', { ac_base: 16, dex_mod: false, str_req: 13, stealth_disadvantage: true, equipped: true, weight_lb: 55, cost_gp: 75 }),
+      item('shield_main', 'Shield', 'shield', 'shield', { equipped: true, weight_lb: 6, cost_gp: 10, notes: '+2 AC while equipped' }),
+      item('ammo_javelin', 'Javelin', 'weapon', 'simple_melee', { damage: '1d6', damage_type: 'piercing', properties: ['thrown(30/120)'], quantity: 3, weight_lb: 2, cost_gp: 1 }),
+    ]
+  }
+
+  if (classKey === 'ranger') {
+    return [
+      item('weapon_main', 'Longbow', 'weapon', 'martial_ranged', { damage: '1d8', damage_type: 'piercing', properties: ['ammunition', 'heavy', 'range(150/600)', 'two-handed'], equipped: true, weight_lb: 2, cost_gp: 50 }),
+      item('ammo_arrows', 'Arrows', 'ammunition', 'arrows', { quantity: 20, weight_lb: 1, cost_gp: 1 }),
+      item('weapon_backup', 'Shortsword', 'weapon', 'martial_melee', { damage: '1d6', damage_type: 'piercing', properties: ['finesse', 'light'], weight_lb: 2, cost_gp: 10 }),
+      item('armor_main', 'Leather Armor', 'armor', 'light', { ac_base: 11, dex_mod: true, equipped: true, weight_lb: 10, cost_gp: 10 }),
+    ]
+  }
+
+  if (classKey === 'rogue') {
+    return [
+      item('weapon_main', 'Shortsword', 'weapon', 'martial_melee', { damage: '1d6', damage_type: 'piercing', properties: ['finesse', 'light'], equipped: true, weight_lb: 2, cost_gp: 10 }),
+      item('weapon_ranged', 'Shortbow', 'weapon', 'martial_ranged', { damage: '1d6', damage_type: 'piercing', properties: ['ammunition', 'range(80/320)', 'two-handed'], weight_lb: 2, cost_gp: 25 }),
+      item('ammo_arrows', 'Arrows', 'ammunition', 'arrows', { quantity: 20, weight_lb: 1, cost_gp: 1 }),
+      item('armor_main', 'Leather Armor', 'armor', 'light', { ac_base: 11, dex_mod: true, equipped: true, weight_lb: 10, cost_gp: 10 }),
+      item('tool_thieves', 'Thieves\' Tools', 'tool', 'thieves_tools', { weight_lb: 1, cost_gp: 25 }),
+    ]
+  }
+
+  if (classKey === 'monk') {
+    return [
+      item('weapon_main', 'Quarterstaff', 'weapon', 'simple_melee', { damage: '1d6', damage_type: 'bludgeoning', properties: ['versatile(1d8)'], equipped: true, weight_lb: 4, cost_gp: 0.2 }),
+      item('ammo_darts', 'Dart', 'weapon', 'simple_ranged', { damage: '1d4', damage_type: 'piercing', properties: ['finesse', 'thrown(20/60)'], quantity: 10, weight_lb: 0.25, cost_gp: 0.05 }),
+      item('gear_pack', 'Explorer\'s Pack', 'gear', 'pack', { weight_lb: 59, cost_gp: 10 }),
+    ]
+  }
+
+  if (classKey === 'cleric') {
+    return [
+      item('weapon_main', 'Mace', 'weapon', 'simple_melee', { damage: '1d6', damage_type: 'bludgeoning', equipped: true, weight_lb: 4, cost_gp: 5 }),
+      item('armor_main', 'Scale Mail', 'armor', 'medium', { ac_base: 14, dex_mod: true, max_dex: 2, stealth_disadvantage: true, equipped: true, weight_lb: 45, cost_gp: 50 }),
+      item('shield_main', 'Shield', 'shield', 'shield', { equipped: true, weight_lb: 6, cost_gp: 10, notes: '+2 AC while equipped' }),
+      item('focus_holy', 'Holy Symbol', 'tool', 'holy_symbol', { weight_lb: 1, cost_gp: 5 }),
+    ]
+  }
+
+  if (classKey === 'druid') {
+    return [
+      item('weapon_main', 'Scimitar', 'weapon', 'martial_melee', { damage: '1d6', damage_type: 'slashing', properties: ['finesse', 'light'], equipped: true, weight_lb: 3, cost_gp: 25 }),
+      item('armor_main', 'Leather Armor', 'armor', 'light', { ac_base: 11, dex_mod: true, equipped: true, weight_lb: 10, cost_gp: 10 }),
+      item('focus_druid', 'Druidic Focus', 'tool', 'focus', { weight_lb: 1, cost_gp: 1 }),
+    ]
+  }
+
+  if (classKey === 'bard') {
+    return [
+      item('weapon_main', 'Rapier', 'weapon', 'martial_melee', { damage: '1d8', damage_type: 'piercing', properties: ['finesse'], equipped: true, weight_lb: 2, cost_gp: 25 }),
+      item('armor_main', 'Leather Armor', 'armor', 'light', { ac_base: 11, dex_mod: true, equipped: true, weight_lb: 10, cost_gp: 10 }),
+      item('tool_lute', 'Lute', 'tool', 'musical_instrument', { weight_lb: 2, cost_gp: 35 }),
+    ]
+  }
+
+  if (classKey === 'sorcerer') {
+    return [
+      item('weapon_main', 'Light Crossbow', 'weapon', 'simple_ranged', { damage: '1d8', damage_type: 'piercing', properties: ['ammunition', 'loading', 'range(80/320)', 'two-handed'], equipped: true, weight_lb: 5, cost_gp: 25 }),
+      item('ammo_bolts', 'Bolts', 'ammunition', 'bolts', { quantity: 20, weight_lb: 1.5, cost_gp: 1 }),
+      item('weapon_backup', 'Dagger', 'weapon', 'simple_melee', { damage: '1d4', damage_type: 'piercing', properties: ['finesse', 'light', 'thrown(20/60)'], weight_lb: 1, cost_gp: 2 }),
+      item('focus_arcane', 'Arcane Focus', 'tool', 'focus', { weight_lb: 1, cost_gp: 10 }),
+    ]
+  }
+
+  if (classKey === 'warlock') {
+    return [
+      item('weapon_main', 'Light Crossbow', 'weapon', 'simple_ranged', { damage: '1d8', damage_type: 'piercing', properties: ['ammunition', 'loading', 'range(80/320)', 'two-handed'], equipped: true, weight_lb: 5, cost_gp: 25 }),
+      item('ammo_bolts', 'Bolts', 'ammunition', 'bolts', { quantity: 20, weight_lb: 1.5, cost_gp: 1 }),
+      item('weapon_backup', 'Dagger', 'weapon', 'simple_melee', { damage: '1d4', damage_type: 'piercing', properties: ['finesse', 'light', 'thrown(20/60)'], weight_lb: 1, cost_gp: 2 }),
+      item('focus_arcane', 'Arcane Focus', 'tool', 'focus', { weight_lb: 1, cost_gp: 10 }),
+    ]
+  }
+
+  if (classKey === 'wizard') {
+    return [
+      item('weapon_main', 'Quarterstaff', 'weapon', 'simple_melee', { damage: '1d6', damage_type: 'bludgeoning', properties: ['versatile(1d8)'], equipped: true, weight_lb: 4, cost_gp: 0.2 }),
+      item('tool_spellbook', 'Spellbook', 'tool', 'spellbook', { weight_lb: 3, cost_gp: 50 }),
+      item('focus_arcane', 'Arcane Focus', 'tool', 'focus', { weight_lb: 1, cost_gp: 10 }),
+    ]
+  }
+
+  return [
+    item('weapon_main', 'Dagger', 'weapon', 'simple_melee', { damage: '1d4', damage_type: 'piercing', properties: ['finesse', 'light', 'thrown(20/60)'], equipped: true, weight_lb: 1, cost_gp: 2 }),
+    item('armor_main', 'Leather Armor', 'armor', 'light', { ac_base: 11, dex_mod: true, equipped: true, weight_lb: 10, cost_gp: 10 }),
+  ]
+}
+
 function buildCharacter(input: {
   charId: string
   playerId: string
@@ -890,7 +1059,7 @@ function buildCharacter(input: {
     proficiency_bonus: 2,
     skill_proficiencies: [],
     conditions: [],
-    inventory: [],
+    inventory: buildStarterInventory(input.charId, classKey),
     spell_slots: profile.slots,
     spell_slots_used: {},
     known_spells: input.knownSpells,

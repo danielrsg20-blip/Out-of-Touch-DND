@@ -94,13 +94,14 @@ interface SessionState {
   roomCode: string | null
   playerId: string | null
   playerName: string | null
+  mockMode: boolean
   players: PlayerData[]
   isHost: boolean
   connected: boolean
   phase: 'lobby' | 'character_create' | 'playing'
 
   setPhase: (phase: SessionState['phase']) => void
-  createSession: (playerName: string) => Promise<void>
+  createSession: (playerName: string, mockMode?: boolean) => Promise<void>
   joinSession: (roomCode: string, playerName: string) => Promise<void>
   getSession: (roomCode: string) => Promise<Record<string, unknown>>
   setPlayers: (players: PlayerData[]) => void
@@ -115,6 +116,7 @@ export const useSessionStore = create<SessionState>((set) => ({
   roomCode: null,
   playerId: null,
   playerName: null,
+  mockMode: false,
   players: [],
   isHost: false,
   connected: false,
@@ -173,7 +175,7 @@ export const useSessionStore = create<SessionState>((set) => ({
     return data
   },
 
-  createSession: async (playerName) => {
+  createSession: async (playerName, mockMode = false) => {
     let data: Record<string, unknown> = {}
     let supabaseCreateError: string | null = null
 
@@ -184,6 +186,7 @@ export const useSessionStore = create<SessionState>((set) => ({
           data = await invokeEdgeFunction<Record<string, unknown>>('session-actions', {
             action: 'create_session',
             player_name: playerName,
+            mock_mode: mockMode,
           })
         }
       } catch (error) {
@@ -226,6 +229,7 @@ export const useSessionStore = create<SessionState>((set) => ({
       roomCode: data.room_code,
       playerId: data.player_id,
       playerName: playerName,
+      mockMode,
       isHost: true,
       players: [{ id: data.player_id, name: playerName, character_id: null }],
     })
@@ -298,6 +302,7 @@ export const useSessionStore = create<SessionState>((set) => ({
       roomCode: roomCode.toUpperCase(),
       playerId: data.player_id,
       playerName: playerName,
+      mockMode: false,
       isHost: false,
       players,
     })
@@ -318,6 +323,7 @@ export const useSessionStore = create<SessionState>((set) => ({
       roomCode: null,
       playerId: null,
       playerName: null,
+      mockMode: false,
       players: [],
       isHost: false,
       connected: false,
