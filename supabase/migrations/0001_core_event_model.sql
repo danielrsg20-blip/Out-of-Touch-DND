@@ -79,15 +79,7 @@ drop policy if exists members_select_member on public.session_members;
 create policy members_select_member
   on public.session_members
   for select
-  using (
-    user_id = auth.uid()
-    or exists (
-      select 1
-      from public.session_members m
-      where m.session_id = session_members.session_id
-        and m.user_id = auth.uid()
-    )
-  );
+  using (true);
 
 drop policy if exists members_insert_self on public.session_members;
 create policy members_insert_self
