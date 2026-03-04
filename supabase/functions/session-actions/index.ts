@@ -1,5 +1,11 @@
 import { createClient } from 'npm:@supabase/supabase-js@2'
 
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+}
+
 const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? ''
 const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? Deno.env.get('SUPABASE_ANON_KEY') ?? ''
 
@@ -224,8 +230,12 @@ async function getSession(roomCodeRaw: string) {
 }
 
 Deno.serve(async (req) => {
+  if (req.method === 'OPTIONS') {
+    return new Response('ok', { headers: corsHeaders })
+  }
+
   if (req.method !== 'POST') {
-    return new Response('Method Not Allowed', { status: 405 })
+    return new Response('Method Not Allowed', { status: 405, headers: corsHeaders })
   }
 
   try {
@@ -233,37 +243,37 @@ Deno.serve(async (req) => {
     const action = typeof body.action === 'string' ? body.action : ''
 
     if (!action) {
-      return Response.json({ error: 'Missing action' }, { status: 400 })
+      return Response.json({ error: 'Missing action' }, { status: 400, headers: corsHeaders })
     }
 
     if (action === 'create_session') {
       const playerName = typeof body.player_name === 'string' ? body.player_name.trim() : ''
       if (!playerName) {
-        return Response.json({ error: 'player_name is required' }, { status: 400 })
+        return Response.json({ error: 'player_name is required' }, { status: 400, headers: corsHeaders })
       }
-      return Response.json(await createSession(playerName))
+      return Response.json(await createSession(playerName), { headers: corsHeaders })
     }
 
     if (action === 'join_session') {
       const playerName = typeof body.player_name === 'string' ? body.player_name.trim() : ''
       const roomCode = typeof body.room_code === 'string' ? body.room_code.trim() : ''
       if (!playerName || !roomCode) {
-        return Response.json({ error: 'room_code and player_name are required' }, { status: 400 })
+        return Response.json({ error: 'room_code and player_name are required' }, { status: 400, headers: corsHeaders })
       }
-      return Response.json(await joinSession(roomCode, playerName))
+      return Response.json(await joinSession(roomCode, playerName), { headers: corsHeaders })
     }
 
     if (action === 'get_session') {
       const roomCode = typeof body.room_code === 'string' ? body.room_code.trim() : ''
       if (!roomCode) {
-        return Response.json({ error: 'room_code is required' }, { status: 400 })
+        return Response.json({ error: 'room_code is required' }, { status: 400, headers: corsHeaders })
       }
-      return Response.json(await getSession(roomCode))
+      return Response.json(await getSession(roomCode), { headers: corsHeaders })
     }
 
-    return Response.json({ error: `Unsupported action: ${action}` }, { status: 400 })
+    return Response.json({ error: `Unsupported action: ${action}` }, { status: 400, headers: corsHeaders })
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unexpected error'
-    return Response.json({ error: message }, { status: 500 })
+    return Response.json({ error: message }, { status: 500, headers: corsHeaders })
   }
 })

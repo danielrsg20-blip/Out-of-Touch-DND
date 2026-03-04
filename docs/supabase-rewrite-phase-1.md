@@ -72,3 +72,15 @@ Current frontend integration points for this next phase:
 
 - `frontend/src/stores/sessionStore.ts`
 - `frontend/src/components/SessionLobby.tsx`
+
+Recent migration progress:
+
+- `dm-action` now handles Supabase-backed actions for:
+  - `get_spell_options`
+  - `create_character`
+  - `level_up_prepared_spells`
+  - `get_castable_spells`
+  - `cast_spell`
+  - `player_action`
+  - `move_token`
+- Frontend `CharacterCreator`, `CharacterSheet`, `ActionBar`, and `useWebSocket` now route through Supabase functions/realtime instead of legacy `/api` or direct backend websockets.

@@ -65,10 +65,13 @@ GET https://<your-backend>/api/health
 
 In Vercel Project → Settings → Environment Variables:
 
-- `VITE_API_URL=https://<your-backend>`
-- `VITE_WS_URL=wss://<your-backend>`
 - `VITE_SUPABASE_URL=https://<your-project-ref>.supabase.co`
 - `VITE_SUPABASE_ANON_KEY=<your-supabase-anon-key>`
+
+Optional legacy compatibility only:
+
+- `VITE_API_URL=https://<your-backend>`
+- `VITE_WS_URL=wss://<your-backend>`
 
 Auth note:
 

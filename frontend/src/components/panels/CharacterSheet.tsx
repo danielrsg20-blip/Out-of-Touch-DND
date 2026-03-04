@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useGameStore } from '../../stores/gameStore'
 import { useSessionStore } from '../../stores/sessionStore'
-import { API_BASE } from '../../config/endpoints'
+import { getSupabaseClient } from '../../lib/supabaseClient'
 import type { ItemData, SpellOption } from '../../types'
 import './panels.css'
 
@@ -124,19 +124,35 @@ export default function CharacterSheet() {
 
     const run = async () => {
       try {
-        const res = await fetch(`${API_BASE}/api/spells/options/${encodeURIComponent(char.class)}/${char.level}`)
-        const data = await res.json()
-        if (data.error) {
-          setPreparedError(String(data.error))
+        const supabase = getSupabaseClient()
+        if (!supabase) {
+          throw new Error('Supabase is not configured.')
+        }
+
+        const { data, error } = await supabase.functions.invoke('dm-action', {
+          body: {
+            action: 'get_spell_options',
+            char_class: char.class,
+            level: char.level,
+          },
+        })
+
+        if (error) {
+          throw new Error(error.message)
+        }
+
+        const payload = (data ?? {}) as Record<string, unknown>
+        if (typeof payload.error === 'string') {
+          setPreparedError(String(payload.error))
           return
         }
 
-        const spells = ((data.spells || []) as SpellOption[]).filter(s => Number(s.level) > 0)
+        const spells = ((payload.spells || []) as SpellOption[]).filter(s => Number(s.level) > 0)
         setAvailablePreparedSpells(spells)
-        setPreparedLimit(Number(data.prepared_limit || 0))
+        setPreparedLimit(Number(payload.prepared_limit || 0))
         setSelectedPreparedSpells(Array.isArray(char.prepared_spells) ? [...char.prepared_spells] : [])
-      } catch {
-        setPreparedError('Unable to load spell options right now.')
+      } catch (err: unknown) {
+        setPreparedError(err instanceof Error ? err.message : 'Unable to load spell options right now.')
       } finally {
         setLoadingPreparedOptions(false)
       }
@@ -162,19 +178,28 @@ export default function CharacterSheet() {
     setPreparedError(null)
     setSavingPreparedOptions(true)
     try {
-      const res = await fetch(`${API_BASE}/api/character/level-up`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+      const supabase = getSupabaseClient()
+      if (!supabase) {
+        throw new Error('Supabase is not configured.')
+      }
+
+      const { data, error } = await supabase.functions.invoke('dm-action', {
+        body: {
+          action: 'level_up_prepared_spells',
           room_code: roomCode,
           player_id: playerId,
           new_level: char.level,
           prepared_spells: selectedPreparedSpells,
-        }),
+        },
       })
-      const data = await res.json()
-      if (data.error) {
-        setPreparedError(String(data.error))
+
+      if (error) {
+        throw new Error(error.message)
+      }
+
+      const payload = (data ?? {}) as Record<string, unknown>
+      if (typeof payload.error === 'string') {
+        setPreparedError(String(payload.error))
         return
       }
 
@@ -188,8 +213,8 @@ export default function CharacterSheet() {
       }
       state.setCharacters(updated)
       setIsManagingPrepared(false)
-    } catch {
-      setPreparedError('Unable to save prepared spells right now.')
+    } catch (err: unknown) {
+      setPreparedError(err instanceof Error ? err.message : 'Unable to save prepared spells right now.')
     } finally {
       setSavingPreparedOptions(false)
     }

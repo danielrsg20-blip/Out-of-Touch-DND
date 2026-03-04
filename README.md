@@ -141,10 +141,13 @@ Health endpoint: `/api/health`
 
 ### Vercel frontend env vars
 
-- `VITE_API_URL=https://<your-railway-backend-domain>`
-- `VITE_WS_URL=wss://<your-railway-backend-domain>`
 - `VITE_SUPABASE_URL=https://<your-project-ref>.supabase.co`
 - `VITE_SUPABASE_ANON_KEY=<your-supabase-anon-key>`
+
+Legacy compatibility only (not needed for Supabase-only backend mode):
+
+- `VITE_API_URL=https://<your-railway-backend-domain>`
+- `VITE_WS_URL=wss://<your-railway-backend-domain>`
 
 Auth note:
 

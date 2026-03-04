@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useGameStore } from '../../stores/gameStore'
 import { useSessionStore } from '../../stores/sessionStore'
-import { API_BASE } from '../../config/endpoints'
+import { getSupabaseClient } from '../../lib/supabaseClient'
 import type { CastableSpellOption, SpellSlotState } from '../../types'
 import './panels.css'
 
@@ -31,15 +31,28 @@ export default function ActionBar({ onSend, onCastSpell }: ActionBarProps) {
     const fetchSpellOptions = async () => {
       if (!roomCode || !playerId || !combatActive) return
       try {
-        const res = await fetch(`${API_BASE}/api/character/spell-options`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ room_code: roomCode, player_id: playerId, in_combat: true }),
+        const supabase = getSupabaseClient()
+        if (!supabase) {
+          throw new Error('Supabase is not configured.')
+        }
+
+        const { data, error } = await supabase.functions.invoke('dm-action', {
+          body: {
+            action: 'get_castable_spells',
+            room_code: roomCode,
+            player_id: playerId,
+            in_combat: true,
+          },
         })
-        const data = await res.json()
-        if (!data.error) {
-          setCastableSpells(data.castable_spells || [])
-          setSlotStates(data.slot_states || [])
+
+        if (error) {
+          throw new Error(error.message)
+        }
+
+        const payload = (data ?? {}) as Record<string, unknown>
+        if (!payload.error) {
+          setCastableSpells((payload.castable_spells as CastableSpellOption[]) || [])
+          setSlotStates((payload.slot_states as SpellSlotState[]) || [])
         }
       } catch {
         setCastableSpells([])

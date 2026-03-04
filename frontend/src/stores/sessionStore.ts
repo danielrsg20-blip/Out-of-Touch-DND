@@ -8,6 +8,7 @@ const SUPABASE_SESSIONS_FLAG = import.meta.env.VITE_USE_SUPABASE_SESSIONS
 const USE_SUPABASE_SESSIONS = SUPABASE_SESSIONS_FLAG
   ? SUPABASE_SESSIONS_FLAG === 'true'
   : true
+const HAS_EXPLICIT_API_URL = Boolean(import.meta.env.VITE_API_URL?.trim())
 let sessionEventsChannel: RealtimeChannel | null = null
 
 function shouldUseSupabaseSessions(): boolean {
@@ -159,6 +160,10 @@ export const useSessionStore = create<SessionState>((set) => ({
       }
     }
 
+    if (!HAS_EXPLICIT_API_URL) {
+      throw new Error('Supabase get_session failed and no VITE_API_URL fallback is configured.')
+    }
+
     const res = await fetch(`${API_BASE}/api/session/${normalizedRoomCode}`)
     const data = await parseJsonBody(res)
     if (!res.ok) {
@@ -200,6 +205,9 @@ export const useSessionStore = create<SessionState>((set) => ({
     }
 
     if (!data.room_code || !data.player_id) {
+      if (!HAS_EXPLICIT_API_URL) {
+        throw new Error(supabaseCreateError ?? 'Supabase create_session failed and no VITE_API_URL fallback is configured.')
+      }
       try {
         const res = await fetch(`${API_BASE}/api/session/create`, {
           method: 'POST',
@@ -266,6 +274,9 @@ export const useSessionStore = create<SessionState>((set) => ({
     }
 
     if (!data.player_id || !data.session) {
+      if (!HAS_EXPLICIT_API_URL) {
+        throw new Error(supabaseJoinError ?? 'Supabase join_session failed and no VITE_API_URL fallback is configured.')
+      }
       try {
         const res = await fetch(`${API_BASE}/api/session/join`, {
           method: 'POST',

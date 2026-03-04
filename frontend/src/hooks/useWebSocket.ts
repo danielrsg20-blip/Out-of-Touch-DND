@@ -1,54 +1,85 @@
 import { useEffect, useRef, useCallback } from 'react'
 import { useSessionStore } from '../stores/sessionStore'
 import { useGameStore } from '../stores/gameStore'
-import { WS_BASE } from '../config/endpoints'
+import { getSupabaseClient } from '../lib/supabaseClient'
+import type { RealtimeChannel } from '@supabase/supabase-js'
 
 export function useWebSocket() {
-  const wsRef = useRef<WebSocket | null>(null)
-  const { roomCode, playerId, setConnected, addPlayer, removePlayer, setPlayers, reset } = useSessionStore()
+  const channelRef = useRef<RealtimeChannel | null>(null)
+  const { roomCode, sessionId, playerId, setConnected, addPlayer, setPlayers, getSession } = useSessionStore()
   const { setMap, updateEntity, addEntity, removeEntity, setCombat, addNarrative, syncState, setLoading } = useGameStore()
 
   useEffect(() => {
     if (!roomCode || !playerId) return
 
-    let intentionalClose = false
-    const ws = new WebSocket(`${WS_BASE}/ws/${roomCode}/${playerId}`)
-    wsRef.current = ws
-
-    ws.onopen = () => {
-      setConnected(true)
+    const supabase = getSupabaseClient()
+    if (!supabase) {
+      setConnected(false)
+      addNarrative('system', 'Supabase is not configured. Realtime disabled.')
+      return
     }
 
-    ws.onclose = (event) => {
-      if (intentionalClose) {
+    let cancelled = false
+
+    const connect = async () => {
+      let effectiveSessionId = sessionId
+      if (!effectiveSessionId) {
+        try {
+          await getSession(roomCode)
+          effectiveSessionId = useSessionStore.getState().sessionId
+        } catch {
+          setConnected(false)
+          addNarrative('system', 'Unable to initialize realtime session state.')
+          return
+        }
+      }
+
+      if (!effectiveSessionId || cancelled) {
         return
       }
-      setConnected(false)
-      wsRef.current = null
-      if (event.code === 4004) {
-        addNarrative('system', `Session expired (${event.reason || 'session/player not found'}). Returning to lobby.`)
-        reset()
-      } else {
-        addNarrative('system', `Connection to server lost (${event.code}). Rejoin or refresh to reconnect.`)
-      }
-      setLoading(false)
+
+      const channel = supabase
+        .channel(`game-events:${effectiveSessionId}`)
+        .on(
+          'postgres_changes',
+          {
+            event: 'INSERT',
+            schema: 'public',
+            table: 'game_events',
+            filter: `session_id=eq.${effectiveSessionId}`,
+          },
+          (payload) => {
+            const row = payload.new as Record<string, unknown>
+            handleMessage({
+              type: row.event_type as string,
+              ...(row.payload as Record<string, unknown>),
+            })
+          },
+        )
+        .subscribe((status) => {
+          if (status === 'SUBSCRIBED') {
+            setConnected(true)
+          }
+          if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
+            setConnected(false)
+            setLoading(false)
+          }
+        })
+
+      channelRef.current = channel
     }
 
-    ws.onerror = () => {
-      addNarrative('system', 'WebSocket error. Actions may not send until reconnected.')
-    }
-
-    ws.onmessage = (event) => {
-      const msg = JSON.parse(event.data)
-      handleMessage(msg)
-    }
+    connect()
 
     return () => {
-      intentionalClose = true
-      ws.close()
-      wsRef.current = null
+      cancelled = true
+      setConnected(false)
+      if (channelRef.current) {
+        supabase.removeChannel(channelRef.current)
+      }
+      channelRef.current = null
     }
-  }, [roomCode, playerId])
+  }, [roomCode, sessionId, playerId, setConnected, addNarrative, setLoading, getSession])
 
   const handleMessage = useCallback((msg: Record<string, unknown>) => {
     const type = msg.type as string
@@ -69,8 +100,14 @@ export function useWebSocket() {
         addNarrative('system', `${(msg.player as { name: string }).name} connected.`)
         break
 
+      case 'player_joined':
+        if (msg.player_id && msg.player_name) {
+          addPlayer({ id: msg.player_id as string, name: msg.player_name as string, character_id: null })
+          addNarrative('system', `${msg.player_name} joined the session.`)
+        }
+        break
+
       case 'player_disconnected':
-        removePlayer(msg.player_id as string)
         addNarrative('system', `${msg.player_name} disconnected.`)
         break
 
@@ -171,39 +208,88 @@ export function useWebSocket() {
         setLoading(false)
         break
     }
-  }, [])
+  }, [addNarrative, addEntity, addPlayer, removeEntity, setCombat, setLoading, setMap, setPlayers, syncState, updateEntity])
 
   const sendAction = useCallback((content: string) => {
-    if (wsRef.current?.readyState === WebSocket.OPEN) {
-      setLoading(true)
-      wsRef.current.send(JSON.stringify({ type: 'player_action', content }))
+    const supabase = getSupabaseClient()
+    if (!supabase || !roomCode || !playerId) {
+      addNarrative('system', 'Not connected to Supabase session. Unable to send action.')
+      setLoading(false)
       return
     }
 
-    addNarrative('system', 'Not connected to server. Unable to send action.')
-    setLoading(false)
-  }, [addNarrative, setLoading])
+    setLoading(true)
+    supabase.functions.invoke('dm-action', {
+      body: { action: 'player_action', room_code: roomCode, player_id: playerId, content },
+    }).then(({ data, error }) => {
+      if (error) {
+        addNarrative('system', `Unable to send action: ${error.message}`)
+        setLoading(false)
+        return
+      }
+      const payload = (data ?? {}) as Record<string, unknown>
+      if (typeof payload.error === 'string') {
+        addNarrative('system', `Unable to send action: ${payload.error}`)
+        setLoading(false)
+      }
+    }).catch((err: unknown) => {
+      addNarrative('system', `Unable to send action: ${err instanceof Error ? err.message : 'Unknown error'}`)
+      setLoading(false)
+    })
+  }, [addNarrative, playerId, roomCode, setLoading])
 
   const sendMoveToken = useCallback((characterId: string, x: number, y: number) => {
-    if (wsRef.current?.readyState === WebSocket.OPEN) {
-      wsRef.current.send(JSON.stringify({ type: 'move_token', character_id: characterId, x, y }))
+    const supabase = getSupabaseClient()
+    if (!supabase || !roomCode || !playerId) {
+      return
     }
-  }, [])
+
+    supabase.functions.invoke('dm-action', {
+      body: {
+        action: 'move_token',
+        room_code: roomCode,
+        player_id: playerId,
+        character_id: characterId,
+        x,
+        y,
+      },
+    })
+  }, [playerId, roomCode])
 
   const sendSpellCast = useCallback((spellName: string, slotLevel: number, targetId?: string) => {
-    if (wsRef.current?.readyState === WebSocket.OPEN) {
-      setLoading(true)
-      wsRef.current.send(JSON.stringify({
-        type: 'cast_spell',
+    const supabase = getSupabaseClient()
+    if (!supabase || !roomCode || !playerId) {
+      addNarrative('system', 'Not connected to Supabase session. Unable to cast spell.')
+      setLoading(false)
+      return
+    }
+
+    setLoading(true)
+    supabase.functions.invoke('dm-action', {
+      body: {
+        action: 'cast_spell',
+        room_code: roomCode,
+        player_id: playerId,
         spell_name: spellName,
         slot_level: slotLevel,
         target_id: targetId,
-      }))
-      return
-    }
-    addNarrative('system', 'Not connected to server. Unable to cast spell.')
-    setLoading(false)
-  }, [addNarrative, setLoading])
+      },
+    }).then(({ data, error }) => {
+      if (error) {
+        addNarrative('system', `Unable to cast spell: ${error.message}`)
+        setLoading(false)
+        return
+      }
+      const payload = (data ?? {}) as Record<string, unknown>
+      if (typeof payload.error === 'string') {
+        addNarrative('system', `Unable to cast spell: ${payload.error}`)
+        setLoading(false)
+      }
+    }).catch((err: unknown) => {
+      addNarrative('system', `Unable to cast spell: ${err instanceof Error ? err.message : 'Unknown error'}`)
+      setLoading(false)
+    })
+  }, [addNarrative, playerId, roomCode, setLoading])
 
   return { sendAction, sendMoveToken, sendSpellCast }
 }

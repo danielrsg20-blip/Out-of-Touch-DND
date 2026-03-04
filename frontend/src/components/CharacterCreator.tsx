@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useSessionStore } from '../stores/sessionStore'
-import { API_BASE } from '../config/endpoints'
+import { getSupabaseClient } from '../lib/supabaseClient'
 import type { SpellOption } from '../types'
 import './CharacterCreator.css'
 
@@ -26,6 +26,7 @@ export default function CharacterCreator() {
   const [availableSpells, setAvailableSpells] = useState<SpellOption[]>([])
   const [selectedKnownSpells, setSelectedKnownSpells] = useState<string[]>([])
   const [selectedPreparedSpells, setSelectedPreparedSpells] = useState<string[]>([])
+  const [error, setError] = useState('')
 
   const handleAbilityChange = (ability: string, value: number) => {
     setAbilities(prev => ({ ...prev, [ability]: Math.max(3, Math.min(20, value)) }))
@@ -33,24 +34,45 @@ export default function CharacterCreator() {
 
   const loadSpellOptions = async (nextClass: string) => {
     try {
-      const res = await fetch(`${API_BASE}/api/spells/options/${encodeURIComponent(nextClass)}/1`)
-      const data = await res.json()
-      setSpellcastingMode(data.spellcasting_mode || 'none')
-      setKnownLimit(Number(data.known_limit || 0))
-      setPreparedLimit(Number(data.prepared_limit || 0))
-      setAvailableSpells((data.spells || []) as SpellOption[])
+      const supabase = getSupabaseClient()
+      if (!supabase) {
+        throw new Error('Supabase is not configured.')
+      }
 
-      if ((data.spellcasting_mode || 'none') === 'known') {
-        const picks = ((data.spells || []) as SpellOption[])
+      const { data, error: invokeError } = await supabase.functions.invoke('dm-action', {
+        body: {
+          action: 'get_spell_options',
+          char_class: nextClass,
+          level: 1,
+        },
+      })
+
+      if (invokeError) {
+        throw new Error(invokeError.message)
+      }
+
+      const payload = (data ?? {}) as Record<string, unknown>
+      if (typeof payload.error === 'string') {
+        throw new Error(payload.error)
+      }
+
+      setSpellcastingMode((payload.spellcasting_mode as 'none' | 'known' | 'prepared') || 'none')
+      setKnownLimit(Number(payload.known_limit || 0))
+      setPreparedLimit(Number(payload.prepared_limit || 0))
+      setAvailableSpells((payload.spells || []) as SpellOption[])
+      setError('')
+
+      if ((payload.spellcasting_mode || 'none') === 'known') {
+        const picks = ((payload.spells || []) as SpellOption[])
           .filter(s => s.level > 0)
-          .slice(0, Number(data.known_limit || 0))
+          .slice(0, Number(payload.known_limit || 0))
           .map(s => s.name)
         setSelectedKnownSpells(picks)
         setSelectedPreparedSpells([])
-      } else if ((data.spellcasting_mode || 'none') === 'prepared') {
-        const picks = ((data.spells || []) as SpellOption[])
+      } else if ((payload.spellcasting_mode || 'none') === 'prepared') {
+        const picks = ((payload.spells || []) as SpellOption[])
           .filter(s => s.level > 0)
-          .slice(0, Number(data.prepared_limit || 0))
+          .slice(0, Number(payload.prepared_limit || 0))
           .map(s => s.name)
         setSelectedPreparedSpells(picks)
         setSelectedKnownSpells([])
@@ -65,6 +87,7 @@ export default function CharacterCreator() {
       setAvailableSpells([])
       setSelectedKnownSpells([])
       setSelectedPreparedSpells([])
+      setError('Unable to load spell options right now.')
     }
   }
 
@@ -90,11 +113,16 @@ export default function CharacterCreator() {
   const handleCreate = async () => {
     if (!name.trim() || !roomCode || !playerId) return
     setCreating(true)
+    setError('')
     try {
-      await fetch(`${API_BASE}/api/character/create`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+      const supabase = getSupabaseClient()
+      if (!supabase) {
+        throw new Error('Supabase is not configured.')
+      }
+
+      const { data, error: invokeError } = await supabase.functions.invoke('dm-action', {
+        body: {
+          action: 'create_character',
           room_code: roomCode,
           player_id: playerId,
           name: name.trim(),
@@ -103,10 +131,20 @@ export default function CharacterCreator() {
           abilities,
           known_spells: spellcastingMode === 'known' ? selectedKnownSpells : undefined,
           prepared_spells: spellcastingMode === 'prepared' ? selectedPreparedSpells : undefined,
-        }),
+        },
       })
+
+      if (invokeError) {
+        throw new Error(invokeError.message)
+      }
+      const payload = (data ?? {}) as Record<string, unknown>
+      if (typeof payload.error === 'string') {
+        throw new Error(payload.error)
+      }
+
       useSessionStore.getState().setPhase('playing')
-    } catch {
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Unable to create character right now.')
       setCreating(false)
     }
   }
@@ -231,6 +269,7 @@ export default function CharacterCreator() {
           >
             {creating ? 'Creating...' : 'Create Character & Start Adventure'}
           </button>
+          {error && <p className="creator-error">{error}</p>}
         </div>
       </div>
     </div>
