@@ -30,4 +30,3 @@ services:
 
 databases:
   - name: out-of-touch-dnd-db
-    plan: starter
