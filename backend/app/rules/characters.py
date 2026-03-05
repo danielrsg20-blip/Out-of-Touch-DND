@@ -82,6 +82,7 @@ class Character:
     traits: list[str] = field(default_factory=list)
     rules_version: str = SRD_RULES_VERSION
     player_id: str | None = None
+    sprite_id: str | None = None
 
     @property
     def proficiency_bonus(self) -> int:
@@ -154,6 +155,7 @@ class Character:
             "is_alive": self.is_alive(),
             "rules_version": self.rules_version,
             "spellcasting_mode": get_spellcasting_mode(self.char_class),
+            "sprite_id": self.sprite_id,
         }
 
 
@@ -167,6 +169,7 @@ def create_character(
     player_id: str | None = None,
     known_spells: list[str] | None = None,
     prepared_spells: list[str] | None = None,
+    sprite_id: str | None = None,
 ) -> Character:
     race_data = RACES.get(race, {})
     class_data = CLASSES.get(char_class, {})
@@ -200,6 +203,7 @@ def create_character(
         speed=speed,
         traits=traits,
         player_id=player_id,
+        sprite_id=sprite_id,
     )
 
     from .items import get_starting_inventory, calculate_ac_from_inventory

@@ -196,6 +196,7 @@ export default function CharacterCreator() {
             name: name.trim(),
             race,
             char_class: charClass,
+            sprite_id: resolvedSpriteId,
             abilities,
             known_spells: spellcastingMode === 'known' ? selectedKnownSpells : [],
             prepared_spells: spellcastingMode === 'prepared' ? selectedPreparedSpells : [],

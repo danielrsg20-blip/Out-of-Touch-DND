@@ -7,6 +7,9 @@ export const CHARACTER_SPRITESHEET_URLS = {
   dragonborn: '/sprites/Characters/dragonborn_classes.png',
   gnome: '/sprites/Characters/gnome_classes.png',
   halfling: '/sprites/Characters/halfling_classes.png',
+  'half-elf': '/sprites/Characters/half-elf_classes.png',
+  'half-orc': '/sprites/Characters/Half-Orc_classes.png',
+  tiefling: '/sprites/Characters/Tiefling_classes.png',
 } as const
 
 export const CHARACTER_SPRITESHEET_COLUMNS = 4
@@ -43,7 +46,7 @@ const CLASS_TO_SPRITE_SUFFIX: Record<string, string> = {
 }
 
 export function getCharacterSpriteId(charClass: string, race: string): string | null {
-  const raceKey = race.trim().toLowerCase()
+  const raceKey = race.trim().toLowerCase().replace(/[\s_]+/g, '-')
   if (!(raceKey in CHARACTER_SPRITESHEET_URLS)) {
     return null
   }
@@ -63,7 +66,7 @@ export function getCharacterSpritesheetUrl(spriteId: string): string | null {
   if (parts.length < 3) {
     return null
   }
-  const raceKey = parts[1] as keyof typeof CHARACTER_SPRITESHEET_URLS
+  const raceKey = parts.slice(1, -1).join('_').replace(/[\s_]+/g, '-') as keyof typeof CHARACTER_SPRITESHEET_URLS
   return CHARACTER_SPRITESHEET_URLS[raceKey] ?? null
 }
 
@@ -76,6 +79,6 @@ export function getCharacterSpriteCell(spriteId: string): SpriteCell | null {
   if (parts.length < 3) {
     return null
   }
-  const classKey = parts.slice(2).join('_')
+  const classKey = parts[parts.length - 1]
   return CLASS_TO_CELL[classKey] ?? null
 }

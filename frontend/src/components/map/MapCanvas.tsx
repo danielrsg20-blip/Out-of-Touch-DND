@@ -8,6 +8,7 @@ import { resolveSpriteUrl } from '../../data/spriteManifest'
 import {
   CHARACTER_SPRITESHEET_COLUMNS,
   CHARACTER_SPRITESHEET_ROWS,
+  getCharacterSpriteId,
   getCharacterSpriteCell,
   getCharacterSpritesheetUrl,
 } from '../../config/characterSprites'
@@ -83,6 +84,33 @@ export default function MapCanvas({ onTileClick, onEntityClick }: MapCanvasProps
   const interaction = useMapInteraction()
 
   const myCharacterId = players.find(p => p.id === playerId)?.character_id ?? null
+
+  const resolveCharacterForEntity = useCallback((entityId: string, entityName: string) => {
+    const direct = characters[entityId]
+    if (direct) {
+      return direct
+    }
+
+    const fromPlayerMembership = players
+      .find((player) => player.id === entityId)
+      ?.character_id
+    if (fromPlayerMembership && characters[fromPlayerMembership]) {
+      return characters[fromPlayerMembership]
+    }
+
+    const normalizedName = entityName.trim().toLowerCase()
+    if (!normalizedName) {
+      return null
+    }
+
+    for (const character of Object.values(characters)) {
+      if (character.name.trim().toLowerCase() === normalizedName) {
+        return character
+      }
+    }
+
+    return null
+  }, [characters, players])
 
   const mapMetadata = map?.metadata
   const imageUrl = mapMetadata?.image_url
@@ -253,7 +281,15 @@ export default function MapCanvas({ onTileClick, onEntityClick }: MapCanvasProps
       const spriteKey = entity.sprite?.trim()
       const inferredSpriteKey = (() => {
         if (entity.type === 'pc') {
-          const characterSprite = characters[entity.id]?.sprite_id
+          const character = resolveCharacterForEntity(entity.id, entity.name)
+          const derivedCharacterSprite = character
+            ? getCharacterSpriteId(character.class, character.race)
+            : null
+          if (derivedCharacterSprite) {
+            return derivedCharacterSprite
+          }
+
+          const characterSprite = character?.sprite_id
           if (typeof characterSprite === 'string' && characterSprite.trim()) {
             return characterSprite
           }
@@ -383,7 +419,7 @@ export default function MapCanvas({ onTileClick, onEntityClick }: MapCanvasProps
     drawOverlays(ctx, map, combat, selectedEntityId, myCharacterId)
 
     ctx.restore()
-  }, [map, combat, characters, interaction.offsetX, interaction.offsetY, interaction.zoom, selectedEntityId, myCharacterId, imageUrl, imageOpacity])
+  }, [map, combat, characters, interaction.offsetX, interaction.offsetY, interaction.zoom, selectedEntityId, myCharacterId, imageUrl, imageOpacity, resolveCharacterForEntity])
 
   useEffect(() => {
     let frameId: number

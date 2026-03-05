@@ -157,6 +157,7 @@ class CreateCharacterRequest(BaseModel):
     race: str
     char_class: str
     abilities: dict[str, int]
+    sprite_id: str | None = None
     known_spells: list[str] | None = None
     prepared_spells: list[str] | None = None
 
@@ -229,6 +230,7 @@ async def create_character(req: CreateCharacterRequest):
             abilities=req.abilities,
             known_spells=req.known_spells,
             prepared_spells=req.prepared_spells,
+            sprite_id=req.sprite_id,
         )
     except ValueError as e:
         return {"error": str(e)}

@@ -235,22 +235,26 @@ function isMockModeEnabled(body: Record<string, unknown>): boolean {
   return edgeMock === true
 }
 
-const SHEET_SPRITE_RACES = new Set(['human', 'elf', 'dwarf', 'dragonborn', 'gnome', 'halfling'])
+const SHEET_SPRITE_RACES = new Set(['human', 'elf', 'dwarf', 'dragonborn', 'gnome', 'halfling', 'half-elf', 'half-orc', 'tiefling'])
 const SHEET_SPRITE_CLASSES = new Set(['barbarian', 'bard', 'cleric', 'druid', 'fighter', 'monk', 'paladin', 'ranger', 'rogue', 'sorcerer', 'warlock', 'wizard'])
+
+function normalizeRaceKey(value: string): string {
+  return value.trim().toLowerCase().replace(/[\s_]+/g, '-')
+}
 
 function isSheetSpriteId(spriteId: string): boolean {
   const normalized = spriteId.trim().toLowerCase()
-  const match = /^pc_([a-z]+)_([a-z]+)$/.exec(normalized)
+  const match = /^pc_([a-z][a-z-_]*)_([a-z]+)$/.exec(normalized)
   if (!match) {
     return false
   }
-  const raceKey = match[1]
+  const raceKey = match[1].replace(/_/g, '-')
   const classKey = match[2]
   return SHEET_SPRITE_RACES.has(raceKey) && SHEET_SPRITE_CLASSES.has(classKey)
 }
 
 function getSheetSpriteIdFor(race: string, charClass: string): string | null {
-  const raceKey = race.trim().toLowerCase()
+  const raceKey = normalizeRaceKey(race)
   const classKey = charClass.trim().toLowerCase()
   if (!SHEET_SPRITE_RACES.has(raceKey) || !SHEET_SPRITE_CLASSES.has(classKey)) {
     return null
@@ -679,6 +683,16 @@ function ensureMapForSnapshot(snapshot: SnapshotState): Record<string, unknown> 
     const spriteId = pickCharacterSpriteId(race, charClass, chosenSprite)
 
     if (existingPcEntityIds.has(charId)) {
+      const entityIndex = nextEntities.findIndex((entity) => String(entity.id ?? '') === charId)
+      if (entityIndex >= 0) {
+        nextEntities[entityIndex] = {
+          ...nextEntities[entityIndex],
+          name: charName,
+          type: 'pc',
+          sprite: spriteId,
+          visible: true,
+        }
+      }
       pcOffset += 1
       continue
     }
