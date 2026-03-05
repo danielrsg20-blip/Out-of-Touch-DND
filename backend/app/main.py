@@ -190,31 +190,71 @@ async def health():
     return {"status": "ok", "sessions": len(session_manager.sessions)}
 
 
+def _extract_user_id(request: Request) -> str | None:
+    """Extract user_id from optional Authorization header. Returns None if missing/invalid."""
+    auth = request.headers.get("Authorization", "")
+    if not auth.startswith("Bearer "):
+        return None
+    try:
+        payload = decode_token(auth.removeprefix("Bearer "))
+        return str(payload["sub"])
+    except Exception:  # noqa: BLE001
+        return None
+
+
 @app.post("/api/session/create", response_model=CreateSessionResponse)
-async def create_session(req: CreateSessionRequest):
+async def create_session(req: CreateSessionRequest, request: Request):
     player_id = str(uuid.uuid4())[:8]
     session = session_manager.create_session(host_id=player_id)
-    player = Player(id=player_id, name=req.player_name)
+    player = Player(id=player_id, name=req.player_name, user_id=_extract_user_id(request))
     session.add_player(player)
     logger.info("Session %s created by %s (%s)", session.room_code, req.player_name, player_id)
     return CreateSessionResponse(room_code=session.room_code, player_id=player_id)
 
 
 @app.post("/api/session/join", response_model=JoinSessionResponse)
-async def join_session(req: JoinSessionRequest):
+async def join_session(req: JoinSessionRequest, request: Request):
     session = session_manager.get_session(req.room_code)
     if not session:
         return JoinSessionResponse(player_id="", session={"error": "Session not found"})
 
     player_id = str(uuid.uuid4())[:8]
-    player = Player(id=player_id, name=req.player_name)
+    player = Player(id=player_id, name=req.player_name, user_id=_extract_user_id(request))
     session.add_player(player)
     logger.info("Player %s (%s) joined %s", req.player_name, player_id, req.room_code)
     return JoinSessionResponse(player_id=player_id, session=session.to_dict())
 
 
+async def _auto_save_campaign(session: GameSession, room_code: str, user_id: str) -> None:
+    """Persist session state so it appears in the user's campaign lobby slots."""
+    from sqlalchemy import select
+    async with async_session() as db:
+        result = await db.execute(select(SavedCampaign).where(SavedCampaign.id == room_code))
+        campaign = result.scalar_one_or_none()
+        if not campaign:
+            campaign = SavedCampaign(id=room_code, name=room_code)
+            db.add(campaign)
+        if not campaign.owner_id:
+            campaign.owner_id = user_id
+        campaign.set_characters({cid: c.to_dict() for cid, c in session.orchestrator.characters.items()})
+        campaign.set_conversation(session.orchestrator.conversation_history[-20:])
+        campaign.session_count = (campaign.session_count or 0) + 1
+        pc_map: dict[str, dict] = {}
+        for p in session.players.values():
+            if p.user_id and p.character_id:
+                char = session.orchestrator.characters.get(p.character_id)
+                if char:
+                    pc_map[p.user_id] = {
+                        "name": char.name, "class": char.char_class,
+                        "level": char.level, "char_id": p.character_id,
+                    }
+        campaign.set_player_characters(pc_map)
+        await db.commit()
+    logger.info("Auto-saved campaign %s for user %s", room_code, user_id)
+
+
 @app.post("/api/character/create")
-async def create_character(req: CreateCharacterRequest):
+async def create_character(req: CreateCharacterRequest, request: Request):
     session = session_manager.get_session(req.room_code)
     if not session:
         return {"error": "Session not found"}
@@ -239,6 +279,13 @@ async def create_character(req: CreateCharacterRequest):
         "type": "character_created",
         "character": char.to_dict(),
     })
+
+    user_id = _extract_user_id(request)
+    player = session.players.get(req.player_id)
+    if user_id and player:
+        player.user_id = user_id
+    if user_id:
+        await _auto_save_campaign(session, req.room_code, user_id)
 
     return {"character": char.to_dict()}
 
@@ -372,13 +419,14 @@ class SaveCampaignRequest(BaseModel):
     campaign_name: str
 
 @app.post("/api/campaign/save")
-async def save_campaign(req: SaveCampaignRequest):
+async def save_campaign(req: SaveCampaignRequest, request: Request):
     session = session_manager.get_session(req.room_code)
     if not session:
         return {"error": "Session not found"}
 
     from sqlalchemy import select
     campaign_id = req.room_code
+    user_id = _extract_user_id(request)
 
     async with async_session() as db:
         result = await db.execute(select(SavedCampaign).where(SavedCampaign.id == campaign_id))
@@ -395,23 +443,51 @@ async def save_campaign(req: SaveCampaignRequest):
         campaign.set_conversation(session.orchestrator.conversation_history[-20:])
         campaign.session_count = (campaign.session_count or 0) + 1
 
+        if user_id and not campaign.owner_id:
+            campaign.owner_id = user_id
+
+        pc_map: dict[str, dict] = {}
+        for player in session.players.values():
+            if player.user_id and player.character_id:
+                char = session.orchestrator.characters.get(player.character_id)
+                if char:
+                    pc_map[player.user_id] = {
+                        "name": char.name,
+                        "class": char.char_class,
+                        "level": char.level,
+                        "char_id": player.character_id,
+                    }
+        campaign.set_player_characters(pc_map)
+
         await db.commit()
 
     return {"saved": True, "campaign_id": campaign_id, "name": req.campaign_name}
 
 
 @app.get("/api/campaign/list")
-async def list_campaigns():
+async def list_campaigns(request: Request):
     from sqlalchemy import select
+    user_id = _extract_user_id(request)
+
     async with async_session() as db:
-        result = await db.execute(select(SavedCampaign).order_by(SavedCampaign.updated_at.desc()))
+        query = select(SavedCampaign).order_by(SavedCampaign.updated_at.desc())
+        if user_id:
+            query = query.where(SavedCampaign.owner_id == user_id).limit(5)
+        result = await db.execute(query)
         campaigns = result.scalars().all()
-        return {
-            "campaigns": [
-                {"id": c.id, "name": c.name, "updated_at": str(c.updated_at), "session_count": c.session_count}
-                for c in campaigns
-            ]
-        }
+
+    out = []
+    for c in campaigns:
+        pc_map = c.get_player_characters()
+        my_char = pc_map.get(user_id) if user_id else None
+        out.append({
+            "id": c.id,
+            "name": c.name,
+            "updated_at": str(c.updated_at),
+            "session_count": c.session_count,
+            "my_character": my_char,
+        })
+    return {"campaigns": out}
 
 
 class LoadCampaignRequest(BaseModel):
@@ -483,6 +559,116 @@ async def load_campaign(req: LoadCampaignRequest):
     session.orchestrator.conversation_history = conversation
 
     return {"loaded": True, "name": campaign.name, "characters": len(chars_data)}
+
+
+class ResumeCampaignRequest(BaseModel):
+    campaign_id: str
+    player_name: str
+    character_id: str | None = None
+
+
+@app.get("/api/campaign/{campaign_id}/characters")
+async def get_campaign_characters(campaign_id: str, request: Request):
+    """Return the character list for a saved campaign (no session created)."""
+    from sqlalchemy import select
+    user_id = _extract_user_id(request)
+
+    async with async_session() as db:
+        result = await db.execute(select(SavedCampaign).where(SavedCampaign.id == campaign_id))
+        campaign = result.scalar_one_or_none()
+
+    if not campaign:
+        return {"error": "Campaign not found"}
+    if campaign.owner_id and campaign.owner_id != user_id:
+        return {"error": "Not your campaign"}
+
+    chars_data = campaign.get_characters()
+    pc_map = campaign.get_player_characters()
+    my_char_id = pc_map.get(user_id, {}).get("char_id") if user_id else None
+
+    characters = [
+        {
+            "char_id": cid,
+            "name": cd.get("name", "Unknown"),
+            "class": cd.get("class", "Unknown"),
+            "level": cd.get("level", 1),
+            "is_mine": cid == my_char_id,
+        }
+        for cid, cd in chars_data.items()
+    ]
+    return {"characters": characters}
+
+
+@app.post("/api/campaign/resume")
+async def resume_campaign(req: ResumeCampaignRequest, request: Request):
+    """Create a new live session from a saved campaign in one atomic call."""
+    from sqlalchemy import select
+    from .map_engine import build_map_from_data
+    from .rules.characters import Character
+
+    user_id = _extract_user_id(request)
+    if not user_id:
+        return {"error": "Authentication required"}
+
+    async with async_session() as db:
+        result = await db.execute(select(SavedCampaign).where(SavedCampaign.id == req.campaign_id))
+        campaign = result.scalar_one_or_none()
+
+    if not campaign:
+        return {"error": "Campaign not found"}
+    if campaign.owner_id and campaign.owner_id != user_id:
+        return {"error": "Not your campaign"}
+
+    player_id = str(uuid.uuid4())[:8]
+    session = session_manager.create_session(host_id=player_id)
+    player = Player(id=player_id, name=req.player_name, user_id=user_id)
+    session.add_player(player)
+
+    chars_data = campaign.get_characters()
+    for cid, cd in chars_data.items():
+        char = Character(
+            id=cd["id"], name=cd["name"], race=cd["race"], char_class=cd["class"],
+            level=cd["level"], abilities=cd["abilities"], hp=cd["hp"], max_hp=cd["max_hp"],
+            temp_hp=cd.get("temp_hp", 0), ac=cd["ac"], speed=cd["speed"],
+            skill_proficiencies=cd.get("skill_proficiencies", []),
+            conditions=cd.get("conditions", []),
+            inventory=cd.get("inventory", []),
+            spell_slots={int(k): int(v) for k, v in cd.get("spell_slots", {}).items()},
+            spell_slots_used={int(k): int(v) for k, v in cd.get("spell_slots_used", {}).items()},
+            known_spells=cd.get("known_spells", []),
+            prepared_spells=cd.get("prepared_spells", []),
+            class_features=cd.get("class_features", []),
+            traits=cd.get("traits", []), xp=cd.get("xp", 0),
+            rules_version=cd.get("rules_version", "2024"),
+        )
+        if not char.class_features:
+            char.class_features = get_class_features_for_level(char.char_class, char.level)
+        session.orchestrator.characters[cid] = char
+
+    map_data = campaign.get_map()
+    if map_data:
+        session.orchestrator.game_map = build_map_from_data(map_data)
+
+    session.orchestrator.conversation_history = campaign.get_conversation()
+
+    pc_map = campaign.get_player_characters()
+    if req.character_id and req.character_id in chars_data:
+        player.character_id = req.character_id
+        logger.info("Resumed chosen character %s for user %s in session %s", player.character_id, user_id, session.room_code)
+    else:
+        user_char_info = pc_map.get(user_id)
+        if user_char_info and user_char_info.get("char_id"):
+            player.character_id = user_char_info["char_id"]
+            logger.info("Resumed character %s for user %s in session %s", player.character_id, user_id, session.room_code)
+
+    logger.info("Campaign %s resumed as session %s by %s", req.campaign_id, session.room_code, req.player_name)
+    return {
+        "room_code": session.room_code,
+        "player_id": player_id,
+        "campaign_name": campaign.name,
+        "characters_count": len(chars_data),
+        "has_character": player.character_id is not None,
+    }
 
 
 @app.post("/api/action")

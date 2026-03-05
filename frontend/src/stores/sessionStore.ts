@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import type { PlayerData } from '../types'
+import type { CampaignCharacter, CampaignSlot, PlayerData } from '../types'
 import { API_BASE } from '../config/endpoints'
 import { getSupabaseClient, hasSupabaseConfig, invokeEdgeFunction } from '../lib/supabaseClient'
 import type { RealtimeChannel } from '@supabase/supabase-js'
@@ -99,6 +99,8 @@ interface SessionState {
   isHost: boolean
   connected: boolean
   phase: 'lobby' | 'character_create' | 'playing'
+  campaigns: CampaignSlot[]
+  campaignsLoading: boolean
 
   setPhase: (phase: SessionState['phase']) => void
   createSession: (playerName: string, mockMode?: boolean) => Promise<void>
@@ -108,6 +110,9 @@ interface SessionState {
   setConnected: (connected: boolean) => void
   addPlayer: (player: PlayerData) => void
   removePlayer: (playerId: string) => void
+  listCampaigns: () => Promise<void>
+  fetchCampaignCharacters: (campaignId: string) => Promise<CampaignCharacter[]>
+  resumeCampaign: (campaignId: string, playerName: string, characterId?: string) => Promise<void>
   reset: () => void
 }
 
@@ -121,6 +126,8 @@ export const useSessionStore = create<SessionState>((set) => ({
   isHost: false,
   connected: false,
   phase: 'lobby',
+  campaigns: [],
+  campaignsLoading: false,
 
   setPhase: (phase) => set({ phase }),
 
@@ -200,9 +207,13 @@ export const useSessionStore = create<SessionState>((set) => ({
         throw new Error(supabaseCreateError ?? 'Supabase create_session failed and no VITE_API_URL fallback is configured.')
       }
       try {
+        const { useAuthStore } = await import('./authStore')
+        const authToken = useAuthStore.getState().token
+        const createHeaders: Record<string, string> = { 'Content-Type': 'application/json' }
+        if (authToken) createHeaders['Authorization'] = `Bearer ${authToken}`
         const res = await fetch(`${API_BASE}/api/session/create`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: createHeaders,
           body: JSON.stringify({ player_name: playerName }),
         })
         data = await parseJsonBody(res)
@@ -264,9 +275,13 @@ export const useSessionStore = create<SessionState>((set) => ({
         throw new Error(supabaseJoinError ?? 'Supabase join_session failed and no VITE_API_URL fallback is configured.')
       }
       try {
+        const { useAuthStore: authStoreForJoin } = await import('./authStore')
+        const joinAuthToken = authStoreForJoin.getState().token
+        const joinHeaders: Record<string, string> = { 'Content-Type': 'application/json' }
+        if (joinAuthToken) joinHeaders['Authorization'] = `Bearer ${joinAuthToken}`
         const res = await fetch(`${API_BASE}/api/session/join`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: joinHeaders,
           body: JSON.stringify({ room_code: roomCode, player_name: playerName }),
         })
         data = await parseJsonBody(res)
@@ -316,6 +331,74 @@ export const useSessionStore = create<SessionState>((set) => ({
   setConnected: (connected) => set({ connected }),
   addPlayer: (player) => set((s) => ({ players: [...s.players.filter(p => p.id !== player.id), player] })),
   removePlayer: (playerId) => set((s) => ({ players: s.players.filter(p => p.id !== playerId) })),
+
+  listCampaigns: async () => {
+    const { useAuthStore } = await import('./authStore')
+    const token = useAuthStore.getState().token
+    if (!token || !HAS_EXPLICIT_API_URL) return
+    set({ campaignsLoading: true })
+    try {
+      const res = await fetch(`${API_BASE}/api/campaign/list`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      if (res.ok) {
+        const data = await parseJsonBody(res)
+        const campaigns = Array.isArray(data.campaigns) ? (data.campaigns as CampaignSlot[]) : []
+        set({ campaigns })
+      }
+    } catch {
+      // Non-critical — silently ignore if campaigns can't be loaded
+    } finally {
+      set({ campaignsLoading: false })
+    }
+  },
+
+  fetchCampaignCharacters: async (campaignId) => {
+    const { useAuthStore } = await import('./authStore')
+    const token = useAuthStore.getState().token
+    if (!token || !HAS_EXPLICIT_API_URL) return []
+    const res = await fetch(`${API_BASE}/api/campaign/${campaignId}/characters`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+    if (!res.ok) return []
+    const data = await parseJsonBody(res)
+    return Array.isArray(data.characters) ? (data.characters as CampaignCharacter[]) : []
+  },
+
+  resumeCampaign: async (campaignId, playerName, characterId?) => {
+    const { useAuthStore } = await import('./authStore')
+    const token = useAuthStore.getState().token
+    if (!token || !HAS_EXPLICIT_API_URL) {
+      throw new Error('Authentication required to resume a campaign.')
+    }
+    const res = await fetch(`${API_BASE}/api/campaign/resume`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ campaign_id: campaignId, player_name: playerName, character_id: characterId ?? null }),
+    })
+    const data = await parseJsonBody(res)
+    if (!res.ok || typeof data.error === 'string') {
+      throw new Error(typeof data.error === 'string' ? data.error : 'Failed to resume campaign.')
+    }
+    if (typeof data.room_code !== 'string' || typeof data.player_id !== 'string') {
+      throw new TypeError('Invalid response from server.')
+    }
+    const roomCode = data.room_code
+    const playerId = data.player_id
+    const hasCharacter = data.has_character === true
+    set({
+      roomCode,
+      playerId,
+      playerName,
+      isHost: true,
+      players: [{ id: playerId, name: playerName, character_id: null }],
+      phase: hasCharacter ? 'playing' : 'character_create',
+    })
+  },
+
   reset: () => {
     stopSessionEvents()
     set({
@@ -328,6 +411,7 @@ export const useSessionStore = create<SessionState>((set) => ({
       isHost: false,
       connected: false,
       phase: 'lobby',
+      campaigns: [],
     })
   },
 }))
