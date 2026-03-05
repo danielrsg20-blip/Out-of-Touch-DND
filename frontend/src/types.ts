@@ -179,3 +179,19 @@ export interface NarrativeEntry {
   content: string
   timestamp: number
 }
+
+export interface CampaignSlot {
+  id: string
+  name: string
+  updated_at: string
+  session_count: number
+  my_character: { name: string; class: string; level: number; char_id: string } | null
+}
+
+export interface CampaignCharacter {
+  char_id: string
+  name: string
+  class: string
+  level: number
+  is_mine: boolean
+}

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useSessionStore } from '../stores/sessionStore'
 import { useGameStore } from '../stores/gameStore'
+import { useAuthStore } from '../stores/authStore'
 import { invokeEdgeFunction } from '../lib/supabaseClient'
 import { API_BASE } from '../config/endpoints'
 import { getCharacterSpriteId } from '../config/characterSprites'
@@ -67,6 +68,7 @@ async function parseJsonBody(res: Response): Promise<Record<string, unknown>> {
 export default function CharacterCreator() {
   const { roomCode, playerId, players, getSession, mockMode } = useSessionStore()
   const setCharacters = useGameStore(s => s.setCharacters)
+  const authToken = useAuthStore(s => s.token)
   const [name, setName] = useState('')
   const [race, setRace] = useState('Human')
   const [charClass, setCharClass] = useState('Fighter')
@@ -187,9 +189,11 @@ export default function CharacterCreator() {
           mock_mode: mockMode,
         })
       } catch {
+        const charCreateHeaders: Record<string, string> = { 'Content-Type': 'application/json' }
+        if (authToken) charCreateHeaders['Authorization'] = `Bearer ${authToken}`
         const res = await fetch(`${API_BASE}/api/character/create`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: charCreateHeaders,
           body: JSON.stringify({
             room_code: roomCode,
             player_id: playerId,

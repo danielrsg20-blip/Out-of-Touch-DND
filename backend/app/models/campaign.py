@@ -21,6 +21,8 @@ class SavedCampaign(Base):
     combat_json = Column(Text, nullable=True)
     conversation_json = Column(Text, default="[]")
     session_count = Column(Integer, default=0)
+    owner_id = Column(String, nullable=True, index=True)
+    player_characters_json = Column(Text, nullable=True)
 
     def set_characters(self, chars_dict: dict) -> None:
         self.characters_json = json.dumps(chars_dict)
@@ -39,3 +41,9 @@ class SavedCampaign(Base):
 
     def get_conversation(self) -> list:
         return json.loads(self.conversation_json or "[]")
+
+    def set_player_characters(self, pc_map: dict) -> None:
+        self.player_characters_json = json.dumps(pc_map)
+
+    def get_player_characters(self) -> dict:
+        return json.loads(self.player_characters_json or "{}")

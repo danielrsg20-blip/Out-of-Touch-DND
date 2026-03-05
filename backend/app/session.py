@@ -31,6 +31,7 @@ class Player:
     id: str
     name: str
     character_id: str | None = None
+    user_id: str | None = None
     websocket: WebSocket | None = field(default=None, repr=False)
 
     def to_dict(self) -> dict:
