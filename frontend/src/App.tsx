@@ -6,6 +6,7 @@ import SessionLobby from './components/SessionLobby'
 import CharacterCreator from './components/CharacterCreator'
 import GameBoard from './components/GameBoard'
 import TableModeView from './components/TableModeView'
+import { useGameStore } from './stores/gameStore'
 
 function isTableMode() {
   return new URLSearchParams(window.location.search).get('mode') === 'table'
@@ -13,6 +14,7 @@ function isTableMode() {
 
 export default function App() {
   const phase = useSessionStore(s => s.phase)
+  const combat = useGameStore(s => s.combat)
   const { isAuthenticated, isLoading, hydrateFromStorage } = useAuthStore()
 
   useEffect(() => {
@@ -33,7 +35,7 @@ export default function App() {
     case 'character_create':
       return <CharacterCreator />
     case 'playing':
-      return isTableMode() ? <TableModeView /> : <GameBoard />
+      return (isTableMode() || !!combat?.is_active) ? <TableModeView /> : <GameBoard />
     default:
       return <SessionLobby />
   }

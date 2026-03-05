@@ -95,6 +95,11 @@ export function useWebSocket() {
         .subscribe((status) => {
           if (status === 'SUBSCRIBED') {
             setConnected(true)
+            getSession(roomCode)
+              .then((payload) => {
+                syncState(payload as Parameters<typeof syncState>[0])
+              })
+              .catch(() => {})
           }
           if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
             setConnected(false)

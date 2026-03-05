@@ -18,6 +18,63 @@ const WORD_LIST = [
   'LICH', 'GOLEM', 'WRAITH', 'HYDRA', 'WYVERN', 'BASILISK', 'MANTICORE'
 ]
 
+function parseBool(value: unknown): boolean {
+  if (typeof value === 'boolean') {
+    return value
+  }
+  if (typeof value !== 'string') {
+    return false
+  }
+  return ['1', 'true', 'yes', 'on'].includes(value.trim().toLowerCase())
+}
+
+function buildProceduralTiles(width: number, height: number): Array<Record<string, unknown>> {
+  const tiles: Array<Record<string, unknown>> = []
+  for (let y = 0; y < height; y += 1) {
+    for (let x = 0; x < width; x += 1) {
+      const edge = x === 0 || y === 0 || x === width - 1 || y === height - 1
+      if (edge) {
+        tiles.push({ x, y, type: 'wall' })
+        continue
+      }
+
+      const roll = randomInt(1, 100)
+      let type = 'floor'
+      if (roll <= 12) type = 'rubble'
+      else if (roll <= 18) type = 'pillar'
+      else if (roll <= 22) type = 'water'
+
+      tiles.push({ x, y, type })
+    }
+  }
+  return tiles
+}
+
+function buildInitialSnapshot(): Record<string, unknown> {
+  const width = 20
+  const height = 14
+  return {
+    characters: {},
+    map: {
+      width,
+      height,
+      tiles: buildProceduralTiles(width, height),
+      entities: [],
+      metadata: {
+        environment: 'dungeon',
+        grid_size: 5,
+        grid_units: 'ft',
+      },
+    },
+    combat: null,
+    usage: {
+      input_tokens: 0,
+      output_tokens: 0,
+      estimated_cost_usd: 0,
+    },
+  }
+}
+
 function randomId(length = 8): string {
   return crypto.randomUUID().replace(/-/g, '').slice(0, length)
 }
@@ -101,7 +158,7 @@ async function buildSessionPayload(sessionId: string) {
   }
 }
 
-async function createSession(playerName: string) {
+async function createSession(playerName: string, mockMode: boolean) {
   const roomCode = await generateUniqueRoomCode()
   const playerId = randomId(8)
 
@@ -132,6 +189,20 @@ async function createSession(playerName: string) {
 
   if (memberInsertError) {
     throw new Error(memberInsertError.message)
+  }
+
+  if (mockMode) {
+    const { error: snapshotError } = await supabase
+      .from('session_snapshots')
+      .insert({
+        session_id: sessionId,
+        version: 1,
+        snapshot: buildInitialSnapshot(),
+      })
+
+    if (snapshotError) {
+      throw new Error(`Unable to initialize mock session map: ${snapshotError.message}`)
+    }
   }
 
   await publishEvent(sessionId, 'session_created', {
@@ -215,12 +286,27 @@ async function getSession(roomCodeRaw: string) {
 
   const session = await buildSessionPayload(sessionRow.id as string)
 
+  const sessionId = sessionRow.id as string
+  const { data: snapshotRow, error: snapshotError } = await supabase
+    .from('session_snapshots')
+    .select('snapshot')
+    .eq('session_id', sessionId)
+    .order('version', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+
+  if (snapshotError) {
+    throw new Error(snapshotError.message)
+  }
+
+  const snapshot = (snapshotRow?.snapshot as Record<string, unknown> | undefined) ?? {}
+
   return {
-    session_id: sessionRow.id as string,
-    characters: {},
-    map: null,
-    combat: null,
-    usage: {
+    session_id: sessionId,
+    characters: (snapshot.characters as Record<string, unknown>) ?? {},
+    map: (snapshot.map as Record<string, unknown> | null) ?? null,
+    combat: (snapshot.combat as Record<string, unknown> | null) ?? null,
+    usage: (snapshot.usage as Record<string, unknown>) ?? {
       input_tokens: 0,
       output_tokens: 0,
       estimated_cost_usd: 0,
@@ -248,10 +334,11 @@ Deno.serve(async (req) => {
 
     if (action === 'create_session') {
       const playerName = typeof body.player_name === 'string' ? body.player_name.trim() : ''
+      const mockMode = parseBool(body.mock_mode)
       if (!playerName) {
         return Response.json({ error: 'player_name is required' }, { status: 400, headers: corsHeaders })
       }
-      return Response.json(await createSession(playerName), { headers: corsHeaders })
+      return Response.json(await createSession(playerName, mockMode), { headers: corsHeaders })
     }
 
     if (action === 'join_session') {

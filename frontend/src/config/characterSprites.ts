@@ -4,50 +4,27 @@ export const CHARACTER_SPRITESHEET_URLS = {
   human: '/sprites/Characters/human_classes.png',
   elf: '/sprites/Characters/elf_classes.png',
   dwarf: '/sprites/Characters/dwarf_classes.png',
+  dragonborn: '/sprites/Characters/dragonborn_classes.png',
+  gnome: '/sprites/Characters/gnome_classes.png',
+  halfling: '/sprites/Characters/halfling_classes.png',
 } as const
 
 export const CHARACTER_SPRITESHEET_COLUMNS = 4
 export const CHARACTER_SPRITESHEET_ROWS = 3
 
-export const CHARACTER_CELLS: Record<string, SpriteCell> = {
-  pc_human_barbarian: { col: 0, row: 0 },
-  pc_human_ranger: { col: 1, row: 0 },
-  pc_human_cleric: { col: 2, row: 0 },
-  pc_human_druid: { col: 3, row: 0 },
-  pc_human_fighter: { col: 0, row: 1 },
-  pc_human_monk: { col: 1, row: 1 },
-  pc_human_paladin: { col: 2, row: 1 },
-  pc_human_bard: { col: 3, row: 1 },
-  pc_human_rogue: { col: 0, row: 2 },
-  pc_human_sorcerer: { col: 1, row: 2 },
-  pc_human_warlock: { col: 2, row: 2 },
-  pc_human_wizard: { col: 3, row: 2 },
-
-  pc_elf_barbarian: { col: 0, row: 0 },
-  pc_elf_ranger: { col: 1, row: 0 },
-  pc_elf_cleric: { col: 2, row: 0 },
-  pc_elf_druid: { col: 3, row: 0 },
-  pc_elf_fighter: { col: 0, row: 1 },
-  pc_elf_monk: { col: 1, row: 1 },
-  pc_elf_paladin: { col: 2, row: 1 },
-  pc_elf_bard: { col: 3, row: 1 },
-  pc_elf_rogue: { col: 0, row: 2 },
-  pc_elf_sorcerer: { col: 1, row: 2 },
-  pc_elf_warlock: { col: 2, row: 2 },
-  pc_elf_wizard: { col: 3, row: 2 },
-
-  pc_dwarf_barbarian: { col: 0, row: 0 },
-  pc_dwarf_ranger: { col: 1, row: 0 },
-  pc_dwarf_cleric: { col: 2, row: 0 },
-  pc_dwarf_druid: { col: 3, row: 0 },
-  pc_dwarf_fighter: { col: 0, row: 1 },
-  pc_dwarf_monk: { col: 1, row: 1 },
-  pc_dwarf_paladin: { col: 2, row: 1 },
-  pc_dwarf_bard: { col: 3, row: 1 },
-  pc_dwarf_rogue: { col: 0, row: 2 },
-  pc_dwarf_sorcerer: { col: 1, row: 2 },
-  pc_dwarf_warlock: { col: 2, row: 2 },
-  pc_dwarf_wizard: { col: 3, row: 2 },
+const CLASS_TO_CELL: Record<string, SpriteCell> = {
+  barbarian: { col: 0, row: 0 },
+  ranger: { col: 1, row: 0 },
+  cleric: { col: 2, row: 0 },
+  druid: { col: 3, row: 0 },
+  fighter: { col: 0, row: 1 },
+  monk: { col: 1, row: 1 },
+  paladin: { col: 2, row: 1 },
+  bard: { col: 3, row: 1 },
+  rogue: { col: 0, row: 2 },
+  sorcerer: { col: 1, row: 2 },
+  warlock: { col: 2, row: 2 },
+  wizard: { col: 3, row: 2 },
 }
 
 const CLASS_TO_SPRITE_SUFFIX: Record<string, string> = {
@@ -67,7 +44,7 @@ const CLASS_TO_SPRITE_SUFFIX: Record<string, string> = {
 
 export function getCharacterSpriteId(charClass: string, race: string): string | null {
   const raceKey = race.trim().toLowerCase()
-  if (!['human', 'elf', 'dwarf'].includes(raceKey)) {
+  if (!(raceKey in CHARACTER_SPRITESHEET_URLS)) {
     return null
   }
   const classSuffix = CLASS_TO_SPRITE_SUFFIX[charClass]
@@ -82,14 +59,23 @@ export function getCharacterSpritesheetUrl(spriteId: string): string | null {
   if (!normalized.startsWith('pc_')) {
     return null
   }
-  if (normalized.startsWith('pc_human_')) {
-    return CHARACTER_SPRITESHEET_URLS.human
+  const parts = normalized.split('_')
+  if (parts.length < 3) {
+    return null
   }
-  if (normalized.startsWith('pc_elf_')) {
-    return CHARACTER_SPRITESHEET_URLS.elf
+  const raceKey = parts[1] as keyof typeof CHARACTER_SPRITESHEET_URLS
+  return CHARACTER_SPRITESHEET_URLS[raceKey] ?? null
+}
+
+export function getCharacterSpriteCell(spriteId: string): SpriteCell | null {
+  const normalized = spriteId.trim().toLowerCase()
+  if (!normalized.startsWith('pc_')) {
+    return null
   }
-  if (normalized.startsWith('pc_dwarf_')) {
-    return CHARACTER_SPRITESHEET_URLS.dwarf
+  const parts = normalized.split('_')
+  if (parts.length < 3) {
+    return null
   }
-  return null
+  const classKey = parts.slice(2).join('_')
+  return CLASS_TO_CELL[classKey] ?? null
 }

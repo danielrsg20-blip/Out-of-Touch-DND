@@ -6,9 +6,9 @@ import { drawOverlays } from './OverlayLayer'
 import type { TileData } from '../../types'
 import { resolveSpriteUrl } from '../../data/spriteManifest'
 import {
-  CHARACTER_CELLS,
   CHARACTER_SPRITESHEET_COLUMNS,
   CHARACTER_SPRITESHEET_ROWS,
+  getCharacterSpriteCell,
   getCharacterSpritesheetUrl,
 } from '../../config/characterSprites'
 import './MapCanvas.css'
@@ -278,18 +278,26 @@ export default function MapCanvas({ onTileClick, onEntityClick }: MapCanvasProps
 
       const characterFrameKey = [spriteKey, inferredSpriteKey]
         .filter((candidate): candidate is string => typeof candidate === 'string' && candidate.trim().length > 0)
-        .find((candidate) => Boolean(CHARACTER_CELLS[candidate]))
-      const characterCell = characterFrameKey ? CHARACTER_CELLS[characterFrameKey] : null
+        .find((candidate) => Boolean(getCharacterSpriteCell(candidate)))
+      const characterCell = characterFrameKey ? getCharacterSpriteCell(characterFrameKey) : null
       const characterSheetUrl = characterFrameKey ? getCharacterSpritesheetUrl(characterFrameKey) : null
       const characterSheetImage = characterSheetUrl ? characterSheetCacheRef.current.get(characterSheetUrl) : null
       const isCharacterSheetSprite = Boolean(characterCell && characterSheetImage && characterSheetImage !== 'loading')
-      const spriteSize = isCharacterSheetSprite
-        ? BASE_TOKEN_SPRITE_SIZE * CHARACTER_SPRITE_SCALE
-        : BASE_TOKEN_SPRITE_SIZE
+      let spriteDrawWidth = BASE_TOKEN_SPRITE_SIZE
+      let spriteDrawHeight = BASE_TOKEN_SPRITE_SIZE
+      if (isCharacterSheetSprite) {
+        const loadedSheet = characterSheetImage as HTMLImageElement
+        const sourceW = loadedSheet.naturalWidth / CHARACTER_SPRITESHEET_COLUMNS
+        const sourceH = loadedSheet.naturalHeight / CHARACTER_SPRITESHEET_ROWS
+        const scaledHeight = BASE_TOKEN_SPRITE_SIZE * CHARACTER_SPRITE_SCALE
+        spriteDrawHeight = scaledHeight
+        spriteDrawWidth = scaledHeight * (sourceW / sourceH)
+      }
+      const spriteVisualRadius = Math.max(spriteDrawWidth, spriteDrawHeight) / 2
 
       if (entity.id === selectedEntityId) {
         ctx.beginPath()
-        ctx.arc(px, py, Math.max(radius + 4, spriteSize / 2 + 2), 0, Math.PI * 2)
+        ctx.arc(px, py, Math.max(radius + 4, spriteVisualRadius + 2), 0, Math.PI * 2)
         ctx.strokeStyle = '#fff'
         ctx.lineWidth = 2
         ctx.stroke()
@@ -301,8 +309,8 @@ export default function MapCanvas({ onTileClick, onEntityClick }: MapCanvasProps
         const sourceH = characterSheetImage.naturalHeight / CHARACTER_SPRITESHEET_ROWS
         const sourceX = characterCell.col * sourceW
         const sourceY = characterCell.row * sourceH
-        const left = px - spriteSize / 2
-        const top = py - spriteSize / 2
+        const left = px - spriteDrawWidth / 2
+        const top = py - spriteDrawHeight / 2
         ctx.imageSmoothingEnabled = false
         ctx.drawImage(
           characterSheetImage,
@@ -312,8 +320,8 @@ export default function MapCanvas({ onTileClick, onEntityClick }: MapCanvasProps
           sourceH,
           left,
           top,
-          spriteSize,
-          spriteSize,
+          spriteDrawWidth,
+          spriteDrawHeight,
         )
         drewSprite = true
       } else if (characterCell && characterSheetUrl && !characterSheetImage) {
@@ -330,10 +338,10 @@ export default function MapCanvas({ onTileClick, onEntityClick }: MapCanvasProps
       } else if (resolvedSpriteUrl) {
         const cached = spriteCacheRef.current.get(resolvedSpriteUrl)
         if (cached && cached !== 'loading') {
-          const left = px - spriteSize / 2
-          const top = py - spriteSize / 2
+          const left = px - spriteDrawWidth / 2
+          const top = py - spriteDrawHeight / 2
           ctx.imageSmoothingEnabled = false
-          ctx.drawImage(cached, left, top, spriteSize, spriteSize)
+          ctx.drawImage(cached, left, top, spriteDrawWidth, spriteDrawHeight)
           drewSprite = true
         } else if (!cached) {
           spriteCacheRef.current.set(resolvedSpriteUrl, 'loading')
@@ -369,7 +377,7 @@ export default function MapCanvas({ onTileClick, onEntityClick }: MapCanvasProps
 
       ctx.fillStyle = 'rgba(255,255,255,0.85)'
       ctx.font = `${Math.max(8, 10 * interaction.zoom) / interaction.zoom}px sans-serif`
-      ctx.fillText(entity.name, px, py + (drewSprite ? spriteSize / 2 : radius) + 10)
+      ctx.fillText(entity.name, px, py + (drewSprite ? spriteVisualRadius : radius) + 10)
     }
 
     drawOverlays(ctx, map, combat, selectedEntityId, myCharacterId)

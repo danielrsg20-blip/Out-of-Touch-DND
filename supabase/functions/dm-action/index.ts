@@ -235,9 +235,37 @@ function isMockModeEnabled(body: Record<string, unknown>): boolean {
   return edgeMock === true
 }
 
+const SHEET_SPRITE_RACES = new Set(['human', 'elf', 'dwarf', 'dragonborn', 'gnome', 'halfling'])
+const SHEET_SPRITE_CLASSES = new Set(['barbarian', 'bard', 'cleric', 'druid', 'fighter', 'monk', 'paladin', 'ranger', 'rogue', 'sorcerer', 'warlock', 'wizard'])
+
+function isSheetSpriteId(spriteId: string): boolean {
+  const normalized = spriteId.trim().toLowerCase()
+  const match = /^pc_([a-z]+)_([a-z]+)$/.exec(normalized)
+  if (!match) {
+    return false
+  }
+  const raceKey = match[1]
+  const classKey = match[2]
+  return SHEET_SPRITE_RACES.has(raceKey) && SHEET_SPRITE_CLASSES.has(classKey)
+}
+
+function getSheetSpriteIdFor(race: string, charClass: string): string | null {
+  const raceKey = race.trim().toLowerCase()
+  const classKey = charClass.trim().toLowerCase()
+  if (!SHEET_SPRITE_RACES.has(raceKey) || !SHEET_SPRITE_CLASSES.has(classKey)) {
+    return null
+  }
+  return `pc_${raceKey}_${classKey}`
+}
+
 function pickCharacterSpriteId(race: string, charClass: string, requestedSpriteId: string): string {
-  if (requestedSpriteId && PC_SPRITE_CATALOG.some((entry) => entry.id === requestedSpriteId)) {
+  if (requestedSpriteId && (PC_SPRITE_CATALOG.some((entry) => entry.id === requestedSpriteId) || isSheetSpriteId(requestedSpriteId))) {
     return requestedSpriteId
+  }
+
+  const generatedSheetSpriteId = getSheetSpriteIdFor(race, charClass)
+  if (generatedSheetSpriteId) {
+    return generatedSheetSpriteId
   }
 
   const raceKey = race.trim().toLowerCase()
