@@ -5,6 +5,7 @@ import ChatInput from './panels/ChatInput'
 import CombatTracker from './panels/CombatTracker'
 import CharacterSheet from './panels/CharacterSheet'
 import ActionBar from './panels/ActionBar'
+import DiceRoller from './panels/DiceRoller'
 import { useWebSocket } from '../hooks/useWebSocket'
 import { useGameStore } from '../stores/gameStore'
 import { useSessionStore } from '../stores/sessionStore'
@@ -57,6 +58,7 @@ export default function GameBoard() {
           </div>
           <div className="sidebar-bottom">
             <ActionBar onSend={sendAction} onCastSpell={sendSpellCast} />
+            <DiceRoller />
           </div>
         </div>
       </div>

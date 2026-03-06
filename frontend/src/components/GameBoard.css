@@ -115,6 +115,7 @@
 @media (max-width: 900px) {
   .game-content {
     flex-direction: column;
+    overflow-y: auto;
   }
   .adventure-rail {
     width: 100%;

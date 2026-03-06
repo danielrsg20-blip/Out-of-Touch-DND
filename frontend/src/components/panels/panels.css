@@ -735,3 +735,99 @@
   text-transform: uppercase;
   letter-spacing: 0.03em;
 }
+
+/* Dice Roller */
+.dice-roller {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.6rem 0;
+  border-top: 1px solid var(--border-color);
+}
+
+.dice-roller-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.dice-last-result {
+  font-family: 'Consolas', 'Courier New', monospace;
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--accent-purple);
+}
+
+.dice-options {
+  display: flex;
+  gap: 0.25rem;
+  flex-wrap: wrap;
+}
+
+.die-btn {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--border-color);
+  color: var(--text-secondary);
+  padding: 0.25rem 0.45rem;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-family: 'Consolas', 'Courier New', monospace;
+  transition: all 0.15s;
+}
+
+.die-btn:hover {
+  border-color: var(--accent-purple);
+  color: var(--text-primary);
+}
+
+.die-btn-selected {
+  background: rgba(155, 89, 182, 0.2);
+  border-color: var(--accent-purple);
+  color: var(--accent-purple);
+}
+
+.dice-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.dice-mod-label {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+  flex-shrink: 0;
+}
+
+.dice-mod-input {
+  width: 52px;
+  background: var(--bg-input);
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
+  padding: 0.3rem 0.4rem;
+  border-radius: 4px;
+  font-size: 0.82rem;
+  text-align: center;
+}
+
+.dice-mod-input:focus {
+  outline: none;
+  border-color: var(--accent-purple);
+}
+
+.dice-roll-btn {
+  flex: 1;
+  background: rgba(155, 89, 182, 0.18);
+  border: 1px solid rgba(155, 89, 182, 0.5);
+  color: var(--accent-purple);
+  padding: 0.3rem 0.6rem;
+  border-radius: 5px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  transition: all 0.15s;
+}
+
+.dice-roll-btn:hover {
+  background: rgba(155, 89, 182, 0.3);
+  border-color: var(--accent-purple);
+}
