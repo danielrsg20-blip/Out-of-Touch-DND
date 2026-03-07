@@ -79,6 +79,7 @@ class Character:
     conditions: list[str] = field(default_factory=list)
     death_saves: dict[str, int] = field(default_factory=lambda: {"successes": 0, "failures": 0})
     xp: int = 0
+    gold_gp: int = 0
     traits: list[str] = field(default_factory=list)
     rules_version: str = SRD_RULES_VERSION
     player_id: str | None = None
@@ -152,6 +153,7 @@ class Character:
             "class_features": self.class_features,
             "traits": self.traits,
             "xp": self.xp,
+            "gold_gp": self.gold_gp,
             "is_alive": self.is_alive(),
             "rules_version": self.rules_version,
             "spellcasting_mode": get_spellcasting_mode(self.char_class),
@@ -206,7 +208,7 @@ def create_character(
         sprite_id=sprite_id,
     )
 
-    from .items import get_starting_inventory, calculate_ac_from_inventory
+    from .items import get_starting_inventory, calculate_ac_from_inventory, STARTING_GOLD
     from .spells import (
         get_class_features_for_level,
         get_spellcasting_mode,
@@ -241,5 +243,6 @@ def create_character(
     char.class_features = get_class_features_for_level(char.char_class, char.level)
     char.inventory = get_starting_inventory(char_class)
     char.ac = calculate_ac_from_inventory(char.inventory, dex_mod)
+    char.gold_gp = STARTING_GOLD.get(char_class, 25)
 
     return char

@@ -89,7 +89,7 @@ class Orchestrator:
             for c in self.characters.values():
                 chars_summary.append(
                     f"- {c.name} ({c.race} {c.char_class} L{c.level}) "
-                    f"HP:{c.hp}/{c.max_hp} AC:{c.ac}"
+                    f"HP:{c.hp}/{c.max_hp} AC:{c.ac} GP:{c.gold_gp}"
                 )
             state_parts.append("CHARACTERS:\n" + "\n".join(chars_summary))
 

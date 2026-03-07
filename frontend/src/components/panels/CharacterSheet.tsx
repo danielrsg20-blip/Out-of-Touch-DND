@@ -6,50 +6,144 @@ import { getItemSpriteKey, resolveSpriteUrl } from '../../data/spriteManifest'
 import type { ItemData, SpellOption } from '../../types'
 import './panels.css'
 
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL ?? 'http://localhost:8000'
+
+// 5e carry capacity: STR score × 15 lb
+function carryCapacity(strScore: number): number {
+  return strScore * 15
+}
+
+function totalWeight(inventory: ItemData[]): number {
+  return inventory.reduce((sum, i) => sum + i.weight_lb * i.quantity, 0)
+}
+
 function ItemIcon({ item }: { readonly item: ItemData }) {
   const url = resolveSpriteUrl(getItemSpriteKey(item))
   if (!url) return null
   return <img className="inv-item-icon" src={url} alt={item.name} />
 }
 
-function InventoryPanel({ inventory }: { readonly inventory: ItemData[] }) {
-  const equipped = inventory.filter(i => i.equipped)
-  const backpack = inventory.filter(i => !i.equipped)
+// ── Feature #5: group backpack items by category ─────────────────────────────
+const CATEGORY_ORDER = ['weapon', 'armor', 'shield', 'ammunition', 'tool', 'gear']
+const CATEGORY_LABELS: Record<string, string> = {
+  weapon: 'Weapons',
+  armor: 'Armor',
+  shield: 'Shields',
+  ammunition: 'Ammunition',
+  tool: 'Tools',
+  gear: 'Gear',
+}
 
-  const equippedWeapon = equipped.find(i => i.category === 'weapon')
-  const equippedArmor = equipped.find(i => i.category === 'armor')
-  const equippedShield = equipped.find(i => i.category === 'shield')
+function groupByCategory(items: ItemData[]): Array<{ category: string; items: ItemData[] }> {
+  const map: Record<string, ItemData[]> = {}
+  for (const item of items) {
+    const cat = item.category ?? 'gear'
+    if (!map[cat]) map[cat] = []
+    map[cat].push(item)
+  }
+  return CATEGORY_ORDER
+    .filter(cat => map[cat]?.length)
+    .map(cat => ({ category: cat, items: map[cat] }))
+}
+
+// ── Feature #8: player equip action ──────────────────────────────────────────
+async function playerEquip(
+  roomCode: string,
+  playerId: string,
+  itemId: string,
+  equip: boolean,
+): Promise<{ error?: string }> {
+  const res = await fetch(`${BACKEND_URL}/api/player-equip`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ room_code: roomCode, player_id: playerId, item_id: itemId, equip }),
+  })
+  return res.json()
+}
+
+// ── ItemRow (features #1, #2, #6, #8) ────────────────────────────────────────
+function ItemRow({
+  item,
+  canEquip,
+  isInCombat,
+  onEquip,
+}: {
+  readonly item: ItemData
+  readonly canEquip: boolean
+  readonly isInCombat: boolean
+  readonly onEquip: (itemId: string, equip: boolean) => void
+}) {
+  const [expanded, setExpanded] = useState(false)
+  const qty = item.quantity > 1 ? ` ×${item.quantity}` : ''
+
+  let stat = ''
+  if (item.damage) {
+    stat = `${item.damage} ${item.damage_type}`
+  } else if (item.ac_base !== null && item.category === 'armor') {
+    stat = `AC ${item.ac_base}${item.dex_mod ? '+DEX' : ''}`
+  } else if (item.category === 'shield') {
+    stat = '+2 AC'
+  }
+
+  const hasDetail = item.description || item.notes || item.properties?.length > 0
 
   return (
-    <div className="inventory-panel">
-      {/* Equipped */}
-      <div className="inv-section-title">Equipped</div>
-      <div className="inv-equipped-slots">
-        <EquipSlot label="Weapon" item={equippedWeapon} />
-        <EquipSlot label="Armor" item={equippedArmor} />
-        <EquipSlot label="Shield" item={equippedShield} />
+    <div className="inv-item-row">
+      <div className="inv-item-row-main" onClick={() => hasDetail && setExpanded(e => !e)}>
+        <ItemIcon item={item} />
+        <span className="inv-item-name">{item.name}{qty}</span>
+        {stat && <span className="inv-item-stat">{stat}</span>}
+        {/* Feature #6: stealth disadvantage */}
+        {item.stealth_disadvantage && (
+          <span className="inv-stealth-warn" title="Stealth disadvantage">⚠</span>
+        )}
+        {hasDetail && (
+          <span className="inv-expand-toggle">{expanded ? '▲' : '▼'}</span>
+        )}
+        {canEquip && !isInCombat && (
+          <button
+            className="inv-equip-btn"
+            onClick={e => { e.stopPropagation(); onEquip(item.id, true) }}
+            title="Equip"
+          >
+            Equip
+          </button>
+        )}
       </div>
 
-      {/* Backpack */}
-      {backpack.length > 0 && (
-        <>
-          <div className="inv-section-title" style={{ marginTop: '0.6rem' }}>Backpack</div>
-          <div className="inv-item-list">
-            {backpack.map((item, idx) => (
-              <ItemRow key={`${item.id}-${idx}`} item={item} />
-            ))}
-          </div>
-        </>
+      {/* Feature #1: properties */}
+      {item.properties?.length > 0 && (
+        <div className="inv-properties">
+          {item.properties.map(p => <span key={p} className="inv-prop-tag">{p}</span>)}
+        </div>
       )}
 
-      {inventory.length === 0 && (
-        <p className="panel-empty">No items.</p>
+      {/* Feature #2: expanded description */}
+      {expanded && (
+        <div className="inv-expand">
+          {item.description && <p>{item.description}</p>}
+          {item.notes && <p className="inv-item-notes">{item.notes}</p>}
+          {item.weight_lb > 0 && <p className="inv-detail-meta">{item.weight_lb} lb · {item.cost_gp} gp</p>}
+        </div>
       )}
     </div>
   )
 }
 
-function EquipSlot({ label, item }: { readonly label: string; readonly item: ItemData | undefined }) {
+// ── EquipSlot (features #1, #6, #8) ──────────────────────────────────────────
+function EquipSlot({
+  label,
+  item,
+  canEquip,
+  isInCombat,
+  onUnequip,
+}: {
+  readonly label: string
+  readonly item: ItemData | undefined
+  readonly canEquip: boolean
+  readonly isInCombat: boolean
+  readonly onUnequip: (itemId: string) => void
+}) {
   return (
     <div className="inv-equip-slot">
       <span className="inv-slot-label">{label}</span>
@@ -66,7 +160,26 @@ function EquipSlot({ label, item }: { readonly label: string; readonly item: Ite
           {item.category === 'shield' && (
             <span className="inv-item-stat">+2 AC</span>
           )}
+          {/* Feature #6: stealth disadvantage on equipped */}
+          {item.stealth_disadvantage && (
+            <span className="inv-stealth-warn" title="Stealth disadvantage">⚠</span>
+          )}
           {item.notes && <span className="inv-item-notes">{item.notes}</span>}
+          {/* Feature #1: properties on equipped */}
+          {item.properties?.length > 0 && (
+            <div className="inv-properties inv-properties-slot">
+              {item.properties.map(p => <span key={p} className="inv-prop-tag">{p}</span>)}
+            </div>
+          )}
+          {canEquip && !isInCombat && (
+            <button
+              className="inv-equip-btn inv-unequip-btn"
+              onClick={() => onUnequip(item.id)}
+              title="Unequip"
+            >
+              ✕
+            </button>
+          )}
         </div>
       ) : (
         <span className="inv-slot-empty">—</span>
@@ -75,27 +188,106 @@ function EquipSlot({ label, item }: { readonly label: string; readonly item: Ite
   )
 }
 
-function ItemRow({ item }: { readonly item: ItemData }) {
-  const qty = item.quantity > 1 ? ` ×${item.quantity}` : ''
-  let stat = ''
-  if (item.damage) {
-    stat = `${item.damage} ${item.damage_type}`
-  } else if (item.ac_base !== null) {
-    stat = `AC ${item.ac_base}`
-  } else if (item.category === 'shield') {
-    stat = '+2 AC'
-  }
+// ── InventoryPanel (features #3, #4, #5, #7 via parent) ──────────────────────
+function InventoryPanel({
+  inventory,
+  gold,
+  strScore,
+  canEquip,
+  isInCombat,
+  onEquip,
+  onUnequip,
+  equipError,
+}: {
+  readonly inventory: ItemData[]
+  readonly gold: number
+  readonly strScore: number
+  readonly canEquip: boolean
+  readonly isInCombat: boolean
+  readonly onEquip: (itemId: string, equip: boolean) => void
+  readonly onUnequip: (itemId: string) => void
+  readonly equipError: string | null
+}) {
+  const equipped = inventory.filter(i => i.equipped)
+  const backpack = inventory.filter(i => !i.equipped)
+
+  const equippedWeapon = equipped.find(i => i.category === 'weapon')
+  const equippedArmor = equipped.find(i => i.category === 'armor')
+  const equippedShield = equipped.find(i => i.category === 'shield')
+
+  // Feature #3: carry weight
+  const weight = totalWeight(inventory)
+  const capacity = carryCapacity(strScore)
+  const weightPct = Math.min(100, (weight / capacity) * 100)
+  const weightEncumbered = weight > capacity * 0.667
+
+  // Feature #5: grouped backpack
+  const groups = groupByCategory(backpack)
 
   return (
-    <div className="inv-item-row">
-      <ItemIcon item={item} />
-      <span className="inv-item-name">{item.name}{qty}</span>
-      {stat && <span className="inv-item-stat">{stat}</span>}
-      {item.notes && <span className="inv-item-notes">{item.notes}</span>}
+    <div className="inventory-panel">
+      {/* Feature #4: gold */}
+      <div className="inv-gold">
+        <span className="inv-gold-icon">◈</span>
+        <span className="inv-gold-value">{gold} gp</span>
+      </div>
+
+      {/* Equipped slots */}
+      <div className="inv-section-title">Equipped</div>
+      <div className="inv-equipped-slots">
+        <EquipSlot label="Weapon" item={equippedWeapon} canEquip={canEquip} isInCombat={isInCombat} onUnequip={onUnequip} />
+        <EquipSlot label="Armor" item={equippedArmor} canEquip={canEquip} isInCombat={isInCombat} onUnequip={onUnequip} />
+        <EquipSlot label="Shield" item={equippedShield} canEquip={canEquip} isInCombat={isInCombat} onUnequip={onUnequip} />
+      </div>
+
+      {/* Feature #8: equip error */}
+      {equipError && <div className="inv-equip-error">{equipError}</div>}
+      {isInCombat && canEquip && (
+        <div className="inv-combat-note">Equipment locked during combat.</div>
+      )}
+
+      {/* Backpack — grouped by category */}
+      {backpack.length > 0 && (
+        <>
+          <div className="inv-section-title" style={{ marginTop: '0.6rem' }}>Backpack</div>
+          {groups.map(({ category, items }) => (
+            <div key={category} className="inv-category-group">
+              <div className="inv-category-header">{CATEGORY_LABELS[category] ?? category}</div>
+              <div className="inv-item-list">
+                {items.map((item, idx) => (
+                  <ItemRow
+                    key={`${item.id}-${idx}`}
+                    item={item}
+                    canEquip={canEquip && ['weapon', 'armor', 'shield'].includes(item.category)}
+                    isInCombat={isInCombat}
+                    onEquip={onEquip}
+                  />
+                ))}
+              </div>
+            </div>
+          ))}
+        </>
+      )}
+
+      {inventory.length === 0 && (
+        <p className="panel-empty">No items.</p>
+      )}
+
+      {/* Feature #3: carry weight bar */}
+      <div className="inv-weight-section">
+        <div className="inv-weight-bar-track">
+          <div
+            className={`inv-weight-bar-fill${weightEncumbered ? ' encumbered' : ''}`}
+            style={{ width: `${weightPct}%` }}
+          />
+        </div>
+        <span className="inv-weight-label">{weight.toFixed(1)} / {capacity} lb</span>
+      </div>
     </div>
   )
 }
 
+// ── CharacterSheet ────────────────────────────────────────────────────────────
 export default function CharacterSheet() {
   const [tab, setTab] = useState<'stats' | 'inventory'>('stats')
   const characters = useGameStore(s => s.characters)
@@ -113,12 +305,18 @@ export default function CharacterSheet() {
   const [availablePreparedSpells, setAvailablePreparedSpells] = useState<SpellOption[]>([])
   const [selectedPreparedSpells, setSelectedPreparedSpells] = useState<string[]>([])
 
+  // Feature #8: player equip state
+  const [equipError, setEquipError] = useState<string | null>(null)
+  const [equipPending, setEquipPending] = useState(false)
+
   const player = players.find(p => p.id === playerId)
   const charId = player?.character_id
   const char = charId ? characters[charId] : null
 
   const isInCombat = !!combat?.is_active
   const canManagePreparedSpells = !!char && char.spellcasting_mode === 'prepared' && !!roomCode && !!playerId
+  // Player can self-equip when they have a character and a live room
+  const canSelfEquip = !!char && !!roomCode && !!playerId
 
   useEffect(() => {
     if (isInCombat && isManagingPrepared) {
@@ -206,6 +404,21 @@ export default function CharacterSheet() {
     }
   }
 
+  // Feature #8: equip/unequip handler
+  const handleEquip = async (itemId: string, equip: boolean) => {
+    if (!roomCode || !playerId || equipPending) return
+    setEquipError(null)
+    setEquipPending(true)
+    try {
+      const res = await playerEquip(roomCode, playerId, itemId, equip)
+      if (res.error) setEquipError(res.error)
+    } catch {
+      setEquipError('Failed to update equipment.')
+    } finally {
+      setEquipPending(false)
+    }
+  }
+
   if (!char) {
     return (
       <div className="character-sheet">
@@ -226,6 +439,9 @@ export default function CharacterSheet() {
     })
     .sort((a, b) => Number(a.level) - Number(b.level))
 
+  // Feature #7: item count badge
+  const itemCount = char.inventory.length
+
   return (
     <div className="character-sheet">
       <div className="char-header-row">
@@ -238,10 +454,14 @@ export default function CharacterSheet() {
             className={`char-tab${tab === 'stats' ? ' active' : ''}`}
             onClick={() => setTab('stats')}
           >Stats</button>
+          {/* Feature #7: badge */}
           <button
             className={`char-tab${tab === 'inventory' ? ' active' : ''}`}
             onClick={() => setTab('inventory')}
-          >Inv</button>
+          >
+            Inv
+            {itemCount > 0 && <span className="inv-tab-badge">{itemCount}</span>}
+          </button>
         </div>
       </div>
 
@@ -299,7 +519,16 @@ export default function CharacterSheet() {
           )}
         </>
       ) : (
-        <InventoryPanel inventory={char.inventory} />
+        <InventoryPanel
+          inventory={char.inventory}
+          gold={char.gold_gp ?? 0}
+          strScore={char.abilities['STR'] ?? 10}
+          canEquip={canSelfEquip}
+          isInCombat={isInCombat}
+          onEquip={handleEquip}
+          onUnequip={(id) => handleEquip(id, false)}
+          equipError={equipError}
+        />
       )}
 
       {slotRows.length > 0 && (

@@ -486,6 +486,203 @@
   flex-shrink: 0;
 }
 
+/* ── Feature #4: Gold display ──────────────────────────────────────── */
+.inv-gold {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin-bottom: 0.5rem;
+  padding: 0.2rem 0.4rem;
+  background: rgba(212, 175, 55, 0.08);
+  border: 1px solid rgba(212, 175, 55, 0.25);
+  border-radius: 4px;
+}
+
+.inv-gold-icon {
+  color: var(--accent-gold);
+  font-size: 0.85rem;
+  flex-shrink: 0;
+}
+
+.inv-gold-value {
+  color: var(--accent-gold);
+  font-family: 'Consolas', 'Courier New', monospace;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+/* ── Feature #1: Weapon properties ────────────────────────────────── */
+.inv-properties {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.2rem;
+  padding-left: 28px;
+  padding-bottom: 0.15rem;
+}
+
+.inv-properties-slot {
+  padding-left: 0;
+  width: 100%;
+  margin-top: 0.15rem;
+}
+
+.inv-prop-tag {
+  font-size: 0.62rem;
+  color: var(--text-secondary);
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--border-color);
+  border-radius: 3px;
+  padding: 0 0.3rem;
+  line-height: 1.5;
+}
+
+/* ── Feature #2: Expandable description ────────────────────────────── */
+.inv-item-row-main {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  width: 100%;
+  cursor: default;
+}
+
+.inv-expand-toggle {
+  font-size: 0.6rem;
+  color: var(--text-secondary);
+  opacity: 0.5;
+  flex-shrink: 0;
+  margin-left: auto;
+}
+
+.inv-expand {
+  padding: 0.3rem 0.4rem 0.3rem 28px;
+  font-size: 0.72rem;
+  color: var(--text-secondary);
+  border-top: 1px solid var(--border-color);
+  margin-top: 0.1rem;
+}
+
+.inv-expand p {
+  margin: 0.1rem 0;
+}
+
+.inv-detail-meta {
+  color: var(--text-secondary);
+  opacity: 0.6;
+}
+
+/* ── Feature #3: Carry weight ──────────────────────────────────────── */
+.inv-weight-section {
+  margin-top: 0.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.inv-weight-bar-track {
+  flex: 1;
+  height: 4px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.inv-weight-bar-fill {
+  height: 100%;
+  background: var(--accent-green);
+  border-radius: 2px;
+  transition: width 0.3s ease, background 0.3s ease;
+}
+
+.inv-weight-bar-fill.encumbered {
+  background: var(--accent-red, #e05252);
+}
+
+.inv-weight-label {
+  font-size: 0.65rem;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+/* ── Feature #5: Category groups ───────────────────────────────────── */
+.inv-category-group {
+  margin-bottom: 0.25rem;
+}
+
+.inv-category-header {
+  font-size: 0.62rem;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--text-secondary);
+  opacity: 0.6;
+  padding: 0.1rem 0.4rem;
+  margin-top: 0.2rem;
+}
+
+/* ── Feature #6: Stealth disadvantage warning ──────────────────────── */
+.inv-stealth-warn {
+  font-size: 0.65rem;
+  color: var(--accent-gold);
+  flex-shrink: 0;
+  opacity: 0.8;
+  cursor: default;
+}
+
+/* ── Feature #7: Item count badge on tab ───────────────────────────── */
+.inv-tab-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.1em;
+  height: 1.1em;
+  padding: 0 0.25em;
+  margin-left: 0.3em;
+  background: var(--accent-gold);
+  color: #1a1a1a;
+  border-radius: 999px;
+  font-size: 0.6rem;
+  font-weight: 700;
+  line-height: 1;
+  vertical-align: middle;
+}
+
+/* ── Feature #8: Player equip controls ─────────────────────────────── */
+.inv-equip-btn {
+  font-size: 0.62rem;
+  padding: 0.1rem 0.35rem;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--border-color);
+  border-radius: 3px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  flex-shrink: 0;
+  margin-left: auto;
+  transition: background 0.15s, color 0.15s;
+}
+
+.inv-equip-btn:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: var(--text-primary);
+}
+
+.inv-unequip-btn {
+  color: var(--accent-red, #e05252);
+  border-color: rgba(224, 82, 82, 0.3);
+}
+
+.inv-equip-error {
+  font-size: 0.72rem;
+  color: var(--accent-red, #e05252);
+  margin: 0.3rem 0 0.1rem;
+}
+
+.inv-combat-note {
+  font-size: 0.68rem;
+  color: var(--text-secondary);
+  opacity: 0.6;
+  margin: 0.2rem 0 0.1rem;
+}
+
 .slot-row {
   display: flex;
   justify-content: space-between;
