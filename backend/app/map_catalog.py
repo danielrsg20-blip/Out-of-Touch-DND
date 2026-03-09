@@ -54,9 +54,25 @@ class NormalizedMapSelectionRequest(TypedDict):
     height: int
 
 
+class TerrainAtlasEntry(TypedDict):
+    x: int
+    y: int
+    tileSize: int
+    label: str
+
+
 _MAP_LIBRARY_PATH = Path(__file__).resolve().parent / "maps" / "data" / "map_library.json"
+_TERRAIN_ATLAS_PATH = (
+    Path(__file__).resolve().parents[2]
+    / "frontend"
+    / "public"
+    / "sprites"
+    / "Environment"
+    / "Terrain_and_Props.json"
+)
 _GENERATED_MAP_CACHE: OrderedDict[str, dict[str, Any]] = OrderedDict()
 _GENERATED_CACHE_LIMIT = 64
+_TERRAIN_ATLAS_CACHE: list[TerrainAtlasEntry] | None = None
 logger = logging.getLogger(__name__)
 
 _ENV_KEYWORDS: dict[str, list[str]] = {
@@ -72,6 +88,214 @@ _ENCOUNTER_KEYWORDS: dict[str, list[str]] = {
     "exploration": ["explore", "search", "scout", "travel", "investigate"],
     "social": ["talk", "parley", "negotiate", "meet", "speak", "social"],
 }
+
+_TILE_LABEL_KEYWORDS: dict[str, list[str]] = {
+    "floor": [
+        "floor", "grass", "dirt", "earth", "sand", "path", "road", "trail",
+        "soil", "stone", "cobble", "moss", "mud", "ground", "wood",
+    ],
+    "wall": [
+        "wall", "brick", "stone wall", "hedge", "tree", "cliff", "rock face",
+        "wood wall", "fence",
+    ],
+    "door": ["door", "gate", "archway", "portcullis", "entrance"],
+    "water": ["water", "river", "pond", "stream", "pool", "swamp"],
+    "pit": ["pit", "chasm", "hole", "void", "lava"],
+    "pillar": ["pillar", "column", "statue", "stalagmite", "boulder", "rock", "crystal"],
+    "rubble": ["rubble", "debris", "ruin", "bones", "broken", "wreckage"],
+    "stairs_up": ["stairs up", "stair up", "ladder up", "upstairs"],
+    "stairs_down": ["stairs down", "stair down", "ladder down", "downstairs"],
+    "chest": ["chest", "crate", "barrel", "cache", "treasure"],
+}
+
+_ENV_THEME_KEYWORDS: dict[str, list[str]] = {
+    "forest": ["grass", "forest", "tree", "moss", "dirt", "log", "bush", "nature"],
+    "cave": ["cave", "rock", "stone", "crystal", "stalagmite", "mushroom"],
+    "tavern": ["wood", "plank", "table", "barrel", "crate", "floor"],
+    "city": ["stone", "road", "cobble", "brick", "paved"],
+    "dungeon": ["dungeon", "crypt", "stone", "brick", "tile", "rubble", "bones"],
+}
+
+
+def _normalize_label(value: str) -> str:
+    return " ".join(value.strip().lower().replace("_", " ").split())
+
+
+def _load_terrain_atlas() -> list[TerrainAtlasEntry]:
+    global _TERRAIN_ATLAS_CACHE
+    if _TERRAIN_ATLAS_CACHE is not None:
+        return _TERRAIN_ATLAS_CACHE
+
+    try:
+        with _TERRAIN_ATLAS_PATH.open("r", encoding="utf-8") as f:
+            payload = json.load(f)
+    except FileNotFoundError:
+        logger.warning("Terrain atlas JSON missing at %s", _TERRAIN_ATLAS_PATH)
+        _TERRAIN_ATLAS_CACHE = []
+        return _TERRAIN_ATLAS_CACHE
+    except json.JSONDecodeError as exc:
+        logger.warning("Terrain atlas JSON invalid: %s", exc)
+        _TERRAIN_ATLAS_CACHE = []
+        return _TERRAIN_ATLAS_CACHE
+
+    entries: list[TerrainAtlasEntry] = []
+    if isinstance(payload, list):
+        for row in payload:
+            if not isinstance(row, dict):
+                continue
+            label = str(row.get("label", "")).strip()
+            if not label:
+                continue
+            try:
+                x = int(row.get("x", 0))
+                y = int(row.get("y", 0))
+                tile_size = int(row.get("tileSize", 32))
+            except (TypeError, ValueError):
+                continue
+            if tile_size <= 0:
+                continue
+            entries.append({"x": x, "y": y, "tileSize": tile_size, "label": label})
+
+    _TERRAIN_ATLAS_CACHE = entries
+    return _TERRAIN_ATLAS_CACHE
+
+
+def _select_labels(entries: list[TerrainAtlasEntry], keywords: list[str], limit: int = 60) -> list[str]:
+    matched: list[str] = []
+    seen: set[str] = set()
+    for entry in entries:
+        normalized = _normalize_label(entry["label"])
+        if normalized in seen:
+            continue
+        if any(keyword in normalized for keyword in keywords):
+            seen.add(normalized)
+            matched.append(normalized)
+            if len(matched) >= limit:
+                break
+    return matched
+
+
+def _build_tile_sprite_palette(
+    environment: str,
+    description: str,
+    mock_mode: bool,
+    rng: random.Random,
+) -> dict[str, list[str]]:
+    entries = _load_terrain_atlas()
+    if not entries:
+        return {}
+
+    env_key = environment if environment in _ENV_THEME_KEYWORDS else "dungeon"
+    env_keywords = list(_ENV_THEME_KEYWORDS.get(env_key, []))
+    lowered_description = description.lower()
+    if "water" in lowered_description or "river" in lowered_description:
+        env_keywords.extend(["water", "river", "pond"]) 
+
+    base_theme = _select_labels(entries, env_keywords, limit=120)
+    if not base_theme:
+        base_theme = _select_labels(entries, ["stone", "floor", "dirt"], limit=120)
+
+    palette: dict[str, list[str]] = {}
+    for tile_type, keywords in _TILE_LABEL_KEYWORDS.items():
+        env_filtered = [label for label in base_theme if any(keyword in label for keyword in keywords)]
+        global_fallback = _select_labels(entries, keywords, limit=120)
+
+        candidates = env_filtered if env_filtered else global_fallback
+        if mock_mode and candidates:
+            # Keep mock output coherent by constraining each tile type to a small variant set.
+            shuffled = list(candidates)
+            rng.shuffle(shuffled)
+            candidates = shuffled[: max(1, min(4, len(shuffled)))]
+
+        if candidates:
+            palette[tile_type] = candidates
+
+    return palette
+
+
+def _assign_tile_sprites(
+    tiles: list[dict[str, Any]],
+    palette: dict[str, list[str]],
+    rng: random.Random,
+) -> list[dict[str, Any]]:
+    if not palette:
+        return [dict(tile) for tile in tiles]
+
+    decorated: list[dict[str, Any]] = []
+    for tile in tiles:
+        tile_copy = dict(tile)
+        tile_type = str(tile_copy.get("type", ""))
+        candidates = palette.get(tile_type)
+        if candidates:
+            label = rng.choice(candidates)
+            tile_copy["sprite"] = f"env:{label}"
+        decorated.append(tile_copy)
+    return decorated
+
+
+def _spawn_environment_props(
+    tiles: list[dict[str, Any]],
+    environment: str,
+    palette: dict[str, list[str]],
+    rng: random.Random,
+) -> list[dict[str, Any]]:
+    entries = _load_terrain_atlas()
+    if not entries:
+        return []
+
+    walkable = [
+        (int(tile["x"]), int(tile["y"]))
+        for tile in tiles
+        if _is_walkable(str(tile.get("type", "wall")))
+    ]
+    if not walkable:
+        return []
+
+    occupied = set()
+    floor_labels = set(palette.get("floor", []))
+    env_keywords = _ENV_THEME_KEYWORDS.get(environment, _ENV_THEME_KEYWORDS["dungeon"])
+    prop_keywords = ["tree", "bush", "rock", "log", "crate", "barrel", "torch", "bones", "mushroom", "urn"]
+    if environment == "tavern":
+        prop_keywords = ["barrel", "crate", "table", "chair", "torch"]
+    elif environment == "cave":
+        prop_keywords = ["rock", "crystal", "stalagmite", "mushroom", "bones"]
+
+    prop_labels = []
+    seen: set[str] = set()
+    for entry in entries:
+        label = _normalize_label(entry["label"])
+        if label in seen or label in floor_labels:
+            continue
+        if any(k in label for k in prop_keywords) and any(k in label for k in env_keywords):
+            seen.add(label)
+            prop_labels.append(label)
+
+    if not prop_labels:
+        prop_labels = _select_labels(entries, prop_keywords, limit=24)
+    if not prop_labels:
+        return []
+
+    rng.shuffle(walkable)
+    count = max(2, min(12, len(walkable) // 45))
+    entities: list[dict[str, Any]] = []
+    for idx in range(count):
+        if idx >= len(walkable):
+            break
+        x, y = walkable[idx]
+        if (x, y) in occupied:
+            continue
+        occupied.add((x, y))
+        label = rng.choice(prop_labels)
+        entities.append({
+            "id": f"prop_auto_{idx}_{x}_{y}",
+            "name": label,
+            "x": x,
+            "y": y,
+            "type": "object",
+            "sprite": f"env:{label}",
+        })
+
+    return entities
 
 
 def _load_library() -> list[MapLibraryEntry]:
@@ -335,13 +559,22 @@ def _build_from_library(entry: MapLibraryEntry, request: NormalizedMapSelectionR
     if not _is_valid_layout(width, height, tiles):
         tiles = _empty_map(width, height)
 
+    palette = _build_tile_sprite_palette(
+        environment=entry["environment"],
+        description=request["description"],
+        mock_mode=LOCAL_MOCK_MODE,
+        rng=rng,
+    )
+    tiles = _assign_tile_sprites(tiles, palette, rng)
+    entities = _spawn_environment_props(tiles, entry["environment"], palette, rng)
+
     license_info = _resolve_license(entry)
 
     return {
         "width": width,
         "height": height,
         "tiles": tiles,
-        "entities": [],
+        "entities": entities,
         "metadata": {
             "map_id": entry["id"],
             "map_source": "library",
@@ -360,6 +593,7 @@ def _build_from_library(entry: MapLibraryEntry, request: NormalizedMapSelectionR
             "tactical_tags": entry.get("tags", []),
             "grid_size": 5,
             "grid_units": "ft",
+            "tile_size_px": 32,
             "image_url": entry.get("image_url", ""),
             "image_opacity": float(entry.get("image_opacity", 0.85)),
         },
@@ -388,6 +622,15 @@ def _generate_dynamic(request: NormalizedMapSelectionRequest, rng: random.Random
             best_tiles = tiles
             break
 
+    palette = _build_tile_sprite_palette(
+        environment=request["environment"],
+        description=request["description"],
+        mock_mode=LOCAL_MOCK_MODE,
+        rng=rng,
+    )
+    best_tiles = _assign_tile_sprites(best_tiles, palette, rng)
+    entities = _spawn_environment_props(best_tiles, request["environment"], palette, rng)
+
     fingerprint = hashlib.sha256(
         json.dumps(
             {
@@ -407,7 +650,7 @@ def _generate_dynamic(request: NormalizedMapSelectionRequest, rng: random.Random
         "width": width,
         "height": height,
         "tiles": best_tiles,
-        "entities": [],
+        "entities": entities,
         "metadata": {
             "map_id": f"gen_{fingerprint}",
             "map_source": "generated",
@@ -417,6 +660,7 @@ def _generate_dynamic(request: NormalizedMapSelectionRequest, rng: random.Random
             "tactical_tags": tactical_tags,
             "grid_size": 5,
             "grid_units": "ft",
+            "tile_size_px": 32,
         },
     }
 

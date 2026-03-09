@@ -6,6 +6,11 @@ import { drawOverlays } from './OverlayLayer'
 import type { TileData } from '../../types'
 import { resolveSpriteUrl } from '../../data/spriteManifest'
 import {
+  ENVIRONMENT_SPRITESHEET_URL,
+  loadEnvironmentSpriteLookup,
+  resolveEnvironmentSpriteRect,
+} from '../../data/environmentSpriteAtlas'
+import {
   CHARACTER_SPRITESHEET_COLUMNS,
   CHARACTER_SPRITESHEET_ROWS,
   getCharacterSpriteId,
@@ -14,7 +19,7 @@ import {
 } from '../../config/characterSprites'
 import './MapCanvas.css'
 
-const TILE_SIZE = 40
+const TILE_SIZE = 32
 const BASE_TOKEN_SPRITE_SIZE = TILE_SIZE * 0.86
 const CHARACTER_SPRITE_SCALE = 1.5
 
@@ -74,6 +79,7 @@ export default function MapCanvas({ onTileClick, onEntityClick }: MapCanvasProps
   const imageRef = useRef<HTMLImageElement | null>(null)
   const imageUrlRef = useRef<string | null>(null)
   const characterSheetCacheRef = useRef<Map<string, HTMLImageElement | 'loading' | null>>(new Map())
+  const environmentSheetCacheRef = useRef<Map<string, HTMLImageElement | 'loading' | null>>(new Map())
   const spriteCacheRef = useRef<Map<string, HTMLImageElement | 'loading' | null>>(new Map())
   const map = useGameStore(s => s.map)
   const combat = useGameStore(s => s.combat)
@@ -139,6 +145,12 @@ export default function MapCanvas({ onTileClick, onEntityClick }: MapCanvasProps
     }
     img.src = imageUrl
   }, [imageUrl])
+
+  useEffect(() => {
+    void loadEnvironmentSpriteLookup().catch(() => {
+      // Keep fallback token rendering if the optional environment atlas fails to load.
+    })
+  }, [])
 
   useEffect(() => {
     if (!map) return
@@ -243,13 +255,46 @@ export default function MapCanvas({ onTileClick, onEntityClick }: MapCanvasProps
           continue
         }
 
-        const color = tile ? (TILE_COLORS[tile.type] || '#3a3a4a') : '#0a0a0a'
-        const hasBackgroundImage = !!loadedImage
-        const lowOpacityTile = tile?.type === 'floor' || tile?.type === 'water'
-        ctx.globalAlpha = hasBackgroundImage && lowOpacityTile ? 0.35 : 1
-        ctx.fillStyle = color
-        ctx.fillRect(px, py, TILE_SIZE, TILE_SIZE)
-        ctx.globalAlpha = 1
+        const tileRect = typeof tile?.sprite === 'string' ? resolveEnvironmentSpriteRect(tile.sprite) : null
+        const environmentSheetImageForTile = tileRect
+          ? environmentSheetCacheRef.current.get(ENVIRONMENT_SPRITESHEET_URL)
+          : null
+
+        if (tileRect && environmentSheetImageForTile && environmentSheetImageForTile !== 'loading') {
+          ctx.imageSmoothingEnabled = false
+          ctx.drawImage(
+            environmentSheetImageForTile,
+            tileRect.x,
+            tileRect.y,
+            tileRect.w,
+            tileRect.h,
+            px,
+            py,
+            TILE_SIZE,
+            TILE_SIZE,
+          )
+        } else {
+          const color = tile ? (TILE_COLORS[tile.type] || '#3a3a4a') : '#0a0a0a'
+          const hasBackgroundImage = !!loadedImage
+          const lowOpacityTile = tile?.type === 'floor' || tile?.type === 'water'
+          ctx.globalAlpha = hasBackgroundImage && lowOpacityTile ? 0.35 : 1
+          ctx.fillStyle = color
+          ctx.fillRect(px, py, TILE_SIZE, TILE_SIZE)
+          ctx.globalAlpha = 1
+
+          if (tileRect && environmentSheetImageForTile === undefined) {
+            environmentSheetCacheRef.current.set(ENVIRONMENT_SPRITESHEET_URL, 'loading')
+            const img = new Image()
+            img.decoding = 'async'
+            img.onload = () => {
+              environmentSheetCacheRef.current.set(ENVIRONMENT_SPRITESHEET_URL, img)
+            }
+            img.onerror = () => {
+              environmentSheetCacheRef.current.set(ENVIRONMENT_SPRITESHEET_URL, null)
+            }
+            img.src = ENVIRONMENT_SPRITESHEET_URL
+          }
+        }
 
         if (hasVisibility && revealedSet.has(key) && !visibleSet.has(key)) {
           ctx.fillStyle = 'rgba(0, 0, 0, 0.5)'
@@ -312,6 +357,17 @@ export default function MapCanvas({ onTileClick, onEntityClick }: MapCanvasProps
         .map((candidate) => resolveSpriteUrl(candidate))
         .find((candidate) => typeof candidate === 'string' && candidate.length > 0) ?? null
 
+      const environmentFrameKey = [
+        spriteKey,
+        entity.type === 'object' ? `env:${entity.name}` : null,
+      ]
+        .filter((candidate): candidate is string => typeof candidate === 'string' && candidate.trim().length > 0)
+        .find((candidate) => Boolean(resolveEnvironmentSpriteRect(candidate)))
+      const environmentRect = environmentFrameKey ? resolveEnvironmentSpriteRect(environmentFrameKey) : null
+      const environmentSheetImage = environmentRect
+        ? environmentSheetCacheRef.current.get(ENVIRONMENT_SPRITESHEET_URL)
+        : null
+
       const characterFrameKey = [spriteKey, inferredSpriteKey]
         .filter((candidate): candidate is string => typeof candidate === 'string' && candidate.trim().length > 0)
         .find((candidate) => Boolean(getCharacterSpriteCell(candidate)))
@@ -328,6 +384,10 @@ export default function MapCanvas({ onTileClick, onEntityClick }: MapCanvasProps
         const scaledHeight = BASE_TOKEN_SPRITE_SIZE * CHARACTER_SPRITE_SCALE
         spriteDrawHeight = scaledHeight
         spriteDrawWidth = scaledHeight * (sourceW / sourceH)
+      } else if (environmentRect) {
+        const scaledHeight = BASE_TOKEN_SPRITE_SIZE
+        spriteDrawHeight = scaledHeight
+        spriteDrawWidth = scaledHeight * (environmentRect.w / environmentRect.h)
       }
       const spriteVisualRadius = Math.max(spriteDrawWidth, spriteDrawHeight) / 2
 
@@ -371,6 +431,33 @@ export default function MapCanvas({ onTileClick, onEntityClick }: MapCanvasProps
           characterSheetCacheRef.current.set(characterSheetUrl, null)
         }
         img.src = characterSheetUrl
+      } else if (environmentRect && environmentSheetImage && environmentSheetImage !== 'loading') {
+        const left = px - spriteDrawWidth / 2
+        const top = py - spriteDrawHeight / 2
+        ctx.imageSmoothingEnabled = false
+        ctx.drawImage(
+          environmentSheetImage,
+          environmentRect.x,
+          environmentRect.y,
+          environmentRect.w,
+          environmentRect.h,
+          left,
+          top,
+          spriteDrawWidth,
+          spriteDrawHeight,
+        )
+        drewSprite = true
+      } else if (environmentRect && environmentSheetImage === undefined) {
+        environmentSheetCacheRef.current.set(ENVIRONMENT_SPRITESHEET_URL, 'loading')
+        const img = new Image()
+        img.decoding = 'async'
+        img.onload = () => {
+          environmentSheetCacheRef.current.set(ENVIRONMENT_SPRITESHEET_URL, img)
+        }
+        img.onerror = () => {
+          environmentSheetCacheRef.current.set(ENVIRONMENT_SPRITESHEET_URL, null)
+        }
+        img.src = ENVIRONMENT_SPRITESHEET_URL
       } else if (resolvedSpriteUrl) {
         const cached = spriteCacheRef.current.get(resolvedSpriteUrl)
         if (cached && cached !== 'loading') {

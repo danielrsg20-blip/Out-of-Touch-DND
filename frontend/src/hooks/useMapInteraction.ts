@@ -1,6 +1,6 @@
 import { useState, useCallback, useRef } from 'react'
 
-const TILE_SIZE = 40
+const TILE_SIZE = 32
 
 interface MapInteraction {
   offsetX: number

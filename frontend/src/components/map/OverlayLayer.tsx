@@ -1,6 +1,6 @@
 import type { MapData, CombatData } from '../../types'
 
-const TILE_SIZE = 40
+const TILE_SIZE = 32
 
 export function drawOverlays(ctx: CanvasRenderingContext2D, map: MapData, combat: CombatData | null, selectedEntityId: string | null, myCharacterId: string | null) {
   if (!combat?.is_active || !selectedEntityId || !myCharacterId) return

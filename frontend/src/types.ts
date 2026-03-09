@@ -3,6 +3,7 @@ export interface TileData {
   y: number
   type: string
   state?: string
+  sprite?: string
 }
 
 export interface EntityData {

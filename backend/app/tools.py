@@ -343,6 +343,7 @@ TOOL_DEFINITIONS: list[dict[str, Any]] = [
                 "y": {"type": "integer"},
                 "tile_type": {"type": "string"},
                 "state": {"type": "string"},
+                "sprite": {"type": "string", "description": "Optional atlas key such as 'env:grass'"},
             },
             "required": ["x", "y", "tile_type"],
         },
@@ -737,5 +738,5 @@ class ToolDispatcher:
     def _tool_update_tile(self, inp: dict) -> dict:
         if not self.game_map:
             return {"error": "No map loaded"}
-        tile = self.game_map.set_tile(inp["x"], inp["y"], inp["tile_type"], inp.get("state"))
+        tile = self.game_map.set_tile(inp["x"], inp["y"], inp["tile_type"], inp.get("state"), inp.get("sprite"))
         return {"updated": tile.to_dict()}

@@ -1,0 +1,11258 @@
+[
+  {
+    "col": 1,
+    "row": 0,
+    "x": 32,
+    "y": 0,
+    "tileSize": 32,
+    "label": "red potion"
+  },
+  {
+    "col": 2,
+    "row": 0,
+    "x": 64,
+    "y": 0,
+    "tileSize": 32,
+    "label": "red potion"
+  },
+  {
+    "col": 3,
+    "row": 0,
+    "x": 96,
+    "y": 0,
+    "tileSize": 32,
+    "label": "cyan potion"
+  },
+  {
+    "col": 4,
+    "row": 0,
+    "x": 128,
+    "y": 0,
+    "tileSize": 32,
+    "label": "cyan potion"
+  },
+  {
+    "col": 5,
+    "row": 0,
+    "x": 160,
+    "y": 0,
+    "tileSize": 32,
+    "label": "brown sphere"
+  },
+  {
+    "col": 6,
+    "row": 0,
+    "x": 192,
+    "y": 0,
+    "tileSize": 32,
+    "label": "wooden crate"
+  },
+  {
+    "col": 7,
+    "row": 0,
+    "x": 224,
+    "y": 0,
+    "tileSize": 32,
+    "label": "wooden chest"
+  },
+  {
+    "col": 8,
+    "row": 0,
+    "x": 256,
+    "y": 0,
+    "tileSize": 32,
+    "label": "brown jar"
+  },
+  {
+    "col": 9,
+    "row": 0,
+    "x": 288,
+    "y": 0,
+    "tileSize": 32,
+    "label": "gray anvil"
+  },
+  {
+    "col": 10,
+    "row": 0,
+    "x": 320,
+    "y": 0,
+    "tileSize": 32,
+    "label": "wooden crate"
+  },
+  {
+    "col": 11,
+    "row": 0,
+    "x": 352,
+    "y": 0,
+    "tileSize": 32,
+    "label": "green slimes"
+  },
+  {
+    "col": 12,
+    "row": 0,
+    "x": 384,
+    "y": 0,
+    "tileSize": 32,
+    "label": "golden statue"
+  },
+  {
+    "col": 13,
+    "row": 0,
+    "x": 416,
+    "y": 0,
+    "tileSize": 32,
+    "label": "water fountain"
+  },
+  {
+    "col": 14,
+    "row": 0,
+    "x": 448,
+    "y": 0,
+    "tileSize": 32,
+    "label": "ice fountain"
+  },
+  {
+    "col": 15,
+    "row": 0,
+    "x": 480,
+    "y": 0,
+    "tileSize": 32,
+    "label": "purple blob"
+  },
+  {
+    "col": 16,
+    "row": 0,
+    "x": 512,
+    "y": 0,
+    "tileSize": 32,
+    "label": "dark ruins"
+  },
+  {
+    "col": 17,
+    "row": 0,
+    "x": 544,
+    "y": 0,
+    "tileSize": 32,
+    "label": "stone pedestal"
+  },
+  {
+    "col": 19,
+    "row": 0,
+    "x": 608,
+    "y": 0,
+    "tileSize": 32,
+    "label": "unknown"
+  },
+  {
+    "col": 20,
+    "row": 0,
+    "x": 640,
+    "y": 0,
+    "tileSize": 32,
+    "label": "unknown"
+  },
+  {
+    "col": 21,
+    "row": 0,
+    "x": 672,
+    "y": 0,
+    "tileSize": 32,
+    "label": "unknown"
+  },
+  {
+    "col": 22,
+    "row": 0,
+    "x": 704,
+    "y": 0,
+    "tileSize": 32,
+    "label": "altar with candles"
+  },
+  {
+    "col": 23,
+    "row": 0,
+    "x": 736,
+    "y": 0,
+    "tileSize": 32,
+    "label": "tombstone"
+  },
+  {
+    "col": 24,
+    "row": 0,
+    "x": 768,
+    "y": 0,
+    "tileSize": 32,
+    "label": "statue base"
+  },
+  {
+    "col": 25,
+    "row": 0,
+    "x": 800,
+    "y": 0,
+    "tileSize": 32,
+    "label": "statue base"
+  },
+  {
+    "col": 26,
+    "row": 0,
+    "x": 832,
+    "y": 0,
+    "tileSize": 32,
+    "label": "statue base"
+  },
+  {
+    "col": 27,
+    "row": 0,
+    "x": 864,
+    "y": 0,
+    "tileSize": 32,
+    "label": "statue base"
+  },
+  {
+    "col": 28,
+    "row": 0,
+    "x": 896,
+    "y": 0,
+    "tileSize": 32,
+    "label": "statue base"
+  },
+  {
+    "col": 29,
+    "row": 0,
+    "x": 928,
+    "y": 0,
+    "tileSize": 32,
+    "label": "statue base"
+  },
+  {
+    "col": 30,
+    "row": 0,
+    "x": 960,
+    "y": 0,
+    "tileSize": 32,
+    "label": "statue base"
+  },
+  {
+    "col": 31,
+    "row": 0,
+    "x": 992,
+    "y": 0,
+    "tileSize": 32,
+    "label": "statue base"
+  },
+  {
+    "col": 32,
+    "row": 0,
+    "x": 1024,
+    "y": 0,
+    "tileSize": 32,
+    "label": "altar"
+  },
+  {
+    "col": 33,
+    "row": 0,
+    "x": 1056,
+    "y": 0,
+    "tileSize": 32,
+    "label": "red potion"
+  },
+  {
+    "col": 34,
+    "row": 0,
+    "x": 1088,
+    "y": 0,
+    "tileSize": 32,
+    "label": "green hood"
+  },
+  {
+    "col": 35,
+    "row": 0,
+    "x": 1120,
+    "y": 0,
+    "tileSize": 32,
+    "label": "green tunic"
+  },
+  {
+    "col": 36,
+    "row": 0,
+    "x": 1152,
+    "y": 0,
+    "tileSize": 32,
+    "label": "green triangle"
+  },
+  {
+    "col": 37,
+    "row": 0,
+    "x": 1184,
+    "y": 0,
+    "tileSize": 32,
+    "label": "green flask"
+  },
+  {
+    "col": 38,
+    "row": 0,
+    "x": 1216,
+    "y": 0,
+    "tileSize": 32,
+    "label": "green armor"
+  },
+  {
+    "col": 39,
+    "row": 0,
+    "x": 1248,
+    "y": 0,
+    "tileSize": 32,
+    "label": "green helmet"
+  },
+  {
+    "col": 40,
+    "row": 0,
+    "x": 1280,
+    "y": 0,
+    "tileSize": 32,
+    "label": "green cloak"
+  },
+  {
+    "col": 41,
+    "row": 0,
+    "x": 1312,
+    "y": 0,
+    "tileSize": 32,
+    "label": "green hood"
+  },
+  {
+    "col": 42,
+    "row": 0,
+    "x": 1344,
+    "y": 0,
+    "tileSize": 32,
+    "label": "green altar"
+  },
+  {
+    "col": 43,
+    "row": 0,
+    "x": 1376,
+    "y": 0,
+    "tileSize": 32,
+    "label": "green altar"
+  },
+  {
+    "col": 44,
+    "row": 0,
+    "x": 1408,
+    "y": 0,
+    "tileSize": 32,
+    "label": "green altar"
+  },
+  {
+    "col": 45,
+    "row": 0,
+    "x": 1440,
+    "y": 0,
+    "tileSize": 32,
+    "label": "white fountain"
+  },
+  {
+    "col": 46,
+    "row": 0,
+    "x": 1472,
+    "y": 0,
+    "tileSize": 32,
+    "label": "purple portal"
+  },
+  {
+    "col": 47,
+    "row": 0,
+    "x": 1504,
+    "y": 0,
+    "tileSize": 32,
+    "label": "orange flame"
+  },
+  {
+    "col": 48,
+    "row": 0,
+    "x": 1536,
+    "y": 0,
+    "tileSize": 32,
+    "label": "orange flame"
+  },
+  {
+    "col": 49,
+    "row": 0,
+    "x": 1568,
+    "y": 0,
+    "tileSize": 32,
+    "label": "orange flame"
+  },
+  {
+    "col": 50,
+    "row": 0,
+    "x": 1600,
+    "y": 0,
+    "tileSize": 32,
+    "label": "orange flame"
+  },
+  {
+    "col": 51,
+    "row": 0,
+    "x": 1632,
+    "y": 0,
+    "tileSize": 32,
+    "label": "orange flame"
+  },
+  {
+    "col": 52,
+    "row": 0,
+    "x": 1664,
+    "y": 0,
+    "tileSize": 32,
+    "label": "fire"
+  },
+  {
+    "col": 53,
+    "row": 0,
+    "x": 1696,
+    "y": 0,
+    "tileSize": 32,
+    "label": "flame"
+  },
+  {
+    "col": 54,
+    "row": 0,
+    "x": 1728,
+    "y": 0,
+    "tileSize": 32,
+    "label": "torch"
+  },
+  {
+    "col": 55,
+    "row": 0,
+    "x": 1760,
+    "y": 0,
+    "tileSize": 32,
+    "label": "purple monster"
+  },
+  {
+    "col": 56,
+    "row": 0,
+    "x": 1792,
+    "y": 0,
+    "tileSize": 32,
+    "label": "anvil"
+  },
+  {
+    "col": 57,
+    "row": 0,
+    "x": 1824,
+    "y": 0,
+    "tileSize": 32,
+    "label": "tombstone"
+  },
+  {
+    "col": 58,
+    "row": 0,
+    "x": 1856,
+    "y": 0,
+    "tileSize": 32,
+    "label": "grave"
+  },
+  {
+    "col": 59,
+    "row": 0,
+    "x": 1888,
+    "y": 0,
+    "tileSize": 32,
+    "label": "gold crown"
+  },
+  {
+    "col": 60,
+    "row": 0,
+    "x": 1920,
+    "y": 0,
+    "tileSize": 32,
+    "label": "blue gem"
+  },
+  {
+    "col": 61,
+    "row": 0,
+    "x": 1952,
+    "y": 0,
+    "tileSize": 32,
+    "label": "red dragon"
+  },
+  {
+    "col": 62,
+    "row": 0,
+    "x": 1984,
+    "y": 0,
+    "tileSize": 32,
+    "label": "ice wall"
+  },
+  {
+    "col": 63,
+    "row": 0,
+    "x": 2016,
+    "y": 0,
+    "tileSize": 32,
+    "label": "skull 1"
+  },
+  {
+    "col": 0,
+    "row": 1,
+    "x": 0,
+    "y": 32,
+    "tileSize": 32,
+    "label": "skull 2"
+  },
+  {
+    "col": 1,
+    "row": 1,
+    "x": 32,
+    "y": 32,
+    "tileSize": 32,
+    "label": "skull 3"
+  },
+  {
+    "col": 2,
+    "row": 1,
+    "x": 64,
+    "y": 32,
+    "tileSize": 32,
+    "label": "skull 4"
+  },
+  {
+    "col": 3,
+    "row": 1,
+    "x": 96,
+    "y": 32,
+    "tileSize": 32,
+    "label": "skull 5"
+  },
+  {
+    "col": 4,
+    "row": 1,
+    "x": 128,
+    "y": 32,
+    "tileSize": 32,
+    "label": "skull 6"
+  },
+  {
+    "col": 5,
+    "row": 1,
+    "x": 160,
+    "y": 32,
+    "tileSize": 32,
+    "label": "skull 7"
+  },
+  {
+    "col": 6,
+    "row": 1,
+    "x": 192,
+    "y": 32,
+    "tileSize": 32,
+    "label": "skull 8"
+  },
+  {
+    "col": 7,
+    "row": 1,
+    "x": 224,
+    "y": 32,
+    "tileSize": 32,
+    "label": "cracked skull"
+  },
+  {
+    "col": 8,
+    "row": 1,
+    "x": 256,
+    "y": 32,
+    "tileSize": 32,
+    "label": "healing potion"
+  },
+  {
+    "col": 9,
+    "row": 1,
+    "x": 288,
+    "y": 32,
+    "tileSize": 32,
+    "label": "fire trap"
+  },
+  {
+    "col": 10,
+    "row": 1,
+    "x": 320,
+    "y": 32,
+    "tileSize": 32,
+    "label": "bell"
+  },
+  {
+    "col": 11,
+    "row": 1,
+    "x": 352,
+    "y": 32,
+    "tileSize": 32,
+    "label": "dark orb"
+  },
+  {
+    "col": 12,
+    "row": 1,
+    "x": 384,
+    "y": 32,
+    "tileSize": 32,
+    "label": "dark orb"
+  },
+  {
+    "col": 13,
+    "row": 1,
+    "x": 416,
+    "y": 32,
+    "tileSize": 32,
+    "label": "dark orb"
+  },
+  {
+    "col": 14,
+    "row": 1,
+    "x": 448,
+    "y": 32,
+    "tileSize": 32,
+    "label": "fire scroll"
+  },
+  {
+    "col": 15,
+    "row": 1,
+    "x": 480,
+    "y": 32,
+    "tileSize": 32,
+    "label": "gold coin"
+  },
+  {
+    "col": 16,
+    "row": 1,
+    "x": 512,
+    "y": 32,
+    "tileSize": 32,
+    "label": "gold coin"
+  },
+  {
+    "col": 17,
+    "row": 1,
+    "x": 544,
+    "y": 32,
+    "tileSize": 32,
+    "label": "gold coin"
+  },
+  {
+    "col": 18,
+    "row": 1,
+    "x": 576,
+    "y": 32,
+    "tileSize": 32,
+    "label": "purple wizard"
+  },
+  {
+    "col": 19,
+    "row": 1,
+    "x": 608,
+    "y": 32,
+    "tileSize": 32,
+    "label": "white unicorn"
+  },
+  {
+    "col": 20,
+    "row": 1,
+    "x": 640,
+    "y": 32,
+    "tileSize": 32,
+    "label": "golden carousel"
+  },
+  {
+    "col": 21,
+    "row": 1,
+    "x": 672,
+    "y": 32,
+    "tileSize": 32,
+    "label": "golden carousel"
+  },
+  {
+    "col": 22,
+    "row": 1,
+    "x": 704,
+    "y": 32,
+    "tileSize": 32,
+    "label": "golden carousel"
+  },
+  {
+    "col": 23,
+    "row": 1,
+    "x": 736,
+    "y": 32,
+    "tileSize": 32,
+    "label": "golden carousel"
+  },
+  {
+    "col": 24,
+    "row": 1,
+    "x": 768,
+    "y": 32,
+    "tileSize": 32,
+    "label": "golden carousel"
+  },
+  {
+    "col": 25,
+    "row": 1,
+    "x": 800,
+    "y": 32,
+    "tileSize": 32,
+    "label": "orange machinery"
+  },
+  {
+    "col": 26,
+    "row": 1,
+    "x": 832,
+    "y": 32,
+    "tileSize": 32,
+    "label": "orange machinery"
+  },
+  {
+    "col": 27,
+    "row": 1,
+    "x": 864,
+    "y": 32,
+    "tileSize": 32,
+    "label": "orange machinery"
+  },
+  {
+    "col": 28,
+    "row": 1,
+    "x": 896,
+    "y": 32,
+    "tileSize": 32,
+    "label": "altar with chalice"
+  },
+  {
+    "col": 29,
+    "row": 1,
+    "x": 928,
+    "y": 32,
+    "tileSize": 32,
+    "label": "golden bell"
+  },
+  {
+    "col": 30,
+    "row": 1,
+    "x": 960,
+    "y": 32,
+    "tileSize": 32,
+    "label": "blue wizard"
+  },
+  {
+    "col": 31,
+    "row": 1,
+    "x": 992,
+    "y": 32,
+    "tileSize": 32,
+    "label": "skeleton key"
+  },
+  {
+    "col": 32,
+    "row": 1,
+    "x": 1024,
+    "y": 32,
+    "tileSize": 32,
+    "label": "ice door"
+  },
+  {
+    "col": 33,
+    "row": 1,
+    "x": 1056,
+    "y": 32,
+    "tileSize": 32,
+    "label": "stone door"
+  },
+  {
+    "col": 34,
+    "row": 1,
+    "x": 1088,
+    "y": 32,
+    "tileSize": 32,
+    "label": "purple portal"
+  },
+  {
+    "col": 35,
+    "row": 1,
+    "x": 1120,
+    "y": 32,
+    "tileSize": 32,
+    "label": "white fountain"
+  },
+  {
+    "col": 36,
+    "row": 1,
+    "x": 1152,
+    "y": 32,
+    "tileSize": 32,
+    "label": "wooden door"
+  },
+  {
+    "col": 37,
+    "row": 1,
+    "x": 1184,
+    "y": 32,
+    "tileSize": 32,
+    "label": "reinforced door"
+  },
+  {
+    "col": 38,
+    "row": 1,
+    "x": 1216,
+    "y": 32,
+    "tileSize": 32,
+    "label": "stone ground"
+  },
+  {
+    "col": 39,
+    "row": 1,
+    "x": 1248,
+    "y": 32,
+    "tileSize": 32,
+    "label": "wooden bookshelf"
+  },
+  {
+    "col": 40,
+    "row": 1,
+    "x": 1280,
+    "y": 32,
+    "tileSize": 32,
+    "label": "black void"
+  },
+  {
+    "col": 41,
+    "row": 1,
+    "x": 1312,
+    "y": 32,
+    "tileSize": 32,
+    "label": "stone wall"
+  },
+  {
+    "col": 42,
+    "row": 1,
+    "x": 1344,
+    "y": 32,
+    "tileSize": 32,
+    "label": "ornate bookshelf"
+  },
+  {
+    "col": 43,
+    "row": 1,
+    "x": 1376,
+    "y": 32,
+    "tileSize": 32,
+    "label": "stone pillar"
+  },
+  {
+    "col": 44,
+    "row": 1,
+    "x": 1408,
+    "y": 32,
+    "tileSize": 32,
+    "label": "blue water"
+  },
+  {
+    "col": 45,
+    "row": 1,
+    "x": 1440,
+    "y": 32,
+    "tileSize": 32,
+    "label": "stone wall"
+  },
+  {
+    "col": 46,
+    "row": 1,
+    "x": 1472,
+    "y": 32,
+    "tileSize": 32,
+    "label": "unknown"
+  },
+  {
+    "col": 47,
+    "row": 1,
+    "x": 1504,
+    "y": 32,
+    "tileSize": 32,
+    "label": "unknown"
+  },
+  {
+    "col": 48,
+    "row": 1,
+    "x": 1536,
+    "y": 32,
+    "tileSize": 32,
+    "label": "green stone archway"
+  },
+  {
+    "col": 49,
+    "row": 1,
+    "x": 1568,
+    "y": 32,
+    "tileSize": 32,
+    "label": "wooden door"
+  },
+  {
+    "col": 50,
+    "row": 1,
+    "x": 1600,
+    "y": 32,
+    "tileSize": 32,
+    "label": "blue fountain"
+  },
+  {
+    "col": 51,
+    "row": 1,
+    "x": 1632,
+    "y": 32,
+    "tileSize": 32,
+    "label": "green archway"
+  },
+  {
+    "col": 52,
+    "row": 1,
+    "x": 1664,
+    "y": 32,
+    "tileSize": 32,
+    "label": "wooden double door"
+  },
+  {
+    "col": 53,
+    "row": 1,
+    "x": 1696,
+    "y": 32,
+    "tileSize": 32,
+    "label": "wooden gate"
+  },
+  {
+    "col": 54,
+    "row": 1,
+    "x": 1728,
+    "y": 32,
+    "tileSize": 32,
+    "label": "wooden gate"
+  },
+  {
+    "col": 55,
+    "row": 1,
+    "x": 1760,
+    "y": 32,
+    "tileSize": 32,
+    "label": "stone pillar"
+  },
+  {
+    "col": 56,
+    "row": 1,
+    "x": 1792,
+    "y": 32,
+    "tileSize": 32,
+    "label": "stone pillar"
+  },
+  {
+    "col": 57,
+    "row": 1,
+    "x": 1824,
+    "y": 32,
+    "tileSize": 32,
+    "label": "stone steps"
+  },
+  {
+    "col": 58,
+    "row": 1,
+    "x": 1856,
+    "y": 32,
+    "tileSize": 32,
+    "label": "wooden door"
+  },
+  {
+    "col": 59,
+    "row": 1,
+    "x": 1888,
+    "y": 32,
+    "tileSize": 32,
+    "label": "blue water"
+  },
+  {
+    "col": 60,
+    "row": 1,
+    "x": 1920,
+    "y": 32,
+    "tileSize": 32,
+    "label": "wooden wall"
+  },
+  {
+    "col": 61,
+    "row": 1,
+    "x": 1952,
+    "y": 32,
+    "tileSize": 32,
+    "label": "blue water"
+  },
+  {
+    "col": 62,
+    "row": 1,
+    "x": 1984,
+    "y": 32,
+    "tileSize": 32,
+    "label": "stone wall"
+  },
+  {
+    "col": 63,
+    "row": 1,
+    "x": 2016,
+    "y": 32,
+    "tileSize": 32,
+    "label": "green grass"
+  },
+  {
+    "col": 0,
+    "row": 2,
+    "x": 0,
+    "y": 64,
+    "tileSize": 32,
+    "label": "stone floor"
+  },
+  {
+    "col": 1,
+    "row": 2,
+    "x": 32,
+    "y": 64,
+    "tileSize": 32,
+    "label": "wooden door"
+  },
+  {
+    "col": 2,
+    "row": 2,
+    "x": 64,
+    "y": 64,
+    "tileSize": 32,
+    "label": "green grass"
+  },
+  {
+    "col": 3,
+    "row": 2,
+    "x": 96,
+    "y": 64,
+    "tileSize": 32,
+    "label": "blue water"
+  },
+  {
+    "col": 4,
+    "row": 2,
+    "x": 128,
+    "y": 64,
+    "tileSize": 32,
+    "label": "green moss wall"
+  },
+  {
+    "col": 5,
+    "row": 2,
+    "x": 160,
+    "y": 64,
+    "tileSize": 32,
+    "label": "dark void"
+  },
+  {
+    "col": 6,
+    "row": 2,
+    "x": 192,
+    "y": 64,
+    "tileSize": 32,
+    "label": "stone labyrinth"
+  },
+  {
+    "col": 7,
+    "row": 2,
+    "x": 224,
+    "y": 64,
+    "tileSize": 32,
+    "label": "blue maze"
+  },
+  {
+    "col": 8,
+    "row": 2,
+    "x": 256,
+    "y": 64,
+    "tileSize": 32,
+    "label": "yellow maze"
+  },
+  {
+    "col": 9,
+    "row": 2,
+    "x": 288,
+    "y": 64,
+    "tileSize": 32,
+    "label": "black void"
+  },
+  {
+    "col": 10,
+    "row": 2,
+    "x": 320,
+    "y": 64,
+    "tileSize": 32,
+    "label": "dark stone"
+  },
+  {
+    "col": 11,
+    "row": 2,
+    "x": 352,
+    "y": 64,
+    "tileSize": 32,
+    "label": "dark passage"
+  },
+  {
+    "col": 12,
+    "row": 2,
+    "x": 384,
+    "y": 64,
+    "tileSize": 32,
+    "label": "teal maze"
+  },
+  {
+    "col": 13,
+    "row": 2,
+    "x": 416,
+    "y": 64,
+    "tileSize": 32,
+    "label": "green maze"
+  },
+  {
+    "col": 14,
+    "row": 2,
+    "x": 448,
+    "y": 64,
+    "tileSize": 32,
+    "label": "stone wall"
+  },
+  {
+    "col": 15,
+    "row": 2,
+    "x": 480,
+    "y": 64,
+    "tileSize": 32,
+    "label": "stone wall"
+  },
+  {
+    "col": 16,
+    "row": 2,
+    "x": 512,
+    "y": 64,
+    "tileSize": 32,
+    "label": "stone wall"
+  },
+  {
+    "col": 17,
+    "row": 2,
+    "x": 544,
+    "y": 64,
+    "tileSize": 32,
+    "label": "stone wall"
+  },
+  {
+    "col": 18,
+    "row": 2,
+    "x": 576,
+    "y": 64,
+    "tileSize": 32,
+    "label": "grass ground"
+  },
+  {
+    "col": 19,
+    "row": 2,
+    "x": 608,
+    "y": 64,
+    "tileSize": 32,
+    "label": "grass ground"
+  },
+  {
+    "col": 20,
+    "row": 2,
+    "x": 640,
+    "y": 64,
+    "tileSize": 32,
+    "label": "grass ground"
+  },
+  {
+    "col": 21,
+    "row": 2,
+    "x": 672,
+    "y": 64,
+    "tileSize": 32,
+    "label": "grass ground"
+  },
+  {
+    "col": 22,
+    "row": 2,
+    "x": 704,
+    "y": 64,
+    "tileSize": 32,
+    "label": "grass ground"
+  },
+  {
+    "col": 23,
+    "row": 2,
+    "x": 736,
+    "y": 64,
+    "tileSize": 32,
+    "label": "grass ground"
+  },
+  {
+    "col": 24,
+    "row": 2,
+    "x": 768,
+    "y": 64,
+    "tileSize": 32,
+    "label": "green foliage"
+  },
+  {
+    "col": 25,
+    "row": 2,
+    "x": 800,
+    "y": 64,
+    "tileSize": 32,
+    "label": "dark brick wall"
+  },
+  {
+    "col": 26,
+    "row": 2,
+    "x": 832,
+    "y": 64,
+    "tileSize": 32,
+    "label": "dark brick wall"
+  },
+  {
+    "col": 27,
+    "row": 2,
+    "x": 864,
+    "y": 64,
+    "tileSize": 32,
+    "label": "dark brick wall"
+  },
+  {
+    "col": 28,
+    "row": 2,
+    "x": 896,
+    "y": 64,
+    "tileSize": 32,
+    "label": "dark brick wall"
+  },
+  {
+    "col": 29,
+    "row": 2,
+    "x": 928,
+    "y": 64,
+    "tileSize": 32,
+    "label": "dark brick wall"
+  },
+  {
+    "col": 30,
+    "row": 2,
+    "x": 960,
+    "y": 64,
+    "tileSize": 32,
+    "label": "dark brick wall"
+  },
+  {
+    "col": 31,
+    "row": 2,
+    "x": 992,
+    "y": 64,
+    "tileSize": 32,
+    "label": "dark brick wall"
+  },
+  {
+    "col": 32,
+    "row": 2,
+    "x": 1024,
+    "y": 64,
+    "tileSize": 32,
+    "label": "stone brick wall"
+  },
+  {
+    "col": 33,
+    "row": 2,
+    "x": 1056,
+    "y": 64,
+    "tileSize": 32,
+    "label": "stone brick wall"
+  },
+  {
+    "col": 34,
+    "row": 2,
+    "x": 1088,
+    "y": 64,
+    "tileSize": 32,
+    "label": "skeleton warrior"
+  },
+  {
+    "col": 35,
+    "row": 2,
+    "x": 1120,
+    "y": 64,
+    "tileSize": 32,
+    "label": "skeleton warrior"
+  },
+  {
+    "col": 36,
+    "row": 2,
+    "x": 1152,
+    "y": 64,
+    "tileSize": 32,
+    "label": "stone wall"
+  },
+  {
+    "col": 37,
+    "row": 2,
+    "x": 1184,
+    "y": 64,
+    "tileSize": 32,
+    "label": "stone wall"
+  },
+  {
+    "col": 38,
+    "row": 2,
+    "x": 1216,
+    "y": 64,
+    "tileSize": 32,
+    "label": "stone wall"
+  },
+  {
+    "col": 39,
+    "row": 2,
+    "x": 1248,
+    "y": 64,
+    "tileSize": 32,
+    "label": "stone wall"
+  },
+  {
+    "col": 40,
+    "row": 2,
+    "x": 1280,
+    "y": 64,
+    "tileSize": 32,
+    "label": "stone wall"
+  },
+  {
+    "col": 41,
+    "row": 2,
+    "x": 1312,
+    "y": 64,
+    "tileSize": 32,
+    "label": "stone wall"
+  },
+  {
+    "col": 42,
+    "row": 2,
+    "x": 1344,
+    "y": 64,
+    "tileSize": 32,
+    "label": "stone wall"
+  },
+  {
+    "col": 43,
+    "row": 2,
+    "x": 1376,
+    "y": 64,
+    "tileSize": 32,
+    "label": "stone wall"
+  },
+  {
+    "col": 44,
+    "row": 2,
+    "x": 1408,
+    "y": 64,
+    "tileSize": 32,
+    "label": "stone wall"
+  },
+  {
+    "col": 45,
+    "row": 2,
+    "x": 1440,
+    "y": 64,
+    "tileSize": 32,
+    "label": "stone wall"
+  },
+  {
+    "col": 46,
+    "row": 2,
+    "x": 1472,
+    "y": 64,
+    "tileSize": 32,
+    "label": "stone wall"
+  },
+  {
+    "col": 47,
+    "row": 2,
+    "x": 1504,
+    "y": 64,
+    "tileSize": 32,
+    "label": "stone wall"
+  },
+  {
+    "col": 48,
+    "row": 2,
+    "x": 1536,
+    "y": 64,
+    "tileSize": 32,
+    "label": "stone wall"
+  },
+  {
+    "col": 49,
+    "row": 2,
+    "x": 1568,
+    "y": 64,
+    "tileSize": 32,
+    "label": "stone wall"
+  },
+  {
+    "col": 50,
+    "row": 2,
+    "x": 1600,
+    "y": 64,
+    "tileSize": 32,
+    "label": "stone wall"
+  },
+  {
+    "col": 51,
+    "row": 2,
+    "x": 1632,
+    "y": 64,
+    "tileSize": 32,
+    "label": "stone wall"
+  },
+  {
+    "col": 52,
+    "row": 2,
+    "x": 1664,
+    "y": 64,
+    "tileSize": 32,
+    "label": "stone wall"
+  },
+  {
+    "col": 53,
+    "row": 2,
+    "x": 1696,
+    "y": 64,
+    "tileSize": 32,
+    "label": "stone wall"
+  },
+  {
+    "col": 54,
+    "row": 2,
+    "x": 1728,
+    "y": 64,
+    "tileSize": 32,
+    "label": "stone wall"
+  },
+  {
+    "col": 55,
+    "row": 2,
+    "x": 1760,
+    "y": 64,
+    "tileSize": 32,
+    "label": "stone wall mossy"
+  },
+  {
+    "col": 56,
+    "row": 2,
+    "x": 1792,
+    "y": 64,
+    "tileSize": 32,
+    "label": "dark stone"
+  },
+  {
+    "col": 57,
+    "row": 2,
+    "x": 1824,
+    "y": 64,
+    "tileSize": 32,
+    "label": "dark stone alt"
+  },
+  {
+    "col": 58,
+    "row": 2,
+    "x": 1856,
+    "y": 64,
+    "tileSize": 32,
+    "label": "stone bricks"
+  },
+  {
+    "col": 59,
+    "row": 2,
+    "x": 1888,
+    "y": 64,
+    "tileSize": 32,
+    "label": "stone bricks dark"
+  },
+  {
+    "col": 60,
+    "row": 2,
+    "x": 1920,
+    "y": 64,
+    "tileSize": 32,
+    "label": "stone floor dark"
+  },
+  {
+    "col": 61,
+    "row": 2,
+    "x": 1952,
+    "y": 64,
+    "tileSize": 32,
+    "label": "stone floor"
+  },
+  {
+    "col": 62,
+    "row": 2,
+    "x": 1984,
+    "y": 64,
+    "tileSize": 32,
+    "label": "stone floor light"
+  },
+  {
+    "col": 63,
+    "row": 2,
+    "x": 2016,
+    "y": 64,
+    "tileSize": 32,
+    "label": "unknown"
+  },
+  {
+    "col": 0,
+    "row": 3,
+    "x": 0,
+    "y": 96,
+    "tileSize": 32,
+    "label": "stone floor"
+  },
+  {
+    "col": 1,
+    "row": 3,
+    "x": 32,
+    "y": 96,
+    "tileSize": 32,
+    "label": "stone floor"
+  },
+  {
+    "col": 2,
+    "row": 3,
+    "x": 64,
+    "y": 96,
+    "tileSize": 32,
+    "label": "stone floor"
+  },
+  {
+    "col": 3,
+    "row": 3,
+    "x": 96,
+    "y": 96,
+    "tileSize": 32,
+    "label": "stone floor"
+  },
+  {
+    "col": 4,
+    "row": 3,
+    "x": 128,
+    "y": 96,
+    "tileSize": 32,
+    "label": "stone floor"
+  },
+  {
+    "col": 5,
+    "row": 3,
+    "x": 160,
+    "y": 96,
+    "tileSize": 32,
+    "label": "water"
+  },
+  {
+    "col": 6,
+    "row": 3,
+    "x": 192,
+    "y": 96,
+    "tileSize": 32,
+    "label": "water"
+  },
+  {
+    "col": 7,
+    "row": 3,
+    "x": 224,
+    "y": 96,
+    "tileSize": 32,
+    "label": "water"
+  },
+  {
+    "col": 8,
+    "row": 3,
+    "x": 256,
+    "y": 96,
+    "tileSize": 32,
+    "label": "water"
+  },
+  {
+    "col": 9,
+    "row": 3,
+    "x": 288,
+    "y": 96,
+    "tileSize": 32,
+    "label": "water"
+  },
+  {
+    "col": 10,
+    "row": 3,
+    "x": 320,
+    "y": 96,
+    "tileSize": 32,
+    "label": "stone wall"
+  },
+  {
+    "col": 11,
+    "row": 3,
+    "x": 352,
+    "y": 96,
+    "tileSize": 32,
+    "label": "stone wall"
+  },
+  {
+    "col": 12,
+    "row": 3,
+    "x": 384,
+    "y": 96,
+    "tileSize": 32,
+    "label": "stone wall"
+  },
+  {
+    "col": 13,
+    "row": 3,
+    "x": 416,
+    "y": 96,
+    "tileSize": 32,
+    "label": "stone wall"
+  },
+  {
+    "col": 14,
+    "row": 3,
+    "x": 448,
+    "y": 96,
+    "tileSize": 32,
+    "label": "stone wall"
+  },
+  {
+    "col": 15,
+    "row": 3,
+    "x": 480,
+    "y": 96,
+    "tileSize": 32,
+    "label": "stone wall"
+  },
+  {
+    "col": 16,
+    "row": 3,
+    "x": 512,
+    "y": 96,
+    "tileSize": 32,
+    "label": "stone wall"
+  },
+  {
+    "col": 17,
+    "row": 3,
+    "x": 544,
+    "y": 96,
+    "tileSize": 32,
+    "label": "stone wall"
+  },
+  {
+    "col": 18,
+    "row": 3,
+    "x": 576,
+    "y": 96,
+    "tileSize": 32,
+    "label": "cyan floor"
+  },
+  {
+    "col": 19,
+    "row": 3,
+    "x": 608,
+    "y": 96,
+    "tileSize": 32,
+    "label": "gold wall"
+  },
+  {
+    "col": 20,
+    "row": 3,
+    "x": 640,
+    "y": 96,
+    "tileSize": 32,
+    "label": "brown dirt"
+  },
+  {
+    "col": 21,
+    "row": 3,
+    "x": 672,
+    "y": 96,
+    "tileSize": 32,
+    "label": "darker dirt"
+  },
+  {
+    "col": 22,
+    "row": 3,
+    "x": 704,
+    "y": 96,
+    "tileSize": 32,
+    "label": "brown stone"
+  },
+  {
+    "col": 23,
+    "row": 3,
+    "x": 736,
+    "y": 96,
+    "tileSize": 32,
+    "label": "green grass"
+  },
+  {
+    "col": 24,
+    "row": 3,
+    "x": 768,
+    "y": 96,
+    "tileSize": 32,
+    "label": "green foliage"
+  },
+  {
+    "col": 25,
+    "row": 3,
+    "x": 800,
+    "y": 96,
+    "tileSize": 32,
+    "label": "light grass"
+  },
+  {
+    "col": 26,
+    "row": 3,
+    "x": 832,
+    "y": 96,
+    "tileSize": 32,
+    "label": "brown ground"
+  },
+  {
+    "col": 27,
+    "row": 3,
+    "x": 864,
+    "y": 96,
+    "tileSize": 32,
+    "label": "green leaves"
+  },
+  {
+    "col": 28,
+    "row": 3,
+    "x": 896,
+    "y": 96,
+    "tileSize": 32,
+    "label": "stone path"
+  },
+  {
+    "col": 29,
+    "row": 3,
+    "x": 928,
+    "y": 96,
+    "tileSize": 32,
+    "label": "dark stone"
+  },
+  {
+    "col": 30,
+    "row": 3,
+    "x": 960,
+    "y": 96,
+    "tileSize": 32,
+    "label": "grass dirt mix"
+  },
+  {
+    "col": 31,
+    "row": 3,
+    "x": 992,
+    "y": 96,
+    "tileSize": 32,
+    "label": "grass"
+  },
+  {
+    "col": 32,
+    "row": 3,
+    "x": 1024,
+    "y": 96,
+    "tileSize": 32,
+    "label": "grass"
+  },
+  {
+    "col": 33,
+    "row": 3,
+    "x": 1056,
+    "y": 96,
+    "tileSize": 32,
+    "label": "grass"
+  },
+  {
+    "col": 34,
+    "row": 3,
+    "x": 1088,
+    "y": 96,
+    "tileSize": 32,
+    "label": "grass"
+  },
+  {
+    "col": 35,
+    "row": 3,
+    "x": 1120,
+    "y": 96,
+    "tileSize": 32,
+    "label": "grass"
+  },
+  {
+    "col": 36,
+    "row": 3,
+    "x": 1152,
+    "y": 96,
+    "tileSize": 32,
+    "label": "grass"
+  },
+  {
+    "col": 37,
+    "row": 3,
+    "x": 1184,
+    "y": 96,
+    "tileSize": 32,
+    "label": "water"
+  },
+  {
+    "col": 38,
+    "row": 3,
+    "x": 1216,
+    "y": 96,
+    "tileSize": 32,
+    "label": "water"
+  },
+  {
+    "col": 39,
+    "row": 3,
+    "x": 1248,
+    "y": 96,
+    "tileSize": 32,
+    "label": "water"
+  },
+  {
+    "col": 40,
+    "row": 3,
+    "x": 1280,
+    "y": 96,
+    "tileSize": 32,
+    "label": "grass with flowers"
+  },
+  {
+    "col": 41,
+    "row": 3,
+    "x": 1312,
+    "y": 96,
+    "tileSize": 32,
+    "label": "grass with flowers"
+  },
+  {
+    "col": 42,
+    "row": 3,
+    "x": 1344,
+    "y": 96,
+    "tileSize": 32,
+    "label": "water"
+  },
+  {
+    "col": 43,
+    "row": 3,
+    "x": 1376,
+    "y": 96,
+    "tileSize": 32,
+    "label": "brick wall"
+  },
+  {
+    "col": 44,
+    "row": 3,
+    "x": 1408,
+    "y": 96,
+    "tileSize": 32,
+    "label": "brick wall"
+  },
+  {
+    "col": 45,
+    "row": 3,
+    "x": 1440,
+    "y": 96,
+    "tileSize": 32,
+    "label": "brick wall"
+  },
+  {
+    "col": 46,
+    "row": 3,
+    "x": 1472,
+    "y": 96,
+    "tileSize": 32,
+    "label": "brick wall"
+  },
+  {
+    "col": 47,
+    "row": 3,
+    "x": 1504,
+    "y": 96,
+    "tileSize": 32,
+    "label": "dark brick wall"
+  },
+  {
+    "col": 48,
+    "row": 3,
+    "x": 1536,
+    "y": 96,
+    "tileSize": 32,
+    "label": "dark wall"
+  },
+  {
+    "col": 49,
+    "row": 3,
+    "x": 1568,
+    "y": 96,
+    "tileSize": 32,
+    "label": "black void"
+  },
+  {
+    "col": 50,
+    "row": 3,
+    "x": 1600,
+    "y": 96,
+    "tileSize": 32,
+    "label": "stone wall"
+  },
+  {
+    "col": 51,
+    "row": 3,
+    "x": 1632,
+    "y": 96,
+    "tileSize": 32,
+    "label": "stone wall"
+  },
+  {
+    "col": 52,
+    "row": 3,
+    "x": 1664,
+    "y": 96,
+    "tileSize": 32,
+    "label": "stone wall"
+  },
+  {
+    "col": 53,
+    "row": 3,
+    "x": 1696,
+    "y": 96,
+    "tileSize": 32,
+    "label": "stone wall"
+  },
+  {
+    "col": 54,
+    "row": 3,
+    "x": 1728,
+    "y": 96,
+    "tileSize": 32,
+    "label": "stone wall"
+  },
+  {
+    "col": 55,
+    "row": 3,
+    "x": 1760,
+    "y": 96,
+    "tileSize": 32,
+    "label": "stone wall"
+  },
+  {
+    "col": 56,
+    "row": 3,
+    "x": 1792,
+    "y": 96,
+    "tileSize": 32,
+    "label": "stone wall"
+  },
+  {
+    "col": 57,
+    "row": 3,
+    "x": 1824,
+    "y": 96,
+    "tileSize": 32,
+    "label": "stone wall"
+  },
+  {
+    "col": 58,
+    "row": 3,
+    "x": 1856,
+    "y": 96,
+    "tileSize": 32,
+    "label": "stone wall"
+  },
+  {
+    "col": 59,
+    "row": 3,
+    "x": 1888,
+    "y": 96,
+    "tileSize": 32,
+    "label": "unknown"
+  },
+  {
+    "col": 60,
+    "row": 3,
+    "x": 1920,
+    "y": 96,
+    "tileSize": 32,
+    "label": "lava"
+  },
+  {
+    "col": 61,
+    "row": 3,
+    "x": 1952,
+    "y": 96,
+    "tileSize": 32,
+    "label": "stone wall"
+  },
+  {
+    "col": 62,
+    "row": 3,
+    "x": 1984,
+    "y": 96,
+    "tileSize": 32,
+    "label": "stone wall lit"
+  },
+  {
+    "col": 63,
+    "row": 3,
+    "x": 2016,
+    "y": 96,
+    "tileSize": 32,
+    "label": "stone wall dark"
+  },
+  {
+    "col": 0,
+    "row": 4,
+    "x": 0,
+    "y": 128,
+    "tileSize": 32,
+    "label": "stone floor"
+  },
+  {
+    "col": 1,
+    "row": 4,
+    "x": 32,
+    "y": 128,
+    "tileSize": 32,
+    "label": "dirt floor"
+  },
+  {
+    "col": 2,
+    "row": 4,
+    "x": 64,
+    "y": 128,
+    "tileSize": 32,
+    "label": "grass"
+  },
+  {
+    "col": 3,
+    "row": 4,
+    "x": 96,
+    "y": 128,
+    "tileSize": 32,
+    "label": "grass dense"
+  },
+  {
+    "col": 4,
+    "row": 4,
+    "x": 128,
+    "y": 128,
+    "tileSize": 32,
+    "label": "grass sparse"
+  },
+  {
+    "col": 5,
+    "row": 4,
+    "x": 160,
+    "y": 128,
+    "tileSize": 32,
+    "label": "sand"
+  },
+  {
+    "col": 6,
+    "row": 4,
+    "x": 192,
+    "y": 128,
+    "tileSize": 32,
+    "label": "dirt ground"
+  },
+  {
+    "col": 7,
+    "row": 4,
+    "x": 224,
+    "y": 128,
+    "tileSize": 32,
+    "label": "stone wall"
+  },
+  {
+    "col": 8,
+    "row": 4,
+    "x": 256,
+    "y": 128,
+    "tileSize": 32,
+    "label": "stone wall"
+  },
+  {
+    "col": 9,
+    "row": 4,
+    "x": 288,
+    "y": 128,
+    "tileSize": 32,
+    "label": "stone wall"
+  },
+  {
+    "col": 10,
+    "row": 4,
+    "x": 320,
+    "y": 128,
+    "tileSize": 32,
+    "label": "stone wall"
+  },
+  {
+    "col": 11,
+    "row": 4,
+    "x": 352,
+    "y": 128,
+    "tileSize": 32,
+    "label": "stone wall"
+  },
+  {
+    "col": 12,
+    "row": 4,
+    "x": 384,
+    "y": 128,
+    "tileSize": 32,
+    "label": "stone wall"
+  },
+  {
+    "col": 13,
+    "row": 4,
+    "x": 416,
+    "y": 128,
+    "tileSize": 32,
+    "label": "stone wall"
+  },
+  {
+    "col": 14,
+    "row": 4,
+    "x": 448,
+    "y": 128,
+    "tileSize": 32,
+    "label": "stone wall"
+  },
+  {
+    "col": 15,
+    "row": 4,
+    "x": 480,
+    "y": 128,
+    "tileSize": 32,
+    "label": "stone wall"
+  },
+  {
+    "col": 16,
+    "row": 4,
+    "x": 512,
+    "y": 128,
+    "tileSize": 32,
+    "label": "moss brick wall"
+  },
+  {
+    "col": 17,
+    "row": 4,
+    "x": 544,
+    "y": 128,
+    "tileSize": 32,
+    "label": "brick wall"
+  },
+  {
+    "col": 18,
+    "row": 4,
+    "x": 576,
+    "y": 128,
+    "tileSize": 32,
+    "label": "brick wall"
+  },
+  {
+    "col": 19,
+    "row": 4,
+    "x": 608,
+    "y": 128,
+    "tileSize": 32,
+    "label": "brick wall"
+  },
+  {
+    "col": 20,
+    "row": 4,
+    "x": 640,
+    "y": 128,
+    "tileSize": 32,
+    "label": "moss brick wall"
+  },
+  {
+    "col": 21,
+    "row": 4,
+    "x": 672,
+    "y": 128,
+    "tileSize": 32,
+    "label": "deep water"
+  },
+  {
+    "col": 22,
+    "row": 4,
+    "x": 704,
+    "y": 128,
+    "tileSize": 32,
+    "label": "deep water"
+  },
+  {
+    "col": 23,
+    "row": 4,
+    "x": 736,
+    "y": 128,
+    "tileSize": 32,
+    "label": "deep water"
+  },
+  {
+    "col": 24,
+    "row": 4,
+    "x": 768,
+    "y": 128,
+    "tileSize": 32,
+    "label": "deep water"
+  },
+  {
+    "col": 25,
+    "row": 4,
+    "x": 800,
+    "y": 128,
+    "tileSize": 32,
+    "label": "deep water"
+  },
+  {
+    "col": 26,
+    "row": 4,
+    "x": 832,
+    "y": 128,
+    "tileSize": 32,
+    "label": "deep water"
+  },
+  {
+    "col": 27,
+    "row": 4,
+    "x": 864,
+    "y": 128,
+    "tileSize": 32,
+    "label": "shallow water"
+  },
+  {
+    "col": 28,
+    "row": 4,
+    "x": 896,
+    "y": 128,
+    "tileSize": 32,
+    "label": "shallow water"
+  },
+  {
+    "col": 29,
+    "row": 4,
+    "x": 928,
+    "y": 128,
+    "tileSize": 32,
+    "label": "shallow water"
+  },
+  {
+    "col": 30,
+    "row": 4,
+    "x": 960,
+    "y": 128,
+    "tileSize": 32,
+    "label": "shallow water"
+  },
+  {
+    "col": 31,
+    "row": 4,
+    "x": 992,
+    "y": 128,
+    "tileSize": 32,
+    "label": "shallow water"
+  },
+  {
+    "col": 32,
+    "row": 4,
+    "x": 1024,
+    "y": 128,
+    "tileSize": 32,
+    "label": "shallow water"
+  },
+  {
+    "col": 33,
+    "row": 4,
+    "x": 1056,
+    "y": 128,
+    "tileSize": 32,
+    "label": "shallow water"
+  },
+  {
+    "col": 34,
+    "row": 4,
+    "x": 1088,
+    "y": 128,
+    "tileSize": 32,
+    "label": "shallow water"
+  },
+  {
+    "col": 35,
+    "row": 4,
+    "x": 1120,
+    "y": 128,
+    "tileSize": 32,
+    "label": "deep water"
+  },
+  {
+    "col": 36,
+    "row": 4,
+    "x": 1152,
+    "y": 128,
+    "tileSize": 32,
+    "label": "water"
+  },
+  {
+    "col": 37,
+    "row": 4,
+    "x": 1184,
+    "y": 128,
+    "tileSize": 32,
+    "label": "stone wall"
+  },
+  {
+    "col": 38,
+    "row": 4,
+    "x": 1216,
+    "y": 128,
+    "tileSize": 32,
+    "label": "dirt path"
+  },
+  {
+    "col": 39,
+    "row": 4,
+    "x": 1248,
+    "y": 128,
+    "tileSize": 32,
+    "label": "stone floor"
+  },
+  {
+    "col": 40,
+    "row": 4,
+    "x": 1280,
+    "y": 128,
+    "tileSize": 32,
+    "label": "mountain"
+  },
+  {
+    "col": 41,
+    "row": 4,
+    "x": 1312,
+    "y": 128,
+    "tileSize": 32,
+    "label": "forest"
+  },
+  {
+    "col": 42,
+    "row": 4,
+    "x": 1344,
+    "y": 128,
+    "tileSize": 32,
+    "label": "stone wall dark"
+  },
+  {
+    "col": 43,
+    "row": 4,
+    "x": 1376,
+    "y": 128,
+    "tileSize": 32,
+    "label": "grass"
+  },
+  {
+    "col": 44,
+    "row": 4,
+    "x": 1408,
+    "y": 128,
+    "tileSize": 32,
+    "label": "stone brick"
+  },
+  {
+    "col": 45,
+    "row": 4,
+    "x": 1440,
+    "y": 128,
+    "tileSize": 32,
+    "label": "unknown"
+  },
+  {
+    "col": 46,
+    "row": 4,
+    "x": 1472,
+    "y": 128,
+    "tileSize": 32,
+    "label": "cave wall"
+  },
+  {
+    "col": 47,
+    "row": 4,
+    "x": 1504,
+    "y": 128,
+    "tileSize": 32,
+    "label": "dark stone"
+  },
+  {
+    "col": 48,
+    "row": 4,
+    "x": 1536,
+    "y": 128,
+    "tileSize": 32,
+    "label": "dark stone"
+  },
+  {
+    "col": 49,
+    "row": 4,
+    "x": 1568,
+    "y": 128,
+    "tileSize": 32,
+    "label": "dark stone"
+  },
+  {
+    "col": 50,
+    "row": 4,
+    "x": 1600,
+    "y": 128,
+    "tileSize": 32,
+    "label": "dark stone"
+  },
+  {
+    "col": 51,
+    "row": 4,
+    "x": 1632,
+    "y": 128,
+    "tileSize": 32,
+    "label": "dark stone"
+  },
+  {
+    "col": 52,
+    "row": 4,
+    "x": 1664,
+    "y": 128,
+    "tileSize": 32,
+    "label": "dark stone"
+  },
+  {
+    "col": 53,
+    "row": 4,
+    "x": 1696,
+    "y": 128,
+    "tileSize": 32,
+    "label": "dark stone"
+  },
+  {
+    "col": 54,
+    "row": 4,
+    "x": 1728,
+    "y": 128,
+    "tileSize": 32,
+    "label": "dark stone"
+  },
+  {
+    "col": 55,
+    "row": 4,
+    "x": 1760,
+    "y": 128,
+    "tileSize": 32,
+    "label": "dark stone"
+  },
+  {
+    "col": 56,
+    "row": 4,
+    "x": 1792,
+    "y": 128,
+    "tileSize": 32,
+    "label": "water"
+  },
+  {
+    "col": 57,
+    "row": 4,
+    "x": 1824,
+    "y": 128,
+    "tileSize": 32,
+    "label": "stone floor"
+  },
+  {
+    "col": 58,
+    "row": 4,
+    "x": 1856,
+    "y": 128,
+    "tileSize": 32,
+    "label": "dark floor"
+  },
+  {
+    "col": 59,
+    "row": 4,
+    "x": 1888,
+    "y": 128,
+    "tileSize": 32,
+    "label": "dark stone"
+  },
+  {
+    "col": 60,
+    "row": 4,
+    "x": 1920,
+    "y": 128,
+    "tileSize": 32,
+    "label": "dark stone"
+  },
+  {
+    "col": 61,
+    "row": 4,
+    "x": 1952,
+    "y": 128,
+    "tileSize": 32,
+    "label": "dark stone"
+  },
+  {
+    "col": 62,
+    "row": 4,
+    "x": 1984,
+    "y": 128,
+    "tileSize": 32,
+    "label": "dark stone"
+  },
+  {
+    "col": 63,
+    "row": 4,
+    "x": 2016,
+    "y": 128,
+    "tileSize": 32,
+    "label": "dark stone"
+  },
+  {
+    "col": 0,
+    "row": 5,
+    "x": 0,
+    "y": 160,
+    "tileSize": 32,
+    "label": "dark stone"
+  },
+  {
+    "col": 1,
+    "row": 5,
+    "x": 32,
+    "y": 160,
+    "tileSize": 32,
+    "label": "dark stone"
+  },
+  {
+    "col": 2,
+    "row": 5,
+    "x": 64,
+    "y": 160,
+    "tileSize": 32,
+    "label": "water"
+  },
+  {
+    "col": 3,
+    "row": 5,
+    "x": 96,
+    "y": 160,
+    "tileSize": 32,
+    "label": "water"
+  },
+  {
+    "col": 4,
+    "row": 5,
+    "x": 128,
+    "y": 160,
+    "tileSize": 32,
+    "label": "water"
+  },
+  {
+    "col": 5,
+    "row": 5,
+    "x": 160,
+    "y": 160,
+    "tileSize": 32,
+    "label": "water"
+  },
+  {
+    "col": 6,
+    "row": 5,
+    "x": 192,
+    "y": 160,
+    "tileSize": 32,
+    "label": "water"
+  },
+  {
+    "col": 7,
+    "row": 5,
+    "x": 224,
+    "y": 160,
+    "tileSize": 32,
+    "label": "stone wall"
+  },
+  {
+    "col": 8,
+    "row": 5,
+    "x": 256,
+    "y": 160,
+    "tileSize": 32,
+    "label": "stone wall"
+  },
+  {
+    "col": 9,
+    "row": 5,
+    "x": 288,
+    "y": 160,
+    "tileSize": 32,
+    "label": "stone wall"
+  },
+  {
+    "col": 10,
+    "row": 5,
+    "x": 320,
+    "y": 160,
+    "tileSize": 32,
+    "label": "stone wall"
+  },
+  {
+    "col": 11,
+    "row": 5,
+    "x": 352,
+    "y": 160,
+    "tileSize": 32,
+    "label": "stone wall"
+  },
+  {
+    "col": 12,
+    "row": 5,
+    "x": 384,
+    "y": 160,
+    "tileSize": 32,
+    "label": "water"
+  },
+  {
+    "col": 13,
+    "row": 5,
+    "x": 416,
+    "y": 160,
+    "tileSize": 32,
+    "label": "stone wall"
+  },
+  {
+    "col": 14,
+    "row": 5,
+    "x": 448,
+    "y": 160,
+    "tileSize": 32,
+    "label": "stone floor"
+  },
+  {
+    "col": 15,
+    "row": 5,
+    "x": 480,
+    "y": 160,
+    "tileSize": 32,
+    "label": "cobblestone"
+  },
+  {
+    "col": 16,
+    "row": 5,
+    "x": 512,
+    "y": 160,
+    "tileSize": 32,
+    "label": "stone floor"
+  },
+  {
+    "col": 17,
+    "row": 5,
+    "x": 544,
+    "y": 160,
+    "tileSize": 32,
+    "label": "stone bricks"
+  },
+  {
+    "col": 18,
+    "row": 5,
+    "x": 576,
+    "y": 160,
+    "tileSize": 32,
+    "label": "stone floor"
+  },
+  {
+    "col": 19,
+    "row": 5,
+    "x": 608,
+    "y": 160,
+    "tileSize": 32,
+    "label": "cracked stone"
+  },
+  {
+    "col": 20,
+    "row": 5,
+    "x": 640,
+    "y": 160,
+    "tileSize": 32,
+    "label": "dark void"
+  },
+  {
+    "col": 21,
+    "row": 5,
+    "x": 672,
+    "y": 160,
+    "tileSize": 32,
+    "label": "red carpet"
+  },
+  {
+    "col": 22,
+    "row": 5,
+    "x": 704,
+    "y": 160,
+    "tileSize": 32,
+    "label": "stone wall"
+  },
+  {
+    "col": 23,
+    "row": 5,
+    "x": 736,
+    "y": 160,
+    "tileSize": 32,
+    "label": "stone wall"
+  },
+  {
+    "col": 24,
+    "row": 5,
+    "x": 768,
+    "y": 160,
+    "tileSize": 32,
+    "label": "stone wall"
+  },
+  {
+    "col": 25,
+    "row": 5,
+    "x": 800,
+    "y": 160,
+    "tileSize": 32,
+    "label": "stone wall"
+  },
+  {
+    "col": 26,
+    "row": 5,
+    "x": 832,
+    "y": 160,
+    "tileSize": 32,
+    "label": "stone wall"
+  },
+  {
+    "col": 27,
+    "row": 5,
+    "x": 864,
+    "y": 160,
+    "tileSize": 32,
+    "label": "stone wall"
+  },
+  {
+    "col": 28,
+    "row": 5,
+    "x": 896,
+    "y": 160,
+    "tileSize": 32,
+    "label": "stone wall"
+  },
+  {
+    "col": 29,
+    "row": 5,
+    "x": 928,
+    "y": 160,
+    "tileSize": 32,
+    "label": "stone wall"
+  },
+  {
+    "col": 30,
+    "row": 5,
+    "x": 960,
+    "y": 160,
+    "tileSize": 32,
+    "label": "stone wall"
+  },
+  {
+    "col": 31,
+    "row": 5,
+    "x": 992,
+    "y": 160,
+    "tileSize": 32,
+    "label": "stone wall"
+  },
+  {
+    "col": 32,
+    "row": 5,
+    "x": 1024,
+    "y": 160,
+    "tileSize": 32,
+    "label": "water"
+  },
+  {
+    "col": 33,
+    "row": 5,
+    "x": 1056,
+    "y": 160,
+    "tileSize": 32,
+    "label": "deep water"
+  },
+  {
+    "col": 34,
+    "row": 5,
+    "x": 1088,
+    "y": 160,
+    "tileSize": 32,
+    "label": "stone wall"
+  },
+  {
+    "col": 35,
+    "row": 5,
+    "x": 1120,
+    "y": 160,
+    "tileSize": 32,
+    "label": "ornate floor"
+  },
+  {
+    "col": 36,
+    "row": 5,
+    "x": 1152,
+    "y": 160,
+    "tileSize": 32,
+    "label": "stone floor"
+  },
+  {
+    "col": 37,
+    "row": 5,
+    "x": 1184,
+    "y": 160,
+    "tileSize": 32,
+    "label": "stone pillar"
+  },
+  {
+    "col": 38,
+    "row": 5,
+    "x": 1216,
+    "y": 160,
+    "tileSize": 32,
+    "label": "wooden door"
+  },
+  {
+    "col": 39,
+    "row": 5,
+    "x": 1248,
+    "y": 160,
+    "tileSize": 32,
+    "label": "open door"
+  },
+  {
+    "col": 40,
+    "row": 5,
+    "x": 1280,
+    "y": 160,
+    "tileSize": 32,
+    "label": "grass"
+  },
+  {
+    "col": 41,
+    "row": 5,
+    "x": 1312,
+    "y": 160,
+    "tileSize": 32,
+    "label": "unknown"
+  },
+  {
+    "col": 42,
+    "row": 5,
+    "x": 1344,
+    "y": 160,
+    "tileSize": 32,
+    "label": "water"
+  },
+  {
+    "col": 43,
+    "row": 5,
+    "x": 1376,
+    "y": 160,
+    "tileSize": 32,
+    "label": "water"
+  },
+  {
+    "col": 44,
+    "row": 5,
+    "x": 1408,
+    "y": 160,
+    "tileSize": 32,
+    "label": "water"
+  },
+  {
+    "col": 45,
+    "row": 5,
+    "x": 1440,
+    "y": 160,
+    "tileSize": 32,
+    "label": "water"
+  },
+  {
+    "col": 46,
+    "row": 5,
+    "x": 1472,
+    "y": 160,
+    "tileSize": 32,
+    "label": "water"
+  },
+  {
+    "col": 47,
+    "row": 5,
+    "x": 1504,
+    "y": 160,
+    "tileSize": 32,
+    "label": "water"
+  },
+  {
+    "col": 48,
+    "row": 5,
+    "x": 1536,
+    "y": 160,
+    "tileSize": 32,
+    "label": "water"
+  },
+  {
+    "col": 49,
+    "row": 5,
+    "x": 1568,
+    "y": 160,
+    "tileSize": 32,
+    "label": "tree"
+  },
+  {
+    "col": 50,
+    "row": 5,
+    "x": 1600,
+    "y": 160,
+    "tileSize": 32,
+    "label": "tree"
+  },
+  {
+    "col": 51,
+    "row": 5,
+    "x": 1632,
+    "y": 160,
+    "tileSize": 32,
+    "label": "water"
+  },
+  {
+    "col": 52,
+    "row": 5,
+    "x": 1664,
+    "y": 160,
+    "tileSize": 32,
+    "label": "green hedge"
+  },
+  {
+    "col": 53,
+    "row": 5,
+    "x": 1696,
+    "y": 160,
+    "tileSize": 32,
+    "label": "stone path"
+  },
+  {
+    "col": 54,
+    "row": 5,
+    "x": 1728,
+    "y": 160,
+    "tileSize": 32,
+    "label": "green hedge"
+  },
+  {
+    "col": 55,
+    "row": 5,
+    "x": 1760,
+    "y": 160,
+    "tileSize": 32,
+    "label": "grass field"
+  },
+  {
+    "col": 56,
+    "row": 5,
+    "x": 1792,
+    "y": 160,
+    "tileSize": 32,
+    "label": "stone path"
+  },
+  {
+    "col": 57,
+    "row": 5,
+    "x": 1824,
+    "y": 160,
+    "tileSize": 32,
+    "label": "dirt path"
+  },
+  {
+    "col": 58,
+    "row": 5,
+    "x": 1856,
+    "y": 160,
+    "tileSize": 32,
+    "label": "grass field"
+  },
+  {
+    "col": 59,
+    "row": 5,
+    "x": 1888,
+    "y": 160,
+    "tileSize": 32,
+    "label": "stone path"
+  },
+  {
+    "col": 60,
+    "row": 5,
+    "x": 1920,
+    "y": 160,
+    "tileSize": 32,
+    "label": "grass field"
+  },
+  {
+    "col": 61,
+    "row": 5,
+    "x": 1952,
+    "y": 160,
+    "tileSize": 32,
+    "label": "red lava"
+  },
+  {
+    "col": 62,
+    "row": 5,
+    "x": 1984,
+    "y": 160,
+    "tileSize": 32,
+    "label": "lava"
+  },
+  {
+    "col": 63,
+    "row": 5,
+    "x": 2016,
+    "y": 160,
+    "tileSize": 32,
+    "label": "fire"
+  },
+  {
+    "col": 0,
+    "row": 6,
+    "x": 0,
+    "y": 192,
+    "tileSize": 32,
+    "label": "lava pool"
+  },
+  {
+    "col": 1,
+    "row": 6,
+    "x": 32,
+    "y": 192,
+    "tileSize": 32,
+    "label": "stone wall"
+  },
+  {
+    "col": 2,
+    "row": 6,
+    "x": 64,
+    "y": 192,
+    "tileSize": 32,
+    "label": "dirt wall"
+  },
+  {
+    "col": 3,
+    "row": 6,
+    "x": 96,
+    "y": 192,
+    "tileSize": 32,
+    "label": "brown wall"
+  },
+  {
+    "col": 4,
+    "row": 6,
+    "x": 128,
+    "y": 192,
+    "tileSize": 32,
+    "label": "stone path"
+  },
+  {
+    "col": 5,
+    "row": 6,
+    "x": 160,
+    "y": 192,
+    "tileSize": 32,
+    "label": "rocky ground"
+  },
+  {
+    "col": 6,
+    "row": 6,
+    "x": 192,
+    "y": 192,
+    "tileSize": 32,
+    "label": "stone floor"
+  },
+  {
+    "col": 7,
+    "row": 6,
+    "x": 224,
+    "y": 192,
+    "tileSize": 32,
+    "label": "dirt floor"
+  },
+  {
+    "col": 8,
+    "row": 6,
+    "x": 256,
+    "y": 192,
+    "tileSize": 32,
+    "label": "dirt floor"
+  },
+  {
+    "col": 9,
+    "row": 6,
+    "x": 288,
+    "y": 192,
+    "tileSize": 32,
+    "label": "dirt floor variant"
+  },
+  {
+    "col": 10,
+    "row": 6,
+    "x": 320,
+    "y": 192,
+    "tileSize": 32,
+    "label": "dirt floor light"
+  },
+  {
+    "col": 11,
+    "row": 6,
+    "x": 352,
+    "y": 192,
+    "tileSize": 32,
+    "label": "stone wall"
+  },
+  {
+    "col": 12,
+    "row": 6,
+    "x": 384,
+    "y": 192,
+    "tileSize": 32,
+    "label": "stone wall dark"
+  },
+  {
+    "col": 13,
+    "row": 6,
+    "x": 416,
+    "y": 192,
+    "tileSize": 32,
+    "label": "stone wall darker"
+  },
+  {
+    "col": 14,
+    "row": 6,
+    "x": 448,
+    "y": 192,
+    "tileSize": 32,
+    "label": "stone wall black"
+  },
+  {
+    "col": 15,
+    "row": 6,
+    "x": 480,
+    "y": 192,
+    "tileSize": 32,
+    "label": "stone wall night"
+  },
+  {
+    "col": 16,
+    "row": 6,
+    "x": 512,
+    "y": 192,
+    "tileSize": 32,
+    "label": "water shallow"
+  },
+  {
+    "col": 17,
+    "row": 6,
+    "x": 544,
+    "y": 192,
+    "tileSize": 32,
+    "label": "water deep"
+  },
+  {
+    "col": 18,
+    "row": 6,
+    "x": 576,
+    "y": 192,
+    "tileSize": 32,
+    "label": "stone wall"
+  },
+  {
+    "col": 19,
+    "row": 6,
+    "x": 608,
+    "y": 192,
+    "tileSize": 32,
+    "label": "stone wall"
+  },
+  {
+    "col": 20,
+    "row": 6,
+    "x": 640,
+    "y": 192,
+    "tileSize": 32,
+    "label": "stone wall"
+  },
+  {
+    "col": 21,
+    "row": 6,
+    "x": 672,
+    "y": 192,
+    "tileSize": 32,
+    "label": "stone wall"
+  },
+  {
+    "col": 22,
+    "row": 6,
+    "x": 704,
+    "y": 192,
+    "tileSize": 32,
+    "label": "stone wall"
+  },
+  {
+    "col": 23,
+    "row": 6,
+    "x": 736,
+    "y": 192,
+    "tileSize": 32,
+    "label": "stone wall"
+  },
+  {
+    "col": 24,
+    "row": 6,
+    "x": 768,
+    "y": 192,
+    "tileSize": 32,
+    "label": "dark grass"
+  },
+  {
+    "col": 25,
+    "row": 6,
+    "x": 800,
+    "y": 192,
+    "tileSize": 32,
+    "label": "dark grass"
+  },
+  {
+    "col": 26,
+    "row": 6,
+    "x": 832,
+    "y": 192,
+    "tileSize": 32,
+    "label": "dark grass"
+  },
+  {
+    "col": 27,
+    "row": 6,
+    "x": 864,
+    "y": 192,
+    "tileSize": 32,
+    "label": "dark grass"
+  },
+  {
+    "col": 28,
+    "row": 6,
+    "x": 896,
+    "y": 192,
+    "tileSize": 32,
+    "label": "water"
+  },
+  {
+    "col": 29,
+    "row": 6,
+    "x": 928,
+    "y": 192,
+    "tileSize": 32,
+    "label": "water"
+  },
+  {
+    "col": 30,
+    "row": 6,
+    "x": 960,
+    "y": 192,
+    "tileSize": 32,
+    "label": "water"
+  },
+  {
+    "col": 31,
+    "row": 6,
+    "x": 992,
+    "y": 192,
+    "tileSize": 32,
+    "label": "water"
+  },
+  {
+    "col": 32,
+    "row": 6,
+    "x": 1024,
+    "y": 192,
+    "tileSize": 32,
+    "label": "water"
+  },
+  {
+    "col": 33,
+    "row": 6,
+    "x": 1056,
+    "y": 192,
+    "tileSize": 32,
+    "label": "water"
+  },
+  {
+    "col": 34,
+    "row": 6,
+    "x": 1088,
+    "y": 192,
+    "tileSize": 32,
+    "label": "water"
+  },
+  {
+    "col": 35,
+    "row": 6,
+    "x": 1120,
+    "y": 192,
+    "tileSize": 32,
+    "label": "water"
+  },
+  {
+    "col": 36,
+    "row": 6,
+    "x": 1152,
+    "y": 192,
+    "tileSize": 32,
+    "label": "water"
+  },
+  {
+    "col": 37,
+    "row": 6,
+    "x": 1184,
+    "y": 192,
+    "tileSize": 32,
+    "label": "water"
+  },
+  {
+    "col": 38,
+    "row": 6,
+    "x": 1216,
+    "y": 192,
+    "tileSize": 32,
+    "label": "stone wall"
+  },
+  {
+    "col": 39,
+    "row": 6,
+    "x": 1248,
+    "y": 192,
+    "tileSize": 32,
+    "label": "stone wall"
+  },
+  {
+    "col": 40,
+    "row": 6,
+    "x": 1280,
+    "y": 192,
+    "tileSize": 32,
+    "label": "stone wall"
+  },
+  {
+    "col": 41,
+    "row": 6,
+    "x": 1312,
+    "y": 192,
+    "tileSize": 32,
+    "label": "stone wall"
+  },
+  {
+    "col": 42,
+    "row": 6,
+    "x": 1344,
+    "y": 192,
+    "tileSize": 32,
+    "label": "stone wall"
+  },
+  {
+    "col": 43,
+    "row": 6,
+    "x": 1376,
+    "y": 192,
+    "tileSize": 32,
+    "label": "stone wall"
+  },
+  {
+    "col": 44,
+    "row": 6,
+    "x": 1408,
+    "y": 192,
+    "tileSize": 32,
+    "label": "stone wall"
+  },
+  {
+    "col": 45,
+    "row": 6,
+    "x": 1440,
+    "y": 192,
+    "tileSize": 32,
+    "label": "stone wall"
+  },
+  {
+    "col": 46,
+    "row": 6,
+    "x": 1472,
+    "y": 192,
+    "tileSize": 32,
+    "label": "stone wall"
+  },
+  {
+    "col": 47,
+    "row": 6,
+    "x": 1504,
+    "y": 192,
+    "tileSize": 32,
+    "label": "stone wall"
+  },
+  {
+    "col": 48,
+    "row": 6,
+    "x": 1536,
+    "y": 192,
+    "tileSize": 32,
+    "label": "stone wall"
+  },
+  {
+    "col": 49,
+    "row": 6,
+    "x": 1568,
+    "y": 192,
+    "tileSize": 32,
+    "label": "stone wall"
+  },
+  {
+    "col": 50,
+    "row": 6,
+    "x": 1600,
+    "y": 192,
+    "tileSize": 32,
+    "label": "stone wall"
+  },
+  {
+    "col": 51,
+    "row": 6,
+    "x": 1632,
+    "y": 192,
+    "tileSize": 32,
+    "label": "stone wall"
+  },
+  {
+    "col": 52,
+    "row": 6,
+    "x": 1664,
+    "y": 192,
+    "tileSize": 32,
+    "label": "stone wall"
+  },
+  {
+    "col": 53,
+    "row": 6,
+    "x": 1696,
+    "y": 192,
+    "tileSize": 32,
+    "label": "stone wall"
+  },
+  {
+    "col": 54,
+    "row": 6,
+    "x": 1728,
+    "y": 192,
+    "tileSize": 32,
+    "label": "stone wall"
+  },
+  {
+    "col": 55,
+    "row": 6,
+    "x": 1760,
+    "y": 192,
+    "tileSize": 32,
+    "label": "stone wall"
+  },
+  {
+    "col": 56,
+    "row": 6,
+    "x": 1792,
+    "y": 192,
+    "tileSize": 32,
+    "label": "stone wall"
+  },
+  {
+    "col": 57,
+    "row": 6,
+    "x": 1824,
+    "y": 192,
+    "tileSize": 32,
+    "label": "unknown"
+  },
+  {
+    "col": 58,
+    "row": 6,
+    "x": 1856,
+    "y": 192,
+    "tileSize": 32,
+    "label": "stone wall"
+  },
+  {
+    "col": 59,
+    "row": 6,
+    "x": 1888,
+    "y": 192,
+    "tileSize": 32,
+    "label": "stone wall"
+  },
+  {
+    "col": 60,
+    "row": 6,
+    "x": 1920,
+    "y": 192,
+    "tileSize": 32,
+    "label": "stone wall"
+  },
+  {
+    "col": 61,
+    "row": 6,
+    "x": 1952,
+    "y": 192,
+    "tileSize": 32,
+    "label": "stone wall"
+  },
+  {
+    "col": 62,
+    "row": 6,
+    "x": 1984,
+    "y": 192,
+    "tileSize": 32,
+    "label": "stone wall"
+  },
+  {
+    "col": 63,
+    "row": 6,
+    "x": 2016,
+    "y": 192,
+    "tileSize": 32,
+    "label": "stone wall"
+  },
+  {
+    "col": 0,
+    "row": 7,
+    "x": 0,
+    "y": 224,
+    "tileSize": 32,
+    "label": "stone wall"
+  },
+  {
+    "col": 1,
+    "row": 7,
+    "x": 32,
+    "y": 224,
+    "tileSize": 32,
+    "label": "stone wall"
+  },
+  {
+    "col": 2,
+    "row": 7,
+    "x": 64,
+    "y": 224,
+    "tileSize": 32,
+    "label": "stone wall"
+  },
+  {
+    "col": 3,
+    "row": 7,
+    "x": 96,
+    "y": 224,
+    "tileSize": 32,
+    "label": "unknown"
+  },
+  {
+    "col": 4,
+    "row": 7,
+    "x": 128,
+    "y": 224,
+    "tileSize": 32,
+    "label": "brown earth"
+  },
+  {
+    "col": 5,
+    "row": 7,
+    "x": 160,
+    "y": 224,
+    "tileSize": 32,
+    "label": "brown earth"
+  },
+  {
+    "col": 6,
+    "row": 7,
+    "x": 192,
+    "y": 224,
+    "tileSize": 32,
+    "label": "brown earth"
+  },
+  {
+    "col": 7,
+    "row": 7,
+    "x": 224,
+    "y": 224,
+    "tileSize": 32,
+    "label": "brown earth"
+  },
+  {
+    "col": 8,
+    "row": 7,
+    "x": 256,
+    "y": 224,
+    "tileSize": 32,
+    "label": "brown earth"
+  },
+  {
+    "col": 9,
+    "row": 7,
+    "x": 288,
+    "y": 224,
+    "tileSize": 32,
+    "label": "brown earth"
+  },
+  {
+    "col": 10,
+    "row": 7,
+    "x": 320,
+    "y": 224,
+    "tileSize": 32,
+    "label": "stone wall"
+  },
+  {
+    "col": 11,
+    "row": 7,
+    "x": 352,
+    "y": 224,
+    "tileSize": 32,
+    "label": "stone wall"
+  },
+  {
+    "col": 12,
+    "row": 7,
+    "x": 384,
+    "y": 224,
+    "tileSize": 32,
+    "label": "black void"
+  },
+  {
+    "col": 13,
+    "row": 7,
+    "x": 416,
+    "y": 224,
+    "tileSize": 32,
+    "label": "stone wall"
+  },
+  {
+    "col": 14,
+    "row": 7,
+    "x": 448,
+    "y": 224,
+    "tileSize": 32,
+    "label": "stone wall"
+  },
+  {
+    "col": 15,
+    "row": 7,
+    "x": 480,
+    "y": 224,
+    "tileSize": 32,
+    "label": "stone corridor"
+  },
+  {
+    "col": 16,
+    "row": 7,
+    "x": 512,
+    "y": 224,
+    "tileSize": 32,
+    "label": "stone passage"
+  },
+  {
+    "col": 17,
+    "row": 7,
+    "x": 544,
+    "y": 224,
+    "tileSize": 32,
+    "label": "stone wall"
+  },
+  {
+    "col": 18,
+    "row": 7,
+    "x": 576,
+    "y": 224,
+    "tileSize": 32,
+    "label": "dark stone floor"
+  },
+  {
+    "col": 19,
+    "row": 7,
+    "x": 608,
+    "y": 224,
+    "tileSize": 32,
+    "label": "dark stone floor"
+  },
+  {
+    "col": 20,
+    "row": 7,
+    "x": 640,
+    "y": 224,
+    "tileSize": 32,
+    "label": "dark stone floor"
+  },
+  {
+    "col": 21,
+    "row": 7,
+    "x": 672,
+    "y": 224,
+    "tileSize": 32,
+    "label": "dark stone passage"
+  },
+  {
+    "col": 22,
+    "row": 7,
+    "x": 704,
+    "y": 224,
+    "tileSize": 32,
+    "label": "stone brick wall"
+  },
+  {
+    "col": 23,
+    "row": 7,
+    "x": 736,
+    "y": 224,
+    "tileSize": 32,
+    "label": "stone brick floor"
+  },
+  {
+    "col": 24,
+    "row": 7,
+    "x": 768,
+    "y": 224,
+    "tileSize": 32,
+    "label": "stone wall"
+  },
+  {
+    "col": 25,
+    "row": 7,
+    "x": 800,
+    "y": 224,
+    "tileSize": 32,
+    "label": "stone bricks"
+  },
+  {
+    "col": 26,
+    "row": 7,
+    "x": 832,
+    "y": 224,
+    "tileSize": 32,
+    "label": "stone bricks"
+  },
+  {
+    "col": 27,
+    "row": 7,
+    "x": 864,
+    "y": 224,
+    "tileSize": 32,
+    "label": "stone floor"
+  },
+  {
+    "col": 28,
+    "row": 7,
+    "x": 896,
+    "y": 224,
+    "tileSize": 32,
+    "label": "lava"
+  },
+  {
+    "col": 29,
+    "row": 7,
+    "x": 928,
+    "y": 224,
+    "tileSize": 32,
+    "label": "red carpet"
+  },
+  {
+    "col": 30,
+    "row": 7,
+    "x": 960,
+    "y": 224,
+    "tileSize": 32,
+    "label": "red texture"
+  },
+  {
+    "col": 31,
+    "row": 7,
+    "x": 992,
+    "y": 224,
+    "tileSize": 32,
+    "label": "dirt ground"
+  },
+  {
+    "col": 32,
+    "row": 7,
+    "x": 1024,
+    "y": 224,
+    "tileSize": 32,
+    "label": "dirt ground"
+  },
+  {
+    "col": 33,
+    "row": 7,
+    "x": 1056,
+    "y": 224,
+    "tileSize": 32,
+    "label": "blue water"
+  },
+  {
+    "col": 34,
+    "row": 7,
+    "x": 1088,
+    "y": 224,
+    "tileSize": 32,
+    "label": "dark stone floor"
+  },
+  {
+    "col": 35,
+    "row": 7,
+    "x": 1120,
+    "y": 224,
+    "tileSize": 32,
+    "label": "dark stone floor"
+  },
+  {
+    "col": 36,
+    "row": 7,
+    "x": 1152,
+    "y": 224,
+    "tileSize": 32,
+    "label": "dark stone floor"
+  },
+  {
+    "col": 37,
+    "row": 7,
+    "x": 1184,
+    "y": 224,
+    "tileSize": 32,
+    "label": "dark stone floor"
+  },
+  {
+    "col": 38,
+    "row": 7,
+    "x": 1216,
+    "y": 224,
+    "tileSize": 32,
+    "label": "dark stone floor"
+  },
+  {
+    "col": 39,
+    "row": 7,
+    "x": 1248,
+    "y": 224,
+    "tileSize": 32,
+    "label": "dark stone floor"
+  },
+  {
+    "col": 40,
+    "row": 7,
+    "x": 1280,
+    "y": 224,
+    "tileSize": 32,
+    "label": "dark stone floor"
+  },
+  {
+    "col": 41,
+    "row": 7,
+    "x": 1312,
+    "y": 224,
+    "tileSize": 32,
+    "label": "dark stone floor"
+  },
+  {
+    "col": 42,
+    "row": 7,
+    "x": 1344,
+    "y": 224,
+    "tileSize": 32,
+    "label": "dark stone floor"
+  },
+  {
+    "col": 43,
+    "row": 7,
+    "x": 1376,
+    "y": 224,
+    "tileSize": 32,
+    "label": "sand floor"
+  },
+  {
+    "col": 44,
+    "row": 7,
+    "x": 1408,
+    "y": 224,
+    "tileSize": 32,
+    "label": "dirt floor"
+  },
+  {
+    "col": 45,
+    "row": 7,
+    "x": 1440,
+    "y": 224,
+    "tileSize": 32,
+    "label": "dirt floor"
+  },
+  {
+    "col": 46,
+    "row": 7,
+    "x": 1472,
+    "y": 224,
+    "tileSize": 32,
+    "label": "dirt floor"
+  },
+  {
+    "col": 47,
+    "row": 7,
+    "x": 1504,
+    "y": 224,
+    "tileSize": 32,
+    "label": "dirt floor"
+  },
+  {
+    "col": 48,
+    "row": 7,
+    "x": 1536,
+    "y": 224,
+    "tileSize": 32,
+    "label": "dirt floor"
+  },
+  {
+    "col": 49,
+    "row": 7,
+    "x": 1568,
+    "y": 224,
+    "tileSize": 32,
+    "label": "dirt floor"
+  },
+  {
+    "col": 50,
+    "row": 7,
+    "x": 1600,
+    "y": 224,
+    "tileSize": 32,
+    "label": "yellow corridor"
+  },
+  {
+    "col": 51,
+    "row": 7,
+    "x": 1632,
+    "y": 224,
+    "tileSize": 32,
+    "label": "yellow pillar"
+  },
+  {
+    "col": 52,
+    "row": 7,
+    "x": 1664,
+    "y": 224,
+    "tileSize": 32,
+    "label": "yellow ring"
+  },
+  {
+    "col": 53,
+    "row": 7,
+    "x": 1696,
+    "y": 224,
+    "tileSize": 32,
+    "label": "yellow corner"
+  },
+  {
+    "col": 54,
+    "row": 7,
+    "x": 1728,
+    "y": 224,
+    "tileSize": 32,
+    "label": "yellow circle"
+  },
+  {
+    "col": 55,
+    "row": 7,
+    "x": 1760,
+    "y": 224,
+    "tileSize": 32,
+    "label": "half circle"
+  },
+  {
+    "col": 56,
+    "row": 7,
+    "x": 1792,
+    "y": 224,
+    "tileSize": 32,
+    "label": "diamond"
+  },
+  {
+    "col": 57,
+    "row": 7,
+    "x": 1824,
+    "y": 224,
+    "tileSize": 32,
+    "label": "lightning bolt"
+  },
+  {
+    "col": 58,
+    "row": 7,
+    "x": 1856,
+    "y": 224,
+    "tileSize": 32,
+    "label": "triangle"
+  },
+  {
+    "col": 59,
+    "row": 7,
+    "x": 1888,
+    "y": 224,
+    "tileSize": 32,
+    "label": "horizontal line"
+  },
+  {
+    "col": 60,
+    "row": 7,
+    "x": 1920,
+    "y": 224,
+    "tileSize": 32,
+    "label": "curved line"
+  },
+  {
+    "col": 61,
+    "row": 7,
+    "x": 1952,
+    "y": 224,
+    "tileSize": 32,
+    "label": "diagonal line"
+  },
+  {
+    "col": 62,
+    "row": 7,
+    "x": 1984,
+    "y": 224,
+    "tileSize": 32,
+    "label": "angle bracket"
+  },
+  {
+    "col": 63,
+    "row": 7,
+    "x": 2016,
+    "y": 224,
+    "tileSize": 32,
+    "label": "triangle outline"
+  },
+  {
+    "col": 0,
+    "row": 8,
+    "x": 0,
+    "y": 256,
+    "tileSize": 32,
+    "label": "mountain peak"
+  },
+  {
+    "col": 1,
+    "row": 8,
+    "x": 32,
+    "y": 256,
+    "tileSize": 32,
+    "label": "wall"
+  },
+  {
+    "col": 2,
+    "row": 8,
+    "x": 64,
+    "y": 256,
+    "tileSize": 32,
+    "label": "stone wall"
+  },
+  {
+    "col": 3,
+    "row": 8,
+    "x": 96,
+    "y": 256,
+    "tileSize": 32,
+    "label": "wall section"
+  },
+  {
+    "col": 4,
+    "row": 8,
+    "x": 128,
+    "y": 256,
+    "tileSize": 32,
+    "label": "empty space"
+  },
+  {
+    "col": 5,
+    "row": 8,
+    "x": 160,
+    "y": 256,
+    "tileSize": 32,
+    "label": "valley"
+  },
+  {
+    "col": 6,
+    "row": 8,
+    "x": 192,
+    "y": 256,
+    "tileSize": 32,
+    "label": "wall"
+  },
+  {
+    "col": 7,
+    "row": 8,
+    "x": 224,
+    "y": 256,
+    "tileSize": 32,
+    "label": "pillar"
+  },
+  {
+    "col": 8,
+    "row": 8,
+    "x": 256,
+    "y": 256,
+    "tileSize": 32,
+    "label": "house"
+  },
+  {
+    "col": 9,
+    "row": 8,
+    "x": 288,
+    "y": 256,
+    "tileSize": 32,
+    "label": "wall"
+  },
+  {
+    "col": 10,
+    "row": 8,
+    "x": 320,
+    "y": 256,
+    "tileSize": 32,
+    "label": "cyan water"
+  },
+  {
+    "col": 11,
+    "row": 8,
+    "x": 352,
+    "y": 256,
+    "tileSize": 32,
+    "label": "stone wall"
+  },
+  {
+    "col": 12,
+    "row": 8,
+    "x": 384,
+    "y": 256,
+    "tileSize": 32,
+    "label": "stone wall"
+  },
+  {
+    "col": 13,
+    "row": 8,
+    "x": 416,
+    "y": 256,
+    "tileSize": 32,
+    "label": "stone wall"
+  },
+  {
+    "col": 14,
+    "row": 8,
+    "x": 448,
+    "y": 256,
+    "tileSize": 32,
+    "label": "stone wall"
+  },
+  {
+    "col": 15,
+    "row": 8,
+    "x": 480,
+    "y": 256,
+    "tileSize": 32,
+    "label": "stone wall"
+  },
+  {
+    "col": 16,
+    "row": 8,
+    "x": 512,
+    "y": 256,
+    "tileSize": 32,
+    "label": "stone wall"
+  },
+  {
+    "col": 17,
+    "row": 8,
+    "x": 544,
+    "y": 256,
+    "tileSize": 32,
+    "label": "stone wall"
+  },
+  {
+    "col": 18,
+    "row": 8,
+    "x": 576,
+    "y": 256,
+    "tileSize": 32,
+    "label": "black void"
+  },
+  {
+    "col": 19,
+    "row": 8,
+    "x": 608,
+    "y": 256,
+    "tileSize": 32,
+    "label": "green vine"
+  },
+  {
+    "col": 20,
+    "row": 8,
+    "x": 640,
+    "y": 256,
+    "tileSize": 32,
+    "label": "water"
+  },
+  {
+    "col": 21,
+    "row": 8,
+    "x": 672,
+    "y": 256,
+    "tileSize": 32,
+    "label": "green pillar"
+  },
+  {
+    "col": 22,
+    "row": 8,
+    "x": 704,
+    "y": 256,
+    "tileSize": 32,
+    "label": "black void"
+  },
+  {
+    "col": 23,
+    "row": 8,
+    "x": 736,
+    "y": 256,
+    "tileSize": 32,
+    "label": "green pillar"
+  },
+  {
+    "col": 24,
+    "row": 8,
+    "x": 768,
+    "y": 256,
+    "tileSize": 32,
+    "label": "dense foliage"
+  },
+  {
+    "col": 25,
+    "row": 8,
+    "x": 800,
+    "y": 256,
+    "tileSize": 32,
+    "label": "dense foliage"
+  },
+  {
+    "col": 26,
+    "row": 8,
+    "x": 832,
+    "y": 256,
+    "tileSize": 32,
+    "label": "water"
+  },
+  {
+    "col": 27,
+    "row": 8,
+    "x": 864,
+    "y": 256,
+    "tileSize": 32,
+    "label": "water"
+  },
+  {
+    "col": 28,
+    "row": 8,
+    "x": 896,
+    "y": 256,
+    "tileSize": 32,
+    "label": "water"
+  },
+  {
+    "col": 29,
+    "row": 8,
+    "x": 928,
+    "y": 256,
+    "tileSize": 32,
+    "label": "water"
+  },
+  {
+    "col": 30,
+    "row": 8,
+    "x": 960,
+    "y": 256,
+    "tileSize": 32,
+    "label": "dark grass floor"
+  },
+  {
+    "col": 31,
+    "row": 8,
+    "x": 992,
+    "y": 256,
+    "tileSize": 32,
+    "label": "grass floor"
+  },
+  {
+    "col": 32,
+    "row": 8,
+    "x": 1024,
+    "y": 256,
+    "tileSize": 32,
+    "label": "woven floor"
+  },
+  {
+    "col": 33,
+    "row": 8,
+    "x": 1056,
+    "y": 256,
+    "tileSize": 32,
+    "label": "stone floor"
+  },
+  {
+    "col": 34,
+    "row": 8,
+    "x": 1088,
+    "y": 256,
+    "tileSize": 32,
+    "label": "stone floor"
+  },
+  {
+    "col": 35,
+    "row": 8,
+    "x": 1120,
+    "y": 256,
+    "tileSize": 32,
+    "label": "stone floor"
+  },
+  {
+    "col": 36,
+    "row": 8,
+    "x": 1152,
+    "y": 256,
+    "tileSize": 32,
+    "label": "stone floor"
+  },
+  {
+    "col": 37,
+    "row": 8,
+    "x": 1184,
+    "y": 256,
+    "tileSize": 32,
+    "label": "stone floor"
+  },
+  {
+    "col": 38,
+    "row": 8,
+    "x": 1216,
+    "y": 256,
+    "tileSize": 32,
+    "label": "woven floor"
+  },
+  {
+    "col": 39,
+    "row": 8,
+    "x": 1248,
+    "y": 256,
+    "tileSize": 32,
+    "label": "golden floor"
+  },
+  {
+    "col": 40,
+    "row": 8,
+    "x": 1280,
+    "y": 256,
+    "tileSize": 32,
+    "label": "yellow brick wall"
+  },
+  {
+    "col": 41,
+    "row": 8,
+    "x": 1312,
+    "y": 256,
+    "tileSize": 32,
+    "label": "dark stone wall"
+  },
+  {
+    "col": 42,
+    "row": 8,
+    "x": 1344,
+    "y": 256,
+    "tileSize": 32,
+    "label": "brown stone wall"
+  },
+  {
+    "col": 43,
+    "row": 8,
+    "x": 1376,
+    "y": 256,
+    "tileSize": 32,
+    "label": "dark brown wall"
+  },
+  {
+    "col": 44,
+    "row": 8,
+    "x": 1408,
+    "y": 256,
+    "tileSize": 32,
+    "label": "red stone wall"
+  },
+  {
+    "col": 45,
+    "row": 8,
+    "x": 1440,
+    "y": 256,
+    "tileSize": 32,
+    "label": "dark red wall"
+  },
+  {
+    "col": 46,
+    "row": 8,
+    "x": 1472,
+    "y": 256,
+    "tileSize": 32,
+    "label": "dark stone wall"
+  },
+  {
+    "col": 47,
+    "row": 8,
+    "x": 1504,
+    "y": 256,
+    "tileSize": 32,
+    "label": "stone wall"
+  },
+  {
+    "col": 48,
+    "row": 8,
+    "x": 1536,
+    "y": 256,
+    "tileSize": 32,
+    "label": "black stone wall"
+  },
+  {
+    "col": 49,
+    "row": 8,
+    "x": 1568,
+    "y": 256,
+    "tileSize": 32,
+    "label": "dark void"
+  },
+  {
+    "col": 50,
+    "row": 8,
+    "x": 1600,
+    "y": 256,
+    "tileSize": 32,
+    "label": "stone wall"
+  },
+  {
+    "col": 51,
+    "row": 8,
+    "x": 1632,
+    "y": 256,
+    "tileSize": 32,
+    "label": "dark void"
+  },
+  {
+    "col": 52,
+    "row": 8,
+    "x": 1664,
+    "y": 256,
+    "tileSize": 32,
+    "label": "cracked stone"
+  },
+  {
+    "col": 53,
+    "row": 8,
+    "x": 1696,
+    "y": 256,
+    "tileSize": 32,
+    "label": "stone brick"
+  },
+  {
+    "col": 54,
+    "row": 8,
+    "x": 1728,
+    "y": 256,
+    "tileSize": 32,
+    "label": "rough stone"
+  },
+  {
+    "col": 55,
+    "row": 8,
+    "x": 1760,
+    "y": 256,
+    "tileSize": 32,
+    "label": "black wall"
+  },
+  {
+    "col": 56,
+    "row": 8,
+    "x": 1792,
+    "y": 256,
+    "tileSize": 32,
+    "label": "stone tile"
+  },
+  {
+    "col": 57,
+    "row": 8,
+    "x": 1824,
+    "y": 256,
+    "tileSize": 32,
+    "label": "blue square"
+  },
+  {
+    "col": 58,
+    "row": 8,
+    "x": 1856,
+    "y": 256,
+    "tileSize": 32,
+    "label": "dark stone"
+  },
+  {
+    "col": 59,
+    "row": 8,
+    "x": 1888,
+    "y": 256,
+    "tileSize": 32,
+    "label": "void"
+  },
+  {
+    "col": 60,
+    "row": 8,
+    "x": 1920,
+    "y": 256,
+    "tileSize": 32,
+    "label": "black void"
+  },
+  {
+    "col": 61,
+    "row": 8,
+    "x": 1952,
+    "y": 256,
+    "tileSize": 32,
+    "label": "stone wall"
+  },
+  {
+    "col": 62,
+    "row": 8,
+    "x": 1984,
+    "y": 256,
+    "tileSize": 32,
+    "label": "stone wall"
+  },
+  {
+    "col": 63,
+    "row": 8,
+    "x": 2016,
+    "y": 256,
+    "tileSize": 32,
+    "label": "stone wall"
+  },
+  {
+    "col": 0,
+    "row": 9,
+    "x": 0,
+    "y": 288,
+    "tileSize": 32,
+    "label": "stone wall"
+  },
+  {
+    "col": 1,
+    "row": 9,
+    "x": 32,
+    "y": 288,
+    "tileSize": 32,
+    "label": "stone wall"
+  },
+  {
+    "col": 2,
+    "row": 9,
+    "x": 64,
+    "y": 288,
+    "tileSize": 32,
+    "label": "stone wall"
+  },
+  {
+    "col": 3,
+    "row": 9,
+    "x": 96,
+    "y": 288,
+    "tileSize": 32,
+    "label": "stone wall"
+  },
+  {
+    "col": 4,
+    "row": 9,
+    "x": 128,
+    "y": 288,
+    "tileSize": 32,
+    "label": "stone wall"
+  },
+  {
+    "col": 5,
+    "row": 9,
+    "x": 160,
+    "y": 288,
+    "tileSize": 32,
+    "label": "stone wall"
+  },
+  {
+    "col": 6,
+    "row": 9,
+    "x": 192,
+    "y": 288,
+    "tileSize": 32,
+    "label": "stone wall"
+  },
+  {
+    "col": 7,
+    "row": 9,
+    "x": 224,
+    "y": 288,
+    "tileSize": 32,
+    "label": "cracked stone"
+  },
+  {
+    "col": 8,
+    "row": 9,
+    "x": 256,
+    "y": 288,
+    "tileSize": 32,
+    "label": "damaged stone"
+  },
+  {
+    "col": 9,
+    "row": 9,
+    "x": 288,
+    "y": 288,
+    "tileSize": 32,
+    "label": "dark stone"
+  },
+  {
+    "col": 10,
+    "row": 9,
+    "x": 320,
+    "y": 288,
+    "tileSize": 32,
+    "label": "worn stone"
+  },
+  {
+    "col": 11,
+    "row": 9,
+    "x": 352,
+    "y": 288,
+    "tileSize": 32,
+    "label": "light grass"
+  },
+  {
+    "col": 12,
+    "row": 9,
+    "x": 384,
+    "y": 288,
+    "tileSize": 32,
+    "label": "grass"
+  },
+  {
+    "col": 13,
+    "row": 9,
+    "x": 416,
+    "y": 288,
+    "tileSize": 32,
+    "label": "dark grass"
+  },
+  {
+    "col": 14,
+    "row": 9,
+    "x": 448,
+    "y": 288,
+    "tileSize": 32,
+    "label": "water"
+  },
+  {
+    "col": 15,
+    "row": 9,
+    "x": 480,
+    "y": 288,
+    "tileSize": 32,
+    "label": "deep water"
+  },
+  {
+    "col": 16,
+    "row": 9,
+    "x": 512,
+    "y": 288,
+    "tileSize": 32,
+    "label": "grass"
+  },
+  {
+    "col": 17,
+    "row": 9,
+    "x": 544,
+    "y": 288,
+    "tileSize": 32,
+    "label": "grass"
+  },
+  {
+    "col": 18,
+    "row": 9,
+    "x": 576,
+    "y": 288,
+    "tileSize": 32,
+    "label": "grass"
+  },
+  {
+    "col": 19,
+    "row": 9,
+    "x": 608,
+    "y": 288,
+    "tileSize": 32,
+    "label": "grass"
+  },
+  {
+    "col": 20,
+    "row": 9,
+    "x": 640,
+    "y": 288,
+    "tileSize": 32,
+    "label": "dirt path"
+  },
+  {
+    "col": 21,
+    "row": 9,
+    "x": 672,
+    "y": 288,
+    "tileSize": 32,
+    "label": "dirt path"
+  },
+  {
+    "col": 22,
+    "row": 9,
+    "x": 704,
+    "y": 288,
+    "tileSize": 32,
+    "label": "grass"
+  },
+  {
+    "col": 23,
+    "row": 9,
+    "x": 736,
+    "y": 288,
+    "tileSize": 32,
+    "label": "grass"
+  },
+  {
+    "col": 24,
+    "row": 9,
+    "x": 768,
+    "y": 288,
+    "tileSize": 32,
+    "label": "grass"
+  },
+  {
+    "col": 25,
+    "row": 9,
+    "x": 800,
+    "y": 288,
+    "tileSize": 32,
+    "label": "grass"
+  },
+  {
+    "col": 26,
+    "row": 9,
+    "x": 832,
+    "y": 288,
+    "tileSize": 32,
+    "label": "grass"
+  },
+  {
+    "col": 27,
+    "row": 9,
+    "x": 864,
+    "y": 288,
+    "tileSize": 32,
+    "label": "grass"
+  },
+  {
+    "col": 28,
+    "row": 9,
+    "x": 896,
+    "y": 288,
+    "tileSize": 32,
+    "label": "grass"
+  },
+  {
+    "col": 29,
+    "row": 9,
+    "x": 928,
+    "y": 288,
+    "tileSize": 32,
+    "label": "grass"
+  },
+  {
+    "col": 30,
+    "row": 9,
+    "x": 960,
+    "y": 288,
+    "tileSize": 32,
+    "label": "grass"
+  },
+  {
+    "col": 31,
+    "row": 9,
+    "x": 992,
+    "y": 288,
+    "tileSize": 32,
+    "label": "grass"
+  },
+  {
+    "col": 32,
+    "row": 9,
+    "x": 1024,
+    "y": 288,
+    "tileSize": 32,
+    "label": "grass"
+  },
+  {
+    "col": 33,
+    "row": 9,
+    "x": 1056,
+    "y": 288,
+    "tileSize": 32,
+    "label": "grass"
+  },
+  {
+    "col": 34,
+    "row": 9,
+    "x": 1088,
+    "y": 288,
+    "tileSize": 32,
+    "label": "grass"
+  },
+  {
+    "col": 35,
+    "row": 9,
+    "x": 1120,
+    "y": 288,
+    "tileSize": 32,
+    "label": "grass"
+  },
+  {
+    "col": 36,
+    "row": 9,
+    "x": 1152,
+    "y": 288,
+    "tileSize": 32,
+    "label": "dark grass"
+  },
+  {
+    "col": 37,
+    "row": 9,
+    "x": 1184,
+    "y": 288,
+    "tileSize": 32,
+    "label": "grass"
+  },
+  {
+    "col": 38,
+    "row": 9,
+    "x": 1216,
+    "y": 288,
+    "tileSize": 32,
+    "label": "grass with flowers"
+  },
+  {
+    "col": 39,
+    "row": 9,
+    "x": 1248,
+    "y": 288,
+    "tileSize": 32,
+    "label": "dirt path"
+  },
+  {
+    "col": 40,
+    "row": 9,
+    "x": 1280,
+    "y": 288,
+    "tileSize": 32,
+    "label": "wooden floor"
+  },
+  {
+    "col": 41,
+    "row": 9,
+    "x": 1312,
+    "y": 288,
+    "tileSize": 32,
+    "label": "wooden floor aged"
+  },
+  {
+    "col": 42,
+    "row": 9,
+    "x": 1344,
+    "y": 288,
+    "tileSize": 32,
+    "label": "wooden floor damaged"
+  },
+  {
+    "col": 43,
+    "row": 9,
+    "x": 1376,
+    "y": 288,
+    "tileSize": 32,
+    "label": "dirt with grass"
+  },
+  {
+    "col": 44,
+    "row": 9,
+    "x": 1408,
+    "y": 288,
+    "tileSize": 32,
+    "label": "dirt with grass"
+  },
+  {
+    "col": 45,
+    "row": 9,
+    "x": 1440,
+    "y": 288,
+    "tileSize": 32,
+    "label": "dirt with grass"
+  },
+  {
+    "col": 46,
+    "row": 9,
+    "x": 1472,
+    "y": 288,
+    "tileSize": 32,
+    "label": "green grass"
+  },
+  {
+    "col": 47,
+    "row": 9,
+    "x": 1504,
+    "y": 288,
+    "tileSize": 32,
+    "label": "brown dirt"
+  },
+  {
+    "col": 48,
+    "row": 9,
+    "x": 1536,
+    "y": 288,
+    "tileSize": 32,
+    "label": "stone wall"
+  },
+  {
+    "col": 49,
+    "row": 9,
+    "x": 1568,
+    "y": 288,
+    "tileSize": 32,
+    "label": "wooden floor"
+  },
+  {
+    "col": 50,
+    "row": 9,
+    "x": 1600,
+    "y": 288,
+    "tileSize": 32,
+    "label": "stone path"
+  },
+  {
+    "col": 51,
+    "row": 9,
+    "x": 1632,
+    "y": 288,
+    "tileSize": 32,
+    "label": "dirt path"
+  },
+  {
+    "col": 52,
+    "row": 9,
+    "x": 1664,
+    "y": 288,
+    "tileSize": 32,
+    "label": "cobblestone"
+  },
+  {
+    "col": 53,
+    "row": 9,
+    "x": 1696,
+    "y": 288,
+    "tileSize": 32,
+    "label": "sand"
+  },
+  {
+    "col": 54,
+    "row": 9,
+    "x": 1728,
+    "y": 288,
+    "tileSize": 32,
+    "label": "wooden bridge"
+  },
+  {
+    "col": 55,
+    "row": 9,
+    "x": 1760,
+    "y": 288,
+    "tileSize": 32,
+    "label": "stone bridge"
+  },
+  {
+    "col": 56,
+    "row": 9,
+    "x": 1792,
+    "y": 288,
+    "tileSize": 32,
+    "label": "stone wall corner"
+  },
+  {
+    "col": 57,
+    "row": 9,
+    "x": 1824,
+    "y": 288,
+    "tileSize": 32,
+    "label": "black void"
+  },
+  {
+    "col": 58,
+    "row": 9,
+    "x": 1856,
+    "y": 288,
+    "tileSize": 32,
+    "label": "stone wall end"
+  },
+  {
+    "col": 59,
+    "row": 9,
+    "x": 1888,
+    "y": 288,
+    "tileSize": 32,
+    "label": "black void"
+  },
+  {
+    "col": 60,
+    "row": 9,
+    "x": 1920,
+    "y": 288,
+    "tileSize": 32,
+    "label": "stone wall junction"
+  },
+  {
+    "col": 61,
+    "row": 9,
+    "x": 1952,
+    "y": 288,
+    "tileSize": 32,
+    "label": "black void"
+  },
+  {
+    "col": 62,
+    "row": 9,
+    "x": 1984,
+    "y": 288,
+    "tileSize": 32,
+    "label": "stone wall corner"
+  },
+  {
+    "col": 63,
+    "row": 9,
+    "x": 2016,
+    "y": 288,
+    "tileSize": 32,
+    "label": "black void"
+  },
+  {
+    "col": 0,
+    "row": 10,
+    "x": 0,
+    "y": 320,
+    "tileSize": 32,
+    "label": "stone archway"
+  },
+  {
+    "col": 1,
+    "row": 10,
+    "x": 32,
+    "y": 320,
+    "tileSize": 32,
+    "label": "black void"
+  },
+  {
+    "col": 2,
+    "row": 10,
+    "x": 64,
+    "y": 320,
+    "tileSize": 32,
+    "label": "corner wall"
+  },
+  {
+    "col": 3,
+    "row": 10,
+    "x": 96,
+    "y": 320,
+    "tileSize": 32,
+    "label": "ring"
+  },
+  {
+    "col": 4,
+    "row": 10,
+    "x": 128,
+    "y": 320,
+    "tileSize": 32,
+    "label": "T-junction wall"
+  },
+  {
+    "col": 5,
+    "row": 10,
+    "x": 160,
+    "y": 320,
+    "tileSize": 32,
+    "label": "curved wall"
+  },
+  {
+    "col": 6,
+    "row": 10,
+    "x": 192,
+    "y": 320,
+    "tileSize": 32,
+    "label": "empty space"
+  },
+  {
+    "col": 7,
+    "row": 10,
+    "x": 224,
+    "y": 320,
+    "tileSize": 32,
+    "label": "semicircle"
+  },
+  {
+    "col": 8,
+    "row": 10,
+    "x": 256,
+    "y": 320,
+    "tileSize": 32,
+    "label": "diamond"
+  },
+  {
+    "col": 9,
+    "row": 10,
+    "x": 288,
+    "y": 320,
+    "tileSize": 32,
+    "label": "angle wall"
+  },
+  {
+    "col": 10,
+    "row": 10,
+    "x": 320,
+    "y": 320,
+    "tileSize": 32,
+    "label": "empty space"
+  },
+  {
+    "col": 11,
+    "row": 10,
+    "x": 352,
+    "y": 320,
+    "tileSize": 32,
+    "label": "empty space"
+  },
+  {
+    "col": 12,
+    "row": 10,
+    "x": 384,
+    "y": 320,
+    "tileSize": 32,
+    "label": "floor corner"
+  },
+  {
+    "col": 13,
+    "row": 10,
+    "x": 416,
+    "y": 320,
+    "tileSize": 32,
+    "label": "wall section"
+  },
+  {
+    "col": 14,
+    "row": 10,
+    "x": 448,
+    "y": 320,
+    "tileSize": 32,
+    "label": "floor platform"
+  },
+  {
+    "col": 15,
+    "row": 10,
+    "x": 480,
+    "y": 320,
+    "tileSize": 32,
+    "label": "diagonal wall"
+  },
+  {
+    "col": 16,
+    "row": 10,
+    "x": 512,
+    "y": 320,
+    "tileSize": 32,
+    "label": "empty space"
+  },
+  {
+    "col": 17,
+    "row": 10,
+    "x": 544,
+    "y": 320,
+    "tileSize": 32,
+    "label": "diagonal wall"
+  },
+  {
+    "col": 18,
+    "row": 10,
+    "x": 576,
+    "y": 320,
+    "tileSize": 32,
+    "label": "empty space"
+  },
+  {
+    "col": 19,
+    "row": 10,
+    "x": 608,
+    "y": 320,
+    "tileSize": 32,
+    "label": "triangle roof"
+  },
+  {
+    "col": 20,
+    "row": 10,
+    "x": 640,
+    "y": 320,
+    "tileSize": 32,
+    "label": "floor section"
+  },
+  {
+    "col": 21,
+    "row": 10,
+    "x": 672,
+    "y": 320,
+    "tileSize": 32,
+    "label": "zigzag pattern"
+  },
+  {
+    "col": 22,
+    "row": 10,
+    "x": 704,
+    "y": 320,
+    "tileSize": 32,
+    "label": "water"
+  },
+  {
+    "col": 23,
+    "row": 10,
+    "x": 736,
+    "y": 320,
+    "tileSize": 32,
+    "label": "water"
+  },
+  {
+    "col": 24,
+    "row": 10,
+    "x": 768,
+    "y": 320,
+    "tileSize": 32,
+    "label": "water"
+  },
+  {
+    "col": 25,
+    "row": 10,
+    "x": 800,
+    "y": 320,
+    "tileSize": 32,
+    "label": "water"
+  },
+  {
+    "col": 26,
+    "row": 10,
+    "x": 832,
+    "y": 320,
+    "tileSize": 32,
+    "label": "water"
+  },
+  {
+    "col": 27,
+    "row": 10,
+    "x": 864,
+    "y": 320,
+    "tileSize": 32,
+    "label": "water"
+  },
+  {
+    "col": 28,
+    "row": 10,
+    "x": 896,
+    "y": 320,
+    "tileSize": 32,
+    "label": "water"
+  },
+  {
+    "col": 29,
+    "row": 10,
+    "x": 928,
+    "y": 320,
+    "tileSize": 32,
+    "label": "water"
+  },
+  {
+    "col": 30,
+    "row": 10,
+    "x": 960,
+    "y": 320,
+    "tileSize": 32,
+    "label": "water"
+  },
+  {
+    "col": 31,
+    "row": 10,
+    "x": 992,
+    "y": 320,
+    "tileSize": 32,
+    "label": "purple door"
+  },
+  {
+    "col": 32,
+    "row": 10,
+    "x": 1024,
+    "y": 320,
+    "tileSize": 32,
+    "label": "bloody stake"
+  },
+  {
+    "col": 33,
+    "row": 10,
+    "x": 1056,
+    "y": 320,
+    "tileSize": 32,
+    "label": "banner"
+  },
+  {
+    "col": 34,
+    "row": 10,
+    "x": 1088,
+    "y": 320,
+    "tileSize": 32,
+    "label": "stone archway"
+  },
+  {
+    "col": 35,
+    "row": 10,
+    "x": 1120,
+    "y": 320,
+    "tileSize": 32,
+    "label": "sky window"
+  },
+  {
+    "col": 36,
+    "row": 10,
+    "x": 1152,
+    "y": 320,
+    "tileSize": 32,
+    "label": "stone wall"
+  },
+  {
+    "col": 37,
+    "row": 10,
+    "x": 1184,
+    "y": 320,
+    "tileSize": 32,
+    "label": "gold bars"
+  },
+  {
+    "col": 38,
+    "row": 10,
+    "x": 1216,
+    "y": 320,
+    "tileSize": 32,
+    "label": "cracked wall"
+  },
+  {
+    "col": 39,
+    "row": 10,
+    "x": 1248,
+    "y": 320,
+    "tileSize": 32,
+    "label": "purple crystals"
+  },
+  {
+    "col": 40,
+    "row": 10,
+    "x": 1280,
+    "y": 320,
+    "tileSize": 32,
+    "label": "green trees"
+  },
+  {
+    "col": 41,
+    "row": 10,
+    "x": 1312,
+    "y": 320,
+    "tileSize": 32,
+    "label": "purple flowers"
+  },
+  {
+    "col": 42,
+    "row": 10,
+    "x": 1344,
+    "y": 320,
+    "tileSize": 32,
+    "label": "water"
+  },
+  {
+    "col": 43,
+    "row": 10,
+    "x": 1376,
+    "y": 320,
+    "tileSize": 32,
+    "label": "stone pillar"
+  },
+  {
+    "col": 44,
+    "row": 10,
+    "x": 1408,
+    "y": 320,
+    "tileSize": 32,
+    "label": "stone pillar"
+  },
+  {
+    "col": 45,
+    "row": 10,
+    "x": 1440,
+    "y": 320,
+    "tileSize": 32,
+    "label": "stone pillar"
+  },
+  {
+    "col": 46,
+    "row": 10,
+    "x": 1472,
+    "y": 320,
+    "tileSize": 32,
+    "label": "arched door"
+  },
+  {
+    "col": 47,
+    "row": 10,
+    "x": 1504,
+    "y": 320,
+    "tileSize": 32,
+    "label": "archway"
+  },
+  {
+    "col": 48,
+    "row": 10,
+    "x": 1536,
+    "y": 320,
+    "tileSize": 32,
+    "label": "dark doorway"
+  },
+  {
+    "col": 49,
+    "row": 10,
+    "x": 1568,
+    "y": 320,
+    "tileSize": 32,
+    "label": "grass"
+  },
+  {
+    "col": 50,
+    "row": 10,
+    "x": 1600,
+    "y": 320,
+    "tileSize": 32,
+    "label": "stone pillar"
+  },
+  {
+    "col": 51,
+    "row": 10,
+    "x": 1632,
+    "y": 320,
+    "tileSize": 32,
+    "label": "grass"
+  },
+  {
+    "col": 52,
+    "row": 10,
+    "x": 1664,
+    "y": 320,
+    "tileSize": 32,
+    "label": "red demon"
+  },
+  {
+    "col": 53,
+    "row": 10,
+    "x": 1696,
+    "y": 320,
+    "tileSize": 32,
+    "label": "red creature"
+  },
+  {
+    "col": 54,
+    "row": 10,
+    "x": 1728,
+    "y": 320,
+    "tileSize": 32,
+    "label": "red monster"
+  },
+  {
+    "col": 55,
+    "row": 10,
+    "x": 1760,
+    "y": 320,
+    "tileSize": 32,
+    "label": "skeleton warrior"
+  },
+  {
+    "col": 56,
+    "row": 10,
+    "x": 1792,
+    "y": 320,
+    "tileSize": 32,
+    "label": "black tree"
+  },
+  {
+    "col": 57,
+    "row": 10,
+    "x": 1824,
+    "y": 320,
+    "tileSize": 32,
+    "label": "torch fire"
+  },
+  {
+    "col": 58,
+    "row": 10,
+    "x": 1856,
+    "y": 320,
+    "tileSize": 32,
+    "label": "yellow demon"
+  },
+  {
+    "col": 59,
+    "row": 10,
+    "x": 1888,
+    "y": 320,
+    "tileSize": 32,
+    "label": "yellow creature"
+  },
+  {
+    "col": 60,
+    "row": 10,
+    "x": 1920,
+    "y": 320,
+    "tileSize": 32,
+    "label": "yellow monster"
+  },
+  {
+    "col": 61,
+    "row": 10,
+    "x": 1952,
+    "y": 320,
+    "tileSize": 32,
+    "label": "yellow treasure"
+  },
+  {
+    "col": 62,
+    "row": 10,
+    "x": 1984,
+    "y": 320,
+    "tileSize": 32,
+    "label": "wooden door"
+  },
+  {
+    "col": 63,
+    "row": 10,
+    "x": 2016,
+    "y": 320,
+    "tileSize": 32,
+    "label": "portal"
+  },
+  {
+    "col": 0,
+    "row": 11,
+    "x": 0,
+    "y": 352,
+    "tileSize": 32,
+    "label": "stone altar"
+  },
+  {
+    "col": 1,
+    "row": 11,
+    "x": 32,
+    "y": 352,
+    "tileSize": 32,
+    "label": "tree"
+  },
+  {
+    "col": 2,
+    "row": 11,
+    "x": 64,
+    "y": 352,
+    "tileSize": 32,
+    "label": "purple creature"
+  },
+  {
+    "col": 3,
+    "row": 11,
+    "x": 96,
+    "y": 352,
+    "tileSize": 32,
+    "label": "metal grate"
+  },
+  {
+    "col": 4,
+    "row": 11,
+    "x": 128,
+    "y": 352,
+    "tileSize": 32,
+    "label": "blue pillar"
+  },
+  {
+    "col": 5,
+    "row": 11,
+    "x": 160,
+    "y": 352,
+    "tileSize": 32,
+    "label": "red pillar"
+  },
+  {
+    "col": 6,
+    "row": 11,
+    "x": 192,
+    "y": 352,
+    "tileSize": 32,
+    "label": "cyan pillar"
+  },
+  {
+    "col": 7,
+    "row": 11,
+    "x": 224,
+    "y": 352,
+    "tileSize": 32,
+    "label": "golden bell"
+  },
+  {
+    "col": 8,
+    "row": 11,
+    "x": 256,
+    "y": 352,
+    "tileSize": 32,
+    "label": "stone wall"
+  },
+  {
+    "col": 9,
+    "row": 11,
+    "x": 288,
+    "y": 352,
+    "tileSize": 32,
+    "label": "moon phases"
+  },
+  {
+    "col": 10,
+    "row": 11,
+    "x": 320,
+    "y": 352,
+    "tileSize": 32,
+    "label": "golden door"
+  },
+  {
+    "col": 11,
+    "row": 11,
+    "x": 352,
+    "y": 352,
+    "tileSize": 32,
+    "label": "wooden interior"
+  },
+  {
+    "col": 12,
+    "row": 11,
+    "x": 384,
+    "y": 352,
+    "tileSize": 32,
+    "label": "fire pillar"
+  },
+  {
+    "col": 13,
+    "row": 11,
+    "x": 416,
+    "y": 352,
+    "tileSize": 32,
+    "label": "stone archway"
+  },
+  {
+    "col": 14,
+    "row": 11,
+    "x": 448,
+    "y": 352,
+    "tileSize": 32,
+    "label": "lava pool"
+  },
+  {
+    "col": 15,
+    "row": 11,
+    "x": 480,
+    "y": 352,
+    "tileSize": 32,
+    "label": "orange flames"
+  },
+  {
+    "col": 16,
+    "row": 11,
+    "x": 512,
+    "y": 352,
+    "tileSize": 32,
+    "label": "stone wall"
+  },
+  {
+    "col": 17,
+    "row": 11,
+    "x": 544,
+    "y": 352,
+    "tileSize": 32,
+    "label": "golden star"
+  },
+  {
+    "col": 18,
+    "row": 11,
+    "x": 576,
+    "y": 352,
+    "tileSize": 32,
+    "label": "pink crystal"
+  },
+  {
+    "col": 19,
+    "row": 11,
+    "x": 608,
+    "y": 352,
+    "tileSize": 32,
+    "label": "stone wall torch"
+  },
+  {
+    "col": 20,
+    "row": 11,
+    "x": 640,
+    "y": 352,
+    "tileSize": 32,
+    "label": "purple crystal"
+  },
+  {
+    "col": 21,
+    "row": 11,
+    "x": 672,
+    "y": 352,
+    "tileSize": 32,
+    "label": "stone wall torch"
+  },
+  {
+    "col": 22,
+    "row": 11,
+    "x": 704,
+    "y": 352,
+    "tileSize": 32,
+    "label": "stone wall torch"
+  },
+  {
+    "col": 23,
+    "row": 11,
+    "x": 736,
+    "y": 352,
+    "tileSize": 32,
+    "label": "gray orb"
+  },
+  {
+    "col": 24,
+    "row": 11,
+    "x": 768,
+    "y": 352,
+    "tileSize": 32,
+    "label": "blue orb"
+  },
+  {
+    "col": 25,
+    "row": 11,
+    "x": 800,
+    "y": 352,
+    "tileSize": 32,
+    "label": "black hole"
+  },
+  {
+    "col": 26,
+    "row": 11,
+    "x": 832,
+    "y": 352,
+    "tileSize": 32,
+    "label": "flesh wall"
+  },
+  {
+    "col": 27,
+    "row": 11,
+    "x": 864,
+    "y": 352,
+    "tileSize": 32,
+    "label": "dark doorway"
+  },
+  {
+    "col": 28,
+    "row": 11,
+    "x": 896,
+    "y": 352,
+    "tileSize": 32,
+    "label": "rope"
+  },
+  {
+    "col": 29,
+    "row": 11,
+    "x": 928,
+    "y": 352,
+    "tileSize": 32,
+    "label": "wooden chest"
+  },
+  {
+    "col": 30,
+    "row": 11,
+    "x": 960,
+    "y": 352,
+    "tileSize": 32,
+    "label": "white robe"
+  },
+  {
+    "col": 31,
+    "row": 11,
+    "x": 992,
+    "y": 352,
+    "tileSize": 32,
+    "label": "wooden door"
+  },
+  {
+    "col": 32,
+    "row": 11,
+    "x": 1024,
+    "y": 352,
+    "tileSize": 32,
+    "label": "wooden door"
+  },
+  {
+    "col": 33,
+    "row": 11,
+    "x": 1056,
+    "y": 352,
+    "tileSize": 32,
+    "label": "orange gem"
+  },
+  {
+    "col": 34,
+    "row": 11,
+    "x": 1088,
+    "y": 352,
+    "tileSize": 32,
+    "label": "gold pile"
+  },
+  {
+    "col": 35,
+    "row": 11,
+    "x": 1120,
+    "y": 352,
+    "tileSize": 32,
+    "label": "blue portal"
+  },
+  {
+    "col": 36,
+    "row": 11,
+    "x": 1152,
+    "y": 352,
+    "tileSize": 32,
+    "label": "blue portal"
+  },
+  {
+    "col": 37,
+    "row": 11,
+    "x": 1184,
+    "y": 352,
+    "tileSize": 32,
+    "label": "question mark"
+  },
+  {
+    "col": 38,
+    "row": 11,
+    "x": 1216,
+    "y": 352,
+    "tileSize": 32,
+    "label": "yellow columns"
+  },
+  {
+    "col": 39,
+    "row": 11,
+    "x": 1248,
+    "y": 352,
+    "tileSize": 32,
+    "label": "stone archway"
+  },
+  {
+    "col": 40,
+    "row": 11,
+    "x": 1280,
+    "y": 352,
+    "tileSize": 32,
+    "label": "stone wall"
+  },
+  {
+    "col": 41,
+    "row": 11,
+    "x": 1312,
+    "y": 352,
+    "tileSize": 32,
+    "label": "stone doorway"
+  },
+  {
+    "col": 42,
+    "row": 11,
+    "x": 1344,
+    "y": 352,
+    "tileSize": 32,
+    "label": "dark altar"
+  },
+  {
+    "col": 43,
+    "row": 11,
+    "x": 1376,
+    "y": 352,
+    "tileSize": 32,
+    "label": "golden archway"
+  },
+  {
+    "col": 44,
+    "row": 11,
+    "x": 1408,
+    "y": 352,
+    "tileSize": 32,
+    "label": "stone wall"
+  },
+  {
+    "col": 45,
+    "row": 11,
+    "x": 1440,
+    "y": 352,
+    "tileSize": 32,
+    "label": "orange bricks"
+  },
+  {
+    "col": 46,
+    "row": 11,
+    "x": 1472,
+    "y": 352,
+    "tileSize": 32,
+    "label": "orange columns"
+  },
+  {
+    "col": 47,
+    "row": 11,
+    "x": 1504,
+    "y": 352,
+    "tileSize": 32,
+    "label": "green maze"
+  },
+  {
+    "col": 48,
+    "row": 11,
+    "x": 1536,
+    "y": 352,
+    "tileSize": 32,
+    "label": "green moss"
+  },
+  {
+    "col": 49,
+    "row": 11,
+    "x": 1568,
+    "y": 352,
+    "tileSize": 32,
+    "label": "wooden barrel"
+  },
+  {
+    "col": 50,
+    "row": 11,
+    "x": 1600,
+    "y": 352,
+    "tileSize": 32,
+    "label": "stone wheel"
+  },
+  {
+    "col": 51,
+    "row": 11,
+    "x": 1632,
+    "y": 352,
+    "tileSize": 32,
+    "label": "stone wall"
+  },
+  {
+    "col": 52,
+    "row": 11,
+    "x": 1664,
+    "y": 352,
+    "tileSize": 32,
+    "label": "red banner"
+  },
+  {
+    "col": 53,
+    "row": 11,
+    "x": 1696,
+    "y": 352,
+    "tileSize": 32,
+    "label": "stone blocks"
+  },
+  {
+    "col": 54,
+    "row": 11,
+    "x": 1728,
+    "y": 352,
+    "tileSize": 32,
+    "label": "stone pillar"
+  },
+  {
+    "col": 55,
+    "row": 11,
+    "x": 1760,
+    "y": 352,
+    "tileSize": 32,
+    "label": "blue shield"
+  },
+  {
+    "col": 56,
+    "row": 11,
+    "x": 1792,
+    "y": 352,
+    "tileSize": 32,
+    "label": "blue gem"
+  },
+  {
+    "col": 57,
+    "row": 11,
+    "x": 1824,
+    "y": 352,
+    "tileSize": 32,
+    "label": "gold ring"
+  },
+  {
+    "col": 58,
+    "row": 11,
+    "x": 1856,
+    "y": 352,
+    "tileSize": 32,
+    "label": "golden amulet"
+  },
+  {
+    "col": 59,
+    "row": 11,
+    "x": 1888,
+    "y": 352,
+    "tileSize": 32,
+    "label": "red hood"
+  },
+  {
+    "col": 60,
+    "row": 11,
+    "x": 1920,
+    "y": 352,
+    "tileSize": 32,
+    "label": "leather armor"
+  },
+  {
+    "col": 61,
+    "row": 11,
+    "x": 1952,
+    "y": 352,
+    "tileSize": 32,
+    "label": "bronze ring"
+  },
+  {
+    "col": 62,
+    "row": 11,
+    "x": 1984,
+    "y": 352,
+    "tileSize": 32,
+    "label": "purple portal"
+  },
+  {
+    "col": 63,
+    "row": 11,
+    "x": 2016,
+    "y": 352,
+    "tileSize": 32,
+    "label": "golden arch"
+  },
+  {
+    "col": 0,
+    "row": 12,
+    "x": 0,
+    "y": 384,
+    "tileSize": 32,
+    "label": "stone shop"
+  },
+  {
+    "col": 1,
+    "row": 12,
+    "x": 32,
+    "y": 384,
+    "tileSize": 32,
+    "label": "wooden shop"
+  },
+  {
+    "col": 2,
+    "row": 12,
+    "x": 64,
+    "y": 384,
+    "tileSize": 32,
+    "label": "red mushroom"
+  },
+  {
+    "col": 3,
+    "row": 12,
+    "x": 96,
+    "y": 384,
+    "tileSize": 32,
+    "label": "blue gem"
+  },
+  {
+    "col": 4,
+    "row": 12,
+    "x": 128,
+    "y": 384,
+    "tileSize": 32,
+    "label": "shop sign"
+  },
+  {
+    "col": 5,
+    "row": 12,
+    "x": 160,
+    "y": 384,
+    "tileSize": 32,
+    "label": "treasure chest"
+  },
+  {
+    "col": 6,
+    "row": 12,
+    "x": 192,
+    "y": 384,
+    "tileSize": 32,
+    "label": "campfire"
+  },
+  {
+    "col": 7,
+    "row": 12,
+    "x": 224,
+    "y": 384,
+    "tileSize": 32,
+    "label": "blue character"
+  },
+  {
+    "col": 8,
+    "row": 12,
+    "x": 256,
+    "y": 384,
+    "tileSize": 32,
+    "label": "green slime"
+  },
+  {
+    "col": 9,
+    "row": 12,
+    "x": 288,
+    "y": 384,
+    "tileSize": 32,
+    "label": "white rabbit"
+  },
+  {
+    "col": 10,
+    "row": 12,
+    "x": 320,
+    "y": 384,
+    "tileSize": 32,
+    "label": "red sword"
+  },
+  {
+    "col": 11,
+    "row": 12,
+    "x": 352,
+    "y": 384,
+    "tileSize": 32,
+    "label": "white sword"
+  },
+  {
+    "col": 12,
+    "row": 12,
+    "x": 384,
+    "y": 384,
+    "tileSize": 32,
+    "label": "stone lever"
+  },
+  {
+    "col": 13,
+    "row": 12,
+    "x": 416,
+    "y": 384,
+    "tileSize": 32,
+    "label": "stone pillar"
+  },
+  {
+    "col": 14,
+    "row": 12,
+    "x": 448,
+    "y": 384,
+    "tileSize": 32,
+    "label": "stone pillar"
+  },
+  {
+    "col": 15,
+    "row": 12,
+    "x": 480,
+    "y": 384,
+    "tileSize": 32,
+    "label": "cracked pillar"
+  },
+  {
+    "col": 16,
+    "row": 12,
+    "x": 512,
+    "y": 384,
+    "tileSize": 32,
+    "label": "damaged pillar"
+  },
+  {
+    "col": 17,
+    "row": 12,
+    "x": 544,
+    "y": 384,
+    "tileSize": 32,
+    "label": "broken pillar"
+  },
+  {
+    "col": 18,
+    "row": 12,
+    "x": 576,
+    "y": 384,
+    "tileSize": 32,
+    "label": "rubble pillar"
+  },
+  {
+    "col": 19,
+    "row": 12,
+    "x": 608,
+    "y": 384,
+    "tileSize": 32,
+    "label": "stone head"
+  },
+  {
+    "col": 20,
+    "row": 12,
+    "x": 640,
+    "y": 384,
+    "tileSize": 32,
+    "label": "stone mask"
+  },
+  {
+    "col": 21,
+    "row": 12,
+    "x": 672,
+    "y": 384,
+    "tileSize": 32,
+    "label": "stone block"
+  },
+  {
+    "col": 22,
+    "row": 12,
+    "x": 704,
+    "y": 384,
+    "tileSize": 32,
+    "label": "cracked block"
+  },
+  {
+    "col": 23,
+    "row": 12,
+    "x": 736,
+    "y": 384,
+    "tileSize": 32,
+    "label": "armored warrior"
+  },
+  {
+    "col": 24,
+    "row": 12,
+    "x": 768,
+    "y": 384,
+    "tileSize": 32,
+    "label": "chess piece"
+  },
+  {
+    "col": 25,
+    "row": 12,
+    "x": 800,
+    "y": 384,
+    "tileSize": 32,
+    "label": "boot"
+  },
+  {
+    "col": 26,
+    "row": 12,
+    "x": 832,
+    "y": 384,
+    "tileSize": 32,
+    "label": "ampersand"
+  },
+  {
+    "col": 27,
+    "row": 12,
+    "x": 864,
+    "y": 384,
+    "tileSize": 32,
+    "label": "at symbol"
+  },
+  {
+    "col": 28,
+    "row": 12,
+    "x": 896,
+    "y": 384,
+    "tileSize": 32,
+    "label": "barrel"
+  },
+  {
+    "col": 29,
+    "row": 12,
+    "x": 928,
+    "y": 384,
+    "tileSize": 32,
+    "label": "horseshoe"
+  },
+  {
+    "col": 30,
+    "row": 12,
+    "x": 960,
+    "y": 384,
+    "tileSize": 32,
+    "label": "equals sign"
+  },
+  {
+    "col": 31,
+    "row": 12,
+    "x": 992,
+    "y": 384,
+    "tileSize": 32,
+    "label": "cat"
+  },
+  {
+    "col": 32,
+    "row": 12,
+    "x": 1024,
+    "y": 384,
+    "tileSize": 32,
+    "label": "kraken"
+  },
+  {
+    "col": 33,
+    "row": 12,
+    "x": 1056,
+    "y": 384,
+    "tileSize": 32,
+    "label": "fountain"
+  },
+  {
+    "col": 34,
+    "row": 12,
+    "x": 1088,
+    "y": 384,
+    "tileSize": 32,
+    "label": "fire pit"
+  },
+  {
+    "col": 35,
+    "row": 12,
+    "x": 1120,
+    "y": 384,
+    "tileSize": 32,
+    "label": "stone archway"
+  },
+  {
+    "col": 36,
+    "row": 12,
+    "x": 1152,
+    "y": 384,
+    "tileSize": 32,
+    "label": "bone pile"
+  },
+  {
+    "col": 37,
+    "row": 12,
+    "x": 1184,
+    "y": 384,
+    "tileSize": 32,
+    "label": "stone statue"
+  },
+  {
+    "col": 38,
+    "row": 12,
+    "x": 1216,
+    "y": 384,
+    "tileSize": 32,
+    "label": "dragon head"
+  },
+  {
+    "col": 39,
+    "row": 12,
+    "x": 1248,
+    "y": 384,
+    "tileSize": 32,
+    "label": "spiked gate"
+  },
+  {
+    "col": 40,
+    "row": 12,
+    "x": 1280,
+    "y": 384,
+    "tileSize": 32,
+    "label": "iron gate"
+  },
+  {
+    "col": 41,
+    "row": 12,
+    "x": 1312,
+    "y": 384,
+    "tileSize": 32,
+    "label": "stone pillar"
+  },
+  {
+    "col": 42,
+    "row": 12,
+    "x": 1344,
+    "y": 384,
+    "tileSize": 32,
+    "label": "stone fountain"
+  },
+  {
+    "col": 43,
+    "row": 12,
+    "x": 1376,
+    "y": 384,
+    "tileSize": 32,
+    "label": "moon"
+  },
+  {
+    "col": 44,
+    "row": 12,
+    "x": 1408,
+    "y": 384,
+    "tileSize": 32,
+    "label": "goblin warrior"
+  },
+  {
+    "col": 45,
+    "row": 12,
+    "x": 1440,
+    "y": 384,
+    "tileSize": 32,
+    "label": "zombie"
+  },
+  {
+    "col": 46,
+    "row": 12,
+    "x": 1472,
+    "y": 384,
+    "tileSize": 32,
+    "label": "dark elf"
+  },
+  {
+    "col": 47,
+    "row": 12,
+    "x": 1504,
+    "y": 384,
+    "tileSize": 32,
+    "label": "stone guardian"
+  },
+  {
+    "col": 48,
+    "row": 12,
+    "x": 1536,
+    "y": 384,
+    "tileSize": 32,
+    "label": "grave marker"
+  },
+  {
+    "col": 49,
+    "row": 12,
+    "x": 1568,
+    "y": 384,
+    "tileSize": 32,
+    "label": "gargoyle"
+  },
+  {
+    "col": 50,
+    "row": 12,
+    "x": 1600,
+    "y": 384,
+    "tileSize": 32,
+    "label": "silver chalice"
+  },
+  {
+    "col": 51,
+    "row": 12,
+    "x": 1632,
+    "y": 384,
+    "tileSize": 32,
+    "label": "iron maiden"
+  },
+  {
+    "col": 52,
+    "row": 12,
+    "x": 1664,
+    "y": 384,
+    "tileSize": 32,
+    "label": "stone pillar"
+  },
+  {
+    "col": 53,
+    "row": 12,
+    "x": 1696,
+    "y": 384,
+    "tileSize": 32,
+    "label": "golden teleporter"
+  },
+  {
+    "col": 54,
+    "row": 12,
+    "x": 1728,
+    "y": 384,
+    "tileSize": 32,
+    "label": "stone altar"
+  },
+  {
+    "col": 55,
+    "row": 12,
+    "x": 1760,
+    "y": 384,
+    "tileSize": 32,
+    "label": "green slime"
+  },
+  {
+    "col": 56,
+    "row": 12,
+    "x": 1792,
+    "y": 384,
+    "tileSize": 32,
+    "label": "tombstone"
+  },
+  {
+    "col": 57,
+    "row": 12,
+    "x": 1824,
+    "y": 384,
+    "tileSize": 32,
+    "label": "red tentacles"
+  },
+  {
+    "col": 58,
+    "row": 12,
+    "x": 1856,
+    "y": 384,
+    "tileSize": 32,
+    "label": "dark cloud"
+  },
+  {
+    "col": 59,
+    "row": 12,
+    "x": 1888,
+    "y": 384,
+    "tileSize": 32,
+    "label": "purple portal"
+  },
+  {
+    "col": 60,
+    "row": 12,
+    "x": 1920,
+    "y": 384,
+    "tileSize": 32,
+    "label": "treasure chest"
+  },
+  {
+    "col": 61,
+    "row": 12,
+    "x": 1952,
+    "y": 384,
+    "tileSize": 32,
+    "label": "black robe"
+  },
+  {
+    "col": 62,
+    "row": 12,
+    "x": 1984,
+    "y": 384,
+    "tileSize": 32,
+    "label": "bloody hook"
+  },
+  {
+    "col": 63,
+    "row": 12,
+    "x": 2016,
+    "y": 384,
+    "tileSize": 32,
+    "label": "unknown"
+  },
+  {
+    "col": 0,
+    "row": 13,
+    "x": 0,
+    "y": 416,
+    "tileSize": 32,
+    "label": "potion"
+  },
+  {
+    "col": 1,
+    "row": 13,
+    "x": 32,
+    "y": 416,
+    "tileSize": 32,
+    "label": "armor"
+  },
+  {
+    "col": 2,
+    "row": 13,
+    "x": 64,
+    "y": 416,
+    "tileSize": 32,
+    "label": "sword"
+  },
+  {
+    "col": 3,
+    "row": 13,
+    "x": 96,
+    "y": 416,
+    "tileSize": 32,
+    "label": "red dragon"
+  },
+  {
+    "col": 4,
+    "row": 13,
+    "x": 128,
+    "y": 416,
+    "tileSize": 32,
+    "label": "mountains"
+  },
+  {
+    "col": 5,
+    "row": 13,
+    "x": 160,
+    "y": 416,
+    "tileSize": 32,
+    "label": "stone archway"
+  },
+  {
+    "col": 6,
+    "row": 13,
+    "x": 192,
+    "y": 416,
+    "tileSize": 32,
+    "label": "brick wall"
+  },
+  {
+    "col": 8,
+    "row": 13,
+    "x": 256,
+    "y": 416,
+    "tileSize": 32,
+    "label": "dagger"
+  },
+  {
+    "col": 9,
+    "row": 13,
+    "x": 288,
+    "y": 416,
+    "tileSize": 32,
+    "label": "green serpent"
+  },
+  {
+    "col": 10,
+    "row": 13,
+    "x": 320,
+    "y": 416,
+    "tileSize": 32,
+    "label": "eye emblem"
+  },
+  {
+    "col": 11,
+    "row": 13,
+    "x": 352,
+    "y": 416,
+    "tileSize": 32,
+    "label": "eye symbol"
+  },
+  {
+    "col": 12,
+    "row": 13,
+    "x": 384,
+    "y": 416,
+    "tileSize": 32,
+    "label": "potion bottle"
+  },
+  {
+    "col": 13,
+    "row": 13,
+    "x": 416,
+    "y": 416,
+    "tileSize": 32,
+    "label": "green tree"
+  },
+  {
+    "col": 14,
+    "row": 13,
+    "x": 448,
+    "y": 416,
+    "tileSize": 32,
+    "label": "dark tree"
+  },
+  {
+    "col": 15,
+    "row": 13,
+    "x": 480,
+    "y": 416,
+    "tileSize": 32,
+    "label": "pine tree"
+  },
+  {
+    "col": 16,
+    "row": 13,
+    "x": 512,
+    "y": 416,
+    "tileSize": 32,
+    "label": "yellow tree"
+  },
+  {
+    "col": 17,
+    "row": 13,
+    "x": 544,
+    "y": 416,
+    "tileSize": 32,
+    "label": "orange tree"
+  },
+  {
+    "col": 18,
+    "row": 13,
+    "x": 576,
+    "y": 416,
+    "tileSize": 32,
+    "label": "golden tree"
+  },
+  {
+    "col": 19,
+    "row": 13,
+    "x": 608,
+    "y": 416,
+    "tileSize": 32,
+    "label": "autumn tree"
+  },
+  {
+    "col": 20,
+    "row": 13,
+    "x": 640,
+    "y": 416,
+    "tileSize": 32,
+    "label": "fall tree"
+  },
+  {
+    "col": 21,
+    "row": 13,
+    "x": 672,
+    "y": 416,
+    "tileSize": 32,
+    "label": "gold coins"
+  },
+  {
+    "col": 22,
+    "row": 13,
+    "x": 704,
+    "y": 416,
+    "tileSize": 32,
+    "label": "stone wall"
+  },
+  {
+    "col": 23,
+    "row": 13,
+    "x": 736,
+    "y": 416,
+    "tileSize": 32,
+    "label": "skeleton warrior"
+  },
+  {
+    "col": 24,
+    "row": 13,
+    "x": 768,
+    "y": 416,
+    "tileSize": 32,
+    "label": "green slime"
+  },
+  {
+    "col": 25,
+    "row": 13,
+    "x": 800,
+    "y": 416,
+    "tileSize": 32,
+    "label": "golden armor"
+  },
+  {
+    "col": 26,
+    "row": 13,
+    "x": 832,
+    "y": 416,
+    "tileSize": 32,
+    "label": "yellow armor"
+  },
+  {
+    "col": 27,
+    "row": 13,
+    "x": 864,
+    "y": 416,
+    "tileSize": 32,
+    "label": "iron bars"
+  },
+  {
+    "col": 28,
+    "row": 13,
+    "x": 896,
+    "y": 416,
+    "tileSize": 32,
+    "label": "blue gem"
+  },
+  {
+    "col": 29,
+    "row": 13,
+    "x": 928,
+    "y": 416,
+    "tileSize": 32,
+    "label": "golden harp"
+  },
+  {
+    "col": 30,
+    "row": 13,
+    "x": 960,
+    "y": 416,
+    "tileSize": 32,
+    "label": "wooden barrel"
+  },
+  {
+    "col": 31,
+    "row": 13,
+    "x": 992,
+    "y": 416,
+    "tileSize": 32,
+    "label": "treasure chest"
+  },
+  {
+    "col": 32,
+    "row": 13,
+    "x": 1024,
+    "y": 416,
+    "tileSize": 32,
+    "label": "golden statue"
+  },
+  {
+    "col": 33,
+    "row": 13,
+    "x": 1056,
+    "y": 416,
+    "tileSize": 32,
+    "label": "green orb"
+  },
+  {
+    "col": 34,
+    "row": 13,
+    "x": 1088,
+    "y": 416,
+    "tileSize": 32,
+    "label": "armored knight"
+  },
+  {
+    "col": 35,
+    "row": 13,
+    "x": 1120,
+    "y": 416,
+    "tileSize": 32,
+    "label": "water tiles"
+  },
+  {
+    "col": 36,
+    "row": 13,
+    "x": 1152,
+    "y": 416,
+    "tileSize": 32,
+    "label": "brick floor"
+  },
+  {
+    "col": 37,
+    "row": 13,
+    "x": 1184,
+    "y": 416,
+    "tileSize": 32,
+    "label": "red carpet"
+  },
+  {
+    "col": 38,
+    "row": 13,
+    "x": 1216,
+    "y": 416,
+    "tileSize": 32,
+    "label": "red floor"
+  },
+  {
+    "col": 39,
+    "row": 13,
+    "x": 1248,
+    "y": 416,
+    "tileSize": 32,
+    "label": "cyan floor"
+  },
+  {
+    "col": 40,
+    "row": 13,
+    "x": 1280,
+    "y": 416,
+    "tileSize": 32,
+    "label": "brown floor"
+  },
+  {
+    "col": 41,
+    "row": 13,
+    "x": 1312,
+    "y": 416,
+    "tileSize": 32,
+    "label": "red brick wall"
+  },
+  {
+    "col": 42,
+    "row": 13,
+    "x": 1344,
+    "y": 416,
+    "tileSize": 32,
+    "label": "red stone floor"
+  },
+  {
+    "col": 43,
+    "row": 13,
+    "x": 1376,
+    "y": 416,
+    "tileSize": 32,
+    "label": "red dungeon wall"
+  },
+  {
+    "col": 44,
+    "row": 13,
+    "x": 1408,
+    "y": 416,
+    "tileSize": 32,
+    "label": "yellow brick wall"
+  },
+  {
+    "col": 45,
+    "row": 13,
+    "x": 1440,
+    "y": 416,
+    "tileSize": 32,
+    "label": "brown brick wall"
+  },
+  {
+    "col": 46,
+    "row": 13,
+    "x": 1472,
+    "y": 416,
+    "tileSize": 32,
+    "label": "yellow hexagon floor"
+  },
+  {
+    "col": 47,
+    "row": 13,
+    "x": 1504,
+    "y": 416,
+    "tileSize": 32,
+    "label": "brown hexagon floor"
+  },
+  {
+    "col": 48,
+    "row": 13,
+    "x": 1536,
+    "y": 416,
+    "tileSize": 32,
+    "label": "yellow stone floor"
+  },
+  {
+    "col": 49,
+    "row": 13,
+    "x": 1568,
+    "y": 416,
+    "tileSize": 32,
+    "label": "water"
+  },
+  {
+    "col": 50,
+    "row": 13,
+    "x": 1600,
+    "y": 416,
+    "tileSize": 32,
+    "label": "blue floor"
+  },
+  {
+    "col": 51,
+    "row": 13,
+    "x": 1632,
+    "y": 416,
+    "tileSize": 32,
+    "label": "yellow brick floor"
+  },
+  {
+    "col": 52,
+    "row": 13,
+    "x": 1664,
+    "y": 416,
+    "tileSize": 32,
+    "label": "mossy stone wall"
+  },
+  {
+    "col": 53,
+    "row": 13,
+    "x": 1696,
+    "y": 416,
+    "tileSize": 32,
+    "label": "orange brick wall"
+  },
+  {
+    "col": 54,
+    "row": 13,
+    "x": 1728,
+    "y": 416,
+    "tileSize": 32,
+    "label": "water"
+  },
+  {
+    "col": 55,
+    "row": 13,
+    "x": 1760,
+    "y": 416,
+    "tileSize": 32,
+    "label": "cyan water"
+  },
+  {
+    "col": 56,
+    "row": 13,
+    "x": 1792,
+    "y": 416,
+    "tileSize": 32,
+    "label": "dark water"
+  },
+  {
+    "col": 57,
+    "row": 13,
+    "x": 1824,
+    "y": 416,
+    "tileSize": 32,
+    "label": "stone wall"
+  },
+  {
+    "col": 58,
+    "row": 13,
+    "x": 1856,
+    "y": 416,
+    "tileSize": 32,
+    "label": "mossy brick wall"
+  },
+  {
+    "col": 59,
+    "row": 13,
+    "x": 1888,
+    "y": 416,
+    "tileSize": 32,
+    "label": "orange stone wall"
+  },
+  {
+    "col": 60,
+    "row": 13,
+    "x": 1920,
+    "y": 416,
+    "tileSize": 32,
+    "label": "red brick wall"
+  },
+  {
+    "col": 61,
+    "row": 13,
+    "x": 1952,
+    "y": 416,
+    "tileSize": 32,
+    "label": "brick wall"
+  },
+  {
+    "col": 62,
+    "row": 13,
+    "x": 1984,
+    "y": 416,
+    "tileSize": 32,
+    "label": "brick wall"
+  },
+  {
+    "col": 63,
+    "row": 13,
+    "x": 2016,
+    "y": 416,
+    "tileSize": 32,
+    "label": "brick wall"
+  },
+  {
+    "col": 0,
+    "row": 14,
+    "x": 0,
+    "y": 448,
+    "tileSize": 32,
+    "label": "brick wall"
+  },
+  {
+    "col": 1,
+    "row": 14,
+    "x": 32,
+    "y": 448,
+    "tileSize": 32,
+    "label": "brick wall"
+  },
+  {
+    "col": 2,
+    "row": 14,
+    "x": 64,
+    "y": 448,
+    "tileSize": 32,
+    "label": "stone wall"
+  },
+  {
+    "col": 3,
+    "row": 14,
+    "x": 96,
+    "y": 448,
+    "tileSize": 32,
+    "label": "stone wall"
+  },
+  {
+    "col": 4,
+    "row": 14,
+    "x": 128,
+    "y": 448,
+    "tileSize": 32,
+    "label": "stone wall"
+  },
+  {
+    "col": 5,
+    "row": 14,
+    "x": 160,
+    "y": 448,
+    "tileSize": 32,
+    "label": "stone wall"
+  },
+  {
+    "col": 6,
+    "row": 14,
+    "x": 192,
+    "y": 448,
+    "tileSize": 32,
+    "label": "stone wall"
+  },
+  {
+    "col": 7,
+    "row": 14,
+    "x": 224,
+    "y": 448,
+    "tileSize": 32,
+    "label": "stone wall"
+  },
+  {
+    "col": 8,
+    "row": 14,
+    "x": 256,
+    "y": 448,
+    "tileSize": 32,
+    "label": "stone bricks"
+  },
+  {
+    "col": 9,
+    "row": 14,
+    "x": 288,
+    "y": 448,
+    "tileSize": 32,
+    "label": "gray bricks"
+  },
+  {
+    "col": 10,
+    "row": 14,
+    "x": 320,
+    "y": 448,
+    "tileSize": 32,
+    "label": "dungeon wall"
+  },
+  {
+    "col": 11,
+    "row": 14,
+    "x": 352,
+    "y": 448,
+    "tileSize": 32,
+    "label": "stone blocks"
+  },
+  {
+    "col": 12,
+    "row": 14,
+    "x": 384,
+    "y": 448,
+    "tileSize": 32,
+    "label": "castle wall"
+  },
+  {
+    "col": 13,
+    "row": 14,
+    "x": 416,
+    "y": 448,
+    "tileSize": 32,
+    "label": "brick wall"
+  },
+  {
+    "col": 14,
+    "row": 14,
+    "x": 448,
+    "y": 448,
+    "tileSize": 32,
+    "label": "dark bricks"
+  },
+  {
+    "col": 15,
+    "row": 14,
+    "x": 480,
+    "y": 448,
+    "tileSize": 32,
+    "label": "mossy wall"
+  },
+  {
+    "col": 16,
+    "row": 14,
+    "x": 512,
+    "y": 448,
+    "tileSize": 32,
+    "label": "cracked wall"
+  },
+  {
+    "col": 17,
+    "row": 14,
+    "x": 544,
+    "y": 448,
+    "tileSize": 32,
+    "label": "stone wall"
+  },
+  {
+    "col": 18,
+    "row": 14,
+    "x": 576,
+    "y": 448,
+    "tileSize": 32,
+    "label": "stone wall"
+  },
+  {
+    "col": 19,
+    "row": 14,
+    "x": 608,
+    "y": 448,
+    "tileSize": 32,
+    "label": "stone wall"
+  },
+  {
+    "col": 20,
+    "row": 14,
+    "x": 640,
+    "y": 448,
+    "tileSize": 32,
+    "label": "stone wall"
+  },
+  {
+    "col": 21,
+    "row": 14,
+    "x": 672,
+    "y": 448,
+    "tileSize": 32,
+    "label": "stone pillar"
+  },
+  {
+    "col": 22,
+    "row": 14,
+    "x": 704,
+    "y": 448,
+    "tileSize": 32,
+    "label": "stone altar"
+  },
+  {
+    "col": 23,
+    "row": 14,
+    "x": 736,
+    "y": 448,
+    "tileSize": 32,
+    "label": "stone wall"
+  },
+  {
+    "col": 24,
+    "row": 14,
+    "x": 768,
+    "y": 448,
+    "tileSize": 32,
+    "label": "stone wall"
+  },
+  {
+    "col": 25,
+    "row": 14,
+    "x": 800,
+    "y": 448,
+    "tileSize": 32,
+    "label": "stone wall"
+  },
+  {
+    "col": 26,
+    "row": 14,
+    "x": 832,
+    "y": 448,
+    "tileSize": 32,
+    "label": "water"
+  },
+  {
+    "col": 27,
+    "row": 14,
+    "x": 864,
+    "y": 448,
+    "tileSize": 32,
+    "label": "stone wall"
+  },
+  {
+    "col": 28,
+    "row": 14,
+    "x": 896,
+    "y": 448,
+    "tileSize": 32,
+    "label": "stone wall variant"
+  },
+  {
+    "col": 29,
+    "row": 14,
+    "x": 928,
+    "y": 448,
+    "tileSize": 32,
+    "label": "stone wall damaged"
+  },
+  {
+    "col": 30,
+    "row": 14,
+    "x": 960,
+    "y": 448,
+    "tileSize": 32,
+    "label": "wooden door"
+  },
+  {
+    "col": 31,
+    "row": 14,
+    "x": 992,
+    "y": 448,
+    "tileSize": 32,
+    "label": "wooden door variant"
+  },
+  {
+    "col": 32,
+    "row": 14,
+    "x": 1024,
+    "y": 448,
+    "tileSize": 32,
+    "label": "wooden door ornate"
+  },
+  {
+    "col": 33,
+    "row": 14,
+    "x": 1056,
+    "y": 448,
+    "tileSize": 32,
+    "label": "wooden door decorated"
+  },
+  {
+    "col": 34,
+    "row": 14,
+    "x": 1088,
+    "y": 448,
+    "tileSize": 32,
+    "label": "stone door"
+  },
+  {
+    "col": 35,
+    "row": 14,
+    "x": 1120,
+    "y": 448,
+    "tileSize": 32,
+    "label": "circuit wall"
+  },
+  {
+    "col": 36,
+    "row": 14,
+    "x": 1152,
+    "y": 448,
+    "tileSize": 32,
+    "label": "circuit wall variant"
+  },
+  {
+    "col": 37,
+    "row": 14,
+    "x": 1184,
+    "y": 448,
+    "tileSize": 32,
+    "label": "dark maze wall"
+  },
+  {
+    "col": 38,
+    "row": 14,
+    "x": 1216,
+    "y": 448,
+    "tileSize": 32,
+    "label": "dark maze wall"
+  },
+  {
+    "col": 39,
+    "row": 14,
+    "x": 1248,
+    "y": 448,
+    "tileSize": 32,
+    "label": "cyan maze wall"
+  },
+  {
+    "col": 40,
+    "row": 14,
+    "x": 1280,
+    "y": 448,
+    "tileSize": 32,
+    "label": "light maze wall"
+  },
+  {
+    "col": 41,
+    "row": 14,
+    "x": 1312,
+    "y": 448,
+    "tileSize": 32,
+    "label": "blue maze path"
+  },
+  {
+    "col": 42,
+    "row": 14,
+    "x": 1344,
+    "y": 448,
+    "tileSize": 32,
+    "label": "gray maze wall"
+  },
+  {
+    "col": 43,
+    "row": 14,
+    "x": 1376,
+    "y": 448,
+    "tileSize": 32,
+    "label": "cyan maze wall"
+  },
+  {
+    "col": 44,
+    "row": 14,
+    "x": 1408,
+    "y": 448,
+    "tileSize": 32,
+    "label": "blue maze wall"
+  },
+  {
+    "col": 45,
+    "row": 14,
+    "x": 1440,
+    "y": 448,
+    "tileSize": 32,
+    "label": "dark maze wall"
+  },
+  {
+    "col": 46,
+    "row": 14,
+    "x": 1472,
+    "y": 448,
+    "tileSize": 32,
+    "label": "cyan maze wall"
+  },
+  {
+    "col": 47,
+    "row": 14,
+    "x": 1504,
+    "y": 448,
+    "tileSize": 32,
+    "label": "dungeon floor"
+  },
+  {
+    "col": 48,
+    "row": 14,
+    "x": 1536,
+    "y": 448,
+    "tileSize": 32,
+    "label": "stone corridor"
+  },
+  {
+    "col": 49,
+    "row": 14,
+    "x": 1568,
+    "y": 448,
+    "tileSize": 32,
+    "label": "tiled floor"
+  },
+  {
+    "col": 50,
+    "row": 14,
+    "x": 1600,
+    "y": 448,
+    "tileSize": 32,
+    "label": "checkered floor"
+  },
+  {
+    "col": 51,
+    "row": 14,
+    "x": 1632,
+    "y": 448,
+    "tileSize": 32,
+    "label": "water surface"
+  },
+  {
+    "col": 52,
+    "row": 14,
+    "x": 1664,
+    "y": 448,
+    "tileSize": 32,
+    "label": "water tile"
+  },
+  {
+    "col": 53,
+    "row": 14,
+    "x": 1696,
+    "y": 448,
+    "tileSize": 32,
+    "label": "deep water"
+  },
+  {
+    "col": 54,
+    "row": 14,
+    "x": 1728,
+    "y": 448,
+    "tileSize": 32,
+    "label": "dark water"
+  },
+  {
+    "col": 55,
+    "row": 14,
+    "x": 1760,
+    "y": 448,
+    "tileSize": 32,
+    "label": "geometric pattern"
+  },
+  {
+    "col": 56,
+    "row": 14,
+    "x": 1792,
+    "y": 448,
+    "tileSize": 32,
+    "label": "angular pattern"
+  },
+  {
+    "col": 57,
+    "row": 14,
+    "x": 1824,
+    "y": 448,
+    "tileSize": 32,
+    "label": "turquoise floor"
+  },
+  {
+    "col": 58,
+    "row": 14,
+    "x": 1856,
+    "y": 448,
+    "tileSize": 32,
+    "label": "turquoise wall corner"
+  },
+  {
+    "col": 59,
+    "row": 14,
+    "x": 1888,
+    "y": 448,
+    "tileSize": 32,
+    "label": "turquoise frame"
+  },
+  {
+    "col": 60,
+    "row": 14,
+    "x": 1920,
+    "y": 448,
+    "tileSize": 32,
+    "label": "turquoise door"
+  },
+  {
+    "col": 61,
+    "row": 14,
+    "x": 1952,
+    "y": 448,
+    "tileSize": 32,
+    "label": "turquoise brick"
+  },
+  {
+    "col": 62,
+    "row": 14,
+    "x": 1984,
+    "y": 448,
+    "tileSize": 32,
+    "label": "turquoise tile"
+  },
+  {
+    "col": 63,
+    "row": 14,
+    "x": 2016,
+    "y": 448,
+    "tileSize": 32,
+    "label": "turquoise panel"
+  },
+  {
+    "col": 0,
+    "row": 15,
+    "x": 0,
+    "y": 480,
+    "tileSize": 32,
+    "label": "turquoise window"
+  },
+  {
+    "col": 1,
+    "row": 15,
+    "x": 32,
+    "y": 480,
+    "tileSize": 32,
+    "label": "blue crystal"
+  },
+  {
+    "col": 2,
+    "row": 15,
+    "x": 64,
+    "y": 480,
+    "tileSize": 32,
+    "label": "brown crystal"
+  },
+  {
+    "col": 3,
+    "row": 15,
+    "x": 96,
+    "y": 480,
+    "tileSize": 32,
+    "label": "cyan gem"
+  },
+  {
+    "col": 4,
+    "row": 15,
+    "x": 128,
+    "y": 480,
+    "tileSize": 32,
+    "label": "black gem"
+  },
+  {
+    "col": 5,
+    "row": 15,
+    "x": 160,
+    "y": 480,
+    "tileSize": 32,
+    "label": "green gem"
+  },
+  {
+    "col": 6,
+    "row": 15,
+    "x": 192,
+    "y": 480,
+    "tileSize": 32,
+    "label": "blue gem"
+  },
+  {
+    "col": 7,
+    "row": 15,
+    "x": 224,
+    "y": 480,
+    "tileSize": 32,
+    "label": "aqua gem"
+  },
+  {
+    "col": 8,
+    "row": 15,
+    "x": 256,
+    "y": 480,
+    "tileSize": 32,
+    "label": "gray gem"
+  },
+  {
+    "col": 9,
+    "row": 15,
+    "x": 288,
+    "y": 480,
+    "tileSize": 32,
+    "label": "lime gem"
+  },
+  {
+    "col": 10,
+    "row": 15,
+    "x": 320,
+    "y": 480,
+    "tileSize": 32,
+    "label": "magenta gem"
+  },
+  {
+    "col": 11,
+    "row": 15,
+    "x": 352,
+    "y": 480,
+    "tileSize": 32,
+    "label": "orange gem"
+  },
+  {
+    "col": 12,
+    "row": 15,
+    "x": 384,
+    "y": 480,
+    "tileSize": 32,
+    "label": "purple gem"
+  },
+  {
+    "col": 13,
+    "row": 15,
+    "x": 416,
+    "y": 480,
+    "tileSize": 32,
+    "label": "red gem"
+  },
+  {
+    "col": 14,
+    "row": 15,
+    "x": 448,
+    "y": 480,
+    "tileSize": 32,
+    "label": "white gem"
+  },
+  {
+    "col": 15,
+    "row": 15,
+    "x": 480,
+    "y": 480,
+    "tileSize": 32,
+    "label": "yellow gem"
+  },
+  {
+    "col": 16,
+    "row": 15,
+    "x": 512,
+    "y": 480,
+    "tileSize": 32,
+    "label": "emerald"
+  },
+  {
+    "col": 17,
+    "row": 15,
+    "x": 544,
+    "y": 480,
+    "tileSize": 32,
+    "label": "cracked emerald"
+  },
+  {
+    "col": 18,
+    "row": 15,
+    "x": 576,
+    "y": 480,
+    "tileSize": 32,
+    "label": "dark emerald"
+  },
+  {
+    "col": 19,
+    "row": 15,
+    "x": 608,
+    "y": 480,
+    "tileSize": 32,
+    "label": "jade"
+  },
+  {
+    "col": 20,
+    "row": 15,
+    "x": 640,
+    "y": 480,
+    "tileSize": 32,
+    "label": "mottled jade"
+  },
+  {
+    "col": 21,
+    "row": 15,
+    "x": 672,
+    "y": 480,
+    "tileSize": 32,
+    "label": "deep jade"
+  },
+  {
+    "col": 22,
+    "row": 15,
+    "x": 704,
+    "y": 480,
+    "tileSize": 32,
+    "label": "cloudy jade"
+  },
+  {
+    "col": 23,
+    "row": 15,
+    "x": 736,
+    "y": 480,
+    "tileSize": 32,
+    "label": "stone wall"
+  },
+  {
+    "col": 24,
+    "row": 15,
+    "x": 768,
+    "y": 480,
+    "tileSize": 32,
+    "label": "grass floor"
+  },
+  {
+    "col": 25,
+    "row": 15,
+    "x": 800,
+    "y": 480,
+    "tileSize": 32,
+    "label": "red carpet"
+  },
+  {
+    "col": 26,
+    "row": 15,
+    "x": 832,
+    "y": 480,
+    "tileSize": 32,
+    "label": "red carpet"
+  },
+  {
+    "col": 27,
+    "row": 15,
+    "x": 864,
+    "y": 480,
+    "tileSize": 32,
+    "label": "red carpet"
+  },
+  {
+    "col": 28,
+    "row": 15,
+    "x": 896,
+    "y": 480,
+    "tileSize": 32,
+    "label": "red carpet"
+  },
+  {
+    "col": 29,
+    "row": 15,
+    "x": 928,
+    "y": 480,
+    "tileSize": 32,
+    "label": "red carpet"
+  },
+  {
+    "col": 30,
+    "row": 15,
+    "x": 960,
+    "y": 480,
+    "tileSize": 32,
+    "label": "red carpet"
+  },
+  {
+    "col": 31,
+    "row": 15,
+    "x": 992,
+    "y": 480,
+    "tileSize": 32,
+    "label": "red carpet"
+  },
+  {
+    "col": 32,
+    "row": 15,
+    "x": 1024,
+    "y": 480,
+    "tileSize": 32,
+    "label": "red carpet"
+  },
+  {
+    "col": 33,
+    "row": 15,
+    "x": 1056,
+    "y": 480,
+    "tileSize": 32,
+    "label": "red carpet"
+  },
+  {
+    "col": 34,
+    "row": 15,
+    "x": 1088,
+    "y": 480,
+    "tileSize": 32,
+    "label": "red ornate rug"
+  },
+  {
+    "col": 35,
+    "row": 15,
+    "x": 1120,
+    "y": 480,
+    "tileSize": 32,
+    "label": "red decorative tile"
+  },
+  {
+    "col": 36,
+    "row": 15,
+    "x": 1152,
+    "y": 480,
+    "tileSize": 32,
+    "label": "stone wall"
+  },
+  {
+    "col": 37,
+    "row": 15,
+    "x": 1184,
+    "y": 480,
+    "tileSize": 32,
+    "label": "stone brick wall"
+  },
+  {
+    "col": 38,
+    "row": 15,
+    "x": 1216,
+    "y": 480,
+    "tileSize": 32,
+    "label": "dark stone wall"
+  },
+  {
+    "col": 39,
+    "row": 15,
+    "x": 1248,
+    "y": 480,
+    "tileSize": 32,
+    "label": "wooden floor"
+  },
+  {
+    "col": 40,
+    "row": 15,
+    "x": 1280,
+    "y": 480,
+    "tileSize": 32,
+    "label": "wooden planks"
+  },
+  {
+    "col": 41,
+    "row": 15,
+    "x": 1312,
+    "y": 480,
+    "tileSize": 32,
+    "label": "stone tile"
+  },
+  {
+    "col": 42,
+    "row": 15,
+    "x": 1344,
+    "y": 480,
+    "tileSize": 32,
+    "label": "ornate border"
+  },
+  {
+    "col": 43,
+    "row": 15,
+    "x": 1376,
+    "y": 480,
+    "tileSize": 32,
+    "label": "stone cavern"
+  },
+  {
+    "col": 44,
+    "row": 15,
+    "x": 1408,
+    "y": 480,
+    "tileSize": 32,
+    "label": "pillar column"
+  },
+  {
+    "col": 45,
+    "row": 15,
+    "x": 1440,
+    "y": 480,
+    "tileSize": 32,
+    "label": "stone wall"
+  },
+  {
+    "col": 46,
+    "row": 15,
+    "x": 1472,
+    "y": 480,
+    "tileSize": 32,
+    "label": "dark wall"
+  },
+  {
+    "col": 47,
+    "row": 15,
+    "x": 1504,
+    "y": 480,
+    "tileSize": 32,
+    "label": "brown bricks"
+  },
+  {
+    "col": 48,
+    "row": 15,
+    "x": 1536,
+    "y": 480,
+    "tileSize": 32,
+    "label": "orange bricks"
+  },
+  {
+    "col": 49,
+    "row": 15,
+    "x": 1568,
+    "y": 480,
+    "tileSize": 32,
+    "label": "cracked bricks"
+  },
+  {
+    "col": 50,
+    "row": 15,
+    "x": 1600,
+    "y": 480,
+    "tileSize": 32,
+    "label": "wooden door"
+  },
+  {
+    "col": 51,
+    "row": 15,
+    "x": 1632,
+    "y": 480,
+    "tileSize": 32,
+    "label": "wooden wall"
+  },
+  {
+    "col": 52,
+    "row": 15,
+    "x": 1664,
+    "y": 480,
+    "tileSize": 32,
+    "label": "stone floor"
+  },
+  {
+    "col": 53,
+    "row": 15,
+    "x": 1696,
+    "y": 480,
+    "tileSize": 32,
+    "label": "spiral pattern"
+  },
+  {
+    "col": 54,
+    "row": 15,
+    "x": 1728,
+    "y": 480,
+    "tileSize": 32,
+    "label": "stone wall"
+  },
+  {
+    "col": 55,
+    "row": 15,
+    "x": 1760,
+    "y": 480,
+    "tileSize": 32,
+    "label": "stone wall"
+  },
+  {
+    "col": 56,
+    "row": 15,
+    "x": 1792,
+    "y": 480,
+    "tileSize": 32,
+    "label": "stone wall"
+  },
+  {
+    "col": 57,
+    "row": 15,
+    "x": 1824,
+    "y": 480,
+    "tileSize": 32,
+    "label": "yellow trees"
+  },
+  {
+    "col": 58,
+    "row": 15,
+    "x": 1856,
+    "y": 480,
+    "tileSize": 32,
+    "label": "yellow trees"
+  },
+  {
+    "col": 59,
+    "row": 15,
+    "x": 1888,
+    "y": 480,
+    "tileSize": 32,
+    "label": "yellow trees"
+  },
+  {
+    "col": 60,
+    "row": 15,
+    "x": 1920,
+    "y": 480,
+    "tileSize": 32,
+    "label": "yellow trees"
+  },
+  {
+    "col": 61,
+    "row": 15,
+    "x": 1952,
+    "y": 480,
+    "tileSize": 32,
+    "label": "yellow trees"
+  },
+  {
+    "col": 62,
+    "row": 15,
+    "x": 1984,
+    "y": 480,
+    "tileSize": 32,
+    "label": "yellow trees"
+  },
+  {
+    "col": 63,
+    "row": 15,
+    "x": 2016,
+    "y": 480,
+    "tileSize": 32,
+    "label": "yellow moss"
+  },
+  {
+    "col": 0,
+    "row": 16,
+    "x": 0,
+    "y": 512,
+    "tileSize": 32,
+    "label": "stone wall"
+  },
+  {
+    "col": 1,
+    "row": 16,
+    "x": 32,
+    "y": 512,
+    "tileSize": 32,
+    "label": "dark stone wall"
+  },
+  {
+    "col": 2,
+    "row": 16,
+    "x": 64,
+    "y": 512,
+    "tileSize": 32,
+    "label": "stone face"
+  },
+  {
+    "col": 3,
+    "row": 16,
+    "x": 96,
+    "y": 512,
+    "tileSize": 32,
+    "label": "wolf face"
+  },
+  {
+    "col": 4,
+    "row": 16,
+    "x": 128,
+    "y": 512,
+    "tileSize": 32,
+    "label": "cracked wall"
+  },
+  {
+    "col": 5,
+    "row": 16,
+    "x": 160,
+    "y": 512,
+    "tileSize": 32,
+    "label": "darker stone wall"
+  },
+  {
+    "col": 6,
+    "row": 16,
+    "x": 192,
+    "y": 512,
+    "tileSize": 32,
+    "label": "stone wall"
+  },
+  {
+    "col": 7,
+    "row": 16,
+    "x": 224,
+    "y": 512,
+    "tileSize": 32,
+    "label": "stone bricks"
+  },
+  {
+    "col": 8,
+    "row": 16,
+    "x": 256,
+    "y": 512,
+    "tileSize": 32,
+    "label": "unknown"
+  },
+  {
+    "col": 9,
+    "row": 16,
+    "x": 288,
+    "y": 512,
+    "tileSize": 32,
+    "label": "water shallow"
+  },
+  {
+    "col": 10,
+    "row": 16,
+    "x": 320,
+    "y": 512,
+    "tileSize": 32,
+    "label": "water medium"
+  },
+  {
+    "col": 11,
+    "row": 16,
+    "x": 352,
+    "y": 512,
+    "tileSize": 32,
+    "label": "water deep"
+  },
+  {
+    "col": 12,
+    "row": 16,
+    "x": 384,
+    "y": 512,
+    "tileSize": 32,
+    "label": "stone wall"
+  },
+  {
+    "col": 13,
+    "row": 16,
+    "x": 416,
+    "y": 512,
+    "tileSize": 32,
+    "label": "wooden floor"
+  },
+  {
+    "col": 14,
+    "row": 16,
+    "x": 448,
+    "y": 512,
+    "tileSize": 32,
+    "label": "wooden planks"
+  },
+  {
+    "col": 15,
+    "row": 16,
+    "x": 480,
+    "y": 512,
+    "tileSize": 32,
+    "label": "stone brick"
+  },
+  {
+    "col": 16,
+    "row": 16,
+    "x": 512,
+    "y": 512,
+    "tileSize": 32,
+    "label": "metal bars"
+  },
+  {
+    "col": 17,
+    "row": 16,
+    "x": 544,
+    "y": 512,
+    "tileSize": 32,
+    "label": "stone tiles"
+  },
+  {
+    "col": 18,
+    "row": 16,
+    "x": 576,
+    "y": 512,
+    "tileSize": 32,
+    "label": "metal floor"
+  },
+  {
+    "col": 19,
+    "row": 16,
+    "x": 608,
+    "y": 512,
+    "tileSize": 32,
+    "label": "stone brick wall"
+  },
+  {
+    "col": 20,
+    "row": 16,
+    "x": 640,
+    "y": 512,
+    "tileSize": 32,
+    "label": "grey wall"
+  },
+  {
+    "col": 21,
+    "row": 16,
+    "x": 672,
+    "y": 512,
+    "tileSize": 32,
+    "label": "forest canopy"
+  },
+  {
+    "col": 22,
+    "row": 16,
+    "x": 704,
+    "y": 512,
+    "tileSize": 32,
+    "label": "dense forest"
+  },
+  {
+    "col": 23,
+    "row": 16,
+    "x": 736,
+    "y": 512,
+    "tileSize": 32,
+    "label": "autumn forest"
+  },
+  {
+    "col": 24,
+    "row": 16,
+    "x": 768,
+    "y": 512,
+    "tileSize": 32,
+    "label": "mixed forest"
+  },
+  {
+    "col": 25,
+    "row": 16,
+    "x": 800,
+    "y": 512,
+    "tileSize": 32,
+    "label": "bright forest"
+  },
+  {
+    "col": 26,
+    "row": 16,
+    "x": 832,
+    "y": 512,
+    "tileSize": 32,
+    "label": "golden forest"
+  },
+  {
+    "col": 27,
+    "row": 16,
+    "x": 864,
+    "y": 512,
+    "tileSize": 32,
+    "label": "sparse forest"
+  },
+  {
+    "col": 28,
+    "row": 16,
+    "x": 896,
+    "y": 512,
+    "tileSize": 32,
+    "label": "autumn trees"
+  },
+  {
+    "col": 29,
+    "row": 16,
+    "x": 928,
+    "y": 512,
+    "tileSize": 32,
+    "label": "moss floor"
+  },
+  {
+    "col": 30,
+    "row": 16,
+    "x": 960,
+    "y": 512,
+    "tileSize": 32,
+    "label": "moss patch"
+  },
+  {
+    "col": 31,
+    "row": 16,
+    "x": 992,
+    "y": 512,
+    "tileSize": 32,
+    "label": "dirt floor"
+  },
+  {
+    "col": 32,
+    "row": 16,
+    "x": 1024,
+    "y": 512,
+    "tileSize": 32,
+    "label": "stone floor"
+  },
+  {
+    "col": 33,
+    "row": 16,
+    "x": 1056,
+    "y": 512,
+    "tileSize": 32,
+    "label": "dark stone"
+  },
+  {
+    "col": 34,
+    "row": 16,
+    "x": 1088,
+    "y": 512,
+    "tileSize": 32,
+    "label": "red stone"
+  },
+  {
+    "col": 35,
+    "row": 16,
+    "x": 1120,
+    "y": 512,
+    "tileSize": 32,
+    "label": "crimson floor"
+  },
+  {
+    "col": 36,
+    "row": 16,
+    "x": 1152,
+    "y": 512,
+    "tileSize": 32,
+    "label": "blood floor"
+  },
+  {
+    "col": 37,
+    "row": 16,
+    "x": 1184,
+    "y": 512,
+    "tileSize": 32,
+    "label": "dark blood"
+  },
+  {
+    "col": 38,
+    "row": 16,
+    "x": 1216,
+    "y": 512,
+    "tileSize": 32,
+    "label": "red cavern"
+  },
+  {
+    "col": 39,
+    "row": 16,
+    "x": 1248,
+    "y": 512,
+    "tileSize": 32,
+    "label": "red carpet"
+  },
+  {
+    "col": 40,
+    "row": 16,
+    "x": 1280,
+    "y": 512,
+    "tileSize": 32,
+    "label": "red banner"
+  },
+  {
+    "col": 41,
+    "row": 16,
+    "x": 1312,
+    "y": 512,
+    "tileSize": 32,
+    "label": "red gem"
+  },
+  {
+    "col": 42,
+    "row": 16,
+    "x": 1344,
+    "y": 512,
+    "tileSize": 32,
+    "label": "dark wall"
+  },
+  {
+    "col": 43,
+    "row": 16,
+    "x": 1376,
+    "y": 512,
+    "tileSize": 32,
+    "label": "stone wall"
+  },
+  {
+    "col": 44,
+    "row": 16,
+    "x": 1408,
+    "y": 512,
+    "tileSize": 32,
+    "label": "cracked stone"
+  },
+  {
+    "col": 45,
+    "row": 16,
+    "x": 1440,
+    "y": 512,
+    "tileSize": 32,
+    "label": "grey brick"
+  },
+  {
+    "col": 46,
+    "row": 16,
+    "x": 1472,
+    "y": 512,
+    "tileSize": 32,
+    "label": "golden wall"
+  },
+  {
+    "col": 47,
+    "row": 16,
+    "x": 1504,
+    "y": 512,
+    "tileSize": 32,
+    "label": "brown wall"
+  },
+  {
+    "col": 48,
+    "row": 16,
+    "x": 1536,
+    "y": 512,
+    "tileSize": 32,
+    "label": "ornate wall"
+  },
+  {
+    "col": 49,
+    "row": 16,
+    "x": 1568,
+    "y": 512,
+    "tileSize": 32,
+    "label": "dark stone wall"
+  },
+  {
+    "col": 50,
+    "row": 16,
+    "x": 1600,
+    "y": 512,
+    "tileSize": 32,
+    "label": "ornate stone wall"
+  },
+  {
+    "col": 51,
+    "row": 16,
+    "x": 1632,
+    "y": 512,
+    "tileSize": 32,
+    "label": "dirt path"
+  },
+  {
+    "col": 52,
+    "row": 16,
+    "x": 1664,
+    "y": 512,
+    "tileSize": 32,
+    "label": "dirt ground"
+  },
+  {
+    "col": 53,
+    "row": 16,
+    "x": 1696,
+    "y": 512,
+    "tileSize": 32,
+    "label": "dirt terrain"
+  },
+  {
+    "col": 54,
+    "row": 16,
+    "x": 1728,
+    "y": 512,
+    "tileSize": 32,
+    "label": "worn dirt"
+  },
+  {
+    "col": 55,
+    "row": 16,
+    "x": 1760,
+    "y": 512,
+    "tileSize": 32,
+    "label": "faded dirt"
+  },
+  {
+    "col": 56,
+    "row": 16,
+    "x": 1792,
+    "y": 512,
+    "tileSize": 32,
+    "label": "old dirt"
+  },
+  {
+    "col": 57,
+    "row": 16,
+    "x": 1824,
+    "y": 512,
+    "tileSize": 32,
+    "label": "ancient dirt"
+  },
+  {
+    "col": 58,
+    "row": 16,
+    "x": 1856,
+    "y": 512,
+    "tileSize": 32,
+    "label": "cracked dirt"
+  },
+  {
+    "col": 59,
+    "row": 16,
+    "x": 1888,
+    "y": 512,
+    "tileSize": 32,
+    "label": "yellow brick wall"
+  },
+  {
+    "col": 60,
+    "row": 16,
+    "x": 1920,
+    "y": 512,
+    "tileSize": 32,
+    "label": "yellow brick wall"
+  },
+  {
+    "col": 11,
+    "row": 17,
+    "x": 352,
+    "y": 544,
+    "tileSize": 32,
+    "label": "stone wall"
+  },
+  {
+    "col": 12,
+    "row": 17,
+    "x": 384,
+    "y": 544,
+    "tileSize": 32,
+    "label": "brown stone wall"
+  },
+  {
+    "col": 13,
+    "row": 17,
+    "x": 416,
+    "y": 544,
+    "tileSize": 32,
+    "label": "water"
+  },
+  {
+    "col": 14,
+    "row": 17,
+    "x": 448,
+    "y": 544,
+    "tileSize": 32,
+    "label": "water"
+  },
+  {
+    "col": 15,
+    "row": 17,
+    "x": 480,
+    "y": 544,
+    "tileSize": 32,
+    "label": "water"
+  },
+  {
+    "col": 16,
+    "row": 17,
+    "x": 512,
+    "y": 544,
+    "tileSize": 32,
+    "label": "stone pillars"
+  },
+  {
+    "col": 17,
+    "row": 17,
+    "x": 544,
+    "y": 544,
+    "tileSize": 32,
+    "label": "water"
+  },
+  {
+    "col": 18,
+    "row": 17,
+    "x": 576,
+    "y": 544,
+    "tileSize": 32,
+    "label": "grass"
+  },
+  {
+    "col": 19,
+    "row": 17,
+    "x": 608,
+    "y": 544,
+    "tileSize": 32,
+    "label": "forest trees"
+  },
+  {
+    "col": 20,
+    "row": 17,
+    "x": 640,
+    "y": 544,
+    "tileSize": 32,
+    "label": "forest trees"
+  },
+  {
+    "col": 21,
+    "row": 17,
+    "x": 672,
+    "y": 544,
+    "tileSize": 32,
+    "label": "forest trees"
+  },
+  {
+    "col": 22,
+    "row": 17,
+    "x": 704,
+    "y": 544,
+    "tileSize": 32,
+    "label": "forest trees"
+  },
+  {
+    "col": 23,
+    "row": 17,
+    "x": 736,
+    "y": 544,
+    "tileSize": 32,
+    "label": "forest trees"
+  },
+  {
+    "col": 24,
+    "row": 17,
+    "x": 768,
+    "y": 544,
+    "tileSize": 32,
+    "label": "forest trees"
+  },
+  {
+    "col": 25,
+    "row": 17,
+    "x": 800,
+    "y": 544,
+    "tileSize": 32,
+    "label": "forest trees"
+  },
+  {
+    "col": 26,
+    "row": 17,
+    "x": 832,
+    "y": 544,
+    "tileSize": 32,
+    "label": "forest trees"
+  },
+  {
+    "col": 27,
+    "row": 17,
+    "x": 864,
+    "y": 544,
+    "tileSize": 32,
+    "label": "forest trees"
+  },
+  {
+    "col": 28,
+    "row": 17,
+    "x": 896,
+    "y": 544,
+    "tileSize": 32,
+    "label": "minimap forest"
+  },
+  {
+    "col": 29,
+    "row": 17,
+    "x": 928,
+    "y": 544,
+    "tileSize": 32,
+    "label": "mossy stone pattern"
+  },
+  {
+    "col": 30,
+    "row": 17,
+    "x": 960,
+    "y": 544,
+    "tileSize": 32,
+    "label": "green brick wall"
+  },
+  {
+    "col": 31,
+    "row": 17,
+    "x": 992,
+    "y": 544,
+    "tileSize": 32,
+    "label": "brown brick wall"
+  },
+  {
+    "col": 32,
+    "row": 17,
+    "x": 1024,
+    "y": 544,
+    "tileSize": 32,
+    "label": "dark brick wall"
+  },
+  {
+    "col": 33,
+    "row": 17,
+    "x": 1056,
+    "y": 544,
+    "tileSize": 32,
+    "label": "cracked brick wall"
+  },
+  {
+    "col": 34,
+    "row": 17,
+    "x": 1088,
+    "y": 544,
+    "tileSize": 32,
+    "label": "damaged brick wall"
+  },
+  {
+    "col": 35,
+    "row": 17,
+    "x": 1120,
+    "y": 544,
+    "tileSize": 32,
+    "label": "weathered brick wall"
+  },
+  {
+    "col": 36,
+    "row": 17,
+    "x": 1152,
+    "y": 544,
+    "tileSize": 32,
+    "label": "deteriorated brick wall"
+  },
+  {
+    "col": 37,
+    "row": 17,
+    "x": 1184,
+    "y": 544,
+    "tileSize": 32,
+    "label": "ruined brick wall"
+  },
+  {
+    "col": 38,
+    "row": 17,
+    "x": 1216,
+    "y": 544,
+    "tileSize": 32,
+    "label": "overgrown brick wall"
+  },
+  {
+    "col": 39,
+    "row": 17,
+    "x": 1248,
+    "y": 544,
+    "tileSize": 32,
+    "label": "grass floor"
+  },
+  {
+    "col": 40,
+    "row": 17,
+    "x": 1280,
+    "y": 544,
+    "tileSize": 32,
+    "label": "wooden door"
+  },
+  {
+    "col": 41,
+    "row": 17,
+    "x": 1312,
+    "y": 544,
+    "tileSize": 32,
+    "label": "ornate door"
+  },
+  {
+    "col": 42,
+    "row": 17,
+    "x": 1344,
+    "y": 544,
+    "tileSize": 32,
+    "label": "stone door"
+  },
+  {
+    "col": 43,
+    "row": 17,
+    "x": 1376,
+    "y": 544,
+    "tileSize": 32,
+    "label": "metal door"
+  },
+  {
+    "col": 44,
+    "row": 17,
+    "x": 1408,
+    "y": 544,
+    "tileSize": 32,
+    "label": "dark stone door"
+  },
+  {
+    "col": 45,
+    "row": 17,
+    "x": 1440,
+    "y": 544,
+    "tileSize": 32,
+    "label": "stone wall"
+  },
+  {
+    "col": 46,
+    "row": 17,
+    "x": 1472,
+    "y": 544,
+    "tileSize": 32,
+    "label": "grey wall"
+  },
+  {
+    "col": 47,
+    "row": 17,
+    "x": 1504,
+    "y": 544,
+    "tileSize": 32,
+    "label": "metal wall"
+  },
+  {
+    "col": 48,
+    "row": 17,
+    "x": 1536,
+    "y": 544,
+    "tileSize": 32,
+    "label": "dark metal wall"
+  },
+  {
+    "col": 49,
+    "row": 17,
+    "x": 1568,
+    "y": 544,
+    "tileSize": 32,
+    "label": "stone wall"
+  },
+  {
+    "col": 50,
+    "row": 17,
+    "x": 1600,
+    "y": 544,
+    "tileSize": 32,
+    "label": "cracked wall"
+  },
+  {
+    "col": 51,
+    "row": 17,
+    "x": 1632,
+    "y": 544,
+    "tileSize": 32,
+    "label": "damaged wall"
+  },
+  {
+    "col": 52,
+    "row": 17,
+    "x": 1664,
+    "y": 544,
+    "tileSize": 32,
+    "label": "worn wall"
+  },
+  {
+    "col": 53,
+    "row": 17,
+    "x": 1696,
+    "y": 544,
+    "tileSize": 32,
+    "label": "brown wall"
+  },
+  {
+    "col": 54,
+    "row": 17,
+    "x": 1728,
+    "y": 544,
+    "tileSize": 32,
+    "label": "dark brown wall"
+  },
+  {
+    "col": 55,
+    "row": 17,
+    "x": 1760,
+    "y": 544,
+    "tileSize": 32,
+    "label": "wooden wall"
+  },
+  {
+    "col": 56,
+    "row": 17,
+    "x": 1792,
+    "y": 544,
+    "tileSize": 32,
+    "label": "aged wood wall"
+  },
+  {
+    "col": 57,
+    "row": 17,
+    "x": 1824,
+    "y": 544,
+    "tileSize": 32,
+    "label": "dark stone wall"
+  },
+  {
+    "col": 58,
+    "row": 17,
+    "x": 1856,
+    "y": 544,
+    "tileSize": 32,
+    "label": "black stone wall"
+  },
+  {
+    "col": 59,
+    "row": 17,
+    "x": 1888,
+    "y": 544,
+    "tileSize": 32,
+    "label": "dark stone wall"
+  },
+  {
+    "col": 60,
+    "row": 17,
+    "x": 1920,
+    "y": 544,
+    "tileSize": 32,
+    "label": "stone wall"
+  },
+  {
+    "col": 61,
+    "row": 17,
+    "x": 1952,
+    "y": 544,
+    "tileSize": 32,
+    "label": "light stone wall"
+  },
+  {
+    "col": 62,
+    "row": 17,
+    "x": 1984,
+    "y": 544,
+    "tileSize": 32,
+    "label": "stone brick wall"
+  },
+  {
+    "col": 63,
+    "row": 17,
+    "x": 2016,
+    "y": 544,
+    "tileSize": 32,
+    "label": "smooth stone wall"
+  },
+  {
+    "col": 0,
+    "row": 18,
+    "x": 0,
+    "y": 576,
+    "tileSize": 32,
+    "label": "weathered stone wall"
+  },
+  {
+    "col": 1,
+    "row": 18,
+    "x": 32,
+    "y": 576,
+    "tileSize": 32,
+    "label": "yellow rune 1"
+  },
+  {
+    "col": 2,
+    "row": 18,
+    "x": 64,
+    "y": 576,
+    "tileSize": 32,
+    "label": "yellow rune 2"
+  },
+  {
+    "col": 3,
+    "row": 18,
+    "x": 96,
+    "y": 576,
+    "tileSize": 32,
+    "label": "yellow rune 3"
+  },
+  {
+    "col": 4,
+    "row": 18,
+    "x": 128,
+    "y": 576,
+    "tileSize": 32,
+    "label": "yellow rune 4"
+  },
+  {
+    "col": 5,
+    "row": 18,
+    "x": 160,
+    "y": 576,
+    "tileSize": 32,
+    "label": "yellow snake"
+  },
+  {
+    "col": 6,
+    "row": 18,
+    "x": 192,
+    "y": 576,
+    "tileSize": 32,
+    "label": "yellow pickaxe"
+  },
+  {
+    "col": 7,
+    "row": 18,
+    "x": 224,
+    "y": 576,
+    "tileSize": 32,
+    "label": "yellow face"
+  },
+  {
+    "col": 8,
+    "row": 18,
+    "x": 256,
+    "y": 576,
+    "tileSize": 32,
+    "label": "yellow key"
+  },
+  {
+    "col": 9,
+    "row": 18,
+    "x": 288,
+    "y": 576,
+    "tileSize": 32,
+    "label": "yellow door"
+  },
+  {
+    "col": 10,
+    "row": 18,
+    "x": 320,
+    "y": 576,
+    "tileSize": 32,
+    "label": "stone brick"
+  },
+  {
+    "col": 11,
+    "row": 18,
+    "x": 352,
+    "y": 576,
+    "tileSize": 32,
+    "label": "stone brick"
+  },
+  {
+    "col": 12,
+    "row": 18,
+    "x": 384,
+    "y": 576,
+    "tileSize": 32,
+    "label": "stone brick"
+  },
+  {
+    "col": 13,
+    "row": 18,
+    "x": 416,
+    "y": 576,
+    "tileSize": 32,
+    "label": "stone brick"
+  },
+  {
+    "col": 14,
+    "row": 18,
+    "x": 448,
+    "y": 576,
+    "tileSize": 32,
+    "label": "stone brick"
+  },
+  {
+    "col": 15,
+    "row": 18,
+    "x": 480,
+    "y": 576,
+    "tileSize": 32,
+    "label": "grey brick wall"
+  },
+  {
+    "col": 16,
+    "row": 18,
+    "x": 512,
+    "y": 576,
+    "tileSize": 32,
+    "label": "grey brick wall"
+  },
+  {
+    "col": 17,
+    "row": 18,
+    "x": 544,
+    "y": 576,
+    "tileSize": 32,
+    "label": "grey brick wall"
+  },
+  {
+    "col": 18,
+    "row": 18,
+    "x": 576,
+    "y": 576,
+    "tileSize": 32,
+    "label": "grey brick wall"
+  },
+  {
+    "col": 19,
+    "row": 18,
+    "x": 608,
+    "y": 576,
+    "tileSize": 32,
+    "label": "grey brick wall"
+  },
+  {
+    "col": 20,
+    "row": 18,
+    "x": 640,
+    "y": 576,
+    "tileSize": 32,
+    "label": "dark void"
+  },
+  {
+    "col": 21,
+    "row": 18,
+    "x": 672,
+    "y": 576,
+    "tileSize": 32,
+    "label": "dark void"
+  },
+  {
+    "col": 22,
+    "row": 18,
+    "x": 704,
+    "y": 576,
+    "tileSize": 32,
+    "label": "dark void"
+  },
+  {
+    "col": 23,
+    "row": 18,
+    "x": 736,
+    "y": 576,
+    "tileSize": 32,
+    "label": "dark void"
+  },
+  {
+    "col": 24,
+    "row": 18,
+    "x": 768,
+    "y": 576,
+    "tileSize": 32,
+    "label": "blue water"
+  },
+  {
+    "col": 25,
+    "row": 18,
+    "x": 800,
+    "y": 576,
+    "tileSize": 32,
+    "label": "dark void"
+  },
+  {
+    "col": 26,
+    "row": 18,
+    "x": 832,
+    "y": 576,
+    "tileSize": 32,
+    "label": "stone wall"
+  },
+  {
+    "col": 27,
+    "row": 18,
+    "x": 864,
+    "y": 576,
+    "tileSize": 32,
+    "label": "stone floor"
+  },
+  {
+    "col": 28,
+    "row": 18,
+    "x": 896,
+    "y": 576,
+    "tileSize": 32,
+    "label": "stone brick"
+  },
+  {
+    "col": 29,
+    "row": 18,
+    "x": 928,
+    "y": 576,
+    "tileSize": 32,
+    "label": "dark stone"
+  },
+  {
+    "col": 30,
+    "row": 18,
+    "x": 960,
+    "y": 576,
+    "tileSize": 32,
+    "label": "yellow banner"
+  },
+  {
+    "col": 31,
+    "row": 18,
+    "x": 992,
+    "y": 576,
+    "tileSize": 32,
+    "label": "patterned tapestry"
+  },
+  {
+    "col": 32,
+    "row": 18,
+    "x": 1024,
+    "y": 576,
+    "tileSize": 32,
+    "label": "decorative cloth"
+  },
+  {
+    "col": 33,
+    "row": 18,
+    "x": 1056,
+    "y": 576,
+    "tileSize": 32,
+    "label": "ornate carpet"
+  },
+  {
+    "col": 34,
+    "row": 18,
+    "x": 1088,
+    "y": 576,
+    "tileSize": 32,
+    "label": "wooden panel"
+  },
+  {
+    "col": 35,
+    "row": 18,
+    "x": 1120,
+    "y": 576,
+    "tileSize": 32,
+    "label": "glowing frame"
+  },
+  {
+    "col": 36,
+    "row": 18,
+    "x": 1152,
+    "y": 576,
+    "tileSize": 32,
+    "label": "empty frame"
+  },
+  {
+    "col": 37,
+    "row": 18,
+    "x": 1184,
+    "y": 576,
+    "tileSize": 32,
+    "label": "black void"
+  },
+  {
+    "col": 38,
+    "row": 18,
+    "x": 1216,
+    "y": 576,
+    "tileSize": 32,
+    "label": "stone wall"
+  },
+  {
+    "col": 39,
+    "row": 18,
+    "x": 1248,
+    "y": 576,
+    "tileSize": 32,
+    "label": "stone wall"
+  },
+  {
+    "col": 40,
+    "row": 18,
+    "x": 1280,
+    "y": 576,
+    "tileSize": 32,
+    "label": "stone wall"
+  },
+  {
+    "col": 41,
+    "row": 18,
+    "x": 1312,
+    "y": 576,
+    "tileSize": 32,
+    "label": "stone wall"
+  },
+  {
+    "col": 42,
+    "row": 18,
+    "x": 1344,
+    "y": 576,
+    "tileSize": 32,
+    "label": "wooden door"
+  },
+  {
+    "col": 43,
+    "row": 18,
+    "x": 1376,
+    "y": 576,
+    "tileSize": 32,
+    "label": "wooden door"
+  },
+  {
+    "col": 44,
+    "row": 18,
+    "x": 1408,
+    "y": 576,
+    "tileSize": 32,
+    "label": "wooden door"
+  },
+  {
+    "col": 45,
+    "row": 18,
+    "x": 1440,
+    "y": 576,
+    "tileSize": 32,
+    "label": "stone wall"
+  },
+  {
+    "col": 46,
+    "row": 18,
+    "x": 1472,
+    "y": 576,
+    "tileSize": 32,
+    "label": "stone floor"
+  },
+  {
+    "col": 47,
+    "row": 18,
+    "x": 1504,
+    "y": 576,
+    "tileSize": 32,
+    "label": "wooden floor"
+  },
+  {
+    "col": 48,
+    "row": 18,
+    "x": 1536,
+    "y": 576,
+    "tileSize": 32,
+    "label": "dirt floor"
+  },
+  {
+    "col": 49,
+    "row": 18,
+    "x": 1568,
+    "y": 576,
+    "tileSize": 32,
+    "label": "grass floor"
+  },
+  {
+    "col": 50,
+    "row": 18,
+    "x": 1600,
+    "y": 576,
+    "tileSize": 32,
+    "label": "stone bricks"
+  },
+  {
+    "col": 51,
+    "row": 18,
+    "x": 1632,
+    "y": 576,
+    "tileSize": 32,
+    "label": "dark stone"
+  },
+  {
+    "col": 52,
+    "row": 18,
+    "x": 1664,
+    "y": 576,
+    "tileSize": 32,
+    "label": "red carpet"
+  },
+  {
+    "col": 53,
+    "row": 18,
+    "x": 1696,
+    "y": 576,
+    "tileSize": 32,
+    "label": "red floor"
+  },
+  {
+    "col": 54,
+    "row": 18,
+    "x": 1728,
+    "y": 576,
+    "tileSize": 32,
+    "label": "lava"
+  },
+  {
+    "col": 55,
+    "row": 18,
+    "x": 1760,
+    "y": 576,
+    "tileSize": 32,
+    "label": "lava"
+  },
+  {
+    "col": 56,
+    "row": 18,
+    "x": 1792,
+    "y": 576,
+    "tileSize": 32,
+    "label": "sand"
+  },
+  {
+    "col": 57,
+    "row": 18,
+    "x": 1824,
+    "y": 576,
+    "tileSize": 32,
+    "label": "sand with rocks"
+  },
+  {
+    "col": 58,
+    "row": 18,
+    "x": 1856,
+    "y": 576,
+    "tileSize": 32,
+    "label": "sand with rocks"
+  },
+  {
+    "col": 59,
+    "row": 18,
+    "x": 1888,
+    "y": 576,
+    "tileSize": 32,
+    "label": "sand with rocks"
+  },
+  {
+    "col": 60,
+    "row": 18,
+    "x": 1920,
+    "y": 576,
+    "tileSize": 32,
+    "label": "sand with creature"
+  },
+  {
+    "col": 61,
+    "row": 18,
+    "x": 1952,
+    "y": 576,
+    "tileSize": 32,
+    "label": "sand with creature"
+  },
+  {
+    "col": 62,
+    "row": 18,
+    "x": 1984,
+    "y": 576,
+    "tileSize": 32,
+    "label": "sand with teeth"
+  },
+  {
+    "col": 63,
+    "row": 18,
+    "x": 2016,
+    "y": 576,
+    "tileSize": 32,
+    "label": "stone wall"
+  },
+  {
+    "col": 0,
+    "row": 19,
+    "x": 0,
+    "y": 608,
+    "tileSize": 32,
+    "label": "brick wall"
+  },
+  {
+    "col": 1,
+    "row": 19,
+    "x": 32,
+    "y": 608,
+    "tileSize": 32,
+    "label": "stone wall"
+  },
+  {
+    "col": 2,
+    "row": 19,
+    "x": 64,
+    "y": 608,
+    "tileSize": 32,
+    "label": "mossy stone wall"
+  },
+  {
+    "col": 3,
+    "row": 19,
+    "x": 96,
+    "y": 608,
+    "tileSize": 32,
+    "label": "cracked stone wall"
+  },
+  {
+    "col": 4,
+    "row": 19,
+    "x": 128,
+    "y": 608,
+    "tileSize": 32,
+    "label": "damaged stone wall"
+  },
+  {
+    "col": 5,
+    "row": 19,
+    "x": 160,
+    "y": 608,
+    "tileSize": 32,
+    "label": "ruined stone wall"
+  },
+  {
+    "col": 6,
+    "row": 19,
+    "x": 192,
+    "y": 608,
+    "tileSize": 32,
+    "label": "cyan water"
+  },
+  {
+    "col": 7,
+    "row": 19,
+    "x": 224,
+    "y": 608,
+    "tileSize": 32,
+    "label": "dark water"
+  },
+  {
+    "col": 8,
+    "row": 19,
+    "x": 256,
+    "y": 608,
+    "tileSize": 32,
+    "label": "deep water"
+  },
+  {
+    "col": 9,
+    "row": 19,
+    "x": 288,
+    "y": 608,
+    "tileSize": 32,
+    "label": "shallow water"
+  },
+  {
+    "col": 10,
+    "row": 19,
+    "x": 320,
+    "y": 608,
+    "tileSize": 32,
+    "label": "sandy ground"
+  },
+  {
+    "col": 11,
+    "row": 19,
+    "x": 352,
+    "y": 608,
+    "tileSize": 32,
+    "label": "chain link"
+  },
+  {
+    "col": 12,
+    "row": 19,
+    "x": 384,
+    "y": 608,
+    "tileSize": 32,
+    "label": "stone wall"
+  },
+  {
+    "col": 13,
+    "row": 19,
+    "x": 416,
+    "y": 608,
+    "tileSize": 32,
+    "label": "water"
+  },
+  {
+    "col": 14,
+    "row": 19,
+    "x": 448,
+    "y": 608,
+    "tileSize": 32,
+    "label": "deep water"
+  },
+  {
+    "col": 15,
+    "row": 19,
+    "x": 480,
+    "y": 608,
+    "tileSize": 32,
+    "label": "dark water"
+  },
+  {
+    "col": 16,
+    "row": 19,
+    "x": 512,
+    "y": 608,
+    "tileSize": 32,
+    "label": "dark water"
+  },
+  {
+    "col": 17,
+    "row": 19,
+    "x": 544,
+    "y": 608,
+    "tileSize": 32,
+    "label": "blue tile"
+  },
+  {
+    "col": 18,
+    "row": 19,
+    "x": 576,
+    "y": 608,
+    "tileSize": 32,
+    "label": "blue tile"
+  },
+  {
+    "col": 19,
+    "row": 19,
+    "x": 608,
+    "y": 608,
+    "tileSize": 32,
+    "label": "blue tile"
+  },
+  {
+    "col": 20,
+    "row": 19,
+    "x": 640,
+    "y": 608,
+    "tileSize": 32,
+    "label": "blue tile"
+  },
+  {
+    "col": 21,
+    "row": 19,
+    "x": 672,
+    "y": 608,
+    "tileSize": 32,
+    "label": "red brick wall"
+  },
+  {
+    "col": 22,
+    "row": 19,
+    "x": 704,
+    "y": 608,
+    "tileSize": 32,
+    "label": "red stone wall"
+  },
+  {
+    "col": 23,
+    "row": 19,
+    "x": 736,
+    "y": 608,
+    "tileSize": 32,
+    "label": "dark red floor"
+  },
+  {
+    "col": 24,
+    "row": 19,
+    "x": 768,
+    "y": 608,
+    "tileSize": 32,
+    "label": "carved red tile"
+  },
+  {
+    "col": 25,
+    "row": 19,
+    "x": 800,
+    "y": 608,
+    "tileSize": 32,
+    "label": "ornate red floor"
+  },
+  {
+    "col": 26,
+    "row": 19,
+    "x": 832,
+    "y": 608,
+    "tileSize": 32,
+    "label": "red dungeon wall"
+  },
+  {
+    "col": 27,
+    "row": 19,
+    "x": 864,
+    "y": 608,
+    "tileSize": 32,
+    "label": "textured red wall"
+  },
+  {
+    "col": 28,
+    "row": 19,
+    "x": 896,
+    "y": 608,
+    "tileSize": 32,
+    "label": "cracked red stone"
+  },
+  {
+    "col": 29,
+    "row": 19,
+    "x": 928,
+    "y": 608,
+    "tileSize": 32,
+    "label": "blue brick wall"
+  },
+  {
+    "col": 30,
+    "row": 19,
+    "x": 960,
+    "y": 608,
+    "tileSize": 32,
+    "label": "purple brick wall"
+  },
+  {
+    "col": 31,
+    "row": 19,
+    "x": 992,
+    "y": 608,
+    "tileSize": 32,
+    "label": "blue stone wall"
+  },
+  {
+    "col": 32,
+    "row": 19,
+    "x": 1024,
+    "y": 608,
+    "tileSize": 32,
+    "label": "purple stone wall"
+  },
+  {
+    "col": 33,
+    "row": 19,
+    "x": 1056,
+    "y": 608,
+    "tileSize": 32,
+    "label": "gray stone wall"
+  },
+  {
+    "col": 34,
+    "row": 19,
+    "x": 1088,
+    "y": 608,
+    "tileSize": 32,
+    "label": "teal stone wall"
+  },
+  {
+    "col": 35,
+    "row": 19,
+    "x": 1120,
+    "y": 608,
+    "tileSize": 32,
+    "label": "blue stone wall"
+  },
+  {
+    "col": 36,
+    "row": 19,
+    "x": 1152,
+    "y": 608,
+    "tileSize": 32,
+    "label": "dark blue stone wall"
+  },
+  {
+    "col": 37,
+    "row": 19,
+    "x": 1184,
+    "y": 608,
+    "tileSize": 32,
+    "label": "gold stone wall"
+  },
+  {
+    "col": 38,
+    "row": 19,
+    "x": 1216,
+    "y": 608,
+    "tileSize": 32,
+    "label": "brown stone wall"
+  },
+  {
+    "col": 39,
+    "row": 19,
+    "x": 1248,
+    "y": 608,
+    "tileSize": 32,
+    "label": "dark brown stone wall"
+  },
+  {
+    "col": 40,
+    "row": 19,
+    "x": 1280,
+    "y": 608,
+    "tileSize": 32,
+    "label": "orange stone wall"
+  },
+  {
+    "col": 41,
+    "row": 19,
+    "x": 1312,
+    "y": 608,
+    "tileSize": 32,
+    "label": "red stone wall"
+  },
+  {
+    "col": 42,
+    "row": 19,
+    "x": 1344,
+    "y": 608,
+    "tileSize": 32,
+    "label": "brown stone wall"
+  },
+  {
+    "col": 43,
+    "row": 19,
+    "x": 1376,
+    "y": 608,
+    "tileSize": 32,
+    "label": "yellow stone wall"
+  },
+  {
+    "col": 44,
+    "row": 19,
+    "x": 1408,
+    "y": 608,
+    "tileSize": 32,
+    "label": "tan stone wall"
+  },
+  {
+    "col": 45,
+    "row": 19,
+    "x": 1440,
+    "y": 608,
+    "tileSize": 32,
+    "label": "teal stone wall"
+  },
+  {
+    "col": 46,
+    "row": 19,
+    "x": 1472,
+    "y": 608,
+    "tileSize": 32,
+    "label": "dark stone wall"
+  },
+  {
+    "col": 47,
+    "row": 19,
+    "x": 1504,
+    "y": 608,
+    "tileSize": 32,
+    "label": "blue stone wall"
+  },
+  {
+    "col": 48,
+    "row": 19,
+    "x": 1536,
+    "y": 608,
+    "tileSize": 32,
+    "label": "green stone wall"
+  },
+  {
+    "col": 49,
+    "row": 19,
+    "x": 1568,
+    "y": 608,
+    "tileSize": 32,
+    "label": "dark green wall"
+  },
+  {
+    "col": 50,
+    "row": 19,
+    "x": 1600,
+    "y": 608,
+    "tileSize": 32,
+    "label": "cyan floor"
+  },
+  {
+    "col": 51,
+    "row": 19,
+    "x": 1632,
+    "y": 608,
+    "tileSize": 32,
+    "label": "circuit floor"
+  },
+  {
+    "col": 52,
+    "row": 19,
+    "x": 1664,
+    "y": 608,
+    "tileSize": 32,
+    "label": "ornate tile"
+  },
+  {
+    "col": 53,
+    "row": 19,
+    "x": 1696,
+    "y": 608,
+    "tileSize": 32,
+    "label": "dark stone"
+  },
+  {
+    "col": 54,
+    "row": 19,
+    "x": 1728,
+    "y": 608,
+    "tileSize": 32,
+    "label": "wooden wall"
+  },
+  {
+    "col": 55,
+    "row": 19,
+    "x": 1760,
+    "y": 608,
+    "tileSize": 32,
+    "label": "overgrown stone"
+  },
+  {
+    "col": 56,
+    "row": 19,
+    "x": 1792,
+    "y": 608,
+    "tileSize": 32,
+    "label": "dark tile"
+  },
+  {
+    "col": 57,
+    "row": 19,
+    "x": 1824,
+    "y": 608,
+    "tileSize": 32,
+    "label": "stone floor"
+  },
+  {
+    "col": 58,
+    "row": 19,
+    "x": 1856,
+    "y": 608,
+    "tileSize": 32,
+    "label": "blue crystal"
+  },
+  {
+    "col": 59,
+    "row": 19,
+    "x": 1888,
+    "y": 608,
+    "tileSize": 32,
+    "label": "purple crystal"
+  },
+  {
+    "col": 60,
+    "row": 19,
+    "x": 1920,
+    "y": 608,
+    "tileSize": 32,
+    "label": "energy tile"
+  },
+  {
+    "col": 61,
+    "row": 19,
+    "x": 1952,
+    "y": 608,
+    "tileSize": 32,
+    "label": "grass floor"
+  },
+  {
+    "col": 62,
+    "row": 19,
+    "x": 1984,
+    "y": 608,
+    "tileSize": 32,
+    "label": "dark grass"
+  },
+  {
+    "col": 63,
+    "row": 19,
+    "x": 2016,
+    "y": 608,
+    "tileSize": 32,
+    "label": "stone path"
+  },
+  {
+    "col": 0,
+    "row": 20,
+    "x": 0,
+    "y": 640,
+    "tileSize": 32,
+    "label": "dirt floor"
+  },
+  {
+    "col": 1,
+    "row": 20,
+    "x": 32,
+    "y": 640,
+    "tileSize": 32,
+    "label": "mossy stone"
+  },
+  {
+    "col": 2,
+    "row": 20,
+    "x": 64,
+    "y": 640,
+    "tileSize": 32,
+    "label": "dark stone"
+  },
+  {
+    "col": 3,
+    "row": 20,
+    "x": 96,
+    "y": 640,
+    "tileSize": 32,
+    "label": "worn stone"
+  },
+  {
+    "col": 4,
+    "row": 20,
+    "x": 128,
+    "y": 640,
+    "tileSize": 32,
+    "label": "muddy ground"
+  },
+  {
+    "col": 5,
+    "row": 20,
+    "x": 160,
+    "y": 640,
+    "tileSize": 32,
+    "label": "water tile"
+  },
+  {
+    "col": 6,
+    "row": 20,
+    "x": 192,
+    "y": 640,
+    "tileSize": 32,
+    "label": "deep water"
+  },
+  {
+    "col": 7,
+    "row": 20,
+    "x": 224,
+    "y": 640,
+    "tileSize": 32,
+    "label": "dark stone wall"
+  },
+  {
+    "col": 8,
+    "row": 20,
+    "x": 256,
+    "y": 640,
+    "tileSize": 32,
+    "label": "stone wall"
+  },
+  {
+    "col": 9,
+    "row": 20,
+    "x": 288,
+    "y": 640,
+    "tileSize": 32,
+    "label": "stone wall"
+  },
+  {
+    "col": 10,
+    "row": 20,
+    "x": 320,
+    "y": 640,
+    "tileSize": 32,
+    "label": "dark stone wall"
+  },
+  {
+    "col": 11,
+    "row": 20,
+    "x": 352,
+    "y": 640,
+    "tileSize": 32,
+    "label": "stone wall"
+  },
+  {
+    "col": 12,
+    "row": 20,
+    "x": 384,
+    "y": 640,
+    "tileSize": 32,
+    "label": "dark blue wall"
+  },
+  {
+    "col": 13,
+    "row": 20,
+    "x": 416,
+    "y": 640,
+    "tileSize": 32,
+    "label": "stone wall"
+  },
+  {
+    "col": 14,
+    "row": 20,
+    "x": 448,
+    "y": 640,
+    "tileSize": 32,
+    "label": "dark stone wall"
+  },
+  {
+    "col": 15,
+    "row": 20,
+    "x": 480,
+    "y": 640,
+    "tileSize": 32,
+    "label": "stone wall"
+  },
+  {
+    "col": 16,
+    "row": 20,
+    "x": 512,
+    "y": 640,
+    "tileSize": 32,
+    "label": "stone wall"
+  },
+  {
+    "col": 17,
+    "row": 20,
+    "x": 544,
+    "y": 640,
+    "tileSize": 32,
+    "label": "water tile"
+  },
+  {
+    "col": 18,
+    "row": 20,
+    "x": 576,
+    "y": 640,
+    "tileSize": 32,
+    "label": "grass tile"
+  },
+  {
+    "col": 19,
+    "row": 20,
+    "x": 608,
+    "y": 640,
+    "tileSize": 32,
+    "label": "blue stone"
+  },
+  {
+    "col": 20,
+    "row": 20,
+    "x": 640,
+    "y": 640,
+    "tileSize": 32,
+    "label": "jade tile"
+  },
+  {
+    "col": 21,
+    "row": 20,
+    "x": 672,
+    "y": 640,
+    "tileSize": 32,
+    "label": "stone tile"
+  },
+  {
+    "col": 22,
+    "row": 20,
+    "x": 704,
+    "y": 640,
+    "tileSize": 32,
+    "label": "dark stone"
+  },
+  {
+    "col": 23,
+    "row": 20,
+    "x": 736,
+    "y": 640,
+    "tileSize": 32,
+    "label": "purple stone"
+  },
+  {
+    "col": 24,
+    "row": 20,
+    "x": 768,
+    "y": 640,
+    "tileSize": 32,
+    "label": "cave wall"
+  },
+  {
+    "col": 25,
+    "row": 20,
+    "x": 800,
+    "y": 640,
+    "tileSize": 32,
+    "label": "green moss"
+  },
+  {
+    "col": 26,
+    "row": 20,
+    "x": 832,
+    "y": 640,
+    "tileSize": 32,
+    "label": "brown stone"
+  },
+  {
+    "col": 27,
+    "row": 20,
+    "x": 864,
+    "y": 640,
+    "tileSize": 32,
+    "label": "stone wall"
+  },
+  {
+    "col": 28,
+    "row": 20,
+    "x": 896,
+    "y": 640,
+    "tileSize": 32,
+    "label": "purple wall"
+  },
+  {
+    "col": 29,
+    "row": 20,
+    "x": 928,
+    "y": 640,
+    "tileSize": 32,
+    "label": "moss wall"
+  },
+  {
+    "col": 30,
+    "row": 20,
+    "x": 960,
+    "y": 640,
+    "tileSize": 32,
+    "label": "teal wall"
+  },
+  {
+    "col": 31,
+    "row": 20,
+    "x": 992,
+    "y": 640,
+    "tileSize": 32,
+    "label": "olive wall"
+  },
+  {
+    "col": 32,
+    "row": 20,
+    "x": 1024,
+    "y": 640,
+    "tileSize": 32,
+    "label": "green wall"
+  },
+  {
+    "col": 33,
+    "row": 20,
+    "x": 1056,
+    "y": 640,
+    "tileSize": 32,
+    "label": "emerald wall"
+  },
+  {
+    "col": 34,
+    "row": 20,
+    "x": 1088,
+    "y": 640,
+    "tileSize": 32,
+    "label": "jade wall"
+  },
+  {
+    "col": 35,
+    "row": 20,
+    "x": 1120,
+    "y": 640,
+    "tileSize": 32,
+    "label": "yellow wall"
+  },
+  {
+    "col": 36,
+    "row": 20,
+    "x": 1152,
+    "y": 640,
+    "tileSize": 32,
+    "label": "lime wall"
+  },
+  {
+    "col": 37,
+    "row": 20,
+    "x": 1184,
+    "y": 640,
+    "tileSize": 32,
+    "label": "purple maze"
+  },
+  {
+    "col": 38,
+    "row": 20,
+    "x": 1216,
+    "y": 640,
+    "tileSize": 32,
+    "label": "brown maze"
+  },
+  {
+    "col": 39,
+    "row": 20,
+    "x": 1248,
+    "y": 640,
+    "tileSize": 32,
+    "label": "blue maze"
+  },
+  {
+    "col": 40,
+    "row": 20,
+    "x": 1280,
+    "y": 640,
+    "tileSize": 32,
+    "label": "blue pattern"
+  },
+  {
+    "col": 41,
+    "row": 20,
+    "x": 1312,
+    "y": 640,
+    "tileSize": 32,
+    "label": "purple pattern"
+  },
+  {
+    "col": 42,
+    "row": 20,
+    "x": 1344,
+    "y": 640,
+    "tileSize": 32,
+    "label": "violet maze"
+  },
+  {
+    "col": 43,
+    "row": 20,
+    "x": 1376,
+    "y": 640,
+    "tileSize": 32,
+    "label": "pink maze"
+  },
+  {
+    "col": 44,
+    "row": 20,
+    "x": 1408,
+    "y": 640,
+    "tileSize": 32,
+    "label": "red maze"
+  },
+  {
+    "col": 45,
+    "row": 20,
+    "x": 1440,
+    "y": 640,
+    "tileSize": 32,
+    "label": "orange maze"
+  },
+  {
+    "col": 46,
+    "row": 20,
+    "x": 1472,
+    "y": 640,
+    "tileSize": 32,
+    "label": "brown maze"
+  },
+  {
+    "col": 47,
+    "row": 20,
+    "x": 1504,
+    "y": 640,
+    "tileSize": 32,
+    "label": "brown brick wall"
+  },
+  {
+    "col": 48,
+    "row": 20,
+    "x": 1536,
+    "y": 640,
+    "tileSize": 32,
+    "label": "red brick wall"
+  },
+  {
+    "col": 49,
+    "row": 20,
+    "x": 1568,
+    "y": 640,
+    "tileSize": 32,
+    "label": "pink brick wall"
+  },
+  {
+    "col": 50,
+    "row": 20,
+    "x": 1600,
+    "y": 640,
+    "tileSize": 32,
+    "label": "orange brick wall"
+  },
+  {
+    "col": 51,
+    "row": 20,
+    "x": 1632,
+    "y": 640,
+    "tileSize": 32,
+    "label": "red brick floor"
+  },
+  {
+    "col": 52,
+    "row": 20,
+    "x": 1664,
+    "y": 640,
+    "tileSize": 32,
+    "label": "yellow brick floor"
+  },
+  {
+    "col": 53,
+    "row": 20,
+    "x": 1696,
+    "y": 640,
+    "tileSize": 32,
+    "label": "purple brick wall"
+  },
+  {
+    "col": 54,
+    "row": 20,
+    "x": 1728,
+    "y": 640,
+    "tileSize": 32,
+    "label": "dark brick wall"
+  },
+  {
+    "col": 55,
+    "row": 20,
+    "x": 1760,
+    "y": 640,
+    "tileSize": 32,
+    "label": "blue brick wall"
+  },
+  {
+    "col": 56,
+    "row": 20,
+    "x": 1792,
+    "y": 640,
+    "tileSize": 32,
+    "label": "magenta brick wall"
+  },
+  {
+    "col": 57,
+    "row": 20,
+    "x": 1824,
+    "y": 640,
+    "tileSize": 32,
+    "label": "purple stone"
+  },
+  {
+    "col": 58,
+    "row": 20,
+    "x": 1856,
+    "y": 640,
+    "tileSize": 32,
+    "label": "blue carved stone"
+  },
+  {
+    "col": 59,
+    "row": 20,
+    "x": 1888,
+    "y": 640,
+    "tileSize": 32,
+    "label": "deep blue tile"
+  },
+  {
+    "col": 60,
+    "row": 20,
+    "x": 1920,
+    "y": 640,
+    "tileSize": 32,
+    "label": "violet floor"
+  },
+  {
+    "col": 61,
+    "row": 20,
+    "x": 1952,
+    "y": 640,
+    "tileSize": 32,
+    "label": "tan carved stone"
+  },
+  {
+    "col": 62,
+    "row": 20,
+    "x": 1984,
+    "y": 640,
+    "tileSize": 32,
+    "label": "brown stone"
+  },
+  {
+    "col": 63,
+    "row": 20,
+    "x": 2016,
+    "y": 640,
+    "tileSize": 32,
+    "label": "gray wall"
+  },
+  {
+    "col": 0,
+    "row": 21,
+    "x": 0,
+    "y": 672,
+    "tileSize": 32,
+    "label": "green carved tile"
+  },
+  {
+    "col": 1,
+    "row": 21,
+    "x": 32,
+    "y": 672,
+    "tileSize": 32,
+    "label": "cyan stone"
+  },
+  {
+    "col": 2,
+    "row": 21,
+    "x": 64,
+    "y": 672,
+    "tileSize": 32,
+    "label": "dark gray tile"
+  },
+  {
+    "col": 3,
+    "row": 21,
+    "x": 96,
+    "y": 672,
+    "tileSize": 32,
+    "label": "stone wall"
+  },
+  {
+    "col": 4,
+    "row": 21,
+    "x": 128,
+    "y": 672,
+    "tileSize": 32,
+    "label": "grey brick"
+  },
+  {
+    "col": 5,
+    "row": 21,
+    "x": 160,
+    "y": 672,
+    "tileSize": 32,
+    "label": "gold brick"
+  },
+  {
+    "col": 6,
+    "row": 21,
+    "x": 192,
+    "y": 672,
+    "tileSize": 32,
+    "label": "green moss"
+  },
+  {
+    "col": 7,
+    "row": 21,
+    "x": 224,
+    "y": 672,
+    "tileSize": 32,
+    "label": "red crystal"
+  },
+  {
+    "col": 8,
+    "row": 21,
+    "x": 256,
+    "y": 672,
+    "tileSize": 32,
+    "label": "yellow rune"
+  },
+  {
+    "col": 9,
+    "row": 21,
+    "x": 288,
+    "y": 672,
+    "tileSize": 32,
+    "label": "brown wood"
+  },
+  {
+    "col": 10,
+    "row": 21,
+    "x": 320,
+    "y": 672,
+    "tileSize": 32,
+    "label": "gold pattern"
+  },
+  {
+    "col": 11,
+    "row": 21,
+    "x": 352,
+    "y": 672,
+    "tileSize": 32,
+    "label": "bronze metal"
+  },
+  {
+    "col": 12,
+    "row": 21,
+    "x": 384,
+    "y": 672,
+    "tileSize": 32,
+    "label": "unknown"
+  },
+  {
+    "col": 13,
+    "row": 21,
+    "x": 416,
+    "y": 672,
+    "tileSize": 32,
+    "label": "stone altar"
+  },
+  {
+    "col": 14,
+    "row": 21,
+    "x": 448,
+    "y": 672,
+    "tileSize": 32,
+    "label": "metal gargoyle"
+  },
+  {
+    "col": 15,
+    "row": 21,
+    "x": 480,
+    "y": 672,
+    "tileSize": 32,
+    "label": "torch"
+  },
+  {
+    "col": 16,
+    "row": 21,
+    "x": 512,
+    "y": 672,
+    "tileSize": 32,
+    "label": "torch"
+  },
+  {
+    "col": 17,
+    "row": 21,
+    "x": 544,
+    "y": 672,
+    "tileSize": 32,
+    "label": "torch"
+  },
+  {
+    "col": 18,
+    "row": 21,
+    "x": 576,
+    "y": 672,
+    "tileSize": 32,
+    "label": "torch"
+  },
+  {
+    "col": 19,
+    "row": 21,
+    "x": 608,
+    "y": 672,
+    "tileSize": 32,
+    "label": "deep water"
+  },
+  {
+    "col": 20,
+    "row": 21,
+    "x": 640,
+    "y": 672,
+    "tileSize": 32,
+    "label": "blue water"
+  },
+  {
+    "col": 21,
+    "row": 21,
+    "x": 672,
+    "y": 672,
+    "tileSize": 32,
+    "label": "green slime"
+  },
+  {
+    "col": 22,
+    "row": 21,
+    "x": 704,
+    "y": 672,
+    "tileSize": 32,
+    "label": "teal floor"
+  },
+  {
+    "col": 23,
+    "row": 21,
+    "x": 736,
+    "y": 672,
+    "tileSize": 32,
+    "label": "blue potion"
+  },
+  {
+    "col": 24,
+    "row": 21,
+    "x": 768,
+    "y": 672,
+    "tileSize": 32,
+    "label": "silver sword"
+  },
+  {
+    "col": 25,
+    "row": 21,
+    "x": 800,
+    "y": 672,
+    "tileSize": 32,
+    "label": "blue gem"
+  },
+  {
+    "col": 26,
+    "row": 21,
+    "x": 832,
+    "y": 672,
+    "tileSize": 32,
+    "label": "ice shard"
+  },
+  {
+    "col": 27,
+    "row": 21,
+    "x": 864,
+    "y": 672,
+    "tileSize": 32,
+    "label": "blue crystal"
+  },
+  {
+    "col": 28,
+    "row": 21,
+    "x": 896,
+    "y": 672,
+    "tileSize": 32,
+    "label": "empty floor"
+  },
+  {
+    "col": 29,
+    "row": 21,
+    "x": 928,
+    "y": 672,
+    "tileSize": 32,
+    "label": "white bird"
+  },
+  {
+    "col": 30,
+    "row": 21,
+    "x": 960,
+    "y": 672,
+    "tileSize": 32,
+    "label": "grey sword"
+  },
+  {
+    "col": 31,
+    "row": 21,
+    "x": 992,
+    "y": 672,
+    "tileSize": 32,
+    "label": "blue fish"
+  },
+  {
+    "col": 32,
+    "row": 21,
+    "x": 1024,
+    "y": 672,
+    "tileSize": 32,
+    "label": "cyan water"
+  },
+  {
+    "col": 33,
+    "row": 21,
+    "x": 1056,
+    "y": 672,
+    "tileSize": 32,
+    "label": "cyan floor"
+  },
+  {
+    "col": 34,
+    "row": 21,
+    "x": 1088,
+    "y": 672,
+    "tileSize": 32,
+    "label": "blue wall"
+  },
+  {
+    "col": 35,
+    "row": 21,
+    "x": 1120,
+    "y": 672,
+    "tileSize": 32,
+    "label": "white wall"
+  },
+  {
+    "col": 36,
+    "row": 21,
+    "x": 1152,
+    "y": 672,
+    "tileSize": 32,
+    "label": "blue cavern"
+  },
+  {
+    "col": 37,
+    "row": 21,
+    "x": 1184,
+    "y": 672,
+    "tileSize": 32,
+    "label": "dark cave"
+  },
+  {
+    "col": 38,
+    "row": 21,
+    "x": 1216,
+    "y": 672,
+    "tileSize": 32,
+    "label": "cyan floor"
+  },
+  {
+    "col": 39,
+    "row": 21,
+    "x": 1248,
+    "y": 672,
+    "tileSize": 32,
+    "label": "dark void"
+  },
+  {
+    "col": 40,
+    "row": 21,
+    "x": 1280,
+    "y": 672,
+    "tileSize": 32,
+    "label": "white snow"
+  },
+  {
+    "col": 41,
+    "row": 21,
+    "x": 1312,
+    "y": 672,
+    "tileSize": 32,
+    "label": "blue crystal"
+  },
+  {
+    "col": 42,
+    "row": 21,
+    "x": 1344,
+    "y": 672,
+    "tileSize": 32,
+    "label": "cyan water"
+  },
+  {
+    "col": 0,
+    "row": 23,
+    "x": 0,
+    "y": 736,
+    "tileSize": 32,
+    "label": "water light blue"
+  },
+  {
+    "col": 1,
+    "row": 23,
+    "x": 32,
+    "y": 736,
+    "tileSize": 32,
+    "label": "water light blue"
+  },
+  {
+    "col": 2,
+    "row": 23,
+    "x": 64,
+    "y": 736,
+    "tileSize": 32,
+    "label": "water light blue"
+  },
+  {
+    "col": 3,
+    "row": 23,
+    "x": 96,
+    "y": 736,
+    "tileSize": 32,
+    "label": "water light blue"
+  },
+  {
+    "col": 4,
+    "row": 23,
+    "x": 128,
+    "y": 736,
+    "tileSize": 32,
+    "label": "water light blue"
+  },
+  {
+    "col": 5,
+    "row": 23,
+    "x": 160,
+    "y": 736,
+    "tileSize": 32,
+    "label": "water light blue"
+  },
+  {
+    "col": 54,
+    "row": 22,
+    "x": 1728,
+    "y": 704,
+    "tileSize": 32,
+    "label": "water light blue"
+  },
+  {
+    "col": 55,
+    "row": 22,
+    "x": 1760,
+    "y": 704,
+    "tileSize": 32,
+    "label": "water light blue"
+  },
+  {
+    "col": 56,
+    "row": 22,
+    "x": 1792,
+    "y": 704,
+    "tileSize": 32,
+    "label": "water light blue"
+  },
+  {
+    "col": 57,
+    "row": 22,
+    "x": 1824,
+    "y": 704,
+    "tileSize": 32,
+    "label": "water light blue"
+  },
+  {
+    "col": 58,
+    "row": 22,
+    "x": 1856,
+    "y": 704,
+    "tileSize": 32,
+    "label": "water light blue"
+  },
+  {
+    "col": 59,
+    "row": 22,
+    "x": 1888,
+    "y": 704,
+    "tileSize": 32,
+    "label": "water light blue"
+  },
+  {
+    "col": 60,
+    "row": 22,
+    "x": 1920,
+    "y": 704,
+    "tileSize": 32,
+    "label": "water light blue"
+  },
+  {
+    "col": 61,
+    "row": 22,
+    "x": 1952,
+    "y": 704,
+    "tileSize": 32,
+    "label": "water light blue"
+  },
+  {
+    "col": 62,
+    "row": 22,
+    "x": 1984,
+    "y": 704,
+    "tileSize": 32,
+    "label": "water light blue"
+  },
+  {
+    "col": 63,
+    "row": 22,
+    "x": 2016,
+    "y": 704,
+    "tileSize": 32,
+    "label": "water light blue"
+  },
+  {
+    "col": 53,
+    "row": 22,
+    "x": 1696,
+    "y": 704,
+    "tileSize": 32,
+    "label": "water dark blue"
+  },
+  {
+    "col": 33,
+    "row": 22,
+    "x": 1056,
+    "y": 704,
+    "tileSize": 32,
+    "label": "water dark blue"
+  },
+  {
+    "col": 34,
+    "row": 22,
+    "x": 1088,
+    "y": 704,
+    "tileSize": 32,
+    "label": "water dark blue"
+  },
+  {
+    "col": 35,
+    "row": 22,
+    "x": 1120,
+    "y": 704,
+    "tileSize": 32,
+    "label": "water dark blue"
+  },
+  {
+    "col": 36,
+    "row": 22,
+    "x": 1152,
+    "y": 704,
+    "tileSize": 32,
+    "label": "water dark blue"
+  },
+  {
+    "col": 37,
+    "row": 22,
+    "x": 1184,
+    "y": 704,
+    "tileSize": 32,
+    "label": "water dark blue"
+  },
+  {
+    "col": 38,
+    "row": 22,
+    "x": 1216,
+    "y": 704,
+    "tileSize": 32,
+    "label": "water dark blue"
+  },
+  {
+    "col": 39,
+    "row": 22,
+    "x": 1248,
+    "y": 704,
+    "tileSize": 32,
+    "label": "water dark blue"
+  },
+  {
+    "col": 40,
+    "row": 22,
+    "x": 1280,
+    "y": 704,
+    "tileSize": 32,
+    "label": "water dark blue"
+  },
+  {
+    "col": 41,
+    "row": 22,
+    "x": 1312,
+    "y": 704,
+    "tileSize": 32,
+    "label": "water dark blue"
+  },
+  {
+    "col": 42,
+    "row": 22,
+    "x": 1344,
+    "y": 704,
+    "tileSize": 32,
+    "label": "water dark blue"
+  },
+  {
+    "col": 43,
+    "row": 22,
+    "x": 1376,
+    "y": 704,
+    "tileSize": 32,
+    "label": "water dark blue"
+  },
+  {
+    "col": 44,
+    "row": 22,
+    "x": 1408,
+    "y": 704,
+    "tileSize": 32,
+    "label": "water dark blue"
+  },
+  {
+    "col": 45,
+    "row": 22,
+    "x": 1440,
+    "y": 704,
+    "tileSize": 32,
+    "label": "water dark blue"
+  },
+  {
+    "col": 46,
+    "row": 22,
+    "x": 1472,
+    "y": 704,
+    "tileSize": 32,
+    "label": "water dark blue"
+  },
+  {
+    "col": 47,
+    "row": 22,
+    "x": 1504,
+    "y": 704,
+    "tileSize": 32,
+    "label": "water dark blue"
+  },
+  {
+    "col": 48,
+    "row": 22,
+    "x": 1536,
+    "y": 704,
+    "tileSize": 32,
+    "label": "water dark blue"
+  },
+  {
+    "col": 49,
+    "row": 22,
+    "x": 1568,
+    "y": 704,
+    "tileSize": 32,
+    "label": "water dark blue"
+  },
+  {
+    "col": 50,
+    "row": 22,
+    "x": 1600,
+    "y": 704,
+    "tileSize": 32,
+    "label": "water dark blue"
+  },
+  {
+    "col": 51,
+    "row": 22,
+    "x": 1632,
+    "y": 704,
+    "tileSize": 32,
+    "label": "water dark blue"
+  },
+  {
+    "col": 52,
+    "row": 22,
+    "x": 1664,
+    "y": 704,
+    "tileSize": 32,
+    "label": "water dark blue"
+  }
+]
