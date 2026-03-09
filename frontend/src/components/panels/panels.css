@@ -1,11 +1,35 @@
 .panel-title {
-  font-size: 0.85rem;
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.68rem;
   text-transform: uppercase;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.1em;
   color: var(--accent-gold);
+  font-weight: 700;
   margin-bottom: 0.5rem;
-  padding-bottom: 0.4rem;
-  border-bottom: 1px solid var(--border-color);
+  padding-bottom: 0;
+  border-bottom: none;
+}
+
+.panel-title::before {
+  content: '◈';
+  font-size: 0.6rem;
+  flex-shrink: 0;
+  opacity: 0.8;
+}
+
+.panel-title::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(90deg, rgba(228, 168, 83, 0.35), transparent);
+}
+
+/* Narrative log header already provides its own border */
+.narrative-log-header .panel-title::before,
+.narrative-log-header .panel-title::after {
+  display: none;
 }
 
 .panel-empty {
@@ -29,9 +53,24 @@
 }
 
 .narrative-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.4rem;
   color: var(--text-secondary);
   font-style: italic;
-  padding: 1rem 0;
+  font-size: 0.85rem;
+  padding: 1.5rem 0;
+  text-align: center;
+  opacity: 0.6;
+}
+
+.narrative-empty::before {
+  content: '📜';
+  font-style: normal;
+  font-size: 1.4rem;
+  opacity: 0.5;
+  filter: grayscale(0.5);
 }
 
 .narrative-entry {
@@ -96,31 +135,40 @@
   border-radius: 6px;
   font-size: 0.9rem;
   outline: none;
-  transition: border-color 0.2s;
+  transition: border-color 0.2s, box-shadow 0.2s;
 }
 .chat-text-input:focus {
-  border-color: var(--accent-gold);
+  border-color: rgba(228, 168, 83, 0.6);
+  box-shadow: 0 0 0 3px rgba(228, 168, 83, 0.08);
 }
 .chat-text-input:disabled {
-  opacity: 0.5;
+  opacity: 0.45;
 }
 
 .chat-send-btn {
-  background: var(--accent-gold);
+  background: linear-gradient(135deg, #e4a853 0%, #c8882a 100%);
   color: #1a1a2e;
   border: none;
   padding: 0.5rem 1rem;
   border-radius: 6px;
-  font-weight: 600;
+  font-weight: 700;
   font-size: 0.9rem;
-  transition: opacity 0.2s;
+  transition: opacity 0.2s, transform 0.15s, box-shadow 0.2s;
+  box-shadow: 0 2px 8px rgba(228, 168, 83, 0.2);
+  cursor: pointer;
+  flex-shrink: 0;
 }
 .chat-send-btn:disabled {
-  opacity: 0.4;
+  opacity: 0.35;
   cursor: default;
 }
 .chat-send-btn:hover:not(:disabled) {
-  opacity: 0.9;
+  opacity: 0.92;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 14px rgba(228, 168, 83, 0.35);
+}
+.chat-send-btn:active:not(:disabled) {
+  transform: translateY(0);
 }
 
 /* Combat Tracker */
@@ -163,6 +211,11 @@
   background: rgba(228, 168, 83, 0.24);
 }
 
+@keyframes turn-glow {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(228, 168, 83, 0); }
+  50%       { box-shadow: 0 0 10px 2px rgba(228, 168, 83, 0.2); }
+}
+
 .initiative-entry {
   display: flex;
   align-items: center;
@@ -171,10 +224,12 @@
   border-radius: 4px;
   font-size: 0.8rem;
   background: rgba(255, 255, 255, 0.03);
+  border-left: 3px solid transparent;
 }
 .initiative-entry.current-turn {
-  background: rgba(228, 168, 83, 0.15);
+  background: rgba(228, 168, 83, 0.12);
   border-left: 3px solid var(--accent-gold);
+  animation: turn-glow 2.2s ease-in-out infinite;
 }
 
 .init-order {
@@ -198,8 +253,8 @@
 }
 .init-hp-fill {
   height: 100%;
-  background: var(--hp-bar);
-  transition: width 0.3s;
+  background: var(--hp-bar, var(--accent-green));
+  transition: width 0.4s ease, background 0.4s ease;
 }
 
 .init-hp-text {
@@ -369,8 +424,8 @@
 }
 .char-hp-fill {
   height: 100%;
-  background: var(--hp-bar);
-  transition: width 0.3s;
+  background: var(--hp-bar, var(--accent-green));
+  transition: width 0.4s ease, background 0.4s ease;
 }
 .char-hp-text {
   font-size: 0.8rem;
@@ -1201,6 +1256,12 @@
 }
 
 /* Dice Roller */
+@keyframes dice-result-pop {
+  0%   { transform: scale(1.5); opacity: 0.6; }
+  60%  { transform: scale(0.92); }
+  100% { transform: scale(1); opacity: 1; }
+}
+
 .dice-roller {
   display: flex;
   flex-direction: column;
@@ -1217,9 +1278,14 @@
 
 .dice-last-result {
   font-family: 'Consolas', 'Courier New', monospace;
-  font-size: 1rem;
+  font-size: 1.05rem;
   font-weight: 700;
   color: var(--accent-purple);
+  background: rgba(155, 89, 182, 0.12);
+  border: 1px solid rgba(155, 89, 182, 0.3);
+  border-radius: 5px;
+  padding: 0.1rem 0.5rem;
+  animation: dice-result-pop 0.35s ease-out;
 }
 
 .dice-options {
@@ -1229,25 +1295,43 @@
 }
 
 .die-btn {
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid var(--border-color);
+  background: rgba(155, 89, 182, 0.06);
+  border: 1px solid rgba(155, 89, 182, 0.2);
   color: var(--text-secondary);
-  padding: 0.25rem 0.45rem;
-  border-radius: 4px;
+  padding: 0.28rem 0.5rem;
+  border-radius: 5px;
   font-size: 0.75rem;
   font-family: 'Consolas', 'Courier New', monospace;
+  font-weight: 600;
   transition: all 0.15s;
+  cursor: pointer;
+  position: relative;
+}
+
+.die-btn::before {
+  content: '⬡';
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.8rem;
+  color: rgba(155, 89, 182, 0.05);
+  pointer-events: none;
 }
 
 .die-btn:hover {
   border-color: var(--accent-purple);
-  color: var(--text-primary);
+  color: var(--accent-purple);
+  background: rgba(155, 89, 182, 0.12);
+  transform: translateY(-1px);
 }
 
 .die-btn-selected {
-  background: rgba(155, 89, 182, 0.2);
+  background: rgba(155, 89, 182, 0.22);
   border-color: var(--accent-purple);
   color: var(--accent-purple);
+  box-shadow: 0 0 8px rgba(155, 89, 182, 0.25);
 }
 
 .dice-controls {
@@ -1281,19 +1365,26 @@
 
 .dice-roll-btn {
   flex: 1;
-  background: rgba(155, 89, 182, 0.18);
-  border: 1px solid rgba(155, 89, 182, 0.5);
+  background: linear-gradient(135deg, rgba(155, 89, 182, 0.25) 0%, rgba(155, 89, 182, 0.12) 100%);
+  border: 1px solid rgba(155, 89, 182, 0.55);
   color: var(--accent-purple);
-  padding: 0.3rem 0.6rem;
-  border-radius: 5px;
+  padding: 0.35rem 0.6rem;
+  border-radius: 6px;
   font-size: 0.82rem;
-  font-weight: 600;
+  font-weight: 700;
   transition: all 0.15s;
+  cursor: pointer;
 }
 
 .dice-roll-btn:hover {
-  background: rgba(155, 89, 182, 0.3);
+  background: linear-gradient(135deg, rgba(155, 89, 182, 0.38) 0%, rgba(155, 89, 182, 0.22) 100%);
   border-color: var(--accent-purple);
+  transform: translateY(-1px);
+  box-shadow: 0 3px 10px rgba(155, 89, 182, 0.2);
+}
+
+.dice-roll-btn:active {
+  transform: translateY(0);
 }
 
 /* ── Weight bar warning state ──────────────────────────────────────── */
@@ -1307,8 +1398,19 @@
   align-items: center;
   justify-content: space-between;
   margin-bottom: 0.5rem;
-  padding-bottom: 0.4rem;
-  border-bottom: 1px solid var(--border-color);
+  padding-bottom: 0.45rem;
+  border-bottom: none;
+  position: relative;
+}
+
+.narrative-log-header::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, rgba(228, 168, 83, 0.35), transparent 70%);
 }
 
 .narrative-log-header .panel-title {

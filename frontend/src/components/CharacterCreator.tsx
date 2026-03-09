@@ -31,6 +31,28 @@ const CHARACTER_SPRITES: CharacterSpriteOption[] = [
   { id: 'pc_rogue', label: 'Rogue', races: ['Halfling', 'Human', 'Tiefling', 'Half-Elf'], classes: ['Rogue', 'Ranger', 'Bard'] },
 ]
 
+// Deterministic floating particles
+const PARTICLES = Array.from({ length: 16 }, (_, i) => ({
+  key: i,
+  left: (Math.sin(i * 3.1) * 0.5 + 0.5) * 100,
+  top: (Math.cos(i * 1.9) * 0.5 + 0.5) * 100,
+  size: 1.2 + Math.abs(Math.sin(i * 4.7)) * 2.0,
+  duration: 8 + Math.abs(Math.cos(i * 1.3)) * 10,
+  delay: -(Math.abs(Math.sin(i * 1.2 + 0.7)) * 8),
+  opacity: 0.08 + Math.abs(Math.sin(i * 2.5 + 1)) * 0.22,
+}))
+
+// Section header with divider
+function SectionHeading({ icon, label }: { icon: string; label: string }) {
+  return (
+    <div className="cc-section-heading">
+      <span className="cc-section-icon">{icon}</span>
+      <span className="cc-section-label">{label}</span>
+      <div className="cc-section-line" />
+    </div>
+  )
+}
+
 function getSpriteOptionsFor(race: string, charClass: string): CharacterSpriteOption[] {
   const mappedSpriteId = getCharacterSpriteId(charClass, race)
   if (mappedSpriteId) {
@@ -261,130 +283,186 @@ export default function CharacterCreator() {
     getSession(roomCode).catch(() => {})
   }, [roomCode, getSession])
 
+  const selectedSpells = spellcastingMode === 'known' ? selectedKnownSpells : selectedPreparedSpells
+  const spellLimit = spellcastingMode === 'known' ? knownLimit : preparedLimit
+
   return (
-    <div className="creator-wrapper">
-      <div className="creator-card">
-        <div className="creator-header">
-          <h2>Create Your Character</h2>
-          {roomCode && <p className="room-badge">Room: {roomCode}</p>}
-          <p className="player-count">{players.length} player(s) in lobby</p>
+    <div className="cc-wrapper">
+
+      {/* Floating particles */}
+      <div className="cc-particles" aria-hidden="true">
+        {PARTICLES.map(p => (
+          <span
+            key={p.key}
+            className="cc-particle"
+            style={{
+              left: `${p.left}%`,
+              top: `${p.top}%`,
+              width: `${p.size}px`,
+              height: `${p.size}px`,
+              animationDuration: `${p.duration}s`,
+              animationDelay: `${p.delay}s`,
+              opacity: p.opacity,
+            }}
+          />
+        ))}
+      </div>
+
+      <div className="cc-card">
+
+        {/* ── Header ── */}
+        <div className="cc-header">
+          <div className="cc-header-icon" aria-hidden="true">⚔</div>
+          <h2 className="cc-title">Forge Your Hero</h2>
+          <p className="cc-subtitle">
+            {roomCode
+              ? <><span className="cc-room-badge">{roomCode}</span> · {players.length} in lobby</>
+              : 'Create your character to begin the adventure'}
+          </p>
+          <div className="cc-header-divider" />
         </div>
 
-        <div className="creator-form">
-          <div className="form-group">
-            <label>Character Name</label>
+        <div className="cc-form">
+
+          {/* ── Identity ── */}
+          <SectionHeading icon="✦" label="Identity" />
+
+          <div className="cc-field">
+            <label className="cc-label" htmlFor="cc-name">Character Name</label>
             <input
+              id="cc-name"
               type="text"
               value={name}
               onChange={e => setName(e.target.value)}
-              placeholder="Enter a name..."
-              className="creator-input"
+              placeholder="Enter a name…"
+              className="cc-input"
               maxLength={32}
+              autoFocus
             />
           </div>
 
-          <div className="form-row">
-            <div className="form-group">
-              <label>Race</label>
-              <select value={race} onChange={e => setRace(e.target.value)} className="creator-select">
+          <div className="cc-row">
+            <div className="cc-field">
+              <label className="cc-label" htmlFor="cc-race">Race</label>
+              <select id="cc-race" value={race} onChange={e => setRace(e.target.value)} className="cc-select">
                 {RACES.map(r => <option key={r} value={r}>{r}</option>)}
               </select>
             </div>
-            <div className="form-group">
-              <label>Class</label>
+            <div className="cc-field">
+              <label className="cc-label" htmlFor="cc-class">Class</label>
               <select
+                id="cc-class"
                 value={charClass}
                 onChange={e => {
                   const nextClass = e.target.value
                   setCharClass(nextClass)
                   loadSpellOptions(nextClass)
                 }}
-                className="creator-select"
+                className="cc-select"
               >
                 {CLASSES.map(c => <option key={c} value={c}>{c}</option>)}
               </select>
             </div>
           </div>
 
-          <div className="form-group">
-            <label>Sprite</label>
+          {/* ── Appearance ── */}
+          <SectionHeading icon="◈" label="Appearance" />
+
+          <div className="cc-field">
+            <label className="cc-label" htmlFor="cc-sprite">Sprite</label>
             <select
+              id="cc-sprite"
               value={spriteId}
               onChange={e => setSpriteId(e.target.value)}
-              className="creator-select"
+              className="cc-select"
             >
               {spriteOptions.map(option => (
                 <option key={option.id} value={option.id}>{option.label}</option>
               ))}
             </select>
-            <p className="sprite-hint">Options are filtered by your current race/class.</p>
+            <p className="cc-hint">Filtered by your race &amp; class selection.</p>
           </div>
 
+          {/* ── Magic ── */}
           {spellcastingMode !== 'none' && (
-            <div className="form-group spell-picker-group">
-              <label>
-                Level 1 Spell Selection
-                {spellcastingMode === 'known'
-                  ? ` (choose up to ${knownLimit} known spells)`
-                  : ` (choose up to ${preparedLimit} prepared spells)`}
-              </label>
-              <div className="spell-picker-list">
-                {availableSpells.filter(s => s.level > 0).map(spell => {
-                  const selected = spellcastingMode === 'known'
-                    ? selectedKnownSpells.includes(spell.name)
-                    : selectedPreparedSpells.includes(spell.name)
-                  const disabled = spellcastingMode === 'known'
-                    ? !selected && selectedKnownSpells.length >= knownLimit
-                    : !selected && selectedPreparedSpells.length >= preparedLimit
+            <>
+              <SectionHeading icon="✦" label="Starting Spells" />
+              <div className="cc-field">
+                <div className="cc-spell-meta">
+                  <span className="cc-label">
+                    {spellcastingMode === 'known' ? 'Known Spells' : 'Prepared Spells'}
+                  </span>
+                  <span className="cc-spell-count">
+                    {selectedSpells.length} / {spellLimit}
+                  </span>
+                </div>
+                <div className="cc-spell-list">
+                  {availableSpells.filter(s => s.level > 0).map(spell => {
+                    const selected = selectedSpells.includes(spell.name)
+                    const disabled = !selected && selectedSpells.length >= spellLimit
 
-                  return (
-                    <label key={spell.name} className={`spell-option ${disabled ? 'disabled' : ''}`}>
-                      <input
-                        type="checkbox"
-                        checked={selected}
-                        disabled={disabled}
-                        onChange={() => toggleSpell(spell.name)}
-                      />
-                      <span>{spell.name}</span>
-                      <span className="spell-option-level">L{spell.level}</span>
-                    </label>
-                  )
-                })}
+                    return (
+                      <label
+                        key={spell.name}
+                        className={`cc-spell-option${selected ? ' selected' : ''}${disabled ? ' disabled' : ''}`}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={selected}
+                          disabled={disabled}
+                          onChange={() => toggleSpell(spell.name)}
+                          className="cc-spell-checkbox"
+                        />
+                        <span className="cc-spell-name">{spell.name}</span>
+                        <span className="cc-spell-level">L{spell.level}</span>
+                      </label>
+                    )
+                  })}
+                </div>
               </div>
-            </div>
+            </>
           )}
 
-          <div className="form-group">
-            <label>Ability Scores (Standard Array: 15, 14, 13, 12, 10, 8)</label>
-            <div className="abilities-grid">
-              {ABILITIES.map(ab => (
-                <div key={ab} className="ability-input-box">
-                  <span className="ability-label">{ab}</span>
+          {/* ── Ability Scores ── */}
+          <SectionHeading icon="◈" label="Ability Scores" />
+          <p className="cc-array-note">Standard Array: 15, 14, 13, 12, 10, 8</p>
+
+          <div className="cc-abilities-grid">
+            {ABILITIES.map(ab => {
+              const mod = Math.floor((abilities[ab] - 10) / 2)
+              return (
+                <div key={ab} className="cc-ability-box">
+                  <span className="cc-ability-name">{ab}</span>
                   <input
                     type="number"
                     min={3}
                     max={20}
                     value={abilities[ab]}
                     onChange={e => handleAbilityChange(ab, parseInt(e.target.value) || 10)}
-                    className="ability-number-input"
+                    className="cc-ability-input"
                   />
-                  <span className="ability-modifier">
-                    {Math.floor((abilities[ab] - 10) / 2) >= 0 ? '+' : ''}
-                    {Math.floor((abilities[ab] - 10) / 2)}
+                  <span className={`cc-ability-mod${mod >= 0 ? ' positive' : ' negative'}`}>
+                    {mod >= 0 ? '+' : ''}{mod}
                   </span>
                 </div>
-              ))}
-            </div>
+              )
+            })}
           </div>
 
+          {/* ── Error ── */}
+          {error && <p className="cc-error">{error}</p>}
+
+          {/* ── Submit ── */}
           <button
-            className="creator-submit"
+            className="cc-submit"
             onClick={handleCreate}
             disabled={!name.trim() || creating}
           >
-            {creating ? 'Creating...' : 'Create Character & Start Adventure'}
+            {creating
+              ? <><span className="cc-spinner" />Creating…</>
+              : '⚔ Begin the Adventure'}
           </button>
-          {error && <p className="creator-error">{error}</p>}
+
         </div>
       </div>
     </div>
