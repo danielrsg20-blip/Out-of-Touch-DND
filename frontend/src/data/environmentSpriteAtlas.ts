@@ -22,6 +22,13 @@ function normalizeLabel(label: string): string {
   return label.trim().toLowerCase().replace(/[\s_]+/g, ' ')
 }
 
+function stripSurfaceTerms(label: string): string {
+  return label
+    .replace(/\b(floor|wall)\b/g, ' ')
+    .replace(/[\s_]+/g, ' ')
+    .trim()
+}
+
 function toLookup(entries: EnvironmentSpriteAtlasEntry[]): Map<string, EnvironmentSpriteRect> {
   const byLabel = new Map<string, EnvironmentSpriteRect>()
 
@@ -87,7 +94,24 @@ export function resolveEnvironmentSpriteRect(spriteKey: string): EnvironmentSpri
     return null
   }
 
-  return cache.get(normalizeLabel(label)) ?? null
+  const normalized = normalizeLabel(label)
+  const exact = cache.get(normalized)
+  if (exact) {
+    return exact
+  }
+
+  // Backward compatibility: older selectors may include "floor"/"wall" even
+  // when atlas labels were normalized to shared surface labels (e.g. "stone").
+  const stripped = stripSurfaceTerms(normalized)
+  if (stripped) {
+    const normalizedSurface = normalizeLabel(stripped)
+    const directSurface = cache.get(normalizedSurface)
+    if (directSurface) {
+      return directSurface
+    }
+  }
+
+  return null
 }
 
 export async function getEnvironmentSpriteLabels(): Promise<string[]> {

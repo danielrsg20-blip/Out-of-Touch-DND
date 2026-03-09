@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from .map_catalog import build_automated_map
+from .map_catalog import build_automated_map, assign_terrain_atlas_sprites
 from .map_engine import GameMap, MapEntity, build_map_from_data
 from .rules.characters import Character
 from .rules.combat import (
@@ -219,7 +219,13 @@ TOOL_DEFINITIONS: list[dict[str, Any]] = [
                 "x": {"type": "integer"},
                 "y": {"type": "integer"},
                 "entity_type": {"type": "string", "enum": ["pc", "npc", "enemy", "object"]},
-                "sprite": {"type": "string", "default": "default"},
+                "sprite": {
+                    "type": "string",
+                    "default": "default",
+                    "description": "Optional sprite override. Supports manifest keys (e.g. enemy_goblin), environment atlas keys (e.g. env:stone floor), and monster atlas keys (e.g. monster:black_dragon_03 for exact frame).",
+                },
+                "blocks_movement": {"type": "boolean", "description": "Whether this entity blocks token movement", "default": True},
+                "prop_category": {"type": "string", "description": "Optional prop category label such as obstacle/decorative"},
             },
             "required": ["id", "name", "x", "y", "entity_type"],
         },
@@ -564,16 +570,33 @@ class ToolDispatcher:
     def _tool_generate_map(self, inp: dict) -> dict:
         user_tiles = inp.get("tiles") or []
         if user_tiles:
+            tiles = [dict(tile) for tile in user_tiles]
+            has_sprite_assignments = any(isinstance(t.get("sprite"), str) and bool(str(t.get("sprite", "")).strip()) for t in tiles)
+            if not has_sprite_assignments:
+                tiles = assign_terrain_atlas_sprites(
+                    {
+                        "description": str(inp.get("description", "")),
+                        "environment": str(inp.get("environment", "")).strip().lower(),
+                        "encounter_type": str(inp.get("encounter_type", "")).strip().lower(),
+                        "encounter_scale": str(inp.get("encounter_scale", "")).strip().lower(),
+                        "tactical_tags": [str(t) for t in inp.get("tactical_tags", [])],
+                        "width": int(inp.get("width", 20)),
+                        "height": int(inp.get("height", 15)),
+                    },
+                    tiles,
+                )
+
             map_data = {
                 "width": inp.get("width", 20),
                 "height": inp.get("height", 15),
-                "tiles": user_tiles,
+                "tiles": tiles,
                 "entities": inp.get("entities", []),
                 "metadata": {
                     "map_source": "manual",
                     "map_id": "manual_input",
                     "grid_size": 5,
                     "grid_units": "ft",
+                    "tile_size_px": 32,
                     "cache_hit": False,
                 },
             }
@@ -606,6 +629,8 @@ class ToolDispatcher:
             y=inp["y"],
             entity_type=inp.get("entity_type", "npc"),
             sprite=inp.get("sprite", "default"),
+            blocks_movement=bool(inp.get("blocks_movement", True)),
+            prop_category=inp.get("prop_category"),
         )
         self.game_map.place_entity(entity)
         return {"placed": entity.to_dict()}
@@ -613,10 +638,15 @@ class ToolDispatcher:
     def _tool_move_entity(self, inp: dict) -> dict:
         if not self.game_map:
             return {"error": "No map loaded"}
-        ok = self.game_map.move_entity(inp["entity_id"], inp["x"], inp["y"])
+        entity_id = inp["entity_id"]
+        x = int(inp["x"])
+        y = int(inp["y"])
+        if not self.game_map.can_occupy(x, y, entity_id=entity_id):
+            return {"error": f"Destination ({x}, {y}) is blocked"}
+        ok = self.game_map.move_entity(entity_id, x, y)
         if not ok:
-            return {"error": f"Entity {inp['entity_id']} not found"}
-        return {"moved": inp["entity_id"], "to": {"x": inp["x"], "y": inp["y"]}}
+            return {"error": f"Entity {entity_id} not found"}
+        return {"moved": entity_id, "to": {"x": x, "y": y}}
 
     def _tool_remove_entity(self, inp: dict) -> dict:
         if not self.game_map:

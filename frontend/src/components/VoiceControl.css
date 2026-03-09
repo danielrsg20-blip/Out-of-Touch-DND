@@ -5,14 +5,17 @@
 }
 
 .voice-toggle,
-.voice-tts-toggle {
+.voice-tts-toggle,
+.voice-mode-toggle,
+.voice-test-btn {
   background: rgba(255, 255, 255, 0.05);
   border: 1px solid var(--border-color);
   color: var(--text-secondary);
   padding: 0.35rem 0.5rem;
   border-radius: 6px;
-  font-size: 1rem;
+  font-size: 0.8rem;
   transition: all 0.15s;
+  cursor: pointer;
 }
 .voice-toggle.active,
 .voice-tts-toggle.active {
@@ -30,15 +33,34 @@
   font-size: 0.8rem;
   transition: all 0.15s;
   user-select: none;
+  cursor: pointer;
 }
 .voice-record-btn:hover {
   border-color: var(--accent-blue);
+}
+.voice-record-btn:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+.voice-test-btn:disabled {
+  opacity: 0.6;
+  cursor: default;
 }
 .voice-record-btn.recording {
   background: rgba(231, 76, 60, 0.2);
   border-color: var(--accent-red);
   color: var(--accent-red);
   animation: pulse 1s ease-in-out infinite;
+}
+
+.voice-mode-toggle.auto {
+  border-color: rgba(46, 204, 113, 0.35);
+  color: #8be3af;
+}
+
+.voice-mode-toggle.review {
+  border-color: rgba(228, 168, 83, 0.35);
+  color: var(--accent-gold);
 }
 
 @keyframes pulse {

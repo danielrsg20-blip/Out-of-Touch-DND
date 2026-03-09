@@ -50,9 +50,11 @@ class MapEntity:
     entity_type: str = "npc"
     sprite: str = "default"
     visible: bool = True
+    blocks_movement: bool = True
+    prop_category: str | None = None
 
     def to_dict(self) -> dict:
-        return {
+        data = {
             "id": self.id,
             "name": self.name,
             "x": self.x,
@@ -60,7 +62,11 @@ class MapEntity:
             "type": self.entity_type,
             "sprite": self.sprite,
             "visible": self.visible,
+            "blocks_movement": self.blocks_movement,
         }
+        if self.prop_category:
+            data["prop_category"] = self.prop_category
+        return data
 
 
 @dataclass
@@ -99,6 +105,19 @@ class GameMap:
         if tile is None:
             return False
         return not tile.blocks_movement
+
+    def is_occupied(self, x: int, y: int, *, ignore_entity_id: str | None = None) -> bool:
+        for entity in self.entities.values():
+            if ignore_entity_id and entity.id == ignore_entity_id:
+                continue
+            if not entity.blocks_movement:
+                continue
+            if entity.x == x and entity.y == y:
+                return True
+        return False
+
+    def can_occupy(self, x: int, y: int, *, entity_id: str | None = None) -> bool:
+        return self.is_walkable(x, y) and not self.is_occupied(x, y, ignore_entity_id=entity_id)
 
     def place_entity(self, entity: MapEntity) -> None:
         self.entities[entity.id] = entity
@@ -187,6 +206,8 @@ def build_map_from_data(data: dict) -> GameMap:
             y=ed["y"],
             entity_type=ed.get("type", "npc"),
             sprite=ed.get("sprite", "default"),
+            blocks_movement=bool(ed.get("blocks_movement", True)),
+            prop_category=ed.get("prop_category"),
         )
         gmap.place_entity(entity)
 

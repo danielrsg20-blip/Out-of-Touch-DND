@@ -642,6 +642,51 @@ function getMapEntities(map: Record<string, unknown> | null): Array<Record<strin
   return map.entities.filter((entity): entity is Record<string, unknown> => typeof entity === 'object' && entity !== null)
 }
 
+function tileBlocksMovement(tile: Record<string, unknown> | null | undefined): boolean {
+  if (!tile) {
+    return false
+  }
+  const type = String(tile.type ?? '')
+  if (type === 'wall' || type === 'pit' || type === 'pillar' || type === 'rubble') {
+    return true
+  }
+  if (type === 'door') {
+    return String(tile.state ?? '').toLowerCase() === 'closed'
+  }
+  return false
+}
+
+function mapDestinationBlocked(
+  map: Record<string, unknown>,
+  x: number,
+  y: number,
+  movingEntityId: string,
+): { blocked: boolean; reason?: string } {
+  const tiles = Array.isArray(map.tiles) ? (map.tiles as Array<Record<string, unknown>>) : []
+  const entities = getMapEntities(map)
+
+  const tile = tiles.find((row) => Number(row.x) === x && Number(row.y) === y)
+  if (tileBlocksMovement(tile)) {
+    return { blocked: true, reason: 'That destination is blocked.' }
+  }
+
+  const occupant = entities.find((entity) => {
+    if (String(entity.id ?? '') === movingEntityId) {
+      return false
+    }
+    if (Number(entity.x) !== x || Number(entity.y) !== y) {
+      return false
+    }
+    return entity.blocks_movement !== false
+  })
+
+  if (occupant) {
+    return { blocked: true, reason: 'That space is occupied.' }
+  }
+
+  return { blocked: false }
+}
+
 function ensureMapForSnapshot(snapshot: SnapshotState): Record<string, unknown> {
   const existingMap = snapshot.map && typeof snapshot.map === 'object' ? { ...snapshot.map } : {
     width: 20,
@@ -1594,7 +1639,63 @@ async function actionMoveToken(body: Record<string, unknown>) {
     throw new Error('room_code, player_id, character_id, x, and y are required')
   }
 
+  if (!Number.isInteger(x) || !Number.isInteger(y)) {
+    throw new Error('Destination coordinates must be whole numbers')
+  }
+
   const { sessionId } = await resolveSession(roomCode)
+  const member = await resolveMember(sessionId, playerId)
+  if (!member.characterId || member.characterId !== characterId) {
+    throw new Error('You can only move your own character token.')
+  }
+
+  const { version, snapshot } = await loadSnapshot(sessionId)
+  const map = ensureMapForSnapshot(snapshot)
+  const width = Number(map.width ?? 0)
+  const height = Number(map.height ?? 0)
+
+  if (x < 0 || y < 0 || x >= width || y >= height) {
+    throw new Error('Destination is out of bounds.')
+  }
+
+  const entities = getMapEntities(map)
+  const mover = entities.find((entity) => String(entity.id ?? '') === characterId)
+  if (!mover) {
+    throw new Error('Your token is not currently on the map.')
+  }
+
+  const combat = normalizeCombat(snapshot.combat)
+  if (combat?.is_active && combat.current_turn && combat.current_turn !== characterId) {
+    throw new Error('It is not your turn.')
+  }
+
+  const blocked = mapDestinationBlocked(map, x, y, characterId)
+  if (blocked.blocked) {
+    throw new Error(blocked.reason ?? 'That destination is blocked.')
+  }
+
+  const nextEntities = entities.map((entity) => {
+    if (String(entity.id ?? '') !== characterId) {
+      return entity
+    }
+    return {
+      ...entity,
+      x,
+      y,
+    }
+  })
+
+  const nextMap: Record<string, unknown> = {
+    ...map,
+    entities: nextEntities,
+  }
+  const nextSnapshot: SnapshotState = {
+    ...snapshot,
+    map: nextMap,
+  }
+
+  await saveSnapshot(sessionId, version, nextSnapshot)
+
   await publishEvent(sessionId, 'map_change', {
     action: 'move_entity',
     data: {
@@ -1603,7 +1704,9 @@ async function actionMoveToken(body: Record<string, unknown>) {
     },
   }, playerId)
 
-  return { ok: true }
+  await publishEvent(sessionId, 'state_sync', { state: nextSnapshot }, playerId)
+
+  return { ok: true, state: nextSnapshot }
 }
 
 Deno.serve(async (req) => {

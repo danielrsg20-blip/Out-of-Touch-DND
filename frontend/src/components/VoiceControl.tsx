@@ -1,15 +1,44 @@
 import { useState, useRef, useCallback } from 'react'
 import './VoiceControl.css'
 
+export type TranscriptMode = 'auto' | 'review'
+
+function arrayBufferToBase64(buffer: ArrayBuffer): string {
+  const bytes = new Uint8Array(buffer)
+  let binary = ''
+  const chunkSize = 0x8000
+
+  for (let i = 0; i < bytes.length; i += chunkSize) {
+    const chunk = bytes.subarray(i, i + chunkSize)
+    binary += String.fromCharCode(...chunk)
+  }
+
+  return btoa(binary)
+}
+
 interface VoiceControlProps {
   enabled: boolean
   onToggle: (enabled: boolean) => void
-  onTranscript?: (text: string) => void
+  ttsEnabled: boolean
+  onToggleTts: (enabled: boolean) => void
+  transcriptMode: TranscriptMode
+  onTranscriptModeChange: (mode: TranscriptMode) => void
+  onTranscript?: (audioBase64: string) => void | Promise<void>
+  onVoiceTest?: () => void | Promise<void>
 }
 
-export default function VoiceControl({ enabled, onToggle, onTranscript }: VoiceControlProps) {
+export default function VoiceControl({
+  enabled,
+  onToggle,
+  ttsEnabled,
+  onToggleTts,
+  transcriptMode,
+  onTranscriptModeChange,
+  onTranscript,
+  onVoiceTest,
+}: VoiceControlProps) {
   const [recording, setRecording] = useState(false)
-  const [ttsEnabled, setTtsEnabled] = useState(true)
+  const [isProcessing, setIsProcessing] = useState(false)
   const mediaRecorderRef = useRef<MediaRecorder | null>(null)
   const chunksRef = useRef<Blob[]>([])
 
@@ -29,8 +58,13 @@ export default function VoiceControl({ enabled, onToggle, onTranscript }: VoiceC
         stream.getTracks().forEach(t => t.stop())
 
         const buffer = await blob.arrayBuffer()
-        const base64 = btoa(String.fromCharCode(...new Uint8Array(buffer)))
-        onTranscript?.(base64)
+        const base64 = arrayBufferToBase64(buffer)
+        setIsProcessing(true)
+        try {
+          await onTranscript?.(base64)
+        } finally {
+          setIsProcessing(false)
+        }
       }
 
       mediaRecorder.start()
@@ -46,6 +80,19 @@ export default function VoiceControl({ enabled, onToggle, onTranscript }: VoiceC
     }
     setRecording(false)
   }, [])
+
+  const handleVoiceTest = useCallback(async () => {
+    if (!onVoiceTest) {
+      return
+    }
+
+    setIsProcessing(true)
+    try {
+      await onVoiceTest()
+    } finally {
+      setIsProcessing(false)
+    }
+  }, [onVoiceTest])
 
   return (
     <div className="voice-control">
@@ -64,17 +111,36 @@ export default function VoiceControl({ enabled, onToggle, onTranscript }: VoiceC
             onPointerDown={startRecording}
             onPointerUp={stopRecording}
             onPointerLeave={stopRecording}
+            onPointerCancel={stopRecording}
             title="Hold to talk"
+            disabled={isProcessing}
           >
-            {recording ? '🔴 Recording...' : '🎤 Hold to Talk'}
+            {recording ? '🔴 Recording...' : isProcessing ? '⏳ Processing...' : '🎤 Hold to Talk'}
+          </button>
+
+          <button
+            className={`voice-mode-toggle ${transcriptMode === 'review' ? 'review' : 'auto'}`}
+            onClick={() => onTranscriptModeChange(transcriptMode === 'auto' ? 'review' : 'auto')}
+            title={transcriptMode === 'auto' ? 'Transcript auto-send enabled' : 'Transcript review before send enabled'}
+          >
+            {transcriptMode === 'auto' ? 'Auto Send' : 'Review First'}
           </button>
 
           <button
             className={`voice-tts-toggle ${ttsEnabled ? 'active' : ''}`}
-            onClick={() => setTtsEnabled(!ttsEnabled)}
+            onClick={() => onToggleTts(!ttsEnabled)}
             title="Toggle DM voice"
           >
             {ttsEnabled ? '🔊' : '🔈'}
+          </button>
+
+          <button
+            className="voice-test-btn"
+            onClick={handleVoiceTest}
+            title="Play local mock voice line"
+            disabled={isProcessing}
+          >
+            {isProcessing ? 'Testing...' : 'Voice Test'}
           </button>
         </>
       )}

@@ -1,4 +1,4 @@
-import { useCallback } from 'react'
+import { useCallback, useState } from 'react'
 import MapCanvas from './map/MapCanvas'
 import NarrativeLog from './panels/NarrativeLog'
 import ChatInput from './panels/ChatInput'
@@ -6,6 +6,7 @@ import CombatTracker from './panels/CombatTracker'
 import CharacterSheet from './panels/CharacterSheet'
 import ActionBar from './panels/ActionBar'
 import DiceRoller from './panels/DiceRoller'
+import VoiceControl from './VoiceControl'
 import { useWebSocket } from '../hooks/useWebSocket'
 import { useGameStore } from '../stores/gameStore'
 import { useSessionStore } from '../stores/sessionStore'
@@ -14,9 +15,21 @@ import './GameBoard.css'
 const AVATAR_COLORS = ['#9b59b6', '#3498db', '#2ecc71', '#e67e22', '#e74c3c']
 
 export default function GameBoard() {
-  const { sendAction, sendMoveToken, sendSpellCast } = useWebSocket()
+  const { sendAction, sendMoveToken, sendSpellCast, transcribeVoiceInput, runVoiceTest } = useWebSocket()
   const { roomCode, playerId, players } = useSessionStore()
-  const { selectedEntityId, setSelectedEntity, usage } = useGameStore()
+  const {
+    selectedEntityId,
+    setSelectedEntity,
+    usage,
+    voiceEnabled,
+    ttsEnabled,
+    transcriptMode,
+    setVoiceEnabled,
+    setTtsEnabled,
+    setTranscriptMode,
+    addNarrative,
+  } = useGameStore()
+  const [chatDraft, setChatDraft] = useState('')
 
   const handleTileClick = useCallback((gx: number, gy: number) => {
     const player = players.find(p => p.id === playerId)
@@ -29,6 +42,21 @@ export default function GameBoard() {
   const handleEntityClick = useCallback((entityId: string) => {
     setSelectedEntity(selectedEntityId === entityId ? null : entityId)
   }, [selectedEntityId, setSelectedEntity])
+
+  const handleVoiceTranscript = useCallback(async (audioBase64: string) => {
+    const transcript = await transcribeVoiceInput(audioBase64)
+    if (!transcript) {
+      return
+    }
+
+    if (transcriptMode === 'review') {
+      setChatDraft(transcript)
+      addNarrative('system', 'Voice transcript ready. Review and press Send when ready.')
+      return
+    }
+
+    sendAction(transcript)
+  }, [addNarrative, sendAction, transcriptMode, transcribeVoiceInput])
 
   return (
     <div className="game-board">
@@ -56,7 +84,17 @@ export default function GameBoard() {
       <div className="game-content">
         <div className="adventure-rail">
           <NarrativeLog />
-          <ChatInput onSend={sendAction} />
+          <VoiceControl
+            enabled={voiceEnabled}
+            onToggle={setVoiceEnabled}
+            ttsEnabled={ttsEnabled}
+            onToggleTts={setTtsEnabled}
+            transcriptMode={transcriptMode}
+            onTranscriptModeChange={setTranscriptMode}
+            onTranscript={handleVoiceTranscript}
+            onVoiceTest={runVoiceTest}
+          />
+          <ChatInput onSend={sendAction} draftText={chatDraft} onDraftTextChange={setChatDraft} />
         </div>
 
         <div className="map-area">

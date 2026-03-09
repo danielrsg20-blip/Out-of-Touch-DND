@@ -91,12 +91,11 @@ _ENCOUNTER_KEYWORDS: dict[str, list[str]] = {
 
 _TILE_LABEL_KEYWORDS: dict[str, list[str]] = {
     "floor": [
-        "floor", "grass", "dirt", "earth", "sand", "path", "road", "trail",
-        "soil", "stone", "cobble", "moss", "mud", "ground", "wood",
+        "grass", "dirt", "earth", "sand", "path", "road", "trail",
+        "soil", "stone", "cobble", "moss", "mud", "ground", "wood", "brick",
     ],
     "wall": [
-        "wall", "brick", "stone wall", "hedge", "tree", "cliff", "rock face",
-        "wood wall", "fence",
+        "brick", "stone", "hedge", "tree", "cliff", "rock", "fence", "wood",
     ],
     "door": ["door", "gate", "archway", "portcullis", "entrance"],
     "water": ["water", "river", "pond", "stream", "pool", "swamp"],
@@ -114,6 +113,24 @@ _ENV_THEME_KEYWORDS: dict[str, list[str]] = {
     "tavern": ["wood", "plank", "table", "barrel", "crate", "floor"],
     "city": ["stone", "road", "cobble", "brick", "paved"],
     "dungeon": ["dungeon", "crypt", "stone", "brick", "tile", "rubble", "bones"],
+}
+
+_PROP_CATEGORY_RULES: dict[str, dict[str, Any]] = {
+    "obstacle": {
+        "blocks_movement": True,
+        "keywords": [
+            "tree", "bush", "log", "rock", "boulder", "pillar", "column",
+            "stalagmite", "crate", "barrel", "chest", "table", "chair", "tomb",
+            "urn", "statue", "anvil", "cart",
+        ],
+    },
+    "decorative": {
+        "blocks_movement": False,
+        "keywords": [
+            "torch", "bones", "mushroom", "flower", "grass", "banner", "candle",
+            "lantern", "blood", "skull", "rune", "mark", "moss", "vines",
+        ],
+    },
 }
 
 
@@ -195,8 +212,25 @@ def _build_tile_sprite_palette(
     if not base_theme:
         base_theme = _select_labels(entries, ["stone", "floor", "dirt"], limit=120)
 
+    # Floor and wall now intentionally share one "surface" pool so either can
+    # draw from assets that were previously split by naming convention.
+    surface_keywords = sorted(set(_TILE_LABEL_KEYWORDS["floor"] + _TILE_LABEL_KEYWORDS["wall"]))
+    env_surface = [label for label in base_theme if any(keyword in label for keyword in surface_keywords)]
+    global_surface = _select_labels(entries, surface_keywords, limit=160)
+    shared_surface_candidates = env_surface if env_surface else global_surface
+    if mock_mode and shared_surface_candidates:
+        shuffled_surface = list(shared_surface_candidates)
+        rng.shuffle(shuffled_surface)
+        shared_surface_candidates = shuffled_surface[: max(2, min(8, len(shuffled_surface)))]
+
     palette: dict[str, list[str]] = {}
+    if shared_surface_candidates:
+        palette["floor"] = list(shared_surface_candidates)
+        palette["wall"] = list(shared_surface_candidates)
+
     for tile_type, keywords in _TILE_LABEL_KEYWORDS.items():
+        if tile_type in {"floor", "wall"}:
+            continue
         env_filtered = [label for label in base_theme if any(keyword in label for keyword in keywords)]
         global_fallback = _select_labels(entries, keywords, limit=120)
 
@@ -231,6 +265,39 @@ def _assign_tile_sprites(
             tile_copy["sprite"] = f"env:{label}"
         decorated.append(tile_copy)
     return decorated
+
+
+def assign_terrain_atlas_sprites(
+    raw_request: MapSelectionRequest,
+    tiles: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    """Assign deterministic env: sprite labels to an existing tile grid.
+
+    This is used when an upstream caller already produced tile geometry but still
+    wants coherent terrain atlas visuals.
+    """
+    request = _normalize_request(raw_request)
+    seed_payload = {
+        "description": request["description"],
+        "environment": request["environment"],
+        "encounter_type": request["encounter_type"],
+        "encounter_scale": request["encounter_scale"],
+        "tactical_tags": request["tactical_tags"],
+        "width": request["width"],
+        "height": request["height"],
+        "tile_count": len(tiles),
+        "mode": "prebuilt",
+    }
+    seed = int(hashlib.sha256(json.dumps(seed_payload, sort_keys=True).encode("utf-8")).hexdigest()[:8], 16)
+    rng = random.Random(seed)
+
+    palette = _build_tile_sprite_palette(
+        environment=request["environment"],
+        description=request["description"],
+        mock_mode=LOCAL_MOCK_MODE,
+        rng=rng,
+    )
+    return _assign_tile_sprites(tiles, palette, rng)
 
 
 def _spawn_environment_props(
@@ -286,6 +353,7 @@ def _spawn_environment_props(
             continue
         occupied.add((x, y))
         label = rng.choice(prop_labels)
+        prop_category, blocks_movement = _classify_prop_label(label)
         entities.append({
             "id": f"prop_auto_{idx}_{x}_{y}",
             "name": label,
@@ -293,9 +361,23 @@ def _spawn_environment_props(
             "y": y,
             "type": "object",
             "sprite": f"env:{label}",
+            "prop_category": prop_category,
+            "blocks_movement": blocks_movement,
         })
 
     return entities
+
+
+def _classify_prop_label(label: str) -> tuple[str, bool]:
+    normalized = _normalize_label(label)
+
+    for category, rule in _PROP_CATEGORY_RULES.items():
+        keywords = [str(k) for k in rule.get("keywords", [])]
+        if any(keyword in normalized for keyword in keywords):
+            return category, bool(rule.get("blocks_movement", False))
+
+    # Unknown labels default to decorative so we do not introduce accidental hard blockers.
+    return "decorative", False
 
 
 def _load_library() -> list[MapLibraryEntry]:

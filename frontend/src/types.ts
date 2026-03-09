@@ -14,6 +14,8 @@ export interface EntityData {
   type: 'pc' | 'npc' | 'enemy' | 'object'
   sprite: string
   visible?: boolean
+  blocks_movement?: boolean
+  prop_category?: string
 }
 
 export interface MapMetadata {

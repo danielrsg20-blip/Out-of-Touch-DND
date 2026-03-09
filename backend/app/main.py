@@ -14,10 +14,10 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import Response
 from pydantic import BaseModel
 
-from .config import CORS_ALLOW_ORIGINS
+from .config import CORS_ALLOW_ORIGINS, LOCAL_MOCK_MODE
 from .map_catalog import validate_map_catalog_startup
 from .session import GameSession, Player, SessionManager
-from .voice import speech_to_text, text_to_speech, dm_speak
+from .voice import speech_to_text, text_to_speech, dm_speak, mock_tts_audio
 from .models.database import init_db, async_session
 from .models.campaign import SavedCampaign
 from .tools import ToolDispatcher
@@ -394,12 +394,34 @@ async def level_up_character(req: LevelUpRequest):
 class TTSRequest(BaseModel):
     text: str
     voice: str = "dm_default"
+    mock_mode: bool = False
+
+
+class STTRequest(BaseModel):
+    audio: str
+    filename: str = "audio.webm"
+
 
 @app.post("/api/tts")
 async def tts_endpoint(req: TTSRequest):
     try:
+        force_mock = bool(req.mock_mode) or LOCAL_MOCK_MODE
+        if force_mock:
+            audio_bytes = mock_tts_audio(req.text)
+            return Response(content=audio_bytes, media_type="audio/wav")
+
         audio_bytes = await dm_speak(req.text, req.voice)
         return Response(content=audio_bytes, media_type="audio/mpeg")
+    except Exception as e:
+        return {"error": str(e)}
+
+
+@app.post("/api/stt")
+async def stt_endpoint(req: STTRequest):
+    try:
+        audio_bytes = base64.b64decode(req.audio)
+        transcript = await speech_to_text(audio_bytes, filename=req.filename)
+        return {"transcript": transcript}
     except Exception as e:
         return {"error": str(e)}
 
@@ -1209,7 +1231,7 @@ async def handle_ws_message(session: GameSession, player: Player, msg: dict[str,
             else:
                 original_x, original_y = entity.x, entity.y
 
-            if gmap.is_walkable(x, y):
+            if gmap.can_occupy(x, y, entity_id=char_id):
                 gmap.move_entity(char_id, x, y)
 
                 if combat and combat.is_active:
@@ -1230,6 +1252,11 @@ async def handle_ws_message(session: GameSession, player: Player, msg: dict[str,
                         "action": "move_token",
                         "combat": combat.to_dict(),
                     })
+            else:
+                await session.send_to_player(player.id, {
+                    "type": "error",
+                    "content": "That destination is blocked.",
+                })
 
     elif msg_type == "ping":
         await session.send_to_player(player.id, {"type": "pong"})

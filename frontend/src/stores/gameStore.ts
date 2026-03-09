@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import type { MapData, CharacterData, CombatData, NarrativeEntry, EntityData } from '../types'
+import type { TranscriptMode } from '../components/VoiceControl'
 
 let entryCounter = 0
 
@@ -11,6 +12,9 @@ interface GameState {
   selectedEntityId: string | null
   usage: { input_tokens: number; output_tokens: number; estimated_cost_usd: number }
   isLoading: boolean
+  voiceEnabled: boolean
+  ttsEnabled: boolean
+  transcriptMode: TranscriptMode
 
   setMap: (map: MapData) => void
   updateEntity: (entityId: string, x: number, y: number) => void
@@ -22,7 +26,43 @@ interface GameState {
   setSelectedEntity: (id: string | null) => void
   setUsage: (usage: GameState['usage']) => void
   setLoading: (loading: boolean) => void
+  setVoiceEnabled: (enabled: boolean) => void
+  setTtsEnabled: (enabled: boolean) => void
+  setTranscriptMode: (mode: TranscriptMode) => void
   syncState: (state: { characters: Record<string, CharacterData>; map: MapData | null; combat: CombatData | null; usage: GameState['usage'] }) => void
+}
+
+const VOICE_ENABLED_KEY = 'otdnd.voiceEnabled'
+const TTS_ENABLED_KEY = 'otdnd.ttsEnabled'
+const TRANSCRIPT_MODE_KEY = 'otdnd.transcriptMode'
+
+function readBoolSetting(key: string, fallback: boolean): boolean {
+  try {
+    const raw = window.localStorage.getItem(key)
+    if (raw === null) {
+      return fallback
+    }
+    return raw === 'true'
+  } catch {
+    return fallback
+  }
+}
+
+function readTranscriptModeSetting(): TranscriptMode {
+  try {
+    const raw = window.localStorage.getItem(TRANSCRIPT_MODE_KEY)
+    return raw === 'review' ? 'review' : 'auto'
+  } catch {
+    return 'auto'
+  }
+}
+
+function writeSetting(key: string, value: string): void {
+  try {
+    window.localStorage.setItem(key, value)
+  } catch {
+    // Non-fatal: keep in-memory behavior even if storage is unavailable.
+  }
 }
 
 export const useGameStore = create<GameState>((set) => ({
@@ -33,6 +73,9 @@ export const useGameStore = create<GameState>((set) => ({
   selectedEntityId: null,
   usage: { input_tokens: 0, output_tokens: 0, estimated_cost_usd: 0 },
   isLoading: false,
+  voiceEnabled: readBoolSetting(VOICE_ENABLED_KEY, true),
+  ttsEnabled: readBoolSetting(TTS_ENABLED_KEY, true),
+  transcriptMode: readTranscriptModeSetting(),
 
   setMap: (map) => set({ map }),
 
@@ -73,6 +116,18 @@ export const useGameStore = create<GameState>((set) => ({
 
   setUsage: (usage) => set({ usage }),
   setLoading: (loading) => set({ isLoading: loading }),
+  setVoiceEnabled: (enabled) => {
+    writeSetting(VOICE_ENABLED_KEY, String(enabled))
+    set({ voiceEnabled: enabled })
+  },
+  setTtsEnabled: (enabled) => {
+    writeSetting(TTS_ENABLED_KEY, String(enabled))
+    set({ ttsEnabled: enabled })
+  },
+  setTranscriptMode: (mode) => {
+    writeSetting(TRANSCRIPT_MODE_KEY, mode)
+    set({ transcriptMode: mode })
+  },
 
   syncState: (state) => set({
     characters: state.characters,

@@ -11,12 +11,19 @@ import {
   resolveEnvironmentSpriteRect,
 } from '../../data/environmentSpriteAtlas'
 import {
+  MONSTER_SPRITESHEET_URL,
+  getMonsterFrameKeysForBaseLabel,
+  loadMonsterSpriteLookup,
+  resolveMonsterSpriteRect,
+} from '../../data/monsterSpriteAtlas'
+import {
   CHARACTER_SPRITESHEET_COLUMNS,
   CHARACTER_SPRITESHEET_ROWS,
   getCharacterSpriteId,
   getCharacterSpriteCell,
   getCharacterSpritesheetUrl,
 } from '../../config/characterSprites'
+import { getMonsterSpriteCandidates } from '../../config/monsterSprites'
 import './MapCanvas.css'
 
 const TILE_SIZE = 32
@@ -34,6 +41,19 @@ const TILE_COLORS: Record<string, string> = {
   stairs_down: '#6a4a4a',
   chest: '#3a3a4a',
   rubble: '#4a4a3a',
+}
+
+const TILE_TYPE_ATLAS_FALLBACK: Record<string, string> = {
+  floor: 'env:stone floor',
+  wall: 'env:dark stone wall',
+  door: 'env:arched door',
+  water: 'env:deep water',
+  pit: 'env:fire pit',
+  pillar: 'env:cracked pillar',
+  stairs_up: 'env:stone floor',
+  stairs_down: 'env:stone floor',
+  chest: 'env:treasure chest',
+  rubble: 'env:rubble pillar',
 }
 
 const ENTITY_COLORS: Record<string, string> = {
@@ -92,7 +112,9 @@ export default function MapCanvas({ onTileClick, onEntityClick }: MapCanvasProps
   const imageUrlRef = useRef<string | null>(null)
   const characterSheetCacheRef = useRef<Map<string, HTMLImageElement | 'loading' | null>>(new Map())
   const environmentSheetCacheRef = useRef<Map<string, HTMLImageElement | 'loading' | null>>(new Map())
+  const monsterSheetCacheRef = useRef<Map<string, HTMLImageElement | 'loading' | null>>(new Map())
   const spriteCacheRef = useRef<Map<string, HTMLImageElement | 'loading' | null>>(new Map())
+  const enemyMonsterVariantByEntityIdRef = useRef<Map<string, string>>(new Map())
   const map = useGameStore(s => s.map)
   const combat = useGameStore(s => s.combat)
   const characters = useGameStore(s => s.characters)
@@ -163,6 +185,75 @@ export default function MapCanvas({ onTileClick, onEntityClick }: MapCanvasProps
     void loadEnvironmentSpriteLookup().catch(() => {
       // Keep fallback token rendering if the optional environment atlas fails to load.
     })
+
+    void loadMonsterSpriteLookup().catch(() => {
+      // Keep fallback token rendering if the optional monster atlas fails to load.
+    })
+  }, [])
+
+  useEffect(() => {
+    if (!map) {
+      enemyMonsterVariantByEntityIdRef.current.clear()
+      return
+    }
+
+    const aliveEnemyIds = new Set(
+      map.entities
+        .filter((entity) => entity.type === 'enemy')
+        .map((entity) => entity.id),
+    )
+
+    const cache = enemyMonsterVariantByEntityIdRef.current
+    for (const existingId of Array.from(cache.keys())) {
+      if (!aliveEnemyIds.has(existingId)) {
+        cache.delete(existingId)
+      }
+    }
+  }, [map])
+
+  const getMonsterFrameKeyForEnemy = useCallback((entityId: string, enemyName: string, explicitSpriteKey?: string): string | null => {
+    const variantCache = enemyMonsterVariantByEntityIdRef.current
+
+    const explicitKey = explicitSpriteKey?.trim()
+    if (explicitKey && explicitKey.toLowerCase() !== 'default') {
+      const explicitRect = resolveMonsterSpriteRect(explicitKey)
+      if (explicitRect) {
+        variantCache.set(entityId, explicitRect.frameKey)
+        return explicitRect.frameKey
+      }
+
+      // If the override references a base label, pick the first variant deterministically.
+      const explicitVariants = getMonsterFrameKeysForBaseLabel(explicitKey)
+      if (explicitVariants.length > 0) {
+        const selectedFrame = explicitVariants[0]
+        variantCache.set(entityId, selectedFrame)
+        return selectedFrame
+      }
+    }
+
+    const existing = variantCache.get(entityId)
+    if (existing && resolveMonsterSpriteRect(existing)) {
+      return existing
+    }
+
+    const candidates = getMonsterSpriteCandidates(enemyName)
+    for (const candidate of candidates) {
+      const directRect = resolveMonsterSpriteRect(candidate)
+      if (directRect) {
+        variantCache.set(entityId, directRect.frameKey)
+        return directRect.frameKey
+      }
+
+      const frameKeys = getMonsterFrameKeysForBaseLabel(candidate)
+      if (frameKeys.length > 0) {
+        const randomIndex = Math.floor(Math.random() * frameKeys.length)
+        const selectedFrame = frameKeys[randomIndex]
+        variantCache.set(entityId, selectedFrame)
+        return selectedFrame
+      }
+    }
+
+    return null
   }, [])
 
   useEffect(() => {
@@ -255,6 +346,17 @@ export default function MapCanvas({ onTileClick, onEntityClick }: MapCanvasProps
       tileMap.set(`${t.x},${t.y}`, t)
     }
 
+    const blockedTileSet = new Set(
+      map.tiles
+        .filter((t) => t.type === 'wall' || t.type === 'pit' || t.type === 'pillar' || t.type === 'rubble' || (t.type === 'door' && t.state === 'closed'))
+        .map((t) => `${t.x},${t.y}`),
+    )
+    const blockingEntitySet = new Set(
+      map.entities
+        .filter((e) => e.blocks_movement !== false)
+        .map((e) => `${e.x},${e.y}`),
+    )
+
     for (let y = 0; y < map.height; y++) {
       for (let x = 0; x < map.width; x++) {
         const key = `${x},${y}`
@@ -268,7 +370,17 @@ export default function MapCanvas({ onTileClick, onEntityClick }: MapCanvasProps
           continue
         }
 
-        const tileRect = typeof tile?.sprite === 'string' ? resolveEnvironmentSpriteRect(tile.sprite) : null
+        const tileSpriteKey = (() => {
+          if (typeof tile?.sprite === 'string' && tile.sprite.trim()) {
+            return tile.sprite
+          }
+          if (!tile) {
+            return null
+          }
+          return TILE_TYPE_ATLAS_FALLBACK[tile.type] ?? null
+        })()
+
+        const tileRect = tileSpriteKey ? resolveEnvironmentSpriteRect(tileSpriteKey) : null
         const environmentSheetImageForTile = tileRect
           ? environmentSheetCacheRef.current.get(ENVIRONMENT_SPRITESHEET_URL)
           : null
@@ -327,13 +439,16 @@ export default function MapCanvas({ onTileClick, onEntityClick }: MapCanvasProps
         ctx.strokeStyle = 'rgba(255, 255, 255, 0.06)'
         ctx.strokeRect(px, py, TILE_SIZE, TILE_SIZE)
 
-        if (showAtlasLabels && tile?.sprite) {
-          const label = resolveEnvironmentLabel(tile.sprite)
-          if (label) {
-            const short = label.length > 14 ? `${label.slice(0, 13)}.` : label
+        const isBlockedForTraversal = blockedTileSet.has(key) || blockingEntitySet.has(key)
+        if (showAtlasLabels && (tileSpriteKey || isBlockedForTraversal)) {
+          const label = resolveEnvironmentLabel(tileSpriteKey ?? undefined)
+          if (label || isBlockedForTraversal) {
+            const baseText = label || 'tile'
+            const fullText = isBlockedForTraversal ? `no ${baseText}` : baseText
+            const short = fullText.length > 14 ? `${fullText.slice(0, 13)}.` : fullText
             ctx.fillStyle = 'rgba(0, 0, 0, 0.66)'
             ctx.fillRect(px + 1, py + TILE_SIZE - 11, TILE_SIZE - 2, 10)
-            ctx.fillStyle = 'rgba(255, 240, 184, 0.98)'
+            ctx.fillStyle = isBlockedForTraversal ? 'rgba(255, 136, 136, 0.98)' : 'rgba(255, 240, 184, 0.98)'
             ctx.font = '7px monospace'
             ctx.textAlign = 'left'
             ctx.textBaseline = 'bottom'
@@ -345,6 +460,11 @@ export default function MapCanvas({ onTileClick, onEntityClick }: MapCanvasProps
 
     for (const entity of map.entities) {
       if (hasVisibility && !visibleSet.has(`${entity.x},${entity.y}`)) continue
+
+      const isDefeatedEnemyInCombat = entity.type === 'enemy' && !!combat?.is_active && (characters[entity.id]?.hp ?? 1) <= 0
+      if (isDefeatedEnemyInCombat) {
+        continue
+      }
 
       const px = entity.x * TILE_SIZE + TILE_SIZE / 2
       const py = entity.y * TILE_SIZE + TILE_SIZE / 2
@@ -395,6 +515,14 @@ export default function MapCanvas({ onTileClick, onEntityClick }: MapCanvasProps
         ? environmentSheetCacheRef.current.get(ENVIRONMENT_SPRITESHEET_URL)
         : null
 
+      const monsterFrameKey = entity.type === 'enemy'
+        ? getMonsterFrameKeyForEnemy(entity.id, entity.name, spriteKey)
+        : null
+      const monsterRect = monsterFrameKey ? resolveMonsterSpriteRect(monsterFrameKey) : null
+      const monsterSheetImage = monsterRect
+        ? monsterSheetCacheRef.current.get(MONSTER_SPRITESHEET_URL)
+        : null
+
       const characterFrameKey = [spriteKey, inferredSpriteKey]
         .filter((candidate): candidate is string => typeof candidate === 'string' && candidate.trim().length > 0)
         .find((candidate) => Boolean(getCharacterSpriteCell(candidate)))
@@ -415,6 +543,10 @@ export default function MapCanvas({ onTileClick, onEntityClick }: MapCanvasProps
         const scaledHeight = BASE_TOKEN_SPRITE_SIZE
         spriteDrawHeight = scaledHeight
         spriteDrawWidth = scaledHeight * (environmentRect.w / environmentRect.h)
+      } else if (monsterRect) {
+        const scaledHeight = BASE_TOKEN_SPRITE_SIZE
+        spriteDrawHeight = scaledHeight
+        spriteDrawWidth = scaledHeight * (monsterRect.w / monsterRect.h)
       }
       const spriteVisualRadius = Math.max(spriteDrawWidth, spriteDrawHeight) / 2
 
@@ -485,6 +617,33 @@ export default function MapCanvas({ onTileClick, onEntityClick }: MapCanvasProps
           environmentSheetCacheRef.current.set(ENVIRONMENT_SPRITESHEET_URL, null)
         }
         img.src = ENVIRONMENT_SPRITESHEET_URL
+      } else if (monsterRect && monsterSheetImage && monsterSheetImage !== 'loading') {
+        const left = px - spriteDrawWidth / 2
+        const top = py - spriteDrawHeight / 2
+        ctx.imageSmoothingEnabled = false
+        ctx.drawImage(
+          monsterSheetImage,
+          monsterRect.x,
+          monsterRect.y,
+          monsterRect.w,
+          monsterRect.h,
+          left,
+          top,
+          spriteDrawWidth,
+          spriteDrawHeight,
+        )
+        drewSprite = true
+      } else if (monsterRect && monsterSheetImage === undefined) {
+        monsterSheetCacheRef.current.set(MONSTER_SPRITESHEET_URL, 'loading')
+        const img = new Image()
+        img.decoding = 'async'
+        img.onload = () => {
+          monsterSheetCacheRef.current.set(MONSTER_SPRITESHEET_URL, img)
+        }
+        img.onerror = () => {
+          monsterSheetCacheRef.current.set(MONSTER_SPRITESHEET_URL, null)
+        }
+        img.src = MONSTER_SPRITESHEET_URL
       } else if (resolvedSpriteUrl) {
         const cached = spriteCacheRef.current.get(resolvedSpriteUrl)
         if (cached && cached !== 'loading') {
@@ -520,20 +679,36 @@ export default function MapCanvas({ onTileClick, onEntityClick }: MapCanvasProps
         ctx.font = `bold ${Math.max(9, 11 * interaction.zoom) / interaction.zoom}px sans-serif`
         ctx.textAlign = 'center'
         ctx.textBaseline = 'middle'
-        const isDeadEnemyInCombat = !!combat?.is_active && entity.type === 'enemy' && (characters[entity.id]?.hp ?? 1) <= 0
-        const tokenGlyph = isDeadEnemyInCombat ? 'X' : entity.name.charAt(0).toUpperCase()
-        ctx.fillText(tokenGlyph, px, py)
+        ctx.fillText(entity.name.charAt(0).toUpperCase(), px, py)
       }
 
       ctx.fillStyle = 'rgba(255,255,255,0.85)'
       ctx.font = `${Math.max(8, 10 * interaction.zoom) / interaction.zoom}px sans-serif`
       ctx.fillText(entity.name, px, py + (drewSprite ? spriteVisualRadius : radius) + 10)
+
+      if (showAtlasLabels && entity.type === 'object') {
+        const category = entity.prop_category?.trim() || 'uncategorized'
+        const blocks = entity.blocks_movement === true ? 'block' : 'pass'
+        const debugText = `${category} | ${blocks}`
+        const debugY = py - (drewSprite ? spriteVisualRadius : radius) - 4
+
+        ctx.save()
+        ctx.font = `${Math.max(7, 8 * interaction.zoom) / interaction.zoom}px monospace`
+        const textWidth = ctx.measureText(debugText).width
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.7)'
+        ctx.fillRect(px - textWidth / 2 - 3, debugY - 8, textWidth + 6, 10)
+        ctx.fillStyle = 'rgba(180, 232, 255, 0.96)'
+        ctx.textAlign = 'center'
+        ctx.textBaseline = 'bottom'
+        ctx.fillText(debugText, px, debugY)
+        ctx.restore()
+      }
     }
 
     drawOverlays(ctx, map, combat, selectedEntityId, myCharacterId)
 
     ctx.restore()
-  }, [map, combat, characters, interaction.offsetX, interaction.offsetY, interaction.zoom, selectedEntityId, myCharacterId, imageUrl, imageOpacity, resolveCharacterForEntity, showAtlasLabels])
+  }, [map, combat, characters, interaction.offsetX, interaction.offsetY, interaction.zoom, selectedEntityId, myCharacterId, imageUrl, imageOpacity, resolveCharacterForEntity, showAtlasLabels, getMonsterFrameKeyForEnemy])
 
   useEffect(() => {
     let frameId: number
