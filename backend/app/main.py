@@ -17,6 +17,7 @@ from pydantic import BaseModel
 from .config import CORS_ALLOW_ORIGINS, LOCAL_MOCK_MODE
 from .map_catalog import validate_map_catalog_startup
 from .session import GameSession, Player, SessionManager
+from .session_start_protocol import build_session_start_protocol
 from .voice import speech_to_text, text_to_speech, dm_speak, mock_tts_audio
 from .models.database import init_db, async_session
 from .models.campaign import SavedCampaign
@@ -141,6 +142,7 @@ class CreateSessionRequest(BaseModel):
 class CreateSessionResponse(BaseModel):
     room_code: str
     player_id: str
+    session_start: dict[str, Any] | None = None
 
 class JoinSessionRequest(BaseModel):
     room_code: str
@@ -208,8 +210,9 @@ async def create_session(req: CreateSessionRequest, request: Request):
     session = session_manager.create_session(host_id=player_id)
     player = Player(id=player_id, name=req.player_name, user_id=_extract_user_id(request))
     session.add_player(player)
+    session_start = build_session_start_protocol(session)
     logger.info("Session %s created by %s (%s)", session.room_code, req.player_name, player_id)
-    return CreateSessionResponse(room_code=session.room_code, player_id=player_id)
+    return CreateSessionResponse(room_code=session.room_code, player_id=player_id, session_start=session_start)
 
 
 @app.post("/api/session/join", response_model=JoinSessionResponse)
@@ -433,6 +436,7 @@ async def get_session(room_code: str):
         return {"error": "Session not found"}
     state = session.orchestrator.get_full_state()
     state["session"] = session.to_dict()
+    state["session_start"] = build_session_start_protocol(session)
     return state
 
 
@@ -686,12 +690,14 @@ async def resume_campaign(req: ResumeCampaignRequest, request: Request):
             logger.info("Resumed character %s for user %s in session %s", player.character_id, user_id, session.room_code)
 
     logger.info("Campaign %s resumed as session %s by %s", req.campaign_id, session.room_code, req.player_name)
+    session_start = build_session_start_protocol(session)
     return {
         "room_code": session.room_code,
         "player_id": player_id,
         "campaign_name": campaign.name,
         "characters_count": len(chars_data),
         "has_character": player.character_id is not None,
+        "session_start": session_start,
     }
 
 
@@ -962,12 +968,14 @@ async def websocket_endpoint(websocket: WebSocket, room_code: str, player_id: st
 
     await websocket.accept()
     player.websocket = websocket
+    session_start = build_session_start_protocol(session)
 
     await websocket.send_json({
         "type": "connected",
         "player_id": player_id,
         "session": session.to_dict(),
         "game_state": session.orchestrator.get_full_state(),
+        "session_start": session_start,
     })
 
     await session.broadcast({

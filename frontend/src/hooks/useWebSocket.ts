@@ -47,6 +47,79 @@ export function useWebSocket() {
   const { roomCode, sessionId, playerId, setConnected, addPlayer, setPlayers, getSession, mockMode } = useSessionStore()
   const { setMap, updateEntity, addEntity, removeEntity, setCombat, addNarrative, syncState, setLoading } = useGameStore()
 
+  const renderSessionStartProtocol = useCallback((payload: Record<string, unknown> | undefined) => {
+    if (!payload || typeof payload !== 'object') {
+      return
+    }
+
+    const protocol = payload.protocol as Record<string, unknown> | undefined
+    if (!protocol) {
+      return
+    }
+
+    const recap = typeof protocol.SESSION_RECAP === 'string' ? protocol.SESSION_RECAP.trim() : ''
+    const scene = typeof protocol.CURRENT_SCENE === 'string' ? protocol.CURRENT_SCENE.trim() : ''
+    const trigger = typeof protocol.EVENT_TRIGGER === 'string' ? protocol.EVENT_TRIGGER.trim() : ''
+    const prompt = typeof protocol.ACTION_PROMPT === 'string' ? protocol.ACTION_PROMPT.trim() : ''
+
+    const stateReady = protocol.SESSION_STATE_READY as Record<string, unknown> | undefined
+    const ready = stateReady?.ready === true
+    const issues = Array.isArray(stateReady?.issues)
+      ? stateReady?.issues.filter((i): i is string => typeof i === 'string' && i.trim().length > 0)
+      : []
+
+    addNarrative('system', ready ? 'SESSION_STATE_READY' : 'SESSION_STATE_BLOCKED')
+    for (const issue of issues) {
+      addNarrative('system', `Validation: ${issue}`)
+    }
+
+    if (recap) {
+      addNarrative('dm', recap, 'DM')
+    }
+
+    const partyStatus = Array.isArray(protocol.PARTY_STATUS) ? protocol.PARTY_STATUS : []
+    for (const row of partyStatus) {
+      const typed = row as Record<string, unknown>
+      const name = typeof typed.character_name === 'string' && typed.character_name.trim()
+        ? typed.character_name
+        : (typeof typed.player_name === 'string' ? typed.player_name : 'Unknown')
+      const role = typeof typed.role === 'string' && typed.role.trim() ? typed.role : 'Unassigned'
+      const hp = typed.hp as Record<string, unknown> | undefined
+      const hpCurrent = typeof hp?.current === 'number' ? hp.current : null
+      const hpMax = typeof hp?.max === 'number' ? hp.max : null
+      const conditionList = Array.isArray(typed.conditions)
+        ? typed.conditions.filter((c): c is string => typeof c === 'string' && c.trim().length > 0)
+        : []
+      const hpText = hpCurrent !== null && hpMax !== null ? `${hpCurrent}/${hpMax}` : 'n/a'
+      const conditionsText = conditionList.length > 0 ? conditionList.join(', ') : 'none'
+      addNarrative('system', `${name} (${role}) HP ${hpText} | Conditions: ${conditionsText}`)
+    }
+
+    if (scene) {
+      addNarrative('dm', scene, 'DM')
+    }
+
+    const npcPresent = protocol.NPC_PRESENT
+    if (npcPresent === 'NONE') {
+      addNarrative('system', 'NPC_PRESENT: NONE')
+    } else if (Array.isArray(npcPresent)) {
+      for (const npcRow of npcPresent) {
+        const npc = npcRow as Record<string, unknown>
+        const name = typeof npc.name === 'string' ? npc.name : 'Unknown NPC'
+        const role = typeof npc.role === 'string' ? npc.role : 'unknown role'
+        const behavior = typeof npc.behavior === 'string' ? npc.behavior : 'is present'
+        addNarrative('system', `${name} (${role}) - ${behavior}`)
+      }
+    }
+
+    if (trigger) {
+      addNarrative('dm', trigger, 'DM')
+    }
+    if (prompt) {
+      addNarrative('system', prompt)
+    }
+  }, [addNarrative])
+
   const reportVoiceIssue = useCallback((kind: 'stt' | 'tts', error: unknown) => {
     const message = normalizeVoiceErrorMessage(error)
     if (lastVoiceNoticeRef.current[kind] === message) {
@@ -178,6 +251,7 @@ export function useWebSocket() {
           setPlayers(session.players)
         }
         syncState(payload as Parameters<typeof syncState>[0])
+        renderSessionStartProtocol(payload.session_start as Record<string, unknown> | undefined)
       } catch {
         // non-critical
       }
@@ -275,6 +349,11 @@ export function useWebSocket() {
         if (msg.game_state) {
           syncState(msg.game_state as Parameters<typeof syncState>[0])
         }
+        renderSessionStartProtocol(msg.session_start as Record<string, unknown> | undefined)
+        break
+
+      case 'session_start':
+        renderSessionStartProtocol(msg)
         break
 
       case 'player_connected':
@@ -423,7 +502,7 @@ export function useWebSocket() {
         setLoading(false)
         break
     }
-  }, [addNarrative, addEntity, addPlayer, removeEntity, setCombat, setLoading, setMap, setPlayers, speakNarration, syncState, updateEntity])
+  }, [addNarrative, addEntity, addPlayer, removeEntity, renderSessionStartProtocol, setCombat, setLoading, setMap, setPlayers, speakNarration, syncState, updateEntity])
 
   const sendAction = useCallback((content: string) => {
     if (!roomCode || !playerId) {
