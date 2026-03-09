@@ -1,4 +1,4 @@
-import { useRef, useEffect, useCallback } from 'react'
+import { useRef, useEffect, useCallback, useState } from 'react'
 import { useGameStore } from '../../stores/gameStore'
 import { useSessionStore } from '../../stores/sessionStore'
 import { useMapInteraction } from '../../hooks/useMapInteraction'
@@ -72,6 +72,18 @@ function inferPropSpriteIdByName(name: string): string {
   return 'prop_stone'
 }
 
+function resolveEnvironmentLabel(spriteKey: string | undefined): string | null {
+  if (!spriteKey) {
+    return null
+  }
+  const normalized = spriteKey
+    .replace(/^env(ironment)?:/i, '')
+    .trim()
+    .toLowerCase()
+    .replace(/[\s_]+/g, ' ')
+  return normalized || null
+}
+
 export default function MapCanvas({ onTileClick, onEntityClick }: MapCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
@@ -88,6 +100,7 @@ export default function MapCanvas({ onTileClick, onEntityClick }: MapCanvasProps
   const playerId = useSessionStore(s => s.playerId)
   const players = useSessionStore(s => s.players)
   const interaction = useMapInteraction()
+  const [showAtlasLabels, setShowAtlasLabels] = useState(false)
 
   const myCharacterId = players.find(p => p.id === playerId)?.character_id ?? null
 
@@ -313,6 +326,20 @@ export default function MapCanvas({ onTileClick, onEntityClick }: MapCanvasProps
 
         ctx.strokeStyle = 'rgba(255, 255, 255, 0.06)'
         ctx.strokeRect(px, py, TILE_SIZE, TILE_SIZE)
+
+        if (showAtlasLabels && tile?.sprite) {
+          const label = resolveEnvironmentLabel(tile.sprite)
+          if (label) {
+            const short = label.length > 14 ? `${label.slice(0, 13)}.` : label
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.66)'
+            ctx.fillRect(px + 1, py + TILE_SIZE - 11, TILE_SIZE - 2, 10)
+            ctx.fillStyle = 'rgba(255, 240, 184, 0.98)'
+            ctx.font = '7px monospace'
+            ctx.textAlign = 'left'
+            ctx.textBaseline = 'bottom'
+            ctx.fillText(short, px + 2, py + TILE_SIZE - 2)
+          }
+        }
       }
     }
 
@@ -506,7 +533,7 @@ export default function MapCanvas({ onTileClick, onEntityClick }: MapCanvasProps
     drawOverlays(ctx, map, combat, selectedEntityId, myCharacterId)
 
     ctx.restore()
-  }, [map, combat, characters, interaction.offsetX, interaction.offsetY, interaction.zoom, selectedEntityId, myCharacterId, imageUrl, imageOpacity, resolveCharacterForEntity])
+  }, [map, combat, characters, interaction.offsetX, interaction.offsetY, interaction.zoom, selectedEntityId, myCharacterId, imageUrl, imageOpacity, resolveCharacterForEntity, showAtlasLabels])
 
   useEffect(() => {
     let frameId: number
@@ -603,6 +630,14 @@ export default function MapCanvas({ onTileClick, onEntityClick }: MapCanvasProps
         title="Recenter and fit map"
       >
         Recenter map
+      </button>
+      <button
+        type="button"
+        className={`map-debug-toggle-btn ${showAtlasLabels ? 'is-active' : ''}`}
+        onClick={() => setShowAtlasLabels((v) => !v)}
+        title="Toggle atlas tile labels for QA"
+      >
+        {showAtlasLabels ? 'Hide atlas labels' : 'Show atlas labels'}
       </button>
       {hasAttributionPanel && (
         <div className="map-attribution-panel">

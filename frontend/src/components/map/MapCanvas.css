@@ -85,6 +85,31 @@
   color: var(--accent-gold);
 }
 
+.map-debug-toggle-btn {
+  position: absolute;
+  top: 2.35rem;
+  right: 0.6rem;
+  z-index: 2;
+  border: 1px solid var(--border-color);
+  background: rgba(0, 0, 0, 0.58);
+  color: var(--text-primary);
+  border-radius: 4px;
+  padding: 0.25rem 0.5rem;
+  font-size: 0.68rem;
+  cursor: pointer;
+}
+
+.map-debug-toggle-btn:hover {
+  border-color: var(--accent-gold);
+  color: var(--accent-gold);
+}
+
+.map-debug-toggle-btn.is-active {
+  border-color: var(--accent-gold);
+  color: var(--accent-gold);
+  background: rgba(78, 62, 20, 0.62);
+}
+
 .map-attribution-panel {
   position: absolute;
   left: 0.6rem;
