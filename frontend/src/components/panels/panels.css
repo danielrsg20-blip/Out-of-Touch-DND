@@ -214,6 +214,141 @@
   font-size: 0.9rem;
 }
 
+/* Death banner */
+.char-dead-banner {
+  background: rgba(231, 76, 60, 0.15);
+  border: 1px solid rgba(231, 76, 60, 0.4);
+  color: var(--accent-red, #e05252);
+  text-align: center;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  margin-bottom: 0.5rem;
+}
+
+/* XP bar */
+.char-xp-section {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.char-xp-bar-track {
+  flex: 1;
+  height: 4px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.char-xp-bar-fill {
+  height: 100%;
+  background: var(--accent-purple, #9b59b6);
+  border-radius: 2px;
+  transition: width 0.4s ease;
+}
+
+.char-xp-label {
+  font-size: 0.62rem;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+/* Skills */
+.skills-section {
+  margin-bottom: 0.4rem;
+}
+
+.skills-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  background: none;
+  border: none;
+  border-bottom: 1px solid var(--border-color);
+  color: var(--text-secondary);
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  padding: 0.15rem 0;
+  cursor: pointer;
+  margin-bottom: 0.2rem;
+}
+
+.skills-toggle:hover {
+  color: var(--text-primary);
+}
+
+.skills-toggle-arrow {
+  font-size: 0.55rem;
+  opacity: 0.6;
+}
+
+.skills-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.05rem;
+  max-height: 200px;
+  overflow-y: auto;
+  padding-right: 2px;
+}
+
+.skill-row {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.08rem 0.2rem;
+  font-size: 0.75rem;
+  border-radius: 2px;
+}
+
+.skill-row:hover {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.skill-prof-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  border: 1px solid var(--text-secondary);
+  opacity: 0.4;
+  flex-shrink: 0;
+}
+
+.skill-prof-dot.proficient {
+  background: var(--accent-gold);
+  border-color: var(--accent-gold);
+  opacity: 1;
+}
+
+.skill-ability {
+  font-size: 0.6rem;
+  color: var(--text-secondary);
+  min-width: 26px;
+  flex-shrink: 0;
+  opacity: 0.7;
+}
+
+.skill-name {
+  flex: 1;
+  color: var(--text-primary);
+}
+
+.skill-bonus {
+  font-family: 'Consolas', 'Courier New', monospace;
+  font-size: 0.72rem;
+  color: var(--accent-gold);
+  min-width: 24px;
+  text-align: right;
+  flex-shrink: 0;
+}
+
 .char-subtitle {
   color: var(--text-secondary);
   font-size: 0.85rem;
@@ -244,7 +379,8 @@
 
 .char-stats-row {
   display: flex;
-  gap: 0.75rem;
+  flex-wrap: wrap;
+  gap: 0.4rem;
   margin-bottom: 0.6rem;
 }
 
@@ -484,6 +620,137 @@
   color: var(--accent-purple);
   font-style: italic;
   flex-shrink: 0;
+}
+
+/* ── Paper doll ─────────────────────────────────────────────────────── */
+.paper-doll {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.4rem 0 0.5rem;
+  margin-bottom: 0.25rem;
+}
+
+.paper-doll-top,
+.paper-doll-middle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+}
+
+/* Character sprite cell */
+.paper-doll-sprite {
+  width: 56px;
+  height: 56px;
+  flex-shrink: 0;
+  image-rendering: pixelated;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background-color: rgba(255, 255, 255, 0.03);
+}
+
+.paper-doll-sprite-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-secondary);
+  font-size: 1.2rem;
+  opacity: 0.4;
+}
+
+/* Individual equipment slot */
+.paper-doll-slot {
+  position: relative;
+  width: 60px;
+  min-height: 60px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.15rem;
+  padding: 0.25rem 0.2rem;
+  border: 1px dashed rgba(255, 255, 255, 0.12);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.02);
+  text-align: center;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.paper-doll-slot.filled {
+  border-style: solid;
+  border-color: rgba(228, 168, 83, 0.3);
+  background: rgba(228, 168, 83, 0.05);
+}
+
+.paper-doll-slot-empty-icon {
+  font-size: 1.1rem;
+  opacity: 0.25;
+  line-height: 1;
+}
+
+.paper-doll-slot-label {
+  font-size: 0.55rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-secondary);
+  opacity: 0.5;
+}
+
+.paper-doll-slot-icon-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+}
+
+.paper-doll-slot-icon-wrap img {
+  width: 24px;
+  height: 24px;
+  image-rendering: pixelated;
+}
+
+.paper-doll-slot-name {
+  font-size: 0.58rem;
+  color: var(--text-primary);
+  line-height: 1.2;
+  max-width: 56px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.paper-doll-slot-stat {
+  font-size: 0.55rem;
+  color: var(--accent-gold);
+  font-family: 'Consolas', 'Courier New', monospace;
+}
+
+.paper-doll-unequip-btn {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  width: 14px;
+  height: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.55rem;
+  line-height: 1;
+  padding: 0;
+  background: rgba(224, 82, 82, 0.15);
+  border: 1px solid rgba(224, 82, 82, 0.3);
+  border-radius: 3px;
+  color: var(--accent-red, #e05252);
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+
+.paper-doll-slot:hover .paper-doll-unequip-btn {
+  opacity: 1;
 }
 
 /* ── Feature #4: Gold display ──────────────────────────────────────── */
@@ -1027,4 +1294,83 @@
 .dice-roll-btn:hover {
   background: rgba(155, 89, 182, 0.3);
   border-color: var(--accent-purple);
+}
+
+/* ── Weight bar warning state ──────────────────────────────────────── */
+.inv-weight-bar-fill.warning {
+  background: var(--accent-gold, #e4a853);
+}
+
+/* ── Narrative log header (title + timestamp toggle) ───────────────── */
+.narrative-log-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.5rem;
+  padding-bottom: 0.4rem;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.narrative-log-header .panel-title {
+  border-bottom: none;
+  padding-bottom: 0;
+  margin-bottom: 0;
+}
+
+.narrative-ts-toggle {
+  background: none;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  color: var(--text-secondary);
+  font-size: 0.75rem;
+  padding: 0.1rem 0.25rem;
+  cursor: pointer;
+  opacity: 0.5;
+  transition: opacity 0.15s, border-color 0.15s;
+  line-height: 1;
+}
+
+.narrative-ts-toggle:hover {
+  opacity: 1;
+}
+
+.narrative-ts-toggle.active {
+  opacity: 1;
+  border-color: var(--border-color);
+  color: var(--accent-gold);
+}
+
+/* ── Narrative timestamp ───────────────────────────────────────────── */
+.narrative-timestamp {
+  font-size: 0.62rem;
+  color: var(--text-secondary);
+  opacity: 0.5;
+  margin-right: 0.35rem;
+  font-family: 'Consolas', 'Courier New', monospace;
+}
+
+/* ── Enhanced dice entry ───────────────────────────────────────────── */
+.narrative-dice-content {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.narrative-dice-label {
+  color: var(--accent-purple);
+  opacity: 0.85;
+}
+
+.narrative-dice-result {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 28px;
+  padding: 0.05rem 0.35rem;
+  background: rgba(155, 89, 182, 0.2);
+  border: 1px solid rgba(155, 89, 182, 0.4);
+  border-radius: 4px;
+  font-weight: 700;
+  font-size: 0.9rem;
+  color: var(--accent-purple);
 }

@@ -3,10 +3,71 @@ import { useGameStore } from '../../stores/gameStore'
 import { useSessionStore } from '../../stores/sessionStore'
 import { invokeEdgeFunction } from '../../lib/supabaseClient'
 import { getItemSpriteKey, resolveSpriteUrl } from '../../data/spriteManifest'
+import {
+  CHARACTER_SPRITESHEET_COLUMNS,
+  CHARACTER_SPRITESHEET_ROWS,
+  getCharacterSpriteCell,
+  getCharacterSpritesheetUrl,
+} from '../../config/characterSprites'
 import type { ItemData, SpellOption } from '../../types'
 import './panels.css'
 
 const BACKEND_URL = import.meta.env.VITE_BACKEND_URL ?? 'http://localhost:8000'
+
+// ── 5e class → hit die size ───────────────────────────────────────────────────
+const CLASS_HIT_DIE: Record<string, number> = {
+  barbarian: 12,
+  fighter: 10, paladin: 10, ranger: 10,
+  bard: 8, cleric: 8, druid: 8, monk: 8, rogue: 8, warlock: 8,
+  sorcerer: 6, wizard: 6,
+}
+
+// ── 5e class → saving throw proficiencies ─────────────────────────────────────
+const CLASS_SAVE_PROFS: Record<string, string[]> = {
+  barbarian: ['STR', 'CON'],
+  bard: ['DEX', 'CHA'],
+  cleric: ['WIS', 'CHA'],
+  druid: ['INT', 'WIS'],
+  fighter: ['STR', 'CON'],
+  monk: ['STR', 'DEX'],
+  paladin: ['WIS', 'CHA'],
+  ranger: ['STR', 'DEX'],
+  rogue: ['DEX', 'INT'],
+  sorcerer: ['CON', 'CHA'],
+  warlock: ['WIS', 'CHA'],
+  wizard: ['INT', 'WIS'],
+}
+
+// ── 5e skill → ability mapping ────────────────────────────────────────────────
+const SKILLS: Array<{ name: string; ability: string }> = [
+  { name: 'Acrobatics',     ability: 'DEX' },
+  { name: 'Animal Handling',ability: 'WIS' },
+  { name: 'Arcana',         ability: 'INT' },
+  { name: 'Athletics',      ability: 'STR' },
+  { name: 'Deception',      ability: 'CHA' },
+  { name: 'History',        ability: 'INT' },
+  { name: 'Insight',        ability: 'WIS' },
+  { name: 'Intimidation',   ability: 'CHA' },
+  { name: 'Investigation',  ability: 'INT' },
+  { name: 'Medicine',       ability: 'WIS' },
+  { name: 'Nature',         ability: 'INT' },
+  { name: 'Perception',     ability: 'WIS' },
+  { name: 'Performance',    ability: 'CHA' },
+  { name: 'Persuasion',     ability: 'CHA' },
+  { name: 'Religion',       ability: 'INT' },
+  { name: 'Sleight of Hand',ability: 'DEX' },
+  { name: 'Stealth',        ability: 'DEX' },
+  { name: 'Survival',       ability: 'WIS' },
+]
+
+// ── 5e XP thresholds per level (index = level - 1) ───────────────────────────
+const XP_THRESHOLDS = [
+  0, 300, 900, 2700, 6500, 14000, 23000, 34000,
+  48000, 64000, 85000, 100000, 120000, 140000,
+  165000, 195000, 225000, 265000, 305000, 355000,
+]
+
+function fmtMod(n: number) { return n >= 0 ? `+${n}` : `${n}` }
 
 // 5e carry capacity: STR score × 15 lb
 function carryCapacity(strScore: number): number {
@@ -130,59 +191,170 @@ function ItemRow({
   )
 }
 
-// ── EquipSlot (features #1, #6, #8) ──────────────────────────────────────────
-function EquipSlot({
+// ── Paper doll: character sprite ─────────────────────────────────────────────
+function CharacterSprite({ spriteId }: { readonly spriteId: string | null | undefined }) {
+  if (!spriteId) return <div className="paper-doll-sprite paper-doll-sprite-empty">?</div>
+  const url = getCharacterSpritesheetUrl(spriteId)
+  const cell = getCharacterSpriteCell(spriteId)
+  if (!url || !cell) return <div className="paper-doll-sprite paper-doll-sprite-empty">?</div>
+  const x = (cell.col / (CHARACTER_SPRITESHEET_COLUMNS - 1)) * 100
+  const y = (cell.row / (CHARACTER_SPRITESHEET_ROWS - 1)) * 100
+  return (
+    <div
+      className="paper-doll-sprite"
+      style={{
+        backgroundImage: `url(${url})`,
+        backgroundSize: `${CHARACTER_SPRITESHEET_COLUMNS * 100}% ${CHARACTER_SPRITESHEET_ROWS * 100}%`,
+        backgroundPosition: `${x}% ${y}%`,
+      }}
+    />
+  )
+}
+
+// ── Paper doll: individual slot ───────────────────────────────────────────────
+function PaperDollSlot({
   label,
+  emptyIcon,
   item,
   canEquip,
   isInCombat,
   onUnequip,
 }: {
   readonly label: string
+  readonly emptyIcon: string
   readonly item: ItemData | undefined
   readonly canEquip: boolean
   readonly isInCombat: boolean
   readonly onUnequip: (itemId: string) => void
 }) {
+  let stat = ''
+  if (item?.damage) {
+    stat = `${item.damage} ${item.damage_type}`
+  } else if (item?.ac_base != null && item.category === 'armor') {
+    stat = `AC ${item.ac_base}${item.dex_mod ? '+DEX' : ''}`
+  } else if (item?.category === 'shield') {
+    stat = '+2 AC'
+  }
+
   return (
-    <div className="inv-equip-slot">
-      <span className="inv-slot-label">{label}</span>
+    <div className={`paper-doll-slot${item ? ' filled' : ''}`}>
       {item ? (
-        <div className="inv-slot-item">
-          <ItemIcon item={item} />
-          <span className="inv-item-name">{item.name}</span>
-          {item.damage && (
-            <span className="inv-item-stat">{item.damage} {item.damage_type}</span>
-          )}
-          {item.ac_base !== null && item.category === 'armor' && (
-            <span className="inv-item-stat">AC {item.ac_base}{item.dex_mod ? '+DEX' : ''}</span>
-          )}
-          {item.category === 'shield' && (
-            <span className="inv-item-stat">+2 AC</span>
-          )}
-          {/* Feature #6: stealth disadvantage on equipped */}
+        <>
+          <div className="paper-doll-slot-icon-wrap">
+            <ItemIcon item={item} />
+          </div>
+          <div className="paper-doll-slot-name">{item.name}</div>
+          {stat && <div className="paper-doll-slot-stat">{stat}</div>}
           {item.stealth_disadvantage && (
             <span className="inv-stealth-warn" title="Stealth disadvantage">⚠</span>
           )}
-          {item.notes && <span className="inv-item-notes">{item.notes}</span>}
-          {/* Feature #1: properties on equipped */}
-          {item.properties?.length > 0 && (
-            <div className="inv-properties inv-properties-slot">
-              {item.properties.map(p => <span key={p} className="inv-prop-tag">{p}</span>)}
-            </div>
-          )}
           {canEquip && !isInCombat && (
             <button
-              className="inv-equip-btn inv-unequip-btn"
+              className="paper-doll-unequip-btn"
               onClick={() => onUnequip(item.id)}
               title="Unequip"
-            >
-              ✕
-            </button>
+            >✕</button>
           )}
-        </div>
+        </>
       ) : (
-        <span className="inv-slot-empty">—</span>
+        <>
+          <span className="paper-doll-slot-empty-icon">{emptyIcon}</span>
+          <span className="paper-doll-slot-label">{label}</span>
+        </>
+      )}
+    </div>
+  )
+}
+
+// ── XP progress bar ───────────────────────────────────────────────────────────
+function XPBar({ xp, level }: { readonly xp: number; readonly level: number }) {
+  if (level >= 20) return null
+  const current = XP_THRESHOLDS[level - 1] ?? 0
+  const next = XP_THRESHOLDS[level] ?? current
+  const pct = next > current ? Math.min(100, ((xp - current) / (next - current)) * 100) : 100
+  return (
+    <div className="char-xp-section">
+      <div className="char-xp-bar-track">
+        <div className="char-xp-bar-fill" style={{ width: `${pct}%` }} />
+      </div>
+      <span className="char-xp-label">{xp.toLocaleString()} / {next.toLocaleString()} XP</span>
+    </div>
+  )
+}
+
+// ── Skills list ───────────────────────────────────────────────────────────────
+function SkillsList({
+  modifiers,
+  proficiencyBonus,
+  skillProficiencies,
+}: {
+  readonly modifiers: Record<string, number>
+  readonly proficiencyBonus: number
+  readonly skillProficiencies: string[]
+}) {
+  const [open, setOpen] = useState(false)
+  const profSet = new Set(skillProficiencies.map(s => s.toLowerCase()))
+  return (
+    <div className="skills-section">
+      <button className="skills-toggle" onClick={() => setOpen(o => !o)}>
+        <span>Skills</span>
+        <span className="skills-toggle-arrow">{open ? '▲' : '▼'}</span>
+      </button>
+      {open && (
+        <div className="skills-list">
+          {SKILLS.map(({ name, ability }) => {
+            const proficient = profSet.has(name.toLowerCase())
+            const bonus = (modifiers[ability] ?? 0) + (proficient ? proficiencyBonus : 0)
+            return (
+              <div key={name} className="skill-row">
+                <span className={`skill-prof-dot${proficient ? ' proficient' : ''}`} title={proficient ? 'Proficient' : ''} />
+                <span className="skill-ability">{ability}</span>
+                <span className="skill-name">{name}</span>
+                <span className="skill-bonus">{fmtMod(bonus)}</span>
+              </div>
+            )
+          })}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ── Saving throws ─────────────────────────────────────────────────────────────
+const SAVE_ABILITIES = ['STR', 'DEX', 'CON', 'INT', 'WIS', 'CHA']
+
+function SavingThrows({
+  charClass,
+  modifiers,
+  proficiencyBonus,
+}: {
+  readonly charClass: string
+  readonly modifiers: Record<string, number>
+  readonly proficiencyBonus: number
+}) {
+  const [open, setOpen] = useState(false)
+  const saveProfs = new Set(CLASS_SAVE_PROFS[charClass.toLowerCase()] ?? [])
+  return (
+    <div className="skills-section">
+      <button className="skills-toggle" onClick={() => setOpen(o => !o)}>
+        <span>Saving Throws</span>
+        <span className="skills-toggle-arrow">{open ? '▲' : '▼'}</span>
+      </button>
+      {open && (
+        <div className="skills-list">
+          {SAVE_ABILITIES.map(ab => {
+            const proficient = saveProfs.has(ab)
+            const bonus = (modifiers[ab] ?? 0) + (proficient ? proficiencyBonus : 0)
+            return (
+              <div key={ab} className="skill-row">
+                <span className={`skill-prof-dot${proficient ? ' proficient' : ''}`} title={proficient ? 'Proficient' : ''} />
+                <span className="skill-ability">{ab}</span>
+                <span className="skill-name">{ab === 'STR' ? 'Strength' : ab === 'DEX' ? 'Dexterity' : ab === 'CON' ? 'Constitution' : ab === 'INT' ? 'Intelligence' : ab === 'WIS' ? 'Wisdom' : 'Charisma'}</span>
+                <span className="skill-bonus">{fmtMod(bonus)}</span>
+              </div>
+            )
+          })}
+        </div>
       )}
     </div>
   )
@@ -193,6 +365,7 @@ function InventoryPanel({
   inventory,
   gold,
   strScore,
+  spriteId,
   canEquip,
   isInCombat,
   onEquip,
@@ -202,6 +375,7 @@ function InventoryPanel({
   readonly inventory: ItemData[]
   readonly gold: number
   readonly strScore: number
+  readonly spriteId: string | null | undefined
   readonly canEquip: boolean
   readonly isInCombat: boolean
   readonly onEquip: (itemId: string, equip: boolean) => void
@@ -219,7 +393,7 @@ function InventoryPanel({
   const weight = totalWeight(inventory)
   const capacity = carryCapacity(strScore)
   const weightPct = Math.min(100, (weight / capacity) * 100)
-  const weightEncumbered = weight > capacity * 0.667
+  const weightState = weight > capacity ? 'encumbered' : weight > capacity * 0.5 ? 'warning' : ''
 
   // Feature #5: grouped backpack
   const groups = groupByCategory(backpack)
@@ -232,12 +406,25 @@ function InventoryPanel({
         <span className="inv-gold-value">{gold} gp</span>
       </div>
 
-      {/* Equipped slots */}
-      <div className="inv-section-title">Equipped</div>
-      <div className="inv-equipped-slots">
-        <EquipSlot label="Weapon" item={equippedWeapon} canEquip={canEquip} isInCombat={isInCombat} onUnequip={onUnequip} />
-        <EquipSlot label="Armor" item={equippedArmor} canEquip={canEquip} isInCombat={isInCombat} onUnequip={onUnequip} />
-        <EquipSlot label="Shield" item={equippedShield} canEquip={canEquip} isInCombat={isInCombat} onUnequip={onUnequip} />
+      {/* Paper doll */}
+      <div className="paper-doll">
+        <div className="paper-doll-top">
+          <PaperDollSlot
+            label="Armor" emptyIcon="🧥"
+            item={equippedArmor} canEquip={canEquip} isInCombat={isInCombat} onUnequip={onUnequip}
+          />
+        </div>
+        <div className="paper-doll-middle">
+          <PaperDollSlot
+            label="Weapon" emptyIcon="⚔"
+            item={equippedWeapon} canEquip={canEquip} isInCombat={isInCombat} onUnequip={onUnequip}
+          />
+          <CharacterSprite spriteId={spriteId} />
+          <PaperDollSlot
+            label="Shield" emptyIcon="🛡"
+            item={equippedShield} canEquip={canEquip} isInCombat={isInCombat} onUnequip={onUnequip}
+          />
+        </div>
       </div>
 
       {/* Feature #8: equip error */}
@@ -277,7 +464,7 @@ function InventoryPanel({
       <div className="inv-weight-section">
         <div className="inv-weight-bar-track">
           <div
-            className={`inv-weight-bar-fill${weightEncumbered ? ' encumbered' : ''}`}
+            className={`inv-weight-bar-fill${weightState ? ` ${weightState}` : ''}`}
             style={{ width: `${weightPct}%` }}
           />
         </div>
@@ -442,6 +629,13 @@ export default function CharacterSheet() {
   // Feature #7: item count badge
   const itemCount = char.inventory.length
 
+  // Derived stats
+  const dexMod = char.modifiers['DEX'] ?? 0
+  const wisMod = char.modifiers['WIS'] ?? 0
+  const isPerceptionProf = char.skill_proficiencies?.some(s => s.toLowerCase() === 'perception')
+  const passivePerception = 10 + wisMod + (isPerceptionProf ? char.proficiency_bonus : 0)
+  const hitDie = CLASS_HIT_DIE[char.class.toLowerCase()] ?? 8
+
   return (
     <div className="character-sheet">
       <div className="char-header-row">
@@ -474,10 +668,20 @@ export default function CharacterSheet() {
 
       {tab === 'stats' ? (
         <>
+          {/* Death banner */}
+          {!char.is_alive && (
+            <div className="char-dead-banner">✝ Fallen</div>
+          )}
+
+          {/* Quick stats */}
           <div className="char-stats-row">
             <div className="char-stat">
               <span className="stat-label">AC</span>
               <span className="stat-value">{char.ac}</span>
+            </div>
+            <div className="char-stat">
+              <span className="stat-label">Init</span>
+              <span className="stat-value">{fmtMod(dexMod)}</span>
             </div>
             <div className="char-stat">
               <span className="stat-label">Speed</span>
@@ -487,20 +691,45 @@ export default function CharacterSheet() {
               <span className="stat-label">Prof</span>
               <span className="stat-value">+{char.proficiency_bonus}</span>
             </div>
+            <div className="char-stat">
+              <span className="stat-label">Pass. Perc</span>
+              <span className="stat-value">{passivePerception}</span>
+            </div>
+            <div className="char-stat">
+              <span className="stat-label">Hit Die</span>
+              <span className="stat-value">{char.level}d{hitDie}</span>
+            </div>
           </div>
 
+          {/* XP bar */}
+          <XPBar xp={char.xp} level={char.level} />
+
+          {/* Ability scores */}
           <div className="char-abilities">
             {Object.entries(char.abilities).map(([ab, score]) => (
               <div key={ab} className="ability-box">
                 <span className="ability-name">{ab}</span>
                 <span className="ability-score">{score}</span>
-                <span className="ability-mod">
-                  {char.modifiers[ab] >= 0 ? '+' : ''}{char.modifiers[ab]}
-                </span>
+                <span className="ability-mod">{fmtMod(char.modifiers[ab] ?? 0)}</span>
               </div>
             ))}
           </div>
 
+          {/* Saving Throws */}
+          <SavingThrows
+            charClass={char.class}
+            modifiers={char.modifiers}
+            proficiencyBonus={char.proficiency_bonus}
+          />
+
+          {/* Skills */}
+          <SkillsList
+            modifiers={char.modifiers}
+            proficiencyBonus={char.proficiency_bonus}
+            skillProficiencies={char.skill_proficiencies ?? []}
+          />
+
+          {/* Conditions */}
           {char.conditions.length > 0 && (
             <div className="char-conditions">
               {char.conditions.map(c => (
@@ -509,11 +738,121 @@ export default function CharacterSheet() {
             </div>
           )}
 
+          {/* Traits */}
           {char.traits.length > 0 && (
             <div className="char-traits">
               <h4>Traits</h4>
               {char.traits.map(t => (
                 <span key={t} className="trait-tag">{t}</span>
+              ))}
+            </div>
+          )}
+
+          {/* Spell slots */}
+          {slotRows.length > 0 && (
+            <div className="char-spell-slots">
+              <h4>Spell Slots</h4>
+              {slotRows.map(s => (
+                <div key={s.level} className={`slot-row slot-row-${s.state}`}>
+                  <span>Level {s.level}</span>
+                  <span>{s.remaining}/{s.total}</span>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Prepared spells */}
+          {char.prepared_spells?.length > 0 && (
+            <div className="char-spells">
+              <h4>Prepared Spells</h4>
+              {char.prepared_spells.map(spell => (
+                <span key={spell} className="spell-tag">{spell}</span>
+              ))}
+            </div>
+          )}
+
+          {/* Manage prepared spells */}
+          {canManagePreparedSpells && (
+            <div className="prepared-manager">
+              {!isManagingPrepared ? (
+                <>
+                  <button
+                    className="prepared-manager-btn"
+                    onClick={() => setIsManagingPrepared(true)}
+                    disabled={isInCombat}
+                  >
+                    Manage Prepared Spells
+                  </button>
+                  {isInCombat && <div className="prepared-manager-note">Prepared spells cannot be changed during combat.</div>}
+                </>
+              ) : (
+                <div className="prepared-manager-editor">
+                  <div className="prepared-manager-header">
+                    <h4>Manage Prepared Spells</h4>
+                    <span>{selectedPreparedSpells.length}/{preparedLimit}</span>
+                  </div>
+                  {loadingPreparedOptions ? (
+                    <p className="panel-empty">Loading spell options...</p>
+                  ) : (
+                    <div className="prepared-manager-list">
+                      {availablePreparedSpells.map(spell => {
+                        const selected = selectedPreparedSpells.includes(spell.name)
+                        const disabled = !selected && selectedPreparedSpells.length >= preparedLimit
+                        return (
+                          <label key={spell.name} className={`prepared-manager-item ${disabled ? 'disabled' : ''}`}>
+                            <input
+                              type="checkbox"
+                              checked={selected}
+                              disabled={disabled}
+                              onChange={() => togglePreparedSpell(spell.name)}
+                            />
+                            <span>{spell.name}</span>
+                            <span className="prepared-manager-level">L{spell.level}</span>
+                          </label>
+                        )
+                      })}
+                    </div>
+                  )}
+                  {preparedError && <div className="prepared-manager-error">{preparedError}</div>}
+                  <div className="prepared-manager-actions">
+                    <button
+                      className="prepared-manager-btn"
+                      onClick={savePreparedSpells}
+                      disabled={savingPreparedOptions || loadingPreparedOptions || isInCombat}
+                    >
+                      {savingPreparedOptions ? 'Saving...' : 'Save'}
+                    </button>
+                    <button
+                      className="prepared-manager-btn secondary"
+                      onClick={() => { setPreparedError(null); setIsManagingPrepared(false) }}
+                      disabled={savingPreparedOptions}
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Known spells */}
+          {char.known_spells?.length > 0 && (
+            <div className="char-spells">
+              <h4>Known Spells</h4>
+              {char.known_spells.map(spell => (
+                <span key={spell} className="spell-tag">{spell}</span>
+              ))}
+            </div>
+          )}
+
+          {/* Class features */}
+          {char.class_features?.length > 0 && (
+            <div className="char-features">
+              <h4>Class Features</h4>
+              {char.class_features.map(feature => (
+                <div key={feature.id || feature.name} className="feature-item" title={feature.description || feature.name}>
+                  <strong>{feature.name}</strong>{feature.level ? ` (L${feature.level})` : ''}
+                </div>
               ))}
             </div>
           )}
@@ -523,122 +862,13 @@ export default function CharacterSheet() {
           inventory={char.inventory}
           gold={char.gold_gp ?? 0}
           strScore={char.abilities['STR'] ?? 10}
+          spriteId={char.sprite_id}
           canEquip={canSelfEquip}
           isInCombat={isInCombat}
           onEquip={handleEquip}
           onUnequip={(id) => handleEquip(id, false)}
           equipError={equipError}
         />
-      )}
-
-      {slotRows.length > 0 && (
-        <div className="char-spell-slots">
-          <h4>Spell Slots</h4>
-          {slotRows.map(s => (
-            <div key={s.level} className={`slot-row slot-row-${s.state}`}>
-              <span>Level {s.level}</span>
-              <span>{s.remaining}/{s.total}</span>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {char.prepared_spells?.length > 0 && (
-        <div className="char-spells">
-          <h4>Prepared Spells</h4>
-          {char.prepared_spells.map(spell => (
-            <span key={spell} className="spell-tag">{spell}</span>
-          ))}
-        </div>
-      )}
-
-      {canManagePreparedSpells && (
-        <div className="prepared-manager">
-          {!isManagingPrepared ? (
-            <>
-              <button
-                className="prepared-manager-btn"
-                onClick={() => setIsManagingPrepared(true)}
-                disabled={isInCombat}
-              >
-              Manage Prepared Spells
-              </button>
-              {isInCombat && <div className="prepared-manager-note">Prepared spells cannot be changed during combat.</div>}
-            </>
-          ) : (
-            <div className="prepared-manager-editor">
-              <div className="prepared-manager-header">
-                <h4>Manage Prepared Spells</h4>
-                <span>{selectedPreparedSpells.length}/{preparedLimit}</span>
-              </div>
-
-              {loadingPreparedOptions ? (
-                <p className="panel-empty">Loading spell options...</p>
-              ) : (
-                <div className="prepared-manager-list">
-                  {availablePreparedSpells.map(spell => {
-                    const selected = selectedPreparedSpells.includes(spell.name)
-                    const disabled = !selected && selectedPreparedSpells.length >= preparedLimit
-                    return (
-                      <label key={spell.name} className={`prepared-manager-item ${disabled ? 'disabled' : ''}`}>
-                        <input
-                          type="checkbox"
-                          checked={selected}
-                          disabled={disabled}
-                          onChange={() => togglePreparedSpell(spell.name)}
-                        />
-                        <span>{spell.name}</span>
-                        <span className="prepared-manager-level">L{spell.level}</span>
-                      </label>
-                    )
-                  })}
-                </div>
-              )}
-
-              {preparedError && <div className="prepared-manager-error">{preparedError}</div>}
-
-              <div className="prepared-manager-actions">
-                <button
-                  className="prepared-manager-btn"
-                  onClick={savePreparedSpells}
-                  disabled={savingPreparedOptions || loadingPreparedOptions || isInCombat}
-                >
-                  {savingPreparedOptions ? 'Saving...' : 'Save'}
-                </button>
-                <button
-                  className="prepared-manager-btn secondary"
-                  onClick={() => {
-                    setPreparedError(null)
-                    setIsManagingPrepared(false)
-                  }}
-                  disabled={savingPreparedOptions}
-                >
-                  Cancel
-                </button>
-              </div>
-            </div>
-          )}
-        </div>
-      )}
-
-      {char.known_spells?.length > 0 && (
-        <div className="char-spells">
-          <h4>Known Spells</h4>
-          {char.known_spells.map(spell => (
-            <span key={spell} className="spell-tag">{spell}</span>
-          ))}
-        </div>
-      )}
-
-      {char.class_features?.length > 0 && (
-        <div className="char-features">
-          <h4>Class Features</h4>
-          {char.class_features.map(feature => (
-            <div key={feature.id || feature.name} className="feature-item" title={feature.description || feature.name}>
-              <strong>{feature.name}</strong>{feature.level ? ` (L${feature.level})` : ''}
-            </div>
-          ))}
-        </div>
       )}
     </div>
   )
