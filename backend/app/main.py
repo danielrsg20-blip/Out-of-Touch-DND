@@ -545,6 +545,7 @@ async def load_campaign(req: LoadCampaignRequest):
             prepared_spells=cd.get("prepared_spells", []),
             class_features=cd.get("class_features", []),
             traits=cd.get("traits", []), xp=cd.get("xp", 0),
+            gold_gp=cd.get("gold_gp", 0),
             rules_version=cd.get("rules_version", "2024"),
         )
         if not char.class_features:
@@ -639,6 +640,7 @@ async def resume_campaign(req: ResumeCampaignRequest, request: Request):
             prepared_spells=cd.get("prepared_spells", []),
             class_features=cd.get("class_features", []),
             traits=cd.get("traits", []), xp=cd.get("xp", 0),
+            gold_gp=cd.get("gold_gp", 0),
             rules_version=cd.get("rules_version", "2024"),
         )
         if not char.class_features:
@@ -870,6 +872,58 @@ async def move_token_endpoint(req: MoveTokenRequest):
     }
 
 
+class PlayerEquipRequest(BaseModel):
+    room_code: str
+    player_id: str
+    item_id: str
+    equip: bool = True
+
+
+@app.post("/api/player-equip")
+async def player_equip_endpoint(req: PlayerEquipRequest):
+    """Let a player equip or unequip their own item outside of combat."""
+    session = session_manager.get_session(req.room_code)
+    if not session:
+        return {"error": "Session not found"}
+
+    player = session.players.get(req.player_id)
+    if not player:
+        return {"error": "Player not found in session"}
+
+    if not player.character_id:
+        return {"error": "You have no character in this session"}
+
+    combat = session.orchestrator.combat
+    if combat and combat.is_active:
+        return {"error": "You cannot change equipment during combat"}
+
+    dispatcher = ToolDispatcher(
+        session.orchestrator.characters,
+        session.orchestrator.game_map,
+        session.orchestrator.combat,
+        session.orchestrator.memory,
+    )
+    result = dispatcher.dispatch("equip_item", {
+        "character_id": player.character_id,
+        "item_id": req.item_id,
+        "equip": req.equip,
+    })
+
+    if isinstance(result, dict) and result.get("error"):
+        return {"error": str(result["error"])}
+
+    await session.broadcast({
+        "type": "inventory_update",
+        "tool": "equip_item",
+        "data": result,
+    })
+
+    state = session.orchestrator.get_full_state()
+    await session.broadcast({"type": "state_sync", "state": state})
+
+    return {"ok": True, "data": result}
+
+
 # --- WebSocket ---
 
 @app.websocket("/ws/{room_code}/{player_id}")
@@ -1051,6 +1105,13 @@ async def handle_ws_message(session: GameSession, player: Player, msg: dict[str,
                 elif tool_name in ("give_item", "remove_item", "equip_item"):
                     await session.broadcast({
                         "type": "inventory_update",
+                        "tool": tool_name,
+                        "data": result,
+                    })
+
+                elif tool_name in ("give_gold", "spend_gold"):
+                    await session.broadcast({
+                        "type": "gold_update",
                         "tool": tool_name,
                         "data": result,
                     })

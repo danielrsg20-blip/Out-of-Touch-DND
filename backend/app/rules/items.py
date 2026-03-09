@@ -508,6 +508,26 @@ STARTING_EQUIPMENT: dict[str, list[tuple[str, int]]] = {
 }
 
 
+# ---------------------------------------------------------------------------
+# Starting gold by class (SRD average values for the wealth-by-class table)
+# ---------------------------------------------------------------------------
+
+STARTING_GOLD: dict[str, int] = {
+    "Barbarian": 25,
+    "Bard": 62,
+    "Cleric": 37,
+    "Druid": 25,
+    "Fighter": 62,
+    "Monk": 12,
+    "Paladin": 62,
+    "Ranger": 62,
+    "Rogue": 62,
+    "Sorcerer": 37,
+    "Warlock": 37,
+    "Wizard": 37,
+}
+
+
 def get_starting_inventory(char_class: str) -> list[dict[str, Any]]:
     """Return a list of item dicts for a character's starting equipment.
 

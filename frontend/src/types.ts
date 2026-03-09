@@ -90,6 +90,7 @@ export interface CharacterData {
   skill_proficiencies: string[]
   conditions: string[]
   inventory: ItemData[]
+  gold_gp: number
   spell_slots: Record<number, number>
   spell_slots_used: Record<number, number>
   known_spells: string[]

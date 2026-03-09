@@ -1,11 +1,35 @@
 .panel-title {
-  font-size: 0.85rem;
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.68rem;
   text-transform: uppercase;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.1em;
   color: var(--accent-gold);
+  font-weight: 700;
   margin-bottom: 0.5rem;
-  padding-bottom: 0.4rem;
-  border-bottom: 1px solid var(--border-color);
+  padding-bottom: 0;
+  border-bottom: none;
+}
+
+.panel-title::before {
+  content: '◈';
+  font-size: 0.6rem;
+  flex-shrink: 0;
+  opacity: 0.8;
+}
+
+.panel-title::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(90deg, rgba(228, 168, 83, 0.35), transparent);
+}
+
+/* Narrative log header already provides its own border */
+.narrative-log-header .panel-title::before,
+.narrative-log-header .panel-title::after {
+  display: none;
 }
 
 .panel-empty {
@@ -29,9 +53,24 @@
 }
 
 .narrative-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.4rem;
   color: var(--text-secondary);
   font-style: italic;
-  padding: 1rem 0;
+  font-size: 0.85rem;
+  padding: 1.5rem 0;
+  text-align: center;
+  opacity: 0.6;
+}
+
+.narrative-empty::before {
+  content: '📜';
+  font-style: normal;
+  font-size: 1.4rem;
+  opacity: 0.5;
+  filter: grayscale(0.5);
 }
 
 .narrative-entry {
@@ -96,31 +135,40 @@
   border-radius: 6px;
   font-size: 0.9rem;
   outline: none;
-  transition: border-color 0.2s;
+  transition: border-color 0.2s, box-shadow 0.2s;
 }
 .chat-text-input:focus {
-  border-color: var(--accent-gold);
+  border-color: rgba(228, 168, 83, 0.6);
+  box-shadow: 0 0 0 3px rgba(228, 168, 83, 0.08);
 }
 .chat-text-input:disabled {
-  opacity: 0.5;
+  opacity: 0.45;
 }
 
 .chat-send-btn {
-  background: var(--accent-gold);
+  background: linear-gradient(135deg, #e4a853 0%, #c8882a 100%);
   color: #1a1a2e;
   border: none;
   padding: 0.5rem 1rem;
   border-radius: 6px;
-  font-weight: 600;
+  font-weight: 700;
   font-size: 0.9rem;
-  transition: opacity 0.2s;
+  transition: opacity 0.2s, transform 0.15s, box-shadow 0.2s;
+  box-shadow: 0 2px 8px rgba(228, 168, 83, 0.2);
+  cursor: pointer;
+  flex-shrink: 0;
 }
 .chat-send-btn:disabled {
-  opacity: 0.4;
+  opacity: 0.35;
   cursor: default;
 }
 .chat-send-btn:hover:not(:disabled) {
-  opacity: 0.9;
+  opacity: 0.92;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 14px rgba(228, 168, 83, 0.35);
+}
+.chat-send-btn:active:not(:disabled) {
+  transform: translateY(0);
 }
 
 /* Combat Tracker */
@@ -163,6 +211,11 @@
   background: rgba(228, 168, 83, 0.24);
 }
 
+@keyframes turn-glow {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(228, 168, 83, 0); }
+  50%       { box-shadow: 0 0 10px 2px rgba(228, 168, 83, 0.2); }
+}
+
 .initiative-entry {
   display: flex;
   align-items: center;
@@ -171,10 +224,12 @@
   border-radius: 4px;
   font-size: 0.8rem;
   background: rgba(255, 255, 255, 0.03);
+  border-left: 3px solid transparent;
 }
 .initiative-entry.current-turn {
-  background: rgba(228, 168, 83, 0.15);
+  background: rgba(228, 168, 83, 0.12);
   border-left: 3px solid var(--accent-gold);
+  animation: turn-glow 2.2s ease-in-out infinite;
 }
 
 .init-order {
@@ -198,8 +253,8 @@
 }
 .init-hp-fill {
   height: 100%;
-  background: var(--hp-bar);
-  transition: width 0.3s;
+  background: var(--hp-bar, var(--accent-green));
+  transition: width 0.4s ease, background 0.4s ease;
 }
 
 .init-hp-text {
@@ -212,6 +267,141 @@
 /* Character Sheet */
 .character-sheet {
   font-size: 0.9rem;
+}
+
+/* Death banner */
+.char-dead-banner {
+  background: rgba(231, 76, 60, 0.15);
+  border: 1px solid rgba(231, 76, 60, 0.4);
+  color: var(--accent-red, #e05252);
+  text-align: center;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  margin-bottom: 0.5rem;
+}
+
+/* XP bar */
+.char-xp-section {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.char-xp-bar-track {
+  flex: 1;
+  height: 4px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.char-xp-bar-fill {
+  height: 100%;
+  background: var(--accent-purple, #9b59b6);
+  border-radius: 2px;
+  transition: width 0.4s ease;
+}
+
+.char-xp-label {
+  font-size: 0.62rem;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+/* Skills */
+.skills-section {
+  margin-bottom: 0.4rem;
+}
+
+.skills-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  background: none;
+  border: none;
+  border-bottom: 1px solid var(--border-color);
+  color: var(--text-secondary);
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  padding: 0.15rem 0;
+  cursor: pointer;
+  margin-bottom: 0.2rem;
+}
+
+.skills-toggle:hover {
+  color: var(--text-primary);
+}
+
+.skills-toggle-arrow {
+  font-size: 0.55rem;
+  opacity: 0.6;
+}
+
+.skills-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.05rem;
+  max-height: 200px;
+  overflow-y: auto;
+  padding-right: 2px;
+}
+
+.skill-row {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.08rem 0.2rem;
+  font-size: 0.75rem;
+  border-radius: 2px;
+}
+
+.skill-row:hover {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.skill-prof-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  border: 1px solid var(--text-secondary);
+  opacity: 0.4;
+  flex-shrink: 0;
+}
+
+.skill-prof-dot.proficient {
+  background: var(--accent-gold);
+  border-color: var(--accent-gold);
+  opacity: 1;
+}
+
+.skill-ability {
+  font-size: 0.6rem;
+  color: var(--text-secondary);
+  min-width: 26px;
+  flex-shrink: 0;
+  opacity: 0.7;
+}
+
+.skill-name {
+  flex: 1;
+  color: var(--text-primary);
+}
+
+.skill-bonus {
+  font-family: 'Consolas', 'Courier New', monospace;
+  font-size: 0.72rem;
+  color: var(--accent-gold);
+  min-width: 24px;
+  text-align: right;
+  flex-shrink: 0;
 }
 
 .char-subtitle {
@@ -234,8 +424,8 @@
 }
 .char-hp-fill {
   height: 100%;
-  background: var(--hp-bar);
-  transition: width 0.3s;
+  background: var(--hp-bar, var(--accent-green));
+  transition: width 0.4s ease, background 0.4s ease;
 }
 .char-hp-text {
   font-size: 0.8rem;
@@ -244,7 +434,8 @@
 
 .char-stats-row {
   display: flex;
-  gap: 0.75rem;
+  flex-wrap: wrap;
+  gap: 0.4rem;
   margin-bottom: 0.6rem;
 }
 
@@ -484,6 +675,334 @@
   color: var(--accent-purple);
   font-style: italic;
   flex-shrink: 0;
+}
+
+/* ── Paper doll ─────────────────────────────────────────────────────── */
+.paper-doll {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.4rem 0 0.5rem;
+  margin-bottom: 0.25rem;
+}
+
+.paper-doll-top,
+.paper-doll-middle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+}
+
+/* Character sprite cell */
+.paper-doll-sprite {
+  width: 56px;
+  height: 56px;
+  flex-shrink: 0;
+  image-rendering: pixelated;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background-color: rgba(255, 255, 255, 0.03);
+}
+
+.paper-doll-sprite-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-secondary);
+  font-size: 1.2rem;
+  opacity: 0.4;
+}
+
+/* Individual equipment slot */
+.paper-doll-slot {
+  position: relative;
+  width: 60px;
+  min-height: 60px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.15rem;
+  padding: 0.25rem 0.2rem;
+  border: 1px dashed rgba(255, 255, 255, 0.12);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.02);
+  text-align: center;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.paper-doll-slot.filled {
+  border-style: solid;
+  border-color: rgba(228, 168, 83, 0.3);
+  background: rgba(228, 168, 83, 0.05);
+}
+
+.paper-doll-slot-empty-icon {
+  font-size: 1.1rem;
+  opacity: 0.25;
+  line-height: 1;
+}
+
+.paper-doll-slot-label {
+  font-size: 0.55rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-secondary);
+  opacity: 0.5;
+}
+
+.paper-doll-slot-icon-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+}
+
+.paper-doll-slot-icon-wrap img {
+  width: 24px;
+  height: 24px;
+  image-rendering: pixelated;
+}
+
+.paper-doll-slot-name {
+  font-size: 0.58rem;
+  color: var(--text-primary);
+  line-height: 1.2;
+  max-width: 56px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.paper-doll-slot-stat {
+  font-size: 0.55rem;
+  color: var(--accent-gold);
+  font-family: 'Consolas', 'Courier New', monospace;
+}
+
+.paper-doll-unequip-btn {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  width: 14px;
+  height: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.55rem;
+  line-height: 1;
+  padding: 0;
+  background: rgba(224, 82, 82, 0.15);
+  border: 1px solid rgba(224, 82, 82, 0.3);
+  border-radius: 3px;
+  color: var(--accent-red, #e05252);
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+
+.paper-doll-slot:hover .paper-doll-unequip-btn {
+  opacity: 1;
+}
+
+/* ── Feature #4: Gold display ──────────────────────────────────────── */
+.inv-gold {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin-bottom: 0.5rem;
+  padding: 0.2rem 0.4rem;
+  background: rgba(212, 175, 55, 0.08);
+  border: 1px solid rgba(212, 175, 55, 0.25);
+  border-radius: 4px;
+}
+
+.inv-gold-icon {
+  color: var(--accent-gold);
+  font-size: 0.85rem;
+  flex-shrink: 0;
+}
+
+.inv-gold-value {
+  color: var(--accent-gold);
+  font-family: 'Consolas', 'Courier New', monospace;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+/* ── Feature #1: Weapon properties ────────────────────────────────── */
+.inv-properties {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.2rem;
+  padding-left: 28px;
+  padding-bottom: 0.15rem;
+}
+
+.inv-properties-slot {
+  padding-left: 0;
+  width: 100%;
+  margin-top: 0.15rem;
+}
+
+.inv-prop-tag {
+  font-size: 0.62rem;
+  color: var(--text-secondary);
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--border-color);
+  border-radius: 3px;
+  padding: 0 0.3rem;
+  line-height: 1.5;
+}
+
+/* ── Feature #2: Expandable description ────────────────────────────── */
+.inv-item-row-main {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  width: 100%;
+  cursor: default;
+}
+
+.inv-expand-toggle {
+  font-size: 0.6rem;
+  color: var(--text-secondary);
+  opacity: 0.5;
+  flex-shrink: 0;
+  margin-left: auto;
+}
+
+.inv-expand {
+  padding: 0.3rem 0.4rem 0.3rem 28px;
+  font-size: 0.72rem;
+  color: var(--text-secondary);
+  border-top: 1px solid var(--border-color);
+  margin-top: 0.1rem;
+}
+
+.inv-expand p {
+  margin: 0.1rem 0;
+}
+
+.inv-detail-meta {
+  color: var(--text-secondary);
+  opacity: 0.6;
+}
+
+/* ── Feature #3: Carry weight ──────────────────────────────────────── */
+.inv-weight-section {
+  margin-top: 0.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.inv-weight-bar-track {
+  flex: 1;
+  height: 4px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.inv-weight-bar-fill {
+  height: 100%;
+  background: var(--accent-green);
+  border-radius: 2px;
+  transition: width 0.3s ease, background 0.3s ease;
+}
+
+.inv-weight-bar-fill.encumbered {
+  background: var(--accent-red, #e05252);
+}
+
+.inv-weight-label {
+  font-size: 0.65rem;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+/* ── Feature #5: Category groups ───────────────────────────────────── */
+.inv-category-group {
+  margin-bottom: 0.25rem;
+}
+
+.inv-category-header {
+  font-size: 0.62rem;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--text-secondary);
+  opacity: 0.6;
+  padding: 0.1rem 0.4rem;
+  margin-top: 0.2rem;
+}
+
+/* ── Feature #6: Stealth disadvantage warning ──────────────────────── */
+.inv-stealth-warn {
+  font-size: 0.65rem;
+  color: var(--accent-gold);
+  flex-shrink: 0;
+  opacity: 0.8;
+  cursor: default;
+}
+
+/* ── Feature #7: Item count badge on tab ───────────────────────────── */
+.inv-tab-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.1em;
+  height: 1.1em;
+  padding: 0 0.25em;
+  margin-left: 0.3em;
+  background: var(--accent-gold);
+  color: #1a1a1a;
+  border-radius: 999px;
+  font-size: 0.6rem;
+  font-weight: 700;
+  line-height: 1;
+  vertical-align: middle;
+}
+
+/* ── Feature #8: Player equip controls ─────────────────────────────── */
+.inv-equip-btn {
+  font-size: 0.62rem;
+  padding: 0.1rem 0.35rem;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--border-color);
+  border-radius: 3px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  flex-shrink: 0;
+  margin-left: auto;
+  transition: background 0.15s, color 0.15s;
+}
+
+.inv-equip-btn:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: var(--text-primary);
+}
+
+.inv-unequip-btn {
+  color: var(--accent-red, #e05252);
+  border-color: rgba(224, 82, 82, 0.3);
+}
+
+.inv-equip-error {
+  font-size: 0.72rem;
+  color: var(--accent-red, #e05252);
+  margin: 0.3rem 0 0.1rem;
+}
+
+.inv-combat-note {
+  font-size: 0.68rem;
+  color: var(--text-secondary);
+  opacity: 0.6;
+  margin: 0.2rem 0 0.1rem;
 }
 
 .slot-row {
@@ -734,4 +1253,226 @@
   font-size: 0.65rem;
   text-transform: uppercase;
   letter-spacing: 0.03em;
+}
+
+/* Dice Roller */
+@keyframes dice-result-pop {
+  0%   { transform: scale(1.5); opacity: 0.6; }
+  60%  { transform: scale(0.92); }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+.dice-roller {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.6rem 0;
+  border-top: 1px solid var(--border-color);
+}
+
+.dice-roller-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.dice-last-result {
+  font-family: 'Consolas', 'Courier New', monospace;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--accent-purple);
+  background: rgba(155, 89, 182, 0.12);
+  border: 1px solid rgba(155, 89, 182, 0.3);
+  border-radius: 5px;
+  padding: 0.1rem 0.5rem;
+  animation: dice-result-pop 0.35s ease-out;
+}
+
+.dice-options {
+  display: flex;
+  gap: 0.25rem;
+  flex-wrap: wrap;
+}
+
+.die-btn {
+  background: rgba(155, 89, 182, 0.06);
+  border: 1px solid rgba(155, 89, 182, 0.2);
+  color: var(--text-secondary);
+  padding: 0.28rem 0.5rem;
+  border-radius: 5px;
+  font-size: 0.75rem;
+  font-family: 'Consolas', 'Courier New', monospace;
+  font-weight: 600;
+  transition: all 0.15s;
+  cursor: pointer;
+  position: relative;
+}
+
+.die-btn::before {
+  content: '⬡';
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.8rem;
+  color: rgba(155, 89, 182, 0.05);
+  pointer-events: none;
+}
+
+.die-btn:hover {
+  border-color: var(--accent-purple);
+  color: var(--accent-purple);
+  background: rgba(155, 89, 182, 0.12);
+  transform: translateY(-1px);
+}
+
+.die-btn-selected {
+  background: rgba(155, 89, 182, 0.22);
+  border-color: var(--accent-purple);
+  color: var(--accent-purple);
+  box-shadow: 0 0 8px rgba(155, 89, 182, 0.25);
+}
+
+.dice-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.dice-mod-label {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+  flex-shrink: 0;
+}
+
+.dice-mod-input {
+  width: 52px;
+  background: var(--bg-input);
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
+  padding: 0.3rem 0.4rem;
+  border-radius: 4px;
+  font-size: 0.82rem;
+  text-align: center;
+}
+
+.dice-mod-input:focus {
+  outline: none;
+  border-color: var(--accent-purple);
+}
+
+.dice-roll-btn {
+  flex: 1;
+  background: linear-gradient(135deg, rgba(155, 89, 182, 0.25) 0%, rgba(155, 89, 182, 0.12) 100%);
+  border: 1px solid rgba(155, 89, 182, 0.55);
+  color: var(--accent-purple);
+  padding: 0.35rem 0.6rem;
+  border-radius: 6px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  transition: all 0.15s;
+  cursor: pointer;
+}
+
+.dice-roll-btn:hover {
+  background: linear-gradient(135deg, rgba(155, 89, 182, 0.38) 0%, rgba(155, 89, 182, 0.22) 100%);
+  border-color: var(--accent-purple);
+  transform: translateY(-1px);
+  box-shadow: 0 3px 10px rgba(155, 89, 182, 0.2);
+}
+
+.dice-roll-btn:active {
+  transform: translateY(0);
+}
+
+/* ── Weight bar warning state ──────────────────────────────────────── */
+.inv-weight-bar-fill.warning {
+  background: var(--accent-gold, #e4a853);
+}
+
+/* ── Narrative log header (title + timestamp toggle) ───────────────── */
+.narrative-log-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.5rem;
+  padding-bottom: 0.45rem;
+  border-bottom: none;
+  position: relative;
+}
+
+.narrative-log-header::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, rgba(228, 168, 83, 0.35), transparent 70%);
+}
+
+.narrative-log-header .panel-title {
+  border-bottom: none;
+  padding-bottom: 0;
+  margin-bottom: 0;
+}
+
+.narrative-ts-toggle {
+  background: none;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  color: var(--text-secondary);
+  font-size: 0.75rem;
+  padding: 0.1rem 0.25rem;
+  cursor: pointer;
+  opacity: 0.5;
+  transition: opacity 0.15s, border-color 0.15s;
+  line-height: 1;
+}
+
+.narrative-ts-toggle:hover {
+  opacity: 1;
+}
+
+.narrative-ts-toggle.active {
+  opacity: 1;
+  border-color: var(--border-color);
+  color: var(--accent-gold);
+}
+
+/* ── Narrative timestamp ───────────────────────────────────────────── */
+.narrative-timestamp {
+  font-size: 0.62rem;
+  color: var(--text-secondary);
+  opacity: 0.5;
+  margin-right: 0.35rem;
+  font-family: 'Consolas', 'Courier New', monospace;
+}
+
+/* ── Enhanced dice entry ───────────────────────────────────────────── */
+.narrative-dice-content {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.narrative-dice-label {
+  color: var(--accent-purple);
+  opacity: 0.85;
+}
+
+.narrative-dice-result {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 28px;
+  padding: 0.05rem 0.35rem;
+  background: rgba(155, 89, 182, 0.2);
+  border: 1px solid rgba(155, 89, 182, 0.4);
+  border-radius: 4px;
+  font-weight: 700;
+  font-size: 0.9rem;
+  color: var(--accent-purple);
 }

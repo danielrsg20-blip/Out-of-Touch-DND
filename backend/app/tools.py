@@ -334,6 +334,32 @@ TOOL_DEFINITIONS: list[dict[str, Any]] = [
         },
     },
     {
+        "name": "give_gold",
+        "description": "Add gold (GP) to a character's purse. Use when awarding loot, quest rewards, or selling items.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "character_id": {"type": "string", "description": "ID of the character receiving gold"},
+                "amount": {"type": "integer", "description": "Amount of gold pieces to add"},
+                "reason": {"type": "string", "description": "Optional reason (e.g. 'sold sword', 'quest reward')"},
+            },
+            "required": ["character_id", "amount"],
+        },
+    },
+    {
+        "name": "spend_gold",
+        "description": "Deduct gold (GP) from a character's purse. Use when purchasing items or paying costs.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "character_id": {"type": "string", "description": "ID of the character spending gold"},
+                "amount": {"type": "integer", "description": "Amount of gold pieces to deduct"},
+                "reason": {"type": "string", "description": "Optional reason (e.g. 'bought healing potion', 'paid innkeeper')"},
+            },
+            "required": ["character_id", "amount"],
+        },
+    },
+    {
         "name": "update_tile",
         "description": "Change a tile on the map (open a door, collapse a wall, etc.).",
         "input_schema": {
@@ -734,6 +760,29 @@ class ToolDispatcher:
             "ac": char.ac,
             "message": f"{char.name} {action} {target['name']}. AC is now {char.ac}.",
         }
+
+    def _tool_give_gold(self, inp: dict) -> dict:
+        char = self.characters.get(inp["character_id"])
+        if not char:
+            return {"error": f"Character {inp['character_id']} not found"}
+        amount = max(0, int(inp["amount"]))
+        char.gold_gp = getattr(char, "gold_gp", 0) + amount
+        reason = inp.get("reason", "")
+        msg = f"{char.name} received {amount} gp{f' ({reason})' if reason else ''}. Total: {char.gold_gp} gp."
+        return {"character": char.name, "amount": amount, "total_gp": char.gold_gp, "message": msg}
+
+    def _tool_spend_gold(self, inp: dict) -> dict:
+        char = self.characters.get(inp["character_id"])
+        if not char:
+            return {"error": f"Character {inp['character_id']} not found"}
+        amount = max(0, int(inp["amount"]))
+        current = getattr(char, "gold_gp", 0)
+        if amount > current:
+            return {"error": f"{char.name} only has {current} gp (needs {amount} gp)"}
+        char.gold_gp = current - amount
+        reason = inp.get("reason", "")
+        msg = f"{char.name} spent {amount} gp{f' ({reason})' if reason else ''}. Remaining: {char.gold_gp} gp."
+        return {"character": char.name, "amount": amount, "total_gp": char.gold_gp, "message": msg}
 
     def _tool_update_tile(self, inp: dict) -> dict:
         if not self.game_map:

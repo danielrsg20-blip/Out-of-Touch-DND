@@ -6,6 +6,42 @@ import './SessionLobby.css'
 
 const MOCK_MODE_STORAGE_KEY = 'otdnd.mockMode'
 
+// Deterministic floating particles
+const PARTICLES = Array.from({ length: 20 }, (_, i) => ({
+  key: i,
+  left: (Math.sin(i * 2.9) * 0.5 + 0.5) * 100,
+  top:  (Math.cos(i * 1.4) * 0.5 + 0.5) * 100,
+  size: 1.2 + Math.abs(Math.sin(i * 4.1)) * 2.2,
+  duration: 7 + Math.abs(Math.cos(i * 1.7)) * 11,
+  delay: -(Math.abs(Math.sin(i * 1.1 + 0.5)) * 9),
+  opacity: 0.1 + Math.abs(Math.sin(i * 2.3 + 1)) * 0.25,
+}))
+
+// Accent color per slot index
+const SLOT_COLORS = ['#9b59b6', '#3498db', '#2ecc71', '#e67e22', '#e4a853']
+
+// Date freshness
+function slotFreshness(updatedAt: string): 'fresh' | 'recent' | 'old' {
+  const days = (Date.now() - new Date(updatedAt).getTime()) / 86_400_000
+  if (days < 7) return 'fresh'
+  if (days < 30) return 'recent'
+  return 'old'
+}
+
+// Skeleton row for loading state
+function SlotSkeleton({ index }: { index: number }) {
+  return (
+    <div className="lobby-slot skeleton" style={{ '--slot-color': SLOT_COLORS[index] } as React.CSSProperties}>
+      <div className="lobby-slot-index">{index + 1}</div>
+      <div className="lobby-skeleton-content">
+        <div className="lobby-skeleton-line wide" />
+        <div className="lobby-skeleton-line narrow" />
+        <div className="lobby-skeleton-line mid" />
+      </div>
+    </div>
+  )
+}
+
 export default function SessionLobby() {
   const { username, logout } = useAuthStore()
   const [name, setName] = useState(username ?? '')
@@ -113,21 +149,59 @@ export default function SessionLobby() {
 
   return (
     <div className="lobby-wrapper">
+
+      {/* Floating particles */}
+      <div className="lobby-particles" aria-hidden="true">
+        {PARTICLES.map(p => (
+          <span
+            key={p.key}
+            className="lobby-particle"
+            style={{
+              left: `${p.left}%`,
+              top: `${p.top}%`,
+              width: `${p.size}px`,
+              height: `${p.size}px`,
+              animationDuration: `${p.duration}s`,
+              animationDelay: `${p.delay}s`,
+              opacity: p.opacity,
+            }}
+          />
+        ))}
+      </div>
+
       <div className="lobby-card">
+
+        {/* ── User bar ── */}
         <div className="lobby-user-bar">
-          <span className="lobby-user-name">Signed in as <strong>{username}</strong></span>
+          <div className="lobby-user-info">
+            <div className="lobby-avatar" aria-hidden="true">
+              {(username ?? '?')[0].toUpperCase()}
+            </div>
+            <div className="lobby-user-text">
+              <span className="lobby-user-greeting">Welcome back</span>
+              <strong className="lobby-user-display">{username}</strong>
+            </div>
+          </div>
           <button className="lobby-logout-btn" type="button" onClick={logout}>Sign out</button>
         </div>
 
-        <h1 className="lobby-title">Out of Touch DND</h1>
-        <p className="lobby-subtitle">LLM-Powered Campaign Engine</p>
+        {/* ── Header ── */}
+        <div className="lobby-header">
+          <h1 className="lobby-title">Out of Touch DND</h1>
+          <p className="lobby-subtitle">LLM-Powered Campaign Engine</p>
+          <div className="lobby-divider" />
+        </div>
 
-        {mode === 'menu' && (
+        {/* ── MENU MODE ── */}
+        {mode === 'menu' && !charPickSlot && (
           <>
+            {/* Display-name input */}
             <div className="lobby-name-row">
+              <label className="lobby-name-label" htmlFor="lobby-name-input">Session Name</label>
               <input
+                id="lobby-name-input"
                 type="text"
-                placeholder="Your name"
+                placeholder="Your name in session"
                 value={name}
                 onChange={e => setName(e.target.value)}
                 className="lobby-input"
@@ -135,70 +209,114 @@ export default function SessionLobby() {
               />
             </div>
 
+            {/* Campaign slots */}
             <div className="lobby-slots">
-              <h3 className="lobby-slots-title">Your Campaigns</h3>
-              {campaignsLoading && <p className="lobby-slots-loading">Loading...</p>}
-              {!campaignsLoading && Array.from({ length: 5 }, (_, i) => i).map((i) => {
-                const slot = campaigns[i]
+              <div className="lobby-slots-header">
+                <h3 className="lobby-slots-title">Your Campaigns</h3>
+                {!campaignsLoading && (
+                  <span className="lobby-slots-count">{campaigns.length} / 5</span>
+                )}
+              </div>
 
-                if (!slot) {
-                  return (
-                    <div key={`empty-${i}`} className="lobby-slot empty">
-                      <span className="lobby-slot-empty-label">Empty Slot</span>
-                    </div>
-                  )
-                }
+              {campaignsLoading
+                ? Array.from({ length: 5 }, (_, i) => <SlotSkeleton key={i} index={i} />)
+                : Array.from({ length: 5 }, (_, i) => {
+                    const slot = campaigns[i]
+                    const color = SLOT_COLORS[i]
 
-                const isConfirming = confirmSlot?.id === slot.id
-                const dateStr = new Date(slot.updated_at).toLocaleDateString()
+                    if (!slot) {
+                      return (
+                        <div
+                          key={`empty-${i}`}
+                          className="lobby-slot empty"
+                          style={{ '--slot-color': color } as React.CSSProperties}
+                          onClick={() => setMode('create')}
+                          role="button"
+                          tabIndex={0}
+                          onKeyDown={e => e.key === 'Enter' && setMode('create')}
+                          aria-label="Start a new campaign"
+                        >
+                          <div className="lobby-slot-index">{i + 1}</div>
+                          <span className="lobby-slot-empty-icon">+</span>
+                          <span className="lobby-slot-empty-label">New Campaign</span>
+                        </div>
+                      )
+                    }
 
-                return (
-                  <div key={slot.id} className={`lobby-slot${isConfirming ? ' confirming' : ''}`}>
-                    <div className="lobby-slot-info">
-                      <span className="lobby-slot-name">{slot.name}</span>
-                      <span className="lobby-slot-meta">
-                        {slot.my_character
-                          ? `${slot.my_character.name} · ${slot.my_character.class} Lv${slot.my_character.level}`
-                          : 'No character'}
-                      </span>
-                      <span className="lobby-slot-date">
-                        Last played {dateStr} · {slot.session_count} session(s)
-                      </span>
-                    </div>
-                    {!isConfirming && (
-                      <button
-                        className="lobby-btn secondary slot-join-btn"
-                        type="button"
-                        onClick={() => { setConfirmSlot(slot); setError('') }}
+                    const isConfirming = confirmSlot?.id === slot.id
+                    const dateStr = new Date(slot.updated_at).toLocaleDateString(undefined, {
+                      month: 'short', day: 'numeric', year: 'numeric',
+                    })
+                    const freshness = slotFreshness(slot.updated_at)
+
+                    return (
+                      <div
+                        key={slot.id}
+                        className={`lobby-slot${isConfirming ? ' confirming' : ''}`}
+                        style={{ '--slot-color': color } as React.CSSProperties}
                       >
-                        Resume
-                      </button>
-                    )}
-                    {isConfirming && (
-                      <div className="lobby-slot-confirm">
-                        <span>Resume &ldquo;{slot.name}&rdquo;?</span>
-                        <button
-                          className="lobby-btn primary"
-                          type="button"
-                          onClick={() => handleConfirmResume(slot)}
-                          disabled={charListLoading}
-                        >
-                          {charListLoading ? 'Loading...' : 'Yes'}
-                        </button>
-                        <button
-                          className="lobby-btn ghost"
-                          type="button"
-                          onClick={() => setConfirmSlot(null)}
-                        >
-                          Cancel
-                        </button>
+                        <div className="lobby-slot-index">{i + 1}</div>
+                        <div className="lobby-slot-info">
+                          <span className="lobby-slot-name">{slot.name}</span>
+                          <span className="lobby-slot-meta">
+                            {slot.my_character
+                              ? (
+                                <>
+                                  {slot.my_character.name}
+                                  <span className="lobby-slot-class"> · {slot.my_character.class}</span>
+                                  <span className="lobby-slot-level"> Lv{slot.my_character.level}</span>
+                                </>
+                              )
+                              : <span className="lobby-slot-nochar">No character yet</span>
+                            }
+                          </span>
+                          <div className="lobby-slot-footer">
+                            <span className={`lobby-slot-date ${freshness}`}>{dateStr}</span>
+                            <span className="lobby-slot-sessions">
+                              {slot.session_count} session{slot.session_count !== 1 ? 's' : ''}
+                            </span>
+                          </div>
+                        </div>
+
+                        {!isConfirming && (
+                          <button
+                            className="lobby-btn secondary slot-join-btn"
+                            type="button"
+                            onClick={() => { setConfirmSlot(slot); setError('') }}
+                          >
+                            Resume
+                          </button>
+                        )}
+
+                        {isConfirming && (
+                          <div className="lobby-slot-confirm">
+                            <span className="lobby-slot-confirm-label">Continue this campaign?</span>
+                            <div className="lobby-slot-confirm-actions">
+                              <button
+                                className="lobby-btn primary"
+                                type="button"
+                                onClick={() => handleConfirmResume(slot)}
+                                disabled={charListLoading}
+                              >
+                                {charListLoading ? '…' : 'Yes, Resume'}
+                              </button>
+                              <button
+                                className="lobby-btn ghost"
+                                type="button"
+                                onClick={() => setConfirmSlot(null)}
+                              >
+                                Cancel
+                              </button>
+                            </div>
+                          </div>
+                        )}
                       </div>
-                    )}
-                  </div>
-                )
-              })}
+                    )
+                  })
+              }
             </div>
 
+            {/* Primary actions */}
             <div className="lobby-buttons">
               <button className="lobby-btn primary" type="button" onClick={() => setMode('create')}>
                 Create Session
@@ -210,6 +328,7 @@ export default function SessionLobby() {
           </>
         )}
 
+        {/* ── CHARACTER PICKER ── */}
         {charPickSlot && (
           <div className="lobby-char-pick">
             <p className="lobby-char-pick-title">
@@ -220,7 +339,10 @@ export default function SessionLobby() {
                 <div key={char.char_id} className={`lobby-char-item${char.is_mine ? ' mine' : ''}`}>
                   <div className="lobby-char-info">
                     <span className="lobby-char-name">{char.name}</span>
-                    <span className="lobby-char-meta">{char.class} Lv{char.level}{char.is_mine ? ' · Yours' : ''}</span>
+                    <span className="lobby-char-meta">
+                      {char.class} Lv{char.level}
+                      {char.is_mine && <span className="lobby-char-yours"> · Yours</span>}
+                    </span>
                   </div>
                   <button
                     className="lobby-btn primary slot-join-btn"
@@ -228,7 +350,7 @@ export default function SessionLobby() {
                     onClick={() => handleResume(charPickSlot, char.char_id)}
                     disabled={resuming}
                   >
-                    {resuming ? '...' : 'Play'}
+                    {resuming ? '…' : 'Play'}
                   </button>
                 </div>
               ))}
@@ -256,8 +378,10 @@ export default function SessionLobby() {
           </div>
         )}
 
+        {/* ── CREATE MODE ── */}
         {!charPickSlot && mode === 'create' && (
           <div className="lobby-form">
+            <h3 className="lobby-form-title">New Campaign</h3>
             <input
               type="text"
               placeholder="Your name"
@@ -280,13 +404,15 @@ export default function SessionLobby() {
               Create
             </button>
             <button className="lobby-btn ghost" type="button" onClick={() => setMode('menu')}>
-              Back
+              ← Back
             </button>
           </div>
         )}
 
+        {/* ── JOIN MODE ── */}
         {!charPickSlot && mode === 'join' && (
           <div className="lobby-form">
+            <h3 className="lobby-form-title">Join a Campaign</h3>
             <input
               type="text"
               placeholder="Your name"
@@ -305,33 +431,46 @@ export default function SessionLobby() {
               maxLength={20}
               onKeyDown={e => e.key === 'Enter' && handleJoin()}
             />
-            <button className="lobby-btn primary" type="button" onClick={handleJoin} disabled={!name.trim() || !joinCode.trim()}>
+            <button
+              className="lobby-btn primary"
+              type="button"
+              onClick={handleJoin}
+              disabled={!name.trim() || !joinCode.trim()}
+            >
               Join
             </button>
             <button className="lobby-btn ghost" type="button" onClick={() => setMode('menu')}>
-              Back
+              ← Back
             </button>
           </div>
         )}
 
+        {/* ── ERROR ── */}
         {error && <p className="lobby-error">{error}</p>}
 
+        {/* ── ROSTER (after joining a room) ── */}
         {roomCode && (
           <div className="lobby-roster">
             <div className="lobby-roster-head">
-              <span className="lobby-roster-room">Room: {roomCode}</span>
-              <span className="lobby-roster-count">{players.length} player(s)</span>
+              <span className="lobby-roster-room">Room: <strong>{roomCode}</strong></span>
+              <span className="lobby-roster-count">
+                {players.length} player{players.length !== 1 ? 's' : ''}
+              </span>
             </div>
             <ul className="lobby-roster-list">
               {players.map((player) => (
                 <li key={player.id} className="lobby-roster-item">
-                  <span>{player.name}</span>
-                  <span className="lobby-roster-meta">{player.character_id ? 'Character ready' : 'No character yet'}</span>
+                  <div className="lobby-roster-avatar">{(player.name[0] ?? '?').toUpperCase()}</div>
+                  <span className="lobby-roster-name">{player.name}</span>
+                  <span className={`lobby-roster-meta${player.character_id ? ' ready' : ''}`}>
+                    {player.character_id ? '✓ Ready' : 'No character'}
+                  </span>
                 </li>
               ))}
             </ul>
           </div>
         )}
+
       </div>
     </div>
   )
