@@ -95,9 +95,22 @@ export function resolveEnvironmentSpriteRect(spriteKey: string): EnvironmentSpri
   }
 
   const normalized = normalizeLabel(label)
+  
+  // First try exact normalized label match (handles "{base}_{variant}" formats)
   const exact = cache.get(normalized)
   if (exact) {
     return exact
+  }
+
+  // If variant-suffixed label doesn't exist, try stripping the variant suffix
+  // and falling back to base label (e.g., "stone floor_cracked" → "stone floor")
+  const variantMatch = normalized.match(/^(.+?)_(\w+)$/)
+  if (variantMatch) {
+    const baseLabel = variantMatch[1]
+    const baseExact = cache.get(baseLabel)
+    if (baseExact) {
+      return baseExact
+    }
   }
 
   // Backward compatibility: older selectors may include "floor"/"wall" even

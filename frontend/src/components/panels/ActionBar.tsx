@@ -120,17 +120,14 @@ export default function ActionBar({ onSend, onCastSpell }: ActionBarProps) {
         mock_mode: mockMode,
       })
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Unknown error'
-      if (message.includes('(401)')) {
-        try {
-          await fallbackAdvanceTurn()
-          return
-        } catch (fallbackError: unknown) {
-          addNarrative('system', `Unable to advance turn: ${fallbackError instanceof Error ? fallbackError.message : 'Unknown error'}`)
-          return
-        }
+      try {
+        await fallbackAdvanceTurn()
+        return
+      } catch (fallbackError: unknown) {
+        const edgeMessage = error instanceof Error ? error.message : 'Unknown error'
+        const fallbackMessage = fallbackError instanceof Error ? fallbackError.message : 'Unknown error'
+        addNarrative('system', `Unable to advance turn: ${fallbackMessage} (edge fallback: ${edgeMessage})`)
       }
-      addNarrative('system', `Unable to advance turn: ${message}`)
     } finally {
       setAdvancingTurn(false)
     }

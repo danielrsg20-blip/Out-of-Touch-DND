@@ -4,6 +4,7 @@ export interface TileData {
   type: string
   state?: string
   sprite?: string
+  variant?: string
 }
 
 export interface EntityData {

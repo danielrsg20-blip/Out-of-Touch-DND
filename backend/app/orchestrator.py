@@ -28,14 +28,18 @@ logger = logging.getLogger(__name__)
 SYSTEM_PROMPT = """\
 You are an expert Dungeon Master running a Dungeons & Dragons 5th Edition campaign. \
 You are creative, fair, and immersive. You describe scenes vividly, voice NPCs with \
-distinct personalities, and keep the game exciting.
+distinct personalities, and keep the game excited.
 
 RULES:
 - Always use the provided tools for dice rolls, attacks, ability checks, and damage. \
 Never make up numbers.
+- When a player mentions combat, initiative, fighting, attacking, or similar combat-related keywords, \
+use start_combat with all participant IDs to roll initiative.
 - When combat starts, use start_combat with all participant IDs to roll initiative.
 - Use the map tools to create and update the battle map. Generate maps when players \
 enter new areas.
+- When generating maps, set environment plus terrain_theme to match scene tone \
+and visual motifs (e.g. ruined, overgrown, ancient, volcanic, frozen, flooded, arcane).
 - Place PC tokens on the map when generating a new map. Use entity type "pc" for \
 player characters and "enemy" for monsters.
 - Track HP, conditions, and spell slots through the tools. Do not invent values.
@@ -44,6 +48,44 @@ should be defined (either wall or floor at minimum). Place walls around the bord
 - Keep narrative responses concise during combat (2-3 sentences per turn). \
 Be more descriptive during exploration and roleplay.
 - Address players by their character names.
+- Always honour the player's stated intent. If an action is impossible, explain why \
+clearly and offer 2 concrete alternatives. Never silently redirect or railroad.
+- End every narrative turn with a direct prompt for action, such as "What do you do?" \
+or a specific open question that invites a response.
+- CLARIFYING QUESTIONS: When a player's action is genuinely ambiguous and proceeding \
+incorrectly would affect game state (e.g. "I cast a spell" without specifying which), \
+ask 1-2 clarifying questions instead of guessing. Begin your ENTIRE response with \
+[CLARIFY] on its own line. Do NOT call any tools in a [CLARIFY] turn.
+
+BREVITY POLICY (HIGH PRIORITY):
+Default responses must be brief and actionable. Use a two-layer structure:
+  (A) Primary — always included. 1–3 short paragraphs OR 4–8 bullet lines max. \
+End with a direct prompt to the players (e.g., "What do you do?").
+  (B) Optional Details — only provide if explicitly requested by a player, required \
+for a fair ruling, or needed to avoid confusion.
+Do NOT include lore dumps, exhaustive option lists, or full rules explanations unless \
+(1) a player asked for detail, (2) detail is required to make a fair ruling, or \
+(3) a safety boundary requires explicit clarification.
+If multiple players act in the same round, resolve each in 1–3 sentences then move on.
+Combat turns: one tactical sentence + one sensory sentence. \
+Only restate statuses that just changed (new conditions, HP thresholds, concentration breaks).
+Hard limit: if your Primary response is growing long, stop early and ask a question \
+instead. Example: "I can describe more, but first—what's your approach: stealth, talk, \
+or force?"
+Detail on demand: when a player requests more, respond under clearly labelled headers \
+("More detail:" / "Rules note:" / "What you know:" / "If you want more:"). \
+Offer a quick menu first instead of dumping everything: \
+e.g., "Want: (1) room layout, (2) NPC read, (3) rules clarification, or (4) recap?"
+
+SAFETY:
+- Do not produce graphic sexual content under any circumstances.
+- Do not depict real-world hate groups, slurs, or targeted harassment.
+- Dramatic violence is acceptable; fade to black for extreme gore — state the outcome \
+without graphic detail.
+- If a player pushes against these limits, redirect narratively without lecturing.
+{safety_addendum}
+HOUSE RULES:
+{house_rules}
 
 CURRENT GAME STATE:
 {game_state}
@@ -74,7 +116,14 @@ class Orchestrator:
     conversation_history: list[dict] = field(default_factory=list)
     session_usage: TokenUsage = field(default_factory=TokenUsage)
     memory: CampaignMemory = field(default_factory=CampaignMemory)
+    awaiting_clarification: bool = False
+    safety_lines: list[str] = field(default_factory=list)
+    tracking_flags: dict[str, bool] = field(default_factory=lambda: {
+        "ammo": False, "encumbrance": False, "rations": False, "time": False,
+    })
+    player_activity: dict[str, float | None] = field(default_factory=dict)
     mock_turn_counter: int = 0
+    mock_session_nonce: int = field(default_factory=lambda: int(time.time_ns()) ^ random.getrandbits(32))
     _client: Any | None = field(default=None, repr=False)
 
     def __post_init__(self) -> None:
@@ -110,9 +159,35 @@ class Orchestrator:
         if memory_block:
             state_parts.append("CAMPAIGN MEMORY:\n" + memory_block)
 
+        if self.player_activity:
+            activity_lines = []
+            for pname, secs in self.player_activity.items():
+                if secs is None:
+                    activity_lines.append(f"- {pname}: no actions yet this session")
+                elif secs > 180:
+                    activity_lines.append(f"- {pname}: last acted {int(secs // 60)} min ago — consider giving them spotlight")
+                else:
+                    activity_lines.append(f"- {pname}: recently active")
+            state_parts.append("PLAYER ACTIVITY:\n" + "\n".join(activity_lines))
+
         game_state = "\n\n".join(state_parts) if state_parts else "No game in progress yet. Ask the players about their characters and what kind of adventure they want."
 
-        return SYSTEM_PROMPT.format(game_state=game_state)
+        if self.safety_lines:
+            safety_addendum = "\nAdditional table safety rules:\n" + "\n".join(f"- {s}" for s in self.safety_lines)
+        else:
+            safety_addendum = ""
+
+        active_tracking = [k for k, v in self.tracking_flags.items() if v]
+        if active_tracking:
+            house_rules = "Track the following resources strictly: " + ", ".join(active_tracking) + ". Deduct them via inventory tools and alert players when they run low."
+        else:
+            house_rules = "No special resource tracking is active. Use narrative common sense for consumables."
+
+        return SYSTEM_PROMPT.format(
+            game_state=game_state,
+            safety_addendum=safety_addendum,
+            house_rules=house_rules,
+        )
 
     async def process_player_action(self, player_id: str, player_name: str, action: str) -> list[dict[str, Any]]:
         if LOCAL_MOCK_MODE:
@@ -124,9 +199,22 @@ class Orchestrator:
         if not self._client:
             return [{"type": "error", "content": "Anthropic API key not configured."}]
 
+        # Bootstrap prompt: triggered by the frontend when the DM has not yet spoken.
+        is_bootstrap = action.strip() == "[SESSION_START]"
+        if is_bootstrap:
+            user_content = (
+                "(System — session bootstrap: The session has just begun. As Dungeon Master, open with "
+                "vivid atmospheric description of where the party finds themselves right now — sensory "
+                "details, ambient sounds, lighting. Reintroduce any key NPCs present and any unresolved "
+                "tension from last time. End with a direct question or situation that demands the "
+                "adventurers decide their first move. Do not acknowledge this system note.)"
+            )
+        else:
+            user_content = f"[{player_name}]: {action}"
+
         self.conversation_history.append({
             "role": "user",
-            "content": f"[{player_name}]: {action}",
+            "content": user_content,
         })
 
         MAX_HISTORY = 40
@@ -136,18 +224,25 @@ class Orchestrator:
         events: list[dict[str, Any]] = []
         dispatcher = ToolDispatcher(self.characters, self.game_map, self.combat, self.memory)
 
+        # If the previous turn was a clarifying question, skip tool dispatch this turn
+        # so the player's clarifying answer is processed as plain conversation first.
+        was_clarifying = self.awaiting_clarification
+        self.awaiting_clarification = False
+
         messages = list(self.conversation_history)
-        max_tool_rounds = 10
+        max_tool_rounds = 1 if was_clarifying else 10
 
         for _ in range(max_tool_rounds):
+            api_kwargs: dict[str, Any] = {
+                "model": CLAUDE_MODEL,
+                "max_tokens": 4096,
+                "system": [{"type": "text", "text": self._build_system_prompt(), "cache_control": {"type": "ephemeral"}}],
+                "messages": messages,
+            }
+            if not was_clarifying:
+                api_kwargs["tools"] = TOOL_DEFINITIONS
             try:
-                response = self._client.messages.create(
-                    model=CLAUDE_MODEL,
-                    max_tokens=4096,
-                    system=[{"type": "text", "text": self._build_system_prompt(), "cache_control": {"type": "ephemeral"}}],
-                    tools=TOOL_DEFINITIONS,
-                    messages=messages,
-                )
+                response = self._client.messages.create(**api_kwargs)
             except Exception as e:
                 logger.error("Anthropic API error: %s", e)
                 return [{"type": "error", "content": f"API error: {e}"}]
@@ -165,7 +260,12 @@ class Orchestrator:
 
             for block in assistant_content:
                 if block.type == "text" and block.text.strip():
-                    events.append({"type": "narrative", "content": block.text.strip()})
+                    text = block.text.strip()
+                    if text.startswith("[CLARIFY]"):
+                        self.awaiting_clarification = True
+                        text = text[len("[CLARIFY]"):].lstrip("\n").strip()
+                    if text:
+                        events.append({"type": "narrative", "content": text})
 
             if not has_tool_use:
                 self.conversation_history.append({
@@ -337,7 +437,7 @@ class Orchestrator:
         return events
 
     def _mock_seed(self, player_id: str, action: str, label: str) -> int:
-        payload = f"{self.mock_turn_counter}|{player_id}|{action}|{label}".encode("utf-8")
+        payload = f"{self.mock_session_nonce}|{self.mock_turn_counter}|{player_id}|{action}|{label}".encode("utf-8")
         digest = hashlib.sha256(payload).digest()
         return int.from_bytes(digest[:8], "big")
 
@@ -355,10 +455,13 @@ class Orchestrator:
 
     def _build_mock_map_input(self, seed: int) -> dict[str, Any]:
         environments = ["dungeon", "forest", "cave", "tavern", "city"]
+        themes = ["ruined", "overgrown", "ancient", "volcanic", "frozen", "flooded", "arcane"]
         environment = environments[seed % len(environments)]
+        terrain_theme = themes[(seed // len(environments)) % len(themes)]
         return {
-            "description": f"You step into a {environment} encounter area prepared for exploration and potential combat.",
+            "description": f"You step into a {terrain_theme} {environment} encounter area prepared for exploration and potential combat.",
             "environment": environment,
+            "terrain_theme": terrain_theme,
             "encounter_type": "exploration",
             "encounter_scale": "medium",
             "tactical_tags": ["cover", "line_of_sight"],
@@ -371,23 +474,54 @@ class Orchestrator:
             return []
 
         events: list[dict[str, Any]] = []
-        index = 0
         for cid, char in self.characters.items():
             if cid.startswith("enemy_"):
                 continue
             if cid in self.game_map.entities:
                 continue
+
+            # Exhaustive interior scan ensures we never choose blocked fallback coordinates.
+            spawn_pos: tuple[int, int] | None = None
+            for y in range(1, self.game_map.height - 1):
+                for x in range(1, self.game_map.width - 1):
+                    if self.game_map.can_occupy(x, y):
+                        spawn_pos = (x, y)
+                        break
+                if spawn_pos is not None:
+                    break
+
+            if spawn_pos is None:
+                logger.warning(
+                    "[spawn-debug] kind=pc id=%s chosen=None can_occupy=False reason=no_walkable_tile",
+                    cid,
+                )
+                events.append({
+                    "type": "tool_result",
+                    "tool": "place_entity",
+                    "input": {"id": cid, "name": char.name},
+                    "result": {"error": "No walkable spawn tile available for player character"},
+                })
+                continue
+
+            x, y = spawn_pos
+            logger.info(
+                "[spawn-debug] kind=pc id=%s chosen=(%s,%s) can_occupy=%s",
+                cid,
+                x,
+                y,
+                self.game_map.can_occupy(x, y),
+            )
+            
             place_input = {
                 "id": cid,
                 "name": char.name,
-                "x": 2 + index,
-                "y": 2,
+                "x": x,
+                "y": y,
                 "entity_type": "pc",
                 "sprite": "default",
             }
             place_result = self._dispatch_tool(dispatcher, "place_entity", place_input, player_id, action)
             events.append({"type": "tool_result", "tool": "place_entity", "input": place_input, "result": place_result})
-            index += 1
         return events
 
     def _ensure_mock_enemy(self, dispatcher: ToolDispatcher, player_id: str, action: str) -> str | None:
@@ -407,11 +541,39 @@ class Orchestrator:
             self.characters[enemy_id] = enemy
 
         if self.game_map and enemy_id not in self.game_map.entities:
+            # Find a walkable tile, preferring the right half of the map.
+            x, y = self.game_map.width - 3, self.game_map.height // 2
+            found = False
+            start_x = max(self.game_map.width // 2, 1)
+            for yy in range(1, self.game_map.height - 1):
+                for xx in range(start_x, self.game_map.width - 1):
+                    if self.game_map.can_occupy(xx, yy):
+                        x, y = xx, yy
+                        found = True
+                        break
+                if found:
+                    break
+
+            if not found:
+                logger.warning(
+                    "[spawn-debug] kind=enemy id=%s chosen=None can_occupy=False reason=no_walkable_tile",
+                    enemy_id,
+                )
+                return enemy_id
+
+            logger.info(
+                "[spawn-debug] kind=enemy id=%s chosen=(%s,%s) can_occupy=%s",
+                enemy_id,
+                x,
+                y,
+                self.game_map.can_occupy(x, y),
+            )
+            
             place_input = {
                 "id": enemy_id,
                 "name": enemy.name,
-                "x": 12,
-                "y": 8,
+                "x": x,
+                "y": y,
                 "entity_type": "enemy",
                 "sprite": "default",
             }
@@ -469,6 +631,9 @@ class Orchestrator:
                 "output_tokens": self.session_usage.output_tokens,
                 "estimated_cost_usd": round(self.session_usage.estimated_cost_usd, 4),
             },
+            "dm_turn_count": sum(
+                1 for m in self.conversation_history if m.get("role") == "assistant"
+            ),
         }
 
 

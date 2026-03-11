@@ -4,12 +4,15 @@ import hashlib
 import json
 import logging
 import random
+import time
 from collections import OrderedDict, deque
 from pathlib import Path
-from typing import Any, TypedDict, cast
+from typing import Any, TypedDict, cast, Optional
 
 from .config import LOCAL_MOCK_MODE, MAP_PACK_VALIDATION_MODE
 from .maps.license_validation import validate_map_library_manifest
+from .terrain_variants import get_terrain_variants
+from .seeded_random import select_variant, SeededRNG
 
 
 class MapLibraryEntry(TypedDict):
@@ -37,21 +40,25 @@ class MapLibraryEntry(TypedDict):
 class MapSelectionRequest(TypedDict, total=False):
     description: str
     environment: str
+    terrain_theme: str
     encounter_type: str
     encounter_scale: str
     tactical_tags: list[str]
     width: int
     height: int
+    seed: int  # Optional: deterministic seed for terrain variant generation
 
 
-class NormalizedMapSelectionRequest(TypedDict):
+class NormalizedMapSelectionRequest(TypedDict, total=False):
     description: str
     environment: str
+    terrain_theme: str
     encounter_type: str
     encounter_scale: str
     tactical_tags: list[str]
     width: int
     height: int
+    seed: int  # Optional: deterministic seed for terrain variant generation
 
 
 class TerrainAtlasEntry(TypedDict):
@@ -115,6 +122,16 @@ _ENV_THEME_KEYWORDS: dict[str, list[str]] = {
     "dungeon": ["dungeon", "crypt", "stone", "brick", "tile", "rubble", "bones"],
 }
 
+_TERRAIN_THEME_KEYWORDS: dict[str, list[str]] = {
+    "ruined": ["ruined", "rubble", "broken", "cracked", "debris", "worn"],
+    "overgrown": ["moss", "vines", "grass", "roots", "green", "mushroom"],
+    "ancient": ["stone", "pillar", "statue", "crypt", "ornate", "carved"],
+    "volcanic": ["lava", "ash", "char", "basalt", "smoke", "fire"],
+    "frozen": ["ice", "frost", "snow", "cold", "glacier", "crystal"],
+    "flooded": ["water", "pond", "river", "wet", "murky", "algae"],
+    "arcane": ["rune", "glyph", "arcane", "magic", "crystal", "glow"],
+}
+
 _PROP_CATEGORY_RULES: dict[str, dict[str, Any]] = {
     "obstacle": {
         "blocks_movement": True,
@@ -133,6 +150,29 @@ _PROP_CATEGORY_RULES: dict[str, dict[str, Any]] = {
     },
 }
 
+_MAX_PALETTE_BY_TILE_TYPE: dict[str, int] = {
+    "floor": 4,
+    "wall": 3,
+    "door": 2,
+    "water": 2,
+    "pit": 1,
+    "pillar": 2,
+    "rubble": 2,
+    "stairs_up": 1,
+    "stairs_down": 1,
+    "chest": 1,
+}
+
+_MIN_PALETTE_BY_TILE_TYPE: dict[str, int] = {
+    "floor": 2,
+    "wall": 2,
+}
+
+_BLOCKED_SPRITE_KEYWORDS = [
+    "wall", "rock", "rubble", "pit", "chasm", "cliff", "boulder", "collapsed",
+    "debris", "void", "lava", "pillar", "column", "stalagmite", "barrier",
+]
+
 
 def _normalize_label(value: str) -> str:
     return " ".join(value.strip().lower().replace("_", " ").split())
@@ -144,7 +184,7 @@ def _load_terrain_atlas() -> list[TerrainAtlasEntry]:
         return _TERRAIN_ATLAS_CACHE
 
     try:
-        with _TERRAIN_ATLAS_PATH.open("r", encoding="utf-8") as f:
+        with _TERRAIN_ATLAS_PATH.open("r", encoding="utf-8-sig") as f:
             payload = json.load(f)
     except FileNotFoundError:
         logger.warning("Terrain atlas JSON missing at %s", _TERRAIN_ATLAS_PATH)
@@ -192,8 +232,77 @@ def _select_labels(entries: list[TerrainAtlasEntry], keywords: list[str], limit:
     return matched
 
 
+def _cohere_tile_palette(candidates: list[str], tile_type: str, rng: random.Random) -> list[str]:
+    if not candidates:
+        return []
+
+    deduped = list(dict.fromkeys(candidates))
+    max_keep = _MAX_PALETTE_BY_TILE_TYPE.get(tile_type, 2)
+    min_keep = _MIN_PALETTE_BY_TILE_TYPE.get(tile_type, 1)
+
+    if len(deduped) <= max_keep:
+        return deduped
+
+    shuffled = list(deduped)
+    rng.shuffle(shuffled)
+    keep = max(min_keep, min(max_keep, len(shuffled)))
+    return shuffled[:keep]
+
+
+def _collect_palette_label_sets(palette: dict[str, list[str]]) -> tuple[set[str], set[str]]:
+    traversable_labels: set[str] = set()
+    blocked_labels: set[str] = set()
+    for tile_type, labels in palette.items():
+        if _is_walkable(tile_type):
+            traversable_labels.update(labels)
+        else:
+            blocked_labels.update(labels)
+    return traversable_labels, blocked_labels
+
+
+def _choose_blocked_variants_for_map(
+    palette: dict[str, list[str]],
+    rng: random.Random,
+    deterministic_seed: Optional[int],
+) -> list[str]:
+    blocked_pool: list[str] = []
+    seen: set[str] = set()
+    for tile_type, labels in palette.items():
+        if _is_walkable(tile_type):
+            continue
+        for label in labels:
+            if label in seen:
+                continue
+            seen.add(label)
+            blocked_pool.append(label)
+
+    if not blocked_pool:
+        return []
+
+    heavy = [
+        label for label in blocked_pool
+        if any(keyword in label for keyword in _BLOCKED_SPRITE_KEYWORDS)
+    ]
+    candidates = heavy if heavy else blocked_pool
+
+    chooser = random.Random(((int(deterministic_seed) if deterministic_seed is not None else 0) ^ 0x6E6F5F6D) & 0xFFFFFFFF)
+    if deterministic_seed is None:
+        chooser = rng
+
+    max_pick = min(3, len(candidates))
+    if max_pick == 1:
+        pick_count = 1
+    else:
+        pick_count = chooser.choice([1, 2, max_pick])
+
+    shuffled = list(candidates)
+    chooser.shuffle(shuffled)
+    return shuffled[:pick_count]
+
+
 def _build_tile_sprite_palette(
     environment: str,
+    terrain_theme: str,
     description: str,
     mock_mode: bool,
     rng: random.Random,
@@ -204,6 +313,14 @@ def _build_tile_sprite_palette(
 
     env_key = environment if environment in _ENV_THEME_KEYWORDS else "dungeon"
     env_keywords = list(_ENV_THEME_KEYWORDS.get(env_key, []))
+
+    normalized_theme = _normalize_label(terrain_theme)
+    if normalized_theme:
+        if normalized_theme in _TERRAIN_THEME_KEYWORDS:
+            env_keywords.extend(_TERRAIN_THEME_KEYWORDS[normalized_theme])
+        else:
+            env_keywords.extend([token for token in normalized_theme.split(" ") if token])
+
     lowered_description = description.lower()
     if "water" in lowered_description or "river" in lowered_description:
         env_keywords.extend(["water", "river", "pond"]) 
@@ -212,21 +329,51 @@ def _build_tile_sprite_palette(
     if not base_theme:
         base_theme = _select_labels(entries, ["stone", "floor", "dirt"], limit=120)
 
-    # Floor and wall now intentionally share one "surface" pool so either can
-    # draw from assets that were previously split by naming convention.
-    surface_keywords = sorted(set(_TILE_LABEL_KEYWORDS["floor"] + _TILE_LABEL_KEYWORDS["wall"]))
-    env_surface = [label for label in base_theme if any(keyword in label for keyword in surface_keywords)]
-    global_surface = _select_labels(entries, surface_keywords, limit=160)
-    shared_surface_candidates = env_surface if env_surface else global_surface
-    if mock_mode and shared_surface_candidates:
-        shuffled_surface = list(shared_surface_candidates)
-        rng.shuffle(shuffled_surface)
-        shared_surface_candidates = shuffled_surface[: max(2, min(8, len(shuffled_surface)))]
+    # Keep floor/wall pools separate and exclude object-like labels so map tiles
+    # don't resolve to props like bookshelves, pillars, doors, or trees.
+    floor_surface_keywords = [
+        "grass", "dirt", "earth", "sand", "path", "road", "trail", "soil",
+        "stone", "cobble", "moss", "mud", "ground", "wood", "brick", "tile", "floor",
+    ]
+    wall_surface_keywords = [
+        "wall", "brick", "stone", "hedge", "cliff", "fence", "wood", "rock", "cobble",
+        "masonry", "cave", "dungeon",
+    ]
+    reject_surface_keywords = [
+        "bookshelf", "book", "shelf", "crate", "chest", "barrel", "table", "chair",
+        "door", "gate", "archway", "torch", "tree", "bush", "pillar", "column",
+        "statue", "stalagmite", "mushroom", "bones", "urn", "cart", "anvil", "altar",
+        "pedestal", "lever", "wheel", "fountain", "tomb", "tombstone", "skull",
+    ]
+
+    def _surface_candidates(keywords: list[str], limit: int) -> list[str]:
+        env_filtered = [
+            label
+            for label in base_theme
+            if any(keyword in label for keyword in keywords)
+            and not any(bad in label for bad in reject_surface_keywords)
+        ]
+        if env_filtered:
+            return env_filtered
+
+        fallback = _select_labels(entries, keywords, limit=limit)
+        return [
+            label
+            for label in fallback
+            if not any(bad in label for bad in reject_surface_keywords)
+        ]
+
+    floor_candidates = _surface_candidates(floor_surface_keywords, limit=160)
+    wall_candidates = _surface_candidates(wall_surface_keywords, limit=160)
+
+    floor_candidates = _cohere_tile_palette(floor_candidates, "floor", rng)
+    wall_candidates = _cohere_tile_palette(wall_candidates, "wall", rng)
 
     palette: dict[str, list[str]] = {}
-    if shared_surface_candidates:
-        palette["floor"] = list(shared_surface_candidates)
-        palette["wall"] = list(shared_surface_candidates)
+    if floor_candidates:
+        palette["floor"] = list(floor_candidates)
+    if wall_candidates:
+        palette["wall"] = list(wall_candidates)
 
     for tile_type, keywords in _TILE_LABEL_KEYWORDS.items():
         if tile_type in {"floor", "wall"}:
@@ -235,11 +382,7 @@ def _build_tile_sprite_palette(
         global_fallback = _select_labels(entries, keywords, limit=120)
 
         candidates = env_filtered if env_filtered else global_fallback
-        if mock_mode and candidates:
-            # Keep mock output coherent by constraining each tile type to a small variant set.
-            shuffled = list(candidates)
-            rng.shuffle(shuffled)
-            candidates = shuffled[: max(1, min(4, len(shuffled)))]
+        candidates = _cohere_tile_palette(candidates, tile_type, rng)
 
         if candidates:
             palette[tile_type] = candidates
@@ -251,32 +394,162 @@ def _assign_tile_sprites(
     tiles: list[dict[str, Any]],
     palette: dict[str, list[str]],
     rng: random.Random,
-) -> list[dict[str, Any]]:
+    environment: str,
+    deterministic_seed: Optional[int] = None,
+) -> tuple[list[dict[str, Any]], list[str]]:
+    """
+    Assign sprite labels and variants to tiles using procedural variation.
+    
+    If deterministic_seed is provided, uses noise-based variant clustering.
+    Otherwise, falls back to random sprite selection from palette.
+    
+    Args:
+        tiles: List of tile dictionaries with "type" field
+        palette: Dict mapping tile_type -> list of sprite labels
+        rng: Random instance for non-deterministic selection
+        deterministic_seed: Optional seed for procedural variant selection
+    
+    Returns:
+        List of tiles with assigned "sprite" and optional "variant" fields
+    """
     if not palette:
-        return [dict(tile) for tile in tiles]
+        return [dict(tile) for tile in tiles], []
+
+    def terrain_key_for(tile_type: str) -> str:
+        env = environment.strip().lower()
+        if tile_type == "floor":
+            if env in {"forest", "cave"}:
+                return "dirt_floor"
+            if env == "tavern":
+                return "wood_floor"
+            return "stone_floor"
+        if tile_type == "wall":
+            if env in {"forest", "cave"}:
+                return "dirt_wall"
+            if env == "tavern":
+                return "wood_wall"
+            return "stone_wall"
+        return tile_type
+
+    traversable_labels, blocked_labels = _collect_palette_label_sets(palette)
+    blocked_variants = _choose_blocked_variants_for_map(palette, rng, deterministic_seed)
+
+    # Keep pools disjoint so blocked-looking sprites never leak onto walkable tiles.
+    blocked_variant_set = set(blocked_variants)
+    traversable_only = traversable_labels - blocked_variant_set
+    blocked_only = (blocked_labels | blocked_variant_set) - traversable_only
+
+    # Dominant base sprite per tile type for cohesive appearance.
+    dominant_by_tile_type: dict[str, str] = {}
+    for tile_type, labels in palette.items():
+        if labels:
+            dominant_by_tile_type[tile_type] = labels[0]
 
     decorated: list[dict[str, Any]] = []
+    seeded_rng = SeededRNG(deterministic_seed) if deterministic_seed is not None else None
+    
     for tile in tiles:
         tile_copy = dict(tile)
-        tile_type = str(tile_copy.get("type", ""))
-        candidates = palette.get(tile_type)
-        if candidates:
-            label = rng.choice(candidates)
-            tile_copy["sprite"] = f"env:{label}"
+        tile_type = str(tile_copy.get("type", "floor"))
+        terrain_type = terrain_key_for(tile_type)
+        
+        # If we have a seed for procedural generation, use variant selection
+        if deterministic_seed is not None and seeded_rng is not None:
+            x = tile_copy.get("x", 0)
+            y = tile_copy.get("y", 0)
+            
+            # Try variant-based selection
+            variant_id, sprite_label = select_variant(
+                terrain_type=terrain_type,
+                x=x,
+                y=y,
+                base_seed=deterministic_seed,
+                rng=seeded_rng,
+            )
+
+            # Choose base label from a clustered region instead of per-tile randomness.
+            # This avoids noisy "every tile is different" mosaics while keeping variety.
+            is_blocked_tile = not _is_walkable(tile_type)
+            if is_blocked_tile and blocked_variants:
+                base_candidates = blocked_variants
+            else:
+                dominant = dominant_by_tile_type.get(tile_type)
+                base_candidates = [dominant] if dominant else []
+                if not base_candidates:
+                    base_candidates = [
+                        label for label in palette.get(tile_type, [])
+                        if (label in blocked_only) == is_blocked_tile
+                    ]
+                    if not base_candidates:
+                        pool = blocked_only if is_blocked_tile else traversable_only
+                        base_candidates = list(pool)
+                    if not base_candidates:
+                        base_candidates = list(palette.get(tile_type, []))
+
+            if base_candidates:
+                cluster_span = 4 if tile_type == "floor" else 5 if tile_type == "wall" else 3
+                cluster_x = int(x) // cluster_span
+                cluster_y = int(y) // cluster_span
+                tile_seed = (
+                    (int(deterministic_seed) * 73856093)
+                    ^ (int(cluster_x) * 19349663)
+                    ^ (int(cluster_y) * 83492791)
+                ) & 0xFFFFFFFF
+                base_label = base_candidates[tile_seed % len(base_candidates)]
+            else:
+                base_label = sprite_label if sprite_label and sprite_label != terrain_type else tile_type
+
+            # Store base label in sprite so the frontend can append the variant suffix
+            # itself ("env:{base}_{variant}"). Double-encoding (embedding variant here AND
+            # setting tile["variant"]) caused the frontend to produce "base_v_v" keys that
+            # were never found in the atlas, collapsing all tiles to solid color fallbacks.
+            tile_copy["sprite"] = f"env:{base_label}"
+            if variant_id and variant_id != "default":
+                tile_copy["variant"] = variant_id
+        else:
+            # Non-deterministic mode: use traditional random selection
+            is_blocked_tile = not _is_walkable(tile_type)
+            if is_blocked_tile and blocked_variants:
+                candidates = blocked_variants
+            else:
+                dominant = dominant_by_tile_type.get(tile_type)
+                candidates = [dominant] if dominant else []
+                if not candidates:
+                    candidates = [
+                        label for label in palette.get(tile_type, [])
+                        if (label in blocked_only) == is_blocked_tile
+                    ]
+                    if not candidates:
+                        pool = blocked_only if is_blocked_tile else traversable_only
+                        candidates = list(pool)
+                    if not candidates:
+                        candidates = palette.get(tile_type)
+            if candidates:
+                label = rng.choice(candidates)
+                tile_copy["sprite"] = f"env:{label}"
+        
         decorated.append(tile_copy)
-    return decorated
+    
+    return decorated, blocked_variants
 
 
 def assign_terrain_atlas_sprites(
     raw_request: MapSelectionRequest,
     tiles: list[dict[str, Any]],
 ) -> list[dict[str, Any]]:
-    """Assign deterministic env: sprite labels to an existing tile grid.
+    """Assign sprite labels to an existing tile grid.
 
-    This is used when an upstream caller already produced tile geometry but still
-    wants coherent terrain atlas visuals.
+    Uses a seeded RNG based on request parameters plus a timestamp for variety.
+    Each call will produce different but coherent sprite selections.
+    
+    If the request contains a 'seed' parameter, uses deterministic variant selection.
     """
     request = _normalize_request(raw_request)
+    
+    # Extract optional deterministic seed; otherwise use generated seed per call.
+    explicit_seed = request.get("seed")
+    
+    # Include full timestamp so each call produces different sprite selections
     seed_payload = {
         "description": request["description"],
         "environment": request["environment"],
@@ -287,17 +560,27 @@ def assign_terrain_atlas_sprites(
         "height": request["height"],
         "tile_count": len(tiles),
         "mode": "prebuilt",
+        "timestamp_ms": int(time.time() * 1000),  # Use full timestamp for variety across all map loads
     }
     seed = int(hashlib.sha256(json.dumps(seed_payload, sort_keys=True).encode("utf-8")).hexdigest()[:8], 16)
     rng = random.Random(seed)
+    effective_seed = int(explicit_seed) if explicit_seed is not None else seed
 
     palette = _build_tile_sprite_palette(
         environment=request["environment"],
+        terrain_theme=request.get("terrain_theme", ""),
         description=request["description"],
         mock_mode=LOCAL_MOCK_MODE,
         rng=rng,
     )
-    return _assign_tile_sprites(tiles, palette, rng)
+    decorated, _blocked_variants = _assign_tile_sprites(
+        tiles,
+        palette,
+        rng,
+        environment=request["environment"],
+        deterministic_seed=effective_seed,
+    )
+    return decorated
 
 
 def _spawn_environment_props(
@@ -490,19 +773,27 @@ def _normalize_request(raw: MapSelectionRequest) -> NormalizedMapSelectionReques
     height = max(8, min(36, int(raw.get("height", 15))))
 
     environment = (raw.get("environment") or _infer_environment(description)).strip().lower()
+    terrain_theme = str(raw.get("terrain_theme", "")).strip().lower()
     encounter_type = (raw.get("encounter_type") or _infer_encounter_type(description)).strip().lower()
     encounter_scale = (raw.get("encounter_scale") or _infer_scale(width, height)).strip().lower()
     tactical_tags = [t.strip().lower() for t in raw.get("tactical_tags", []) if str(t).strip()]
 
-    return {
+    normalized: NormalizedMapSelectionRequest = {
         "description": description,
         "environment": environment,
+        "terrain_theme": terrain_theme,
         "encounter_type": encounter_type,
         "encounter_scale": encounter_scale,
         "tactical_tags": tactical_tags,
         "width": width,
         "height": height,
     }
+    
+    # Pass through optional seed if provided
+    if "seed" in raw:
+        normalized["seed"] = raw["seed"]
+    
+    return normalized
 
 
 def _score_entry(entry: MapLibraryEntry, request: NormalizedMapSelectionRequest) -> int:
@@ -522,16 +813,32 @@ def _score_entry(entry: MapLibraryEntry, request: NormalizedMapSelectionRequest)
     return score
 
 
-def _pick_library_entry(request: NormalizedMapSelectionRequest, library: list[MapLibraryEntry]) -> tuple[MapLibraryEntry | None, int]:
+def _pick_library_entry(
+    request: NormalizedMapSelectionRequest,
+    library: list[MapLibraryEntry],
+    rng: random.Random,
+    deterministic: bool,
+) -> tuple[MapLibraryEntry | None, int]:
     scored = [(entry, _score_entry(entry, request)) for entry in library]
     if not scored:
         return None, 0
 
     if LOCAL_MOCK_MODE:
+        env_match = [entry for entry, score in scored if entry["environment"] == request["environment"]]
+        if env_match:
+            return rng.choice(env_match), 0
         eligible = [entry for entry, score in scored if score >= 4]
         if not eligible:
             eligible = [entry for entry, _score in scored]
-        return random.choice(eligible), 0
+        return rng.choice(eligible), 0
+
+    if not deterministic:
+        scored.sort(key=lambda item: item[1], reverse=True)
+        best_score = scored[0][1]
+        threshold = max(0, best_score - 1)
+        top_choices = [entry for entry, score in scored if score >= threshold]
+        if top_choices:
+            return rng.choice(top_choices), best_score
 
     scored.sort(key=lambda item: item[1], reverse=True)
     best_entry, best_score = scored[0]
@@ -565,10 +872,22 @@ def _apply_layout(layout: str, width: int, height: int, rng: random.Random) -> l
     tiles_by_pos = _tile_map(_empty_map(width, height))
 
     if layout == "room_cluster":
-        _apply_rect_wall(tiles_by_pos, 3, 3, width // 2, height // 2)
-        _apply_rect_wall(tiles_by_pos, width // 2 - 1, height // 2 - 1, width - 4, height - 4)
-        tiles_by_pos[(width // 2, 3)] = "door"
-        tiles_by_pos[(width // 2 - 1, height // 2)] = "door"
+        mid_x = width // 2 + rng.randint(-2, 2)
+        mid_y = height // 2 + rng.randint(-1, 1)
+
+        left_x1, left_y1 = 2 + rng.randint(0, 2), 2 + rng.randint(0, 2)
+        left_x2, left_y2 = max(left_x1 + 4, mid_x - rng.randint(0, 2)), max(left_y1 + 4, mid_y + rng.randint(-1, 1))
+
+        right_x1, right_y1 = min(width - 6, mid_x - rng.randint(1, 2)), min(height - 6, mid_y - rng.randint(1, 2))
+        right_x2, right_y2 = width - (3 + rng.randint(0, 2)), height - (3 + rng.randint(0, 2))
+
+        _apply_rect_wall(tiles_by_pos, left_x1, left_y1, left_x2, left_y2)
+        _apply_rect_wall(tiles_by_pos, right_x1, right_y1, right_x2, right_y2)
+
+        door_a = (max(left_x1 + 1, min(left_x2 - 1, mid_x)), left_y1)
+        door_b = (max(right_x1 + 1, min(right_x2 - 1, mid_x)), max(right_y1 + 1, min(right_y2 - 1, mid_y)))
+        tiles_by_pos[door_a] = "door"
+        tiles_by_pos[door_b] = "door"
 
     elif layout == "crossroads":
         for y in range(1, height - 1):
@@ -633,7 +952,7 @@ def _is_valid_layout(width: int, height: int, tiles: list[dict[str, Any]]) -> bo
     return len(visited) >= int(len(walkable) * 0.7)
 
 
-def _build_from_library(entry: MapLibraryEntry, request: NormalizedMapSelectionRequest, rng: random.Random) -> dict[str, Any]:
+def _build_from_library(entry: MapLibraryEntry, request: NormalizedMapSelectionRequest, rng: random.Random, deterministic_seed: Optional[int] = None) -> dict[str, Any]:
     width = int(request["width"])
     height = int(request["height"])
     tiles = _apply_layout(entry["layout"], width, height, rng)
@@ -643,11 +962,28 @@ def _build_from_library(entry: MapLibraryEntry, request: NormalizedMapSelectionR
 
     palette = _build_tile_sprite_palette(
         environment=entry["environment"],
+        terrain_theme=request.get("terrain_theme", ""),
         description=request["description"],
         mock_mode=LOCAL_MOCK_MODE,
         rng=rng,
     )
-    tiles = _assign_tile_sprites(tiles, palette, rng)
+    tiles, blocked_variants = _assign_tile_sprites(
+        tiles,
+        palette,
+        rng,
+        environment=entry["environment"],
+        deterministic_seed=deterministic_seed,
+    )
+
+    # TEMP DEBUG: Track selected environment/theme and first floor sprite keys.
+    floor_sprites = [str(t.get("sprite", "")) for t in tiles if str(t.get("type", "")) == "floor" and t.get("sprite")]
+    logger.info(
+        "[terrain-debug] map_source=library env=%s theme=%s floor_sprites_first20=%s",
+        entry["environment"],
+        request.get("terrain_theme", ""),
+        floor_sprites[:20],
+    )
+
     entities = _spawn_environment_props(tiles, entry["environment"], palette, rng)
 
     license_info = _resolve_license(entry)
@@ -678,11 +1014,15 @@ def _build_from_library(entry: MapLibraryEntry, request: NormalizedMapSelectionR
             "tile_size_px": 32,
             "image_url": entry.get("image_url", ""),
             "image_opacity": float(entry.get("image_opacity", 0.85)),
+            "blocked_variants": blocked_variants,
+            "map_config": {
+                "blocked_variants": blocked_variants,
+            },
         },
     }
 
 
-def _generate_dynamic(request: NormalizedMapSelectionRequest, rng: random.Random) -> dict[str, Any]:
+def _generate_dynamic(request: NormalizedMapSelectionRequest, rng: random.Random, deterministic_seed: Optional[int] = None) -> dict[str, Any]:
     width = int(request["width"])
     height = int(request["height"])
     tactical_tags = request.get("tactical_tags", [])
@@ -706,11 +1046,28 @@ def _generate_dynamic(request: NormalizedMapSelectionRequest, rng: random.Random
 
     palette = _build_tile_sprite_palette(
         environment=request["environment"],
+        terrain_theme=request.get("terrain_theme", ""),
         description=request["description"],
         mock_mode=LOCAL_MOCK_MODE,
         rng=rng,
     )
-    best_tiles = _assign_tile_sprites(best_tiles, palette, rng)
+    best_tiles, blocked_variants = _assign_tile_sprites(
+        best_tiles,
+        palette,
+        rng,
+        environment=request["environment"],
+        deterministic_seed=deterministic_seed,
+    )
+
+    # TEMP DEBUG: Track selected environment/theme and first floor sprite keys.
+    floor_sprites = [str(t.get("sprite", "")) for t in best_tiles if str(t.get("type", "")) == "floor" and t.get("sprite")]
+    logger.info(
+        "[terrain-debug] map_source=generated env=%s theme=%s floor_sprites_first20=%s",
+        request["environment"],
+        request.get("terrain_theme", ""),
+        floor_sprites[:20],
+    )
+
     entities = _spawn_environment_props(best_tiles, request["environment"], palette, rng)
 
     fingerprint = hashlib.sha256(
@@ -743,6 +1100,10 @@ def _generate_dynamic(request: NormalizedMapSelectionRequest, rng: random.Random
             "grid_size": 5,
             "grid_units": "ft",
             "tile_size_px": 32,
+            "blocked_variants": blocked_variants,
+            "map_config": {
+                "blocked_variants": blocked_variants,
+            },
         },
     }
 
@@ -755,9 +1116,12 @@ def _cache_key(request: NormalizedMapSelectionRequest) -> str:
 def build_automated_map(raw_request: MapSelectionRequest) -> dict[str, Any]:
     request = _normalize_request(raw_request)
     library = _load_library()
+    explicit_seed = request.get("seed")
 
     cache_key = _cache_key(request)
-    if cache_key in _GENERATED_MAP_CACHE:
+    # Only serve cache hits for explicitly-seeded requests.
+    # Unseeded requests should regenerate to preserve visual variety across reloads.
+    if explicit_seed is not None and cache_key in _GENERATED_MAP_CACHE:
         cached = _GENERATED_MAP_CACHE[cache_key]
         metadata = dict(cached.get("metadata", {}))
         metadata["cache_hit"] = True
@@ -769,28 +1133,41 @@ def build_automated_map(raw_request: MapSelectionRequest) -> dict[str, Any]:
             "metadata": metadata,
         }
 
-    picked, score = _pick_library_entry(request, library)
-    rng_seed = int(hashlib.sha256(cache_key.encode("utf-8")).hexdigest()[:8], 16)
+    if explicit_seed is not None:
+        rng_seed = int(explicit_seed)
+    else:
+        # Unseeded requests should vary every generation and across restarts.
+        rng_seed_data = {
+            "cache_key": cache_key,
+            "timestamp_ns": time.time_ns(),
+            "entropy": random.SystemRandom().getrandbits(32),
+        }
+        rng_seed = int(hashlib.sha256(json.dumps(rng_seed_data, sort_keys=True).encode("utf-8")).hexdigest()[:8], 16)
+
     rng = random.Random(rng_seed)
+    effective_seed = int(explicit_seed) if explicit_seed is not None else rng_seed
+    picked, score = _pick_library_entry(request, library, rng, deterministic=explicit_seed is not None)
 
     if LOCAL_MOCK_MODE:
         if picked is None:
-            result = _generate_dynamic(request, rng)
+            result = _generate_dynamic(request, rng, deterministic_seed=effective_seed)
         else:
-            result = _build_from_library(picked, request, rng)
+            result = _build_from_library(picked, request, rng, deterministic_seed=effective_seed)
     else:
         if picked and score >= 6:
-            result = _build_from_library(picked, request, rng)
+            result = _build_from_library(picked, request, rng, deterministic_seed=effective_seed)
         else:
-            result = _generate_dynamic(request, rng)
+            result = _generate_dynamic(request, rng, deterministic_seed=effective_seed)
 
     metadata = dict(result.get("metadata", {}))
     metadata["cache_hit"] = False
     result["metadata"] = metadata
 
-    _GENERATED_MAP_CACHE[cache_key] = result
-    while len(_GENERATED_MAP_CACHE) > _GENERATED_CACHE_LIMIT:
-        _GENERATED_MAP_CACHE.popitem(last=False)
+    # Cache only explicitly-seeded maps to preserve deterministic replay behavior.
+    if explicit_seed is not None:
+        _GENERATED_MAP_CACHE[cache_key] = result
+        while len(_GENERATED_MAP_CACHE) > _GENERATED_CACHE_LIMIT:
+            _GENERATED_MAP_CACHE.popitem(last=False)
 
     return {
         "width": result["width"],

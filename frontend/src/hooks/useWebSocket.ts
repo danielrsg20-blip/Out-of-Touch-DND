@@ -47,78 +47,7 @@ export function useWebSocket() {
   const { roomCode, sessionId, playerId, setConnected, addPlayer, setPlayers, getSession, mockMode } = useSessionStore()
   const { setMap, updateEntity, addEntity, removeEntity, setCombat, addNarrative, syncState, setLoading } = useGameStore()
 
-  const renderSessionStartProtocol = useCallback((payload: Record<string, unknown> | undefined) => {
-    if (!payload || typeof payload !== 'object') {
-      return
-    }
 
-    const protocol = payload.protocol as Record<string, unknown> | undefined
-    if (!protocol) {
-      return
-    }
-
-    const recap = typeof protocol.SESSION_RECAP === 'string' ? protocol.SESSION_RECAP.trim() : ''
-    const scene = typeof protocol.CURRENT_SCENE === 'string' ? protocol.CURRENT_SCENE.trim() : ''
-    const trigger = typeof protocol.EVENT_TRIGGER === 'string' ? protocol.EVENT_TRIGGER.trim() : ''
-    const prompt = typeof protocol.ACTION_PROMPT === 'string' ? protocol.ACTION_PROMPT.trim() : ''
-
-    const stateReady = protocol.SESSION_STATE_READY as Record<string, unknown> | undefined
-    const ready = stateReady?.ready === true
-    const issues = Array.isArray(stateReady?.issues)
-      ? stateReady?.issues.filter((i): i is string => typeof i === 'string' && i.trim().length > 0)
-      : []
-
-    addNarrative('system', ready ? 'SESSION_STATE_READY' : 'SESSION_STATE_BLOCKED')
-    for (const issue of issues) {
-      addNarrative('system', `Validation: ${issue}`)
-    }
-
-    if (recap) {
-      addNarrative('dm', recap, 'DM')
-    }
-
-    const partyStatus = Array.isArray(protocol.PARTY_STATUS) ? protocol.PARTY_STATUS : []
-    for (const row of partyStatus) {
-      const typed = row as Record<string, unknown>
-      const name = typeof typed.character_name === 'string' && typed.character_name.trim()
-        ? typed.character_name
-        : (typeof typed.player_name === 'string' ? typed.player_name : 'Unknown')
-      const role = typeof typed.role === 'string' && typed.role.trim() ? typed.role : 'Unassigned'
-      const hp = typed.hp as Record<string, unknown> | undefined
-      const hpCurrent = typeof hp?.current === 'number' ? hp.current : null
-      const hpMax = typeof hp?.max === 'number' ? hp.max : null
-      const conditionList = Array.isArray(typed.conditions)
-        ? typed.conditions.filter((c): c is string => typeof c === 'string' && c.trim().length > 0)
-        : []
-      const hpText = hpCurrent !== null && hpMax !== null ? `${hpCurrent}/${hpMax}` : 'n/a'
-      const conditionsText = conditionList.length > 0 ? conditionList.join(', ') : 'none'
-      addNarrative('system', `${name} (${role}) HP ${hpText} | Conditions: ${conditionsText}`)
-    }
-
-    if (scene) {
-      addNarrative('dm', scene, 'DM')
-    }
-
-    const npcPresent = protocol.NPC_PRESENT
-    if (npcPresent === 'NONE') {
-      addNarrative('system', 'NPC_PRESENT: NONE')
-    } else if (Array.isArray(npcPresent)) {
-      for (const npcRow of npcPresent) {
-        const npc = npcRow as Record<string, unknown>
-        const name = typeof npc.name === 'string' ? npc.name : 'Unknown NPC'
-        const role = typeof npc.role === 'string' ? npc.role : 'unknown role'
-        const behavior = typeof npc.behavior === 'string' ? npc.behavior : 'is present'
-        addNarrative('system', `${name} (${role}) - ${behavior}`)
-      }
-    }
-
-    if (trigger) {
-      addNarrative('dm', trigger, 'DM')
-    }
-    if (prompt) {
-      addNarrative('system', prompt)
-    }
-  }, [addNarrative])
 
   const reportVoiceIssue = useCallback((kind: 'stt' | 'tts', error: unknown) => {
     const message = normalizeVoiceErrorMessage(error)
@@ -236,6 +165,82 @@ export function useWebSocket() {
     }
   }, [addNarrative, mockMode, playerId, reportVoiceIssue, roomCode, tryBrowserSpeechFallback])
 
+  const renderSessionStartProtocol = useCallback((payload: Record<string, unknown> | undefined) => {
+    if (!payload || typeof payload !== 'object') {
+      return
+    }
+
+    const protocol = payload.protocol as Record<string, unknown> | undefined
+    if (!protocol) {
+      return
+    }
+
+    const recap = typeof protocol.SESSION_RECAP === 'string' ? protocol.SESSION_RECAP.trim() : ''
+    const scene = typeof protocol.CURRENT_SCENE === 'string' ? protocol.CURRENT_SCENE.trim() : ''
+    const trigger = typeof protocol.EVENT_TRIGGER === 'string' ? protocol.EVENT_TRIGGER.trim() : ''
+    const prompt = typeof protocol.ACTION_PROMPT === 'string' ? protocol.ACTION_PROMPT.trim() : ''
+
+    const stateReady = protocol.SESSION_STATE_READY as Record<string, unknown> | undefined
+    const ready = stateReady?.ready === true
+    const issues = Array.isArray(stateReady?.issues)
+      ? stateReady?.issues.filter((i): i is string => typeof i === 'string' && i.trim().length > 0)
+      : []
+
+    addNarrative('system', ready ? 'SESSION_STATE_READY' : 'SESSION_STATE_BLOCKED')
+    for (const issue of issues) {
+      addNarrative('system', `Validation: ${issue}`)
+    }
+
+    if (recap) {
+      addNarrative('dm', recap, 'DM')
+      void speakNarration(recap)
+    }
+
+    const partyStatus = Array.isArray(protocol.PARTY_STATUS) ? protocol.PARTY_STATUS : []
+    for (const row of partyStatus) {
+      const typed = row as Record<string, unknown>
+      const name = typeof typed.character_name === 'string' && typed.character_name.trim()
+        ? typed.character_name
+        : (typeof typed.player_name === 'string' ? typed.player_name : 'Unknown')
+      const role = typeof typed.role === 'string' && typed.role.trim() ? typed.role : 'Unassigned'
+      const hp = typed.hp as Record<string, unknown> | undefined
+      const hpCurrent = typeof hp?.current === 'number' ? hp.current : null
+      const hpMax = typeof hp?.max === 'number' ? hp.max : null
+      const conditionList = Array.isArray(typed.conditions)
+        ? typed.conditions.filter((c): c is string => typeof c === 'string' && c.trim().length > 0)
+        : []
+      const hpText = hpCurrent !== null && hpMax !== null ? `${hpCurrent}/${hpMax}` : 'n/a'
+      const conditionsText = conditionList.length > 0 ? conditionList.join(', ') : 'none'
+      addNarrative('system', `${name} (${role}) HP ${hpText} | Conditions: ${conditionsText}`)
+    }
+
+    if (scene) {
+      addNarrative('dm', scene, 'DM')
+      void speakNarration(scene)
+    }
+
+    const npcPresent = protocol.NPC_PRESENT
+    if (npcPresent === 'NONE') {
+      addNarrative('system', 'NPC_PRESENT: NONE')
+    } else if (Array.isArray(npcPresent)) {
+      for (const npcRow of npcPresent) {
+        const npc = npcRow as Record<string, unknown>
+        const name = typeof npc.name === 'string' ? npc.name : 'Unknown NPC'
+        const role = typeof npc.role === 'string' ? npc.role : 'unknown role'
+        const behavior = typeof npc.behavior === 'string' ? npc.behavior : 'is present'
+        addNarrative('system', `${name} (${role}) - ${behavior}`)
+      }
+    }
+
+    if (trigger) {
+      addNarrative('dm', trigger, 'DM')
+      void speakNarration(trigger)
+    }
+    if (prompt) {
+      addNarrative('system', prompt)
+    }
+  }, [addNarrative, speakNarration])
+
   // Local FastAPI mode: fetch initial game state on mount (no Supabase Realtime)
   useEffect(() => {
     if (!roomCode || !playerId) return
@@ -252,6 +257,29 @@ export function useWebSocket() {
         }
         syncState(payload as Parameters<typeof syncState>[0])
         renderSessionStartProtocol(payload.session_start as Record<string, unknown> | undefined)
+
+        // If the DM has not spoken yet (fresh session), fire a bootstrap narration
+        const dmTurnCount = typeof payload.dm_turn_count === 'number' ? payload.dm_turn_count : 1
+        if (dmTurnCount === 0 && roomCode && playerId) {
+          try {
+            const bootstrapRes = await fetch(`${API_BASE}/api/action`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ room_code: roomCode, player_id: playerId, content: '[SESSION_START]' }),
+            })
+            const bootstrapPayload = await parseJsonBody(bootstrapRes)
+            if (Array.isArray(bootstrapPayload.narratives)) {
+              for (const line of bootstrapPayload.narratives) {
+                if (typeof line === 'string' && line.trim()) {
+                  addNarrative('dm', line, 'DM')
+                  void speakNarration(line)
+                }
+              }
+            }
+          } catch {
+            // non-critical: deterministic session-start text is already visible
+          }
+        }
       } catch {
         // non-critical
       }
@@ -514,51 +542,45 @@ export function useWebSocket() {
     setLoading(true)
 
     const sendViaLocal = async () => {
-      try {
-        const res = await fetch(`${API_BASE}/api/action`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            room_code: roomCode,
-            player_id: playerId,
-            content,
-          }),
-        })
-        const payload = await parseJsonBody(res)
-        if (!res.ok || typeof payload.error === 'string') {
-          throw new Error(typeof payload.error === 'string' ? payload.error : `Local action failed (${res.status})`)
-        }
+      const res = await fetch(`${API_BASE}/api/action`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          room_code: roomCode,
+          player_id: playerId,
+          content,
+        }),
+      })
+      const payload = await parseJsonBody(res)
+      if (!res.ok || typeof payload.error === 'string') {
+        throw new Error(typeof payload.error === 'string' ? payload.error : `Local action failed (${res.status})`)
+      }
 
-        const playerName = useSessionStore.getState().players.find((p) => p.id === playerId)?.name ?? 'You'
-        addNarrative('player', content, playerName)
+      const playerName = useSessionStore.getState().players.find((p) => p.id === playerId)?.name ?? 'You'
+      addNarrative('player', content, playerName)
 
-        if (Array.isArray(payload.narratives)) {
-          for (const line of payload.narratives) {
-            if (typeof line === 'string' && line.trim()) {
-              addNarrative('dm', line, 'DM')
-              void speakNarration(line)
-            }
+      if (Array.isArray(payload.narratives)) {
+        for (const line of payload.narratives) {
+          if (typeof line === 'string' && line.trim()) {
+            addNarrative('dm', line, 'DM')
+            void speakNarration(line)
           }
         }
+      }
 
-        if (Array.isArray(payload.dice_results)) {
-          for (const row of payload.dice_results) {
-            const typed = row as Record<string, unknown>
-            handleMessage({
-              type: 'dice_result',
-              tool: typed.tool,
-              data: typed.data,
-            })
-          }
+      if (Array.isArray(payload.dice_results)) {
+        for (const row of payload.dice_results) {
+          const typed = row as Record<string, unknown>
+          handleMessage({
+            type: 'dice_result',
+            tool: typed.tool,
+            data: typed.data,
+          })
         }
+      }
 
-        if (payload.state) {
-          syncState(payload.state as Parameters<typeof syncState>[0])
-        }
-      } catch (localErr: unknown) {
-        addNarrative('system', `Unable to send action: ${localErr instanceof Error ? localErr.message : 'Unknown error'}`)
-      } finally {
-        setLoading(false)
+      if (payload.state) {
+        syncState(payload.state as Parameters<typeof syncState>[0])
       }
     }
 
@@ -567,6 +589,9 @@ export function useWebSocket() {
       if (!supabase) {
         throw new Error('Supabase is not configured.')
       }
+
+      const playerName = useSessionStore.getState().players.find((p) => p.id === playerId)?.name ?? 'You'
+      addNarrative('player', content, playerName)
 
       await invokeEdgeFunction<Record<string, unknown>>('dm-action', {
         action: 'player_action',
@@ -577,15 +602,20 @@ export function useWebSocket() {
       })
     }
 
-    // Prefer local backend for player actions because it runs the full DM orchestrator.
-    sendViaLocal().catch((localErr: unknown) => {
-      sendViaEdge().catch((edgeErr: unknown) => {
-        const localMessage = localErr instanceof Error ? localErr.message : 'Unknown local error'
-        const edgeMessage = edgeErr instanceof Error ? edgeErr.message : 'Unknown edge error'
-        addNarrative('system', `Unable to send action: ${localMessage}. Edge fallback also failed: ${edgeMessage}`)
+    // Try local backend first, fall back to edge function if local session not found
+    sendViaLocal()
+      .catch((localErr: unknown) => {
+        const localMessage = localErr instanceof Error ? localErr.message : 'Unknown error'
+        console.log(`[sendAction] Local failed (${localMessage}), trying edge function...`)
+        return sendViaEdge()
+      })
+      .catch((edgeErr: unknown) => {
+        const edgeMessage = edgeErr instanceof Error ? edgeErr.message : 'Unknown error'
+        addNarrative('system', `Unable to send action: ${edgeMessage}`)
+      })
+      .finally(() => {
         setLoading(false)
       })
-    })
   }, [addNarrative, handleMessage, mockMode, playerId, roomCode, setLoading, speakNarration, syncState])
 
   const sendMoveToken = useCallback((characterId: string, x: number, y: number) => {

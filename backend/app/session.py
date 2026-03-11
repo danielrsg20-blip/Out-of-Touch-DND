@@ -33,6 +33,7 @@ class Player:
     character_id: str | None = None
     user_id: str | None = None
     websocket: WebSocket | None = field(default=None, repr=False)
+    last_action_at: float | None = None
 
     def to_dict(self) -> dict:
         return {

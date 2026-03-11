@@ -10,6 +10,8 @@ import VoiceControl from './VoiceControl'
 import { useWebSocket } from '../hooks/useWebSocket'
 import { useGameStore } from '../stores/gameStore'
 import { useSessionStore } from '../stores/sessionStore'
+import { CollisionGrid } from '../lib/systems/movement/collisionGrid'
+import { MovementController } from '../lib/systems/movement/movementController'
 import './GameBoard.css'
 
 const AVATAR_COLORS = ['#9b59b6', '#3498db', '#2ecc71', '#e67e22', '#e74c3c']
@@ -31,13 +33,48 @@ export default function GameBoard() {
   } = useGameStore()
   const [chatDraft, setChatDraft] = useState('')
 
+  const map = useGameStore(state => state.map)
+
   const handleTileClick = useCallback((gx: number, gy: number) => {
     const player = players.find(p => p.id === playerId)
-    if (player?.character_id && selectedEntityId === player.character_id) {
-      sendMoveToken(player.character_id, gx, gy)
-      setSelectedEntity(null)
+    if (!player?.character_id || selectedEntityId !== player.character_id) {
+      return
     }
-  }, [playerId, players, selectedEntityId, sendMoveToken, setSelectedEntity])
+
+    console.log(`[GameBoard.handleTileClick] Moving ${player.character_id} to (${gx},${gy})`)
+
+    // Validate movement locally before sending
+    if (!map) {
+      console.log(`[GameBoard.handleTileClick] No map available`)
+      addNarrative('system', 'Map not loaded')
+      return
+    }
+
+    const grid = new CollisionGrid(map.width, map.height)
+    grid.buildFromMap(map.tiles, map.width, map.height)
+    grid.updateEntityBlocking(map.entities.filter(e => e.id !== player.character_id))
+
+    // Create a state object with entities for validation
+    const validationState = { entities: map.entities }
+    const validation = MovementController.validateLocalMove(
+      player.character_id,
+      gx,
+      gy,
+      grid,
+      validationState,
+      map
+    )
+
+    if (!validation.valid) {
+      console.log(`[GameBoard.handleTileClick] Validation failed: ${validation.error}`)
+      addNarrative('system', validation.error || 'Invalid move')
+      return
+    }
+
+    console.log(`[GameBoard.handleTileClick] Validation passed, sending move`)
+    sendMoveToken(player.character_id, gx, gy)
+    setSelectedEntity(null)
+  }, [playerId, players, selectedEntityId, map, sendMoveToken, setSelectedEntity, addNarrative])
 
   const handleEntityClick = useCallback((entityId: string) => {
     setSelectedEntity(selectedEntityId === entityId ? null : entityId)

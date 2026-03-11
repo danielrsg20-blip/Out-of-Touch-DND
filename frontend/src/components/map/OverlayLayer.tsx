@@ -1,4 +1,6 @@
 import type { MapData, CombatData } from '../../types'
+import { CollisionGrid } from '../../lib/systems/movement/collisionGrid'
+import { MovementController } from '../../lib/systems/movement/movementController'
 
 const TILE_SIZE = 32
 
@@ -11,40 +13,24 @@ export function drawOverlays(ctx: CanvasRenderingContext2D, map: MapData, combat
   if (!entity) return
 
   const remainingFeet = Number(combat.current_movement_remaining ?? 0)
-  const moveTiles = Math.max(0, Math.floor(remainingFeet / 5))
-  if (moveTiles <= 0) return
+  if (remainingFeet <= 0) return
 
-  const wallSet = new Set(
-    map.tiles.filter(t => t.type === 'wall' || (t.type === 'door' && t.state === 'closed') || t.type === 'pillar' || t.type === 'pit' || t.type === 'rubble')
-      .map(t => `${t.x},${t.y}`)
+  // Build collision grid from map data
+  const grid = new CollisionGrid(map.width, map.height)
+  grid.buildFromMap(map.tiles, map.width, map.height)
+  // Exclude current entity from collision checking for reachability
+  const otherEntities = map.entities.filter(e => e.id !== selectedEntityId)
+  grid.updateEntityBlocking(otherEntities)
+
+  // Calculate reachable tiles using the new movement system
+  const reachable = MovementController.calculateReachableTiles(
+    entity.x,
+    entity.y,
+    remainingFeet,
+    grid
   )
-  const entitySet = new Set(map.entities.filter(e => e.id !== selectedEntityId).map(e => `${e.x},${e.y}`))
 
-  const reachable = new Set<string>()
-  const queue: Array<{ x: number; y: number; cost: number }> = [{ x: entity.x, y: entity.y, cost: 0 }]
-  const visited = new Set<string>()
-  visited.add(`${entity.x},${entity.y}`)
-
-  while (queue.length > 0) {
-    const current = queue.shift()!
-    if (current.cost <= moveTiles) {
-      reachable.add(`${current.x},${current.y}`)
-    }
-    if (current.cost >= moveTiles) continue
-
-    for (const [dx, dy] of [[0, 1], [0, -1], [1, 0], [-1, 0]]) {
-      const nx = current.x + dx
-      const ny = current.y + dy
-      const key = `${nx},${ny}`
-      if (visited.has(key)) continue
-      if (nx < 0 || nx >= map.width || ny < 0 || ny >= map.height) continue
-      if (wallSet.has(key)) continue
-      visited.add(key)
-      queue.push({ x: nx, y: ny, cost: current.cost + 1 })
-    }
-  }
-
-  reachable.delete(`${entity.x},${entity.y}`)
+  const entitySet = new Set(otherEntities.map(e => `${e.x},${e.y}`))
 
   ctx.save()
   for (const key of reachable) {

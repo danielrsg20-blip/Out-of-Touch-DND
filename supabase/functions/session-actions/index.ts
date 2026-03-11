@@ -18,23 +18,73 @@ const WORD_LIST = [
   'LICH', 'GOLEM', 'WRAITH', 'HYDRA', 'WYVERN', 'BASILISK', 'MANTICORE'
 ]
 
-function parseBool(value: unknown): boolean {
-  if (typeof value === 'boolean') {
-    return value
-  }
-  if (typeof value !== 'string') {
-    return false
-  }
-  return ['1', 'true', 'yes', 'on'].includes(value.trim().toLowerCase())
+const TILE_BASES_BY_ENV: Record<string, { floor: string[]; wall: string[]; water: string[] }> = {
+  dungeon: {
+    floor: ['stone floor', 'stone tile', 'mossy stone', 'cracked brick', 'dark stone'],
+    wall: ['dark stone wall', 'stone wall', 'mossy wall', 'brick wall'],
+    water: ['deep water', 'dark water', 'murky water'],
+  },
+  forest: {
+    floor: ['grass', 'dirt path', 'moss', 'earth', 'grass tile'],
+    wall: ['hedge wall', 'tree line', 'stone wall'],
+    water: ['pond water', 'stream water', 'deep water'],
+  },
+  cave: {
+    floor: ['stone floor', 'dirt', 'rough stone', 'mossy stone'],
+    wall: ['cave wall', 'rock wall', 'dark stone wall'],
+    water: ['cave water', 'deep water', 'murky water'],
+  },
+  crypt: {
+    floor: ['stone tile', 'dark stone', 'cracked brick', 'mossy stone'],
+    wall: ['crypt wall', 'dark stone wall', 'stone wall'],
+    water: ['dark water', 'deep water', 'murky water'],
+  },
 }
 
-function buildProceduralTiles(width: number, height: number): Array<Record<string, unknown>> {
+const FLOOR_VARIANTS = ['clean', 'cracked', 'rubble', 'mossy', 'patchy', 'grass_creep', 'stone_patch']
+const WALL_VARIANTS = ['smooth', 'cracked', 'worn', 'dark', 'weathered', 'stone_vein']
+const WATER_VARIANTS = ['calm', 'waves', 'murky', 'algae']
+
+function sampleFrom<T>(items: T[], fallback: T): T {
+  if (!items.length) return fallback
+  return items[randomInt(0, items.length - 1)]
+}
+
+function buildTileVisual(environment: string, tileType: string): { sprite?: string; variant?: string } {
+  const env = TILE_BASES_BY_ENV[environment] ? environment : 'dungeon'
+  const bases = TILE_BASES_BY_ENV[env]
+  if (tileType === 'floor') {
+    const base = sampleFrom(bases.floor, 'stone floor')
+    const variant = sampleFrom(FLOOR_VARIANTS, 'clean')
+    return { sprite: `env:${base}`, variant }
+  }
+  if (tileType === 'wall') {
+    const base = sampleFrom(bases.wall, 'dark stone wall')
+    const variant = sampleFrom(WALL_VARIANTS, 'smooth')
+    return { sprite: `env:${base}`, variant }
+  }
+  if (tileType === 'water') {
+    const base = sampleFrom(bases.water, 'deep water')
+    const variant = sampleFrom(WATER_VARIANTS, 'calm')
+    return { sprite: `env:${base}`, variant }
+  }
+  if (tileType === 'rubble') {
+    return { sprite: 'env:rubble', variant: 'rubble' }
+  }
+  if (tileType === 'pillar') {
+    return { sprite: 'env:cracked pillar', variant: 'cracked' }
+  }
+  return {}
+}
+
+function buildProceduralTiles(environment: string, width: number, height: number): Array<Record<string, unknown>> {
   const tiles: Array<Record<string, unknown>> = []
   for (let y = 0; y < height; y += 1) {
     for (let x = 0; x < width; x += 1) {
       const edge = x === 0 || y === 0 || x === width - 1 || y === height - 1
       if (edge) {
-        tiles.push({ x, y, type: 'wall' })
+        const visual = buildTileVisual(environment, 'wall')
+        tiles.push({ x, y, type: 'wall', ...visual })
         continue
       }
 
@@ -44,24 +94,46 @@ function buildProceduralTiles(width: number, height: number): Array<Record<strin
       else if (roll <= 18) type = 'pillar'
       else if (roll <= 22) type = 'water'
 
-      tiles.push({ x, y, type })
+      const visual = buildTileVisual(environment, type)
+      tiles.push({ x, y, type, ...visual })
     }
   }
   return tiles
 }
 
+function hydrateTilesWithSprites(environment: string, tilesRaw: unknown): Array<Record<string, unknown>> {
+  if (!Array.isArray(tilesRaw)) {
+    return []
+  }
+  return tilesRaw
+    .filter((row): row is Record<string, unknown> => typeof row === 'object' && row !== null)
+    .map((tile) => {
+      const tileType = String(tile.type ?? 'floor')
+      const hasSprite = typeof tile.sprite === 'string' && tile.sprite.trim().length > 0
+      if (hasSprite) {
+        return tile
+      }
+      const visual = buildTileVisual(environment, tileType)
+      return { ...tile, ...visual }
+    })
+}
+
 function buildInitialSnapshot(): Record<string, unknown> {
   const width = 20
   const height = 14
+  const environment = 'dungeon'
   return {
     characters: {},
     map: {
       width,
       height,
-      tiles: buildProceduralTiles(width, height),
+      tiles: buildProceduralTiles(environment, width, height),
       entities: [],
       metadata: {
-        environment: 'dungeon',
+        map_source: 'generated',
+        map_id: 'supabase_mock_init',
+        cache_hit: false,
+        environment,
         grid_size: 5,
         grid_units: 'ft',
       },
@@ -158,7 +230,45 @@ async function buildSessionPayload(sessionId: string) {
   }
 }
 
-async function createSession(playerName: string, mockMode: boolean) {
+async function getLatestSnapshot(sessionId: string): Promise<Record<string, unknown> | null> {
+  const { data: snapshotRow, error: snapshotError } = await supabase
+    .from('session_snapshots')
+    .select('snapshot')
+    .eq('session_id', sessionId)
+    .order('version', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+
+  if (snapshotError) {
+    throw new Error(snapshotError.message)
+  }
+
+  return (snapshotRow?.snapshot as Record<string, unknown> | undefined) ?? null
+}
+
+async function ensureSessionSnapshot(sessionId: string): Promise<Record<string, unknown>> {
+  const existing = await getLatestSnapshot(sessionId)
+  if (existing) {
+    return existing
+  }
+
+  const starter = buildInitialSnapshot()
+  const { error: snapshotError } = await supabase
+    .from('session_snapshots')
+    .insert({
+      session_id: sessionId,
+      version: 1,
+      snapshot: starter,
+    })
+
+  if (snapshotError) {
+    throw new Error(`Unable to initialize session map: ${snapshotError.message}`)
+  }
+
+  return starter
+}
+
+async function createSession(playerName: string) {
   const roomCode = await generateUniqueRoomCode()
   const playerId = randomId(8)
 
@@ -191,18 +301,16 @@ async function createSession(playerName: string, mockMode: boolean) {
     throw new Error(memberInsertError.message)
   }
 
-  if (mockMode) {
-    const { error: snapshotError } = await supabase
-      .from('session_snapshots')
-      .insert({
-        session_id: sessionId,
-        version: 1,
-        snapshot: buildInitialSnapshot(),
-      })
+  const { error: snapshotError } = await supabase
+    .from('session_snapshots')
+    .insert({
+      session_id: sessionId,
+      version: 1,
+      snapshot: buildInitialSnapshot(),
+    })
 
-    if (snapshotError) {
-      throw new Error(`Unable to initialize mock session map: ${snapshotError.message}`)
-    }
+  if (snapshotError) {
+    throw new Error(`Unable to initialize session map: ${snapshotError.message}`)
   }
 
   await publishEvent(sessionId, 'session_created', {
@@ -254,6 +362,7 @@ async function joinSession(roomCodeRaw: string, playerName: string) {
   }
 
   const session = await buildSessionPayload(sessionId)
+  await ensureSessionSnapshot(sessionId)
 
   await publishEvent(sessionId, 'player_joined', {
     room_code: roomCode,
@@ -287,24 +396,29 @@ async function getSession(roomCodeRaw: string) {
   const session = await buildSessionPayload(sessionRow.id as string)
 
   const sessionId = sessionRow.id as string
-  const { data: snapshotRow, error: snapshotError } = await supabase
-    .from('session_snapshots')
-    .select('snapshot')
-    .eq('session_id', sessionId)
-    .order('version', { ascending: false })
-    .limit(1)
-    .maybeSingle()
-
-  if (snapshotError) {
-    throw new Error(snapshotError.message)
-  }
-
-  const snapshot = (snapshotRow?.snapshot as Record<string, unknown> | undefined) ?? {}
+  const snapshot = await ensureSessionSnapshot(sessionId)
+  const map = (snapshot.map as Record<string, unknown> | null) ?? null
+  const metadata = map && typeof map.metadata === 'object' && map.metadata !== null
+    ? (map.metadata as Record<string, unknown>)
+    : {}
+  const environment = typeof metadata.environment === 'string' ? metadata.environment : 'dungeon'
+  const hydratedMap = map
+    ? {
+        ...map,
+        tiles: hydrateTilesWithSprites(environment, map.tiles),
+        metadata: {
+          map_source: 'generated',
+          cache_hit: false,
+          ...metadata,
+          environment,
+        },
+      }
+    : null
 
   return {
     session_id: sessionId,
     characters: (snapshot.characters as Record<string, unknown>) ?? {},
-    map: (snapshot.map as Record<string, unknown> | null) ?? null,
+    map: hydratedMap,
     combat: (snapshot.combat as Record<string, unknown> | null) ?? null,
     usage: (snapshot.usage as Record<string, unknown>) ?? {
       input_tokens: 0,
@@ -334,11 +448,10 @@ Deno.serve(async (req) => {
 
     if (action === 'create_session') {
       const playerName = typeof body.player_name === 'string' ? body.player_name.trim() : ''
-      const mockMode = parseBool(body.mock_mode)
       if (!playerName) {
         return Response.json({ error: 'player_name is required' }, { status: 400, headers: corsHeaders })
       }
-      return Response.json(await createSession(playerName, mockMode), { headers: corsHeaders })
+      return Response.json(await createSession(playerName), { headers: corsHeaders })
     }
 
     if (action === 'join_session') {

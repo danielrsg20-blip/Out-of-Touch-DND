@@ -591,6 +591,72 @@ function inferEnvironment(content: string, existingEnvironment: string): string 
   return 'dungeon'
 }
 
+const TILE_BASES_BY_ENV: Record<string, { floor: string[]; wall: string[]; water: string[] }> = {
+  dungeon: {
+    floor: ['stone floor', 'stone tile', 'mossy stone', 'cracked brick', 'dark stone'],
+    wall: ['dark stone wall', 'stone wall', 'mossy wall', 'brick wall'],
+    water: ['deep water', 'dark water', 'murky water'],
+  },
+  forest: {
+    floor: ['grass', 'dirt path', 'moss', 'earth', 'grass tile'],
+    wall: ['hedge wall', 'tree line', 'stone wall'],
+    water: ['pond water', 'stream water', 'deep water'],
+  },
+  cave: {
+    floor: ['stone floor', 'dirt', 'rough stone', 'mossy stone'],
+    wall: ['cave wall', 'rock wall', 'dark stone wall'],
+    water: ['cave water', 'deep water', 'murky water'],
+  },
+  crypt: {
+    floor: ['stone tile', 'dark stone', 'cracked brick', 'mossy stone'],
+    wall: ['crypt wall', 'dark stone wall', 'stone wall'],
+    water: ['dark water', 'deep water', 'murky water'],
+  },
+}
+
+const FLOOR_VARIANTS = ['clean', 'cracked', 'rubble', 'mossy', 'patchy', 'grass_creep', 'stone_patch']
+const WALL_VARIANTS = ['smooth', 'cracked', 'worn', 'dark', 'weathered', 'stone_vein']
+const WATER_VARIANTS = ['calm', 'waves', 'murky', 'algae']
+
+function sampleFrom<T>(items: T[], fallback: T): T {
+  if (!items.length) return fallback
+  return items[randomInt(0, items.length - 1)]
+}
+
+function buildTileVisual(environment: string, tileType: string): { sprite?: string; variant?: string } {
+  const env = TILE_BASES_BY_ENV[environment] ? environment : 'dungeon'
+  const bases = TILE_BASES_BY_ENV[env]
+  if (tileType === 'floor') {
+    const base = sampleFrom(bases.floor, 'stone floor')
+    const variant = sampleFrom(FLOOR_VARIANTS, 'clean')
+    return { sprite: `env:${base}`, variant }
+  }
+  if (tileType === 'wall') {
+    const base = sampleFrom(bases.wall, 'dark stone wall')
+    const variant = sampleFrom(WALL_VARIANTS, 'smooth')
+    return { sprite: `env:${base}`, variant }
+  }
+  if (tileType === 'water') {
+    const base = sampleFrom(bases.water, 'deep water')
+    const variant = sampleFrom(WATER_VARIANTS, 'calm')
+    return { sprite: `env:${base}`, variant }
+  }
+  if (tileType === 'rubble') {
+    return { sprite: 'env:rubble', variant: 'rubble' }
+  }
+  if (tileType === 'pillar') {
+    return { sprite: 'env:cracked pillar', variant: 'cracked' }
+  }
+  return {}
+}
+
+function isBlockedTile(x: number, y: number, tiles: Array<Record<string, unknown>>): boolean {
+  const tile = tiles.find((t) => Number(t.x) === x && Number(t.y) === y) as Record<string, unknown> | undefined
+  if (!tile) return false
+  const tileType = String(tile.type ?? 'floor')
+  return ['wall', 'pit', 'pillar', 'rubble'].includes(tileType)
+}
+
 function buildProceduralTiles(environment: string, width: number, height: number): Array<Record<string, unknown>> {
   const tiles: Array<Record<string, unknown>> = []
 
@@ -598,7 +664,8 @@ function buildProceduralTiles(environment: string, width: number, height: number
     for (let x = 0; x < width; x += 1) {
       const edge = x === 0 || y === 0 || x === width - 1 || y === height - 1
       if (edge) {
-        tiles.push({ x, y, type: 'wall' })
+        const visual = buildTileVisual(environment, 'wall')
+        tiles.push({ x, y, type: 'wall', ...visual })
         continue
       }
 
@@ -619,7 +686,8 @@ function buildProceduralTiles(environment: string, width: number, height: number
         else if (roll <= 20) type = 'pillar'
       }
 
-      tiles.push({ x, y, type })
+      const visual = buildTileVisual(environment, type)
+      tiles.push({ x, y, type, ...visual })
     }
   }
 
@@ -634,6 +702,202 @@ function shouldStartCombat(content: string, snapshot: SnapshotState): boolean {
   const trigger = /(attack|strike|fight|combat|initiative|battle|ambush|draw my|swing|shoot|charge)/i
   return trigger.test(content)
 }
+
+// ============================================================================
+// PATHFINDING & COLLISION GRID UTILITIES
+// ============================================================================
+
+interface NavNode {
+  x: number
+  y: number
+}
+
+class CollisionGrid {
+  width: number
+  height: number
+  walkable: boolean[][]
+
+  constructor(width: number, height: number) {
+    this.width = width
+    this.height = height
+    this.walkable = Array(height)
+      .fill(null)
+      .map(() => Array(width).fill(true))
+  }
+
+  buildFromMap(tiles: Array<Record<string, unknown>>): void {
+    // Reset to all walkable
+    this.walkable = Array(this.height)
+      .fill(null)
+      .map(() => Array(this.width).fill(true))
+
+    for (const tile of tiles) {
+      const x = Number(tile.x)
+      const y = Number(tile.y)
+      if (x >= 0 && x < this.width && y >= 0 && y < this.height) {
+        if (tileBlocksMovement(tile)) {
+          this.walkable[y][x] = false
+        }
+      }
+    }
+  }
+
+  updateEntityBlocking(entities: Array<Record<string, unknown>>): void {
+    for (const entity of entities) {
+      const x = Number(entity.x)
+      const y = Number(entity.y)
+      const blocks = entity.blocks_movement !== false
+      if (blocks && x >= 0 && x < this.width && y >= 0 && y < this.height) {
+        this.walkable[y][x] = false
+      }
+    }
+  }
+
+  isWalkable(x: number, y: number): boolean {
+    if (!(x >= 0 && x < this.width && y >= 0 && y < this.height)) {
+      return false
+    }
+    return this.walkable[y][x]
+  }
+
+  getNeighbors(x: number, y: number, includeDiagonal: boolean = true): NavNode[] {
+    const neighbors: NavNode[] = []
+
+    // Orthogonal
+    if (this.isWalkable(x + 1, y)) neighbors.push({ x: x + 1, y })
+    if (this.isWalkable(x - 1, y)) neighbors.push({ x: x - 1, y })
+    if (this.isWalkable(x, y + 1)) neighbors.push({ x, y: y + 1 })
+    if (this.isWalkable(x, y - 1)) neighbors.push({ x, y: y - 1 })
+
+    if (includeDiagonal) {
+      // NE
+      if (
+        this.isWalkable(x + 1, y - 1) &&
+        this.isWalkable(x + 1, y) &&
+        this.isWalkable(x, y - 1)
+      ) {
+        neighbors.push({ x: x + 1, y: y - 1 })
+      }
+      // NW
+      if (
+        this.isWalkable(x - 1, y - 1) &&
+        this.isWalkable(x - 1, y) &&
+        this.isWalkable(x, y - 1)
+      ) {
+        neighbors.push({ x: x - 1, y: y - 1 })
+      }
+      // SE
+      if (
+        this.isWalkable(x + 1, y + 1) &&
+        this.isWalkable(x + 1, y) &&
+        this.isWalkable(x, y + 1)
+      ) {
+        neighbors.push({ x: x + 1, y: y + 1 })
+      }
+      // SW
+      if (
+        this.isWalkable(x - 1, y + 1) &&
+        this.isWalkable(x - 1, y) &&
+        this.isWalkable(x, y + 1)
+      ) {
+        neighbors.push({ x: x - 1, y: y + 1 })
+      }
+    }
+
+    return neighbors
+  }
+}
+
+function astarPathfind(
+  grid: CollisionGrid,
+  start: NavNode,
+  goal: NavNode,
+  allowDiagonal: boolean = true,
+): NavNode[] {
+  if (start.x === goal.x && start.y === goal.y) {
+    return [start]
+  }
+
+  if (!grid.isWalkable(start.x, start.y) || !grid.isWalkable(goal.x, goal.y)) {
+    return []
+  }
+
+  type HeapNode = { f: number; node: NavNode }
+  const openSet: HeapNode[] = []
+  openSet.push({ f: heuristic(start, goal), node: start })
+
+  const cameFrom = new Map<string, NavNode>()
+  const gScore = new Map<string, number>()
+  const fScore = new Map<string, number>()
+  const openSetHash = new Set<string>()
+
+  const key = (node: NavNode) => `${node.x},${node.y}`
+  const startKey = key(start)
+  const goalKey = key(goal)
+
+  gScore.set(startKey, 0)
+  fScore.set(startKey, heuristic(start, goal))
+  openSetHash.add(startKey)
+
+  while (openSet.length > 0) {
+    // Pop lowest f-score
+    openSet.sort((a, b) => a.f - b.f)
+    const { node: current } = openSet.shift()!
+    const currentKey = key(current)
+
+    if (currentKey === goalKey) {
+      return reconstructPath(cameFrom, current)
+    }
+
+    openSetHash.delete(currentKey)
+
+    const neighbors = grid.getNeighbors(current.x, current.y, allowDiagonal)
+    for (const neighbor of neighbors) {
+      const neighborKey = key(neighbor)
+      const tentativeG = (gScore.get(currentKey) || 0) + 1
+
+      if (!gScore.has(neighborKey) || tentativeG < gScore.get(neighborKey)!) {
+        cameFrom.set(neighborKey, current)
+        gScore.set(neighborKey, tentativeG)
+        const f = tentativeG + heuristic(neighbor, goal)
+        fScore.set(neighborKey, f)
+
+        if (!openSetHash.has(neighborKey)) {
+          openSet.push({ f, node: neighbor })
+          openSetHash.add(neighborKey)
+        }
+      }
+    }
+  }
+
+  return []
+}
+
+function heuristic(node: NavNode, goal: NavNode): number {
+  return Math.abs(node.x - goal.x) + Math.abs(node.y - goal.y)
+}
+
+function reconstructPath(cameFrom: Map<string, NavNode>, current: NavNode): NavNode[] {
+  const path: NavNode[] = [current]
+  const key = (node: NavNode) => `${node.x},${node.y}`
+  let currentKey = key(current)
+
+  while (cameFrom.has(currentKey)) {
+    current = cameFrom.get(currentKey)!
+    path.push(current)
+    currentKey = key(current)
+  }
+
+  path.reverse()
+  return path
+}
+
+function pathDistance(path: NavNode[]): number {
+  if (path.length <= 1) return 0
+  return (path.length - 1) * 5 // 5 feet per tile
+}
+
+// ============================================================================
 
 function getMapEntities(map: Record<string, unknown> | null): Array<Record<string, unknown>> {
   if (!map || !Array.isArray(map.entities)) {
@@ -694,6 +958,9 @@ function ensureMapForSnapshot(snapshot: SnapshotState): Record<string, unknown> 
     tiles: [],
     entities: [],
     metadata: {
+      map_source: 'generated',
+      map_id: 'supabase_mock_runtime',
+      cache_hit: false,
       environment: 'dungeon',
       grid_size: 5,
       grid_units: 'ft',
@@ -757,12 +1024,23 @@ function ensureMapForSnapshot(snapshot: SnapshotState): Record<string, unknown> 
     })
   }
 
+  const existingTiles = Array.isArray(existingMap.tiles) ? (existingMap.tiles as Array<Record<string, unknown>>) : []
+  const hydratedTiles = existingTiles.map((tile) => {
+    const tileType = String(tile.type ?? 'floor')
+    const hasSprite = typeof tile.sprite === 'string' && tile.sprite.trim().length > 0
+    if (hasSprite) {
+      return tile
+    }
+    const visual = buildTileVisual(environment, tileType)
+    return { ...tile, ...visual }
+  })
+
   return {
     ...existingMap,
     width: mapWidth,
     height: mapHeight,
-    tiles: Array.isArray(existingMap.tiles) && existingMap.tiles.length > 0
-      ? existingMap.tiles
+    tiles: hydratedTiles.length > 0
+      ? hydratedTiles
       : buildProceduralTiles(environment, mapWidth, mapHeight),
     entities: nextEntities,
     metadata,
@@ -788,8 +1066,18 @@ function buildMockEncounter(snapshot: SnapshotState, content: string): { nextSna
   for (let i = 0; i < enemyCount; i += 1) {
     const enemy = enemyPool[randomInt(0, enemyPool.length - 1)]
     const enemyId = `enemy_${Date.now()}_${i}`
-    const x = Math.max(1, Math.min(width - 2, width - 3 - (i % 3)))
-    const y = Math.max(1, Math.min(height - 2, 2 + Math.floor(i / 3) * 2))
+    
+    // Try to find a walkable position for the enemy (right side of map)
+    let x = Math.max(1, Math.min(width - 2, width - 3 - (i % 3)))
+    let y = Math.max(1, Math.min(height - 2, 2 + Math.floor(i / 3) * 2))
+    let attempts = 0
+    const tileMap = buildProceduralTiles(environment, width, height)
+    while (attempts < 10 && isBlockedTile(x, y, tileMap)) {
+      x = Math.max(2, width - 5 + randomInt(0, 2))
+      y = randomInt(2, Math.max(2, height - 3))
+      attempts++
+    }
+    
     enemyEntities.push({
       id: enemyId,
       name: enemy.name,
@@ -869,6 +1157,9 @@ function buildMockEncounter(snapshot: SnapshotState, content: string): { nextSna
       entities: [...baseEntities, ...propEntities, ...enemyEntities],
       metadata: {
         ...metadata,
+        map_source: 'generated',
+        map_id: 'supabase_mock_encounter',
+        cache_hit: false,
         environment,
         encounter_type: 'ambush',
       },
@@ -1654,28 +1945,85 @@ async function actionMoveToken(body: Record<string, unknown>) {
   const width = Number(map.width ?? 0)
   const height = Number(map.height ?? 0)
 
+  // ========== MOVEMENT VALIDATION ==========
+
+  // 1. Bounds check
   if (x < 0 || y < 0 || x >= width || y >= height) {
     throw new Error('Destination is out of bounds.')
   }
 
+  // 2. Entity checks
   const entities = getMapEntities(map)
   const mover = entities.find((entity) => String(entity.id ?? '') === characterId)
   if (!mover) {
     throw new Error('Your token is not currently on the map.')
   }
 
+  // 3. Turn check (combat)
   const combat = normalizeCombat(snapshot.combat)
   if (combat?.is_active && combat.current_turn && combat.current_turn !== characterId) {
     throw new Error('It is not your turn.')
   }
 
-  const blocked = mapDestinationBlocked(map, x, y, characterId)
-  if (blocked.blocked) {
-    throw new Error(blocked.reason ?? 'That destination is blocked.')
+  // 4. Build collision grid and find path
+  const grid = new CollisionGrid(width, height)
+  const tiles = Array.isArray(map.tiles) ? (map.tiles as Array<Record<string, unknown>>) : []
+  
+  // DEBUG: Log tile information
+  const blockedTiles = tiles.filter(t => tileBlocksMovement(t))
+  console.log(`[DEBUG] Total tiles: ${tiles.length}, Blocked tiles: ${blockedTiles.length}`)
+  console.log(`[DEBUG] Sample tiles:`, tiles.slice(0, 5).map(t => ({ x: t.x, y: t.y, type: t.type })))
+  console.log(`[DEBUG] Sample blocked tiles:`, blockedTiles.slice(0, 5).map(t => ({ x: t.x, y: t.y, type: t.type })))
+  
+  grid.buildFromMap(tiles)
+  grid.updateEntityBlocking(entities.filter((e) => String(e.id ?? '') !== characterId))
+  
+  console.log(`[DEBUG] Checking destination (${x}, ${y}): walkable=${grid.isWalkable(x, y)}`)
+
+  const start: NavNode = { x: Number(mover.x), y: Number(mover.y) }
+  const goal: NavNode = { x, y }
+  const path = astarPathfind(grid, start, goal, true)
+
+  if (path.length === 0) {
+    throw new Error('No path to target.')
   }
+
+  const moveDistance = pathDistance(path)
+
+  // 5. Check destination walkability
+  if (!grid.isWalkable(x, y)) {
+    throw new Error('That destination is not walkable.')
+  }
+
+  // 6. Check movement pool (if in combat)
+  if (combat?.is_active) {
+    const combatParticipants = Array.isArray(combat.participants)
+      ? (combat.participants as Array<Record<string, unknown>>)
+      : []
+    const participant = combatParticipants.find(
+      (p) => String(p.entity_id ?? '') === characterId
+    )
+
+    if (!participant) {
+      throw new Error('Character not in combat.')
+    }
+
+    const movementRemaining = Number(participant.movement_remaining ?? 0)
+    if (movementRemaining < moveDistance) {
+      throw new Error(
+        `Insufficient movement: ${movementRemaining} feet remaining, ${moveDistance} feet required.`
+      )
+    }
+  }
+
+  // ========== APPLY MOVEMENT ==========
 
   const nextEntities = entities.map((entity) => {
     if (String(entity.id ?? '') !== characterId) {
+      // Update other entities' movement if in combat
+      if (combat?.is_active) {
+        return entity
+      }
       return entity
     }
     return {
@@ -1685,24 +2033,55 @@ async function actionMoveToken(body: Record<string, unknown>) {
     }
   })
 
+  let nextCombat = combat
+  if (combat?.is_active) {
+    const nextParticipants = (
+      Array.isArray(combat.participants)
+        ? (combat.participants as Array<Record<string, unknown>>)
+        : []
+    ).map((p) => {
+      if (String(p.entity_id ?? '') !== characterId) {
+        return p
+      }
+      return {
+        ...p,
+        movement_remaining: Math.max(0, Number(p.movement_remaining ?? 0) - moveDistance),
+      }
+    })
+
+    nextCombat = {
+      ...combat,
+      participants: nextParticipants,
+    }
+  }
+
   const nextMap: Record<string, unknown> = {
     ...map,
     entities: nextEntities,
   }
+
   const nextSnapshot: SnapshotState = {
     ...snapshot,
     map: nextMap,
+    ...(nextCombat ? { combat: nextCombat } : {}),
   }
 
   await saveSnapshot(sessionId, version, nextSnapshot)
 
-  await publishEvent(sessionId, 'map_change', {
-    action: 'move_entity',
-    data: {
-      moved: characterId,
-      to: { x, y },
+  await publishEvent(
+    sessionId,
+    'map_change',
+    {
+      action: 'move_entity',
+      data: {
+        moved: characterId,
+        to: { x, y },
+        path: path,
+        distance: moveDistance,
+      },
     },
-  }, playerId)
+    playerId
+  )
 
   await publishEvent(sessionId, 'state_sync', { state: nextSnapshot }, playerId)
 

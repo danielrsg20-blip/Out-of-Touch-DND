@@ -123,6 +123,7 @@ export default function MapCanvas({ onTileClick, onEntityClick }: MapCanvasProps
   const players = useSessionStore(s => s.players)
   const interaction = useMapInteraction()
   const [showAtlasLabels, setShowAtlasLabels] = useState(false)
+  const [showPaletteDebug, setShowPaletteDebug] = useState(false)
 
   const myCharacterId = players.find(p => p.id === playerId)?.character_id ?? null
 
@@ -371,12 +372,24 @@ export default function MapCanvas({ onTileClick, onEntityClick }: MapCanvasProps
         }
 
         const tileSpriteKey = (() => {
-          if (typeof tile?.sprite === 'string' && tile.sprite.trim()) {
-            return tile.sprite
-          }
           if (!tile) {
             return null
           }
+          
+          if (typeof tile?.sprite === 'string' && tile.sprite.trim()) {
+            // If tile has a variant, try the variant-suffixed label first
+            if (tile.variant) {
+              // Strip "env:" prefix if present to inject variant before suffix
+              const baseSpriteLabel = tile.sprite.replace(/^env(ironment)?:\s*/i, '').trim()
+              if (baseSpriteLabel) {
+                // Try "{base}_{variant}" format first
+                // e.g., if sprite is "stone floor" and variant is "cracked", try "stone floor_cracked"
+                return `env:${baseSpriteLabel}_${tile.variant}`
+              }
+            }
+            return tile.sprite
+          }
+          
           return TILE_TYPE_ATLAS_FALLBACK[tile.type] ?? null
         })()
 
@@ -461,10 +474,7 @@ export default function MapCanvas({ onTileClick, onEntityClick }: MapCanvasProps
     for (const entity of map.entities) {
       if (hasVisibility && !visibleSet.has(`${entity.x},${entity.y}`)) continue
 
-      const isDefeatedEnemyInCombat = entity.type === 'enemy' && !!combat?.is_active && (characters[entity.id]?.hp ?? 1) <= 0
-      if (isDefeatedEnemyInCombat) {
-        continue
-      }
+      const isDefeatedEnemy = entity.type === 'enemy' && (characters[entity.id]?.hp ?? 1) <= 0
 
       const px = entity.x * TILE_SIZE + TILE_SIZE / 2
       const py = entity.y * TILE_SIZE + TILE_SIZE / 2
@@ -549,6 +559,23 @@ export default function MapCanvas({ onTileClick, onEntityClick }: MapCanvasProps
         spriteDrawWidth = scaledHeight * (monsterRect.w / monsterRect.h)
       }
       const spriteVisualRadius = Math.max(spriteDrawWidth, spriteDrawHeight) / 2
+      const shouldRotateDefeated = isDefeatedEnemy
+
+      const drawEntitySprite = (
+        drawFn: () => void,
+        fallbackOpacity = 1,
+      ) => {
+        ctx.save()
+        ctx.translate(px, py)
+        if (shouldRotateDefeated) {
+          ctx.rotate(Math.PI / 2)
+          ctx.globalAlpha = 0.72
+        } else {
+          ctx.globalAlpha = fallbackOpacity
+        }
+        drawFn()
+        ctx.restore()
+      }
 
       if (entity.id === selectedEntityId) {
         ctx.beginPath()
@@ -564,20 +591,20 @@ export default function MapCanvas({ onTileClick, onEntityClick }: MapCanvasProps
         const sourceH = characterSheetImage.naturalHeight / CHARACTER_SPRITESHEET_ROWS
         const sourceX = characterCell.col * sourceW
         const sourceY = characterCell.row * sourceH
-        const left = px - spriteDrawWidth / 2
-        const top = py - spriteDrawHeight / 2
         ctx.imageSmoothingEnabled = false
-        ctx.drawImage(
-          characterSheetImage,
-          sourceX,
-          sourceY,
-          sourceW,
-          sourceH,
-          left,
-          top,
-          spriteDrawWidth,
-          spriteDrawHeight,
-        )
+        drawEntitySprite(() => {
+          ctx.drawImage(
+            characterSheetImage,
+            sourceX,
+            sourceY,
+            sourceW,
+            sourceH,
+            -spriteDrawWidth / 2,
+            -spriteDrawHeight / 2,
+            spriteDrawWidth,
+            spriteDrawHeight,
+          )
+        })
         drewSprite = true
       } else if (characterCell && characterSheetUrl && !characterSheetImage) {
         characterSheetCacheRef.current.set(characterSheetUrl, 'loading')
@@ -591,20 +618,20 @@ export default function MapCanvas({ onTileClick, onEntityClick }: MapCanvasProps
         }
         img.src = characterSheetUrl
       } else if (environmentRect && environmentSheetImage && environmentSheetImage !== 'loading') {
-        const left = px - spriteDrawWidth / 2
-        const top = py - spriteDrawHeight / 2
         ctx.imageSmoothingEnabled = false
-        ctx.drawImage(
-          environmentSheetImage,
-          environmentRect.x,
-          environmentRect.y,
-          environmentRect.w,
-          environmentRect.h,
-          left,
-          top,
-          spriteDrawWidth,
-          spriteDrawHeight,
-        )
+        drawEntitySprite(() => {
+          ctx.drawImage(
+            environmentSheetImage,
+            environmentRect.x,
+            environmentRect.y,
+            environmentRect.w,
+            environmentRect.h,
+            -spriteDrawWidth / 2,
+            -spriteDrawHeight / 2,
+            spriteDrawWidth,
+            spriteDrawHeight,
+          )
+        })
         drewSprite = true
       } else if (environmentRect && environmentSheetImage === undefined) {
         environmentSheetCacheRef.current.set(ENVIRONMENT_SPRITESHEET_URL, 'loading')
@@ -618,20 +645,20 @@ export default function MapCanvas({ onTileClick, onEntityClick }: MapCanvasProps
         }
         img.src = ENVIRONMENT_SPRITESHEET_URL
       } else if (monsterRect && monsterSheetImage && monsterSheetImage !== 'loading') {
-        const left = px - spriteDrawWidth / 2
-        const top = py - spriteDrawHeight / 2
         ctx.imageSmoothingEnabled = false
-        ctx.drawImage(
-          monsterSheetImage,
-          monsterRect.x,
-          monsterRect.y,
-          monsterRect.w,
-          monsterRect.h,
-          left,
-          top,
-          spriteDrawWidth,
-          spriteDrawHeight,
-        )
+        drawEntitySprite(() => {
+          ctx.drawImage(
+            monsterSheetImage,
+            monsterRect.x,
+            monsterRect.y,
+            monsterRect.w,
+            monsterRect.h,
+            -spriteDrawWidth / 2,
+            -spriteDrawHeight / 2,
+            spriteDrawWidth,
+            spriteDrawHeight,
+          )
+        })
         drewSprite = true
       } else if (monsterRect && monsterSheetImage === undefined) {
         monsterSheetCacheRef.current.set(MONSTER_SPRITESHEET_URL, 'loading')
@@ -647,10 +674,10 @@ export default function MapCanvas({ onTileClick, onEntityClick }: MapCanvasProps
       } else if (resolvedSpriteUrl) {
         const cached = spriteCacheRef.current.get(resolvedSpriteUrl)
         if (cached && cached !== 'loading') {
-          const left = px - spriteDrawWidth / 2
-          const top = py - spriteDrawHeight / 2
           ctx.imageSmoothingEnabled = false
-          ctx.drawImage(cached, left, top, spriteDrawWidth, spriteDrawHeight)
+          drawEntitySprite(() => {
+            ctx.drawImage(cached, -spriteDrawWidth / 2, -spriteDrawHeight / 2, spriteDrawWidth, spriteDrawHeight)
+          })
           drewSprite = true
         } else if (!cached) {
           spriteCacheRef.current.set(resolvedSpriteUrl, 'loading')
@@ -667,19 +694,21 @@ export default function MapCanvas({ onTileClick, onEntityClick }: MapCanvasProps
       }
 
       if (!drewSprite) {
-        ctx.beginPath()
-        ctx.arc(px, py, radius, 0, Math.PI * 2)
-        ctx.fillStyle = color
-        ctx.fill()
-        ctx.strokeStyle = 'rgba(0,0,0,0.5)'
-        ctx.lineWidth = 1.5
-        ctx.stroke()
+        drawEntitySprite(() => {
+          ctx.beginPath()
+          ctx.arc(0, 0, radius, 0, Math.PI * 2)
+          ctx.fillStyle = color
+          ctx.fill()
+          ctx.strokeStyle = 'rgba(0,0,0,0.5)'
+          ctx.lineWidth = 1.5
+          ctx.stroke()
 
-        ctx.fillStyle = '#fff'
-        ctx.font = `bold ${Math.max(9, 11 * interaction.zoom) / interaction.zoom}px sans-serif`
-        ctx.textAlign = 'center'
-        ctx.textBaseline = 'middle'
-        ctx.fillText(entity.name.charAt(0).toUpperCase(), px, py)
+          ctx.fillStyle = '#fff'
+          ctx.font = `bold ${Math.max(9, 11 * interaction.zoom) / interaction.zoom}px sans-serif`
+          ctx.textAlign = 'center'
+          ctx.textBaseline = 'middle'
+          ctx.fillText(entity.name.charAt(0).toUpperCase(), 0, 0)
+        })
       }
 
       ctx.fillStyle = 'rgba(255,255,255,0.85)'
@@ -778,6 +807,35 @@ export default function MapCanvas({ onTileClick, onEntityClick }: MapCanvasProps
     : ''
   const hasAttributionPanel = !!(mapMetadata?.author || mapMetadata?.license_spdx || mapMetadata?.source_url || attributionLine)
 
+  const environmentTilePalette = (() => {
+    const byType = new Map<string, Set<string>>()
+    for (const tile of map.tiles) {
+      const spriteKey = typeof tile.sprite === 'string' ? tile.sprite.trim() : ''
+      if (!spriteKey) {
+        continue
+      }
+
+      const normalizedLabel = resolveEnvironmentLabel(spriteKey)
+      if (!normalizedLabel) {
+        continue
+      }
+
+      const variant = typeof tile.variant === 'string' ? tile.variant.trim().toLowerCase() : ''
+      const effectiveLabel = variant ? `${normalizedLabel}_${variant}` : normalizedLabel
+      const bucket = byType.get(tile.type) ?? new Set<string>()
+      bucket.add(effectiveLabel)
+      byType.set(tile.type, bucket)
+    }
+
+    const entries = Array.from(byType.entries())
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([tileType, labels]) => ({
+        tileType,
+        labels: Array.from(labels).sort((a, b) => a.localeCompare(b)),
+      }))
+    return entries
+  })()
+
   return (
     <div
       ref={containerRef}
@@ -814,6 +872,31 @@ export default function MapCanvas({ onTileClick, onEntityClick }: MapCanvasProps
       >
         {showAtlasLabels ? 'Hide atlas labels' : 'Show atlas labels'}
       </button>
+      <button
+        type="button"
+        className={`map-palette-toggle-btn ${showPaletteDebug ? 'is-active' : ''}`}
+        onClick={() => setShowPaletteDebug((v) => !v)}
+        title="Toggle active environment tile palette debug"
+      >
+        {showPaletteDebug ? 'Hide tile palette debug' : 'Show tile palette debug'}
+      </button>
+      {showPaletteDebug && (
+        <div className="map-palette-debug-panel" aria-live="polite">
+          <div className="map-palette-debug-title">Tile Palette Debug</div>
+          <div className="map-palette-debug-meta">Environment: {environmentLabel}</div>
+          <div className="map-palette-debug-meta">Source: {sourceLabel} ({statusLabel})</div>
+          {environmentTilePalette.length === 0 ? (
+            <div className="map-palette-debug-empty">No tile sprite labels detected on current map.</div>
+          ) : (
+            environmentTilePalette.map((entry) => (
+              <div className="map-palette-debug-group" key={entry.tileType}>
+                <div className="map-palette-debug-group-title">{entry.tileType} ({entry.labels.length})</div>
+                <div className="map-palette-debug-list">{entry.labels.join(', ')}</div>
+              </div>
+            ))
+          )}
+        </div>
+      )}
       {hasAttributionPanel && (
         <div className="map-attribution-panel">
           {mapMetadata?.author && <div>Art: {mapMetadata.author}</div>}

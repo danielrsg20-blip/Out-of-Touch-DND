@@ -14,6 +14,7 @@ class Tile:
     tile_type: str = "floor"
     state: str | None = None
     sprite: str | None = None
+    variant: str | None = None
     blocks_movement: bool = False
     blocks_sight: bool = False
 
@@ -23,6 +24,8 @@ class Tile:
             d["state"] = self.state
         if self.sprite:
             d["sprite"] = self.sprite
+        if self.variant:
+            d["variant"] = self.variant
         return d
 
 
@@ -81,7 +84,7 @@ class GameMap:
     def get_tile(self, x: int, y: int) -> Tile | None:
         return self.tiles.get((x, y))
 
-    def set_tile(self, x: int, y: int, tile_type: str, state: str | None = None, sprite: str | None = None) -> Tile:
+    def set_tile(self, x: int, y: int, tile_type: str, state: str | None = None, sprite: str | None = None, variant: str | None = None) -> Tile:
         props = TILE_PROPERTIES.get(tile_type, {})
         effective_type = tile_type
         if tile_type == "door" and state == "closed":
@@ -92,6 +95,7 @@ class GameMap:
             tile_type=tile_type,
             state=state,
             sprite=sprite,
+            variant=variant,
             blocks_movement=props.get("blocks_movement", False),
             blocks_sight=props.get("blocks_sight", False),
         )
@@ -196,7 +200,14 @@ def build_map_from_data(data: dict) -> GameMap:
     gmap.metadata = dict(data.get("metadata", {}))
 
     for td in data.get("tiles", []):
-        gmap.set_tile(td["x"], td["y"], td["type"], td.get("state"), td.get("sprite"))
+        gmap.set_tile(
+            td["x"],
+            td["y"],
+            td["type"],
+            td.get("state"),
+            td.get("sprite"),
+            td.get("variant"),
+        )
 
     for ed in data.get("entities", []):
         entity = MapEntity(

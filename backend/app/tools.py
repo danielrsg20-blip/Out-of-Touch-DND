@@ -50,6 +50,7 @@ TOOL_DEFINITIONS: list[dict[str, Any]] = [
                 "dc": {"type": "integer", "description": "Difficulty class to beat"},
                 "skill": {"type": "string", "description": "Optional skill name (e.g. 'Perception', 'Stealth')"},
                 "is_saving_throw": {"type": "boolean", "description": "Whether this is a saving throw", "default": False},
+                "justification": {"type": "string", "description": "Brief reason this check is being called (e.g. 'investigating the locked chest')"},
             },
             "required": ["character_id", "ability", "dc"],
         },
@@ -67,6 +68,7 @@ TOOL_DEFINITIONS: list[dict[str, Any]] = [
                 "ability": {"type": "string", "enum": ["STR", "DEX"], "default": "STR"},
                 "advantage": {"type": "boolean", "default": False},
                 "disadvantage": {"type": "boolean", "default": False},
+                "justification": {"type": "string", "description": "Brief reason for this attack (e.g. 'opportunity attack as enemy leaves reach')"},
             },
             "required": ["attacker_id", "target_id"],
         },
@@ -165,6 +167,10 @@ TOOL_DEFINITIONS: list[dict[str, Any]] = [
             "properties": {
                 "description": {"type": "string", "description": "Narrative description of the area for the players"},
                 "environment": {"type": "string", "description": "Optional environment hint (dungeon/forest/tavern/cave/city)"},
+                "terrain_theme": {
+                    "type": "string",
+                    "description": "Optional terrain style hint (e.g. ruined/overgrown/ancient/volcanic/frozen/flooded/arcane)",
+                },
                 "encounter_type": {"type": "string", "description": "Optional encounter type hint (combat/exploration/social)"},
                 "encounter_scale": {"type": "string", "description": "Optional scale hint (small/medium/large)"},
                 "tactical_tags": {
@@ -577,11 +583,13 @@ class ToolDispatcher:
                     {
                         "description": str(inp.get("description", "")),
                         "environment": str(inp.get("environment", "")).strip().lower(),
+                        "terrain_theme": str(inp.get("terrain_theme", "")).strip().lower(),
                         "encounter_type": str(inp.get("encounter_type", "")).strip().lower(),
                         "encounter_scale": str(inp.get("encounter_scale", "")).strip().lower(),
                         "tactical_tags": [str(t) for t in inp.get("tactical_tags", [])],
                         "width": int(inp.get("width", 20)),
                         "height": int(inp.get("height", 15)),
+                        "seed": int(inp.get("seed")) if inp.get("seed") is not None else None,
                     },
                     tiles,
                 )
@@ -604,11 +612,13 @@ class ToolDispatcher:
             map_data = build_automated_map({
                 "description": str(inp.get("description", "")),
                 "environment": str(inp.get("environment", "")).strip().lower(),
+                "terrain_theme": str(inp.get("terrain_theme", "")).strip().lower(),
                 "encounter_type": str(inp.get("encounter_type", "")).strip().lower(),
                 "encounter_scale": str(inp.get("encounter_scale", "")).strip().lower(),
                 "tactical_tags": [str(t) for t in inp.get("tactical_tags", [])],
                 "width": int(inp.get("width", 20)),
                 "height": int(inp.get("height", 15)),
+                "seed": int(inp.get("seed")) if inp.get("seed") is not None else None,
             })
 
             if inp.get("entities"):
@@ -622,11 +632,19 @@ class ToolDispatcher:
     def _tool_place_entity(self, inp: dict) -> dict:
         if not self.game_map:
             return {"error": "No map loaded"}
+        
+        x = inp["x"]
+        y = inp["y"]
+        
+        # Validate that the target is walkable
+        if not self.game_map.can_occupy(x, y):
+            return {"error": f"Cannot place entity on non-walkable tile at ({x}, {y})"}
+        
         entity = MapEntity(
             id=inp["id"],
             name=inp["name"],
-            x=inp["x"],
-            y=inp["y"],
+            x=x,
+            y=y,
             entity_type=inp.get("entity_type", "npc"),
             sprite=inp.get("sprite", "default"),
             blocks_movement=bool(inp.get("blocks_movement", True)),

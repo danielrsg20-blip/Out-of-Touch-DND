@@ -12,6 +12,11 @@ const HAS_EXPLICIT_API_URL = Boolean(import.meta.env.VITE_API_URL?.trim())
 let sessionEventsChannel: RealtimeChannel | null = null
 
 function shouldUseSupabaseSessions(): boolean {
+  // In local/dev runs with an explicit API URL, prefer the FastAPI backend
+  // so session/map behavior matches the actively edited Python pipeline.
+  if (import.meta.env.DEV && HAS_EXPLICIT_API_URL) {
+    return false
+  }
   return USE_SUPABASE_SESSIONS && hasSupabaseConfig()
 }
 
@@ -248,6 +253,14 @@ export const useSessionStore = create<SessionState>((set) => ({
     if (sessionId) {
       startSessionEvents(sessionId, data.room_code)
     }
+
+    try {
+      const latestState = await useSessionStore.getState().getSession(data.room_code)
+      const { useGameStore } = await import('./gameStore')
+      useGameStore.getState().syncState(latestState as any)
+    } catch (error) {
+      console.warn('Failed to sync initial game state after session create.', error)
+    }
   },
 
   joinSession: async (roomCode, playerName) => {
@@ -324,6 +337,15 @@ export const useSessionStore = create<SessionState>((set) => ({
 
     if (sessionId) {
       startSessionEvents(sessionId, roomCode.toUpperCase())
+    }
+
+    try {
+      const normalizedRoomCode = roomCode.toUpperCase()
+      const latestState = await useSessionStore.getState().getSession(normalizedRoomCode)
+      const { useGameStore } = await import('./gameStore')
+      useGameStore.getState().syncState(latestState as any)
+    } catch (error) {
+      console.warn('Failed to sync initial game state after session join.', error)
     }
   },
 

@@ -39,10 +39,12 @@ export default function VoiceControl({
 }: VoiceControlProps) {
   const [recording, setRecording] = useState(false)
   const [isProcessing, setIsProcessing] = useState(false)
+  const [micError, setMicError] = useState<string | null>(null)
   const mediaRecorderRef = useRef<MediaRecorder | null>(null)
   const chunksRef = useRef<Blob[]>([])
 
   const startRecording = useCallback(async () => {
+    setMicError(null)
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
       const mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm' })
@@ -70,6 +72,8 @@ export default function VoiceControl({
       mediaRecorder.start()
       setRecording(true)
     } catch (err) {
+      const isDenied = err instanceof DOMException && (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError')
+      setMicError(isDenied ? 'Mic access denied — check browser permissions.' : 'Mic unavailable.')
       console.error('Mic access denied:', err)
     }
   }, [onTranscript])
@@ -117,6 +121,7 @@ export default function VoiceControl({
           >
             {recording ? '🔴 Recording...' : isProcessing ? '⏳ Processing...' : '🎤 Hold to Talk'}
           </button>
+          {micError && <span className="voice-error" title={micError}>⚠ {micError}</span>}
 
           <button
             className={`voice-mode-toggle ${transcriptMode === 'review' ? 'review' : 'auto'}`}

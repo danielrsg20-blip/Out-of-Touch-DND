@@ -5,6 +5,7 @@ from __future__ import annotations
 import base64
 import json
 import logging
+import time
 import uuid
 from contextlib import asynccontextmanager
 from typing import Any
@@ -22,6 +23,7 @@ from .voice import speech_to_text, text_to_speech, dm_speak, mock_tts_audio
 from .models.database import init_db, async_session
 from .models.campaign import SavedCampaign
 from .tools import ToolDispatcher
+from .movement import CollisionGrid, AStarPathfinder, MovementValidator, NavNode
 from .rules.spells import (
     get_castable_spell_options,
     get_known_spells_limit,
@@ -138,6 +140,8 @@ async def auth_me(request: Request):
 
 class CreateSessionRequest(BaseModel):
     player_name: str
+    safety_lines: list[str] = []
+    tracking_flags: dict[str, bool] = {}
 
 class CreateSessionResponse(BaseModel):
     room_code: str
@@ -204,10 +208,46 @@ def _extract_user_id(request: Request) -> str | None:
         return None
 
 
+def _ensure_mock_starter_map(session: GameSession) -> None:
+    if session.orchestrator.game_map is not None:
+        return
+
+    dispatcher = ToolDispatcher(
+        session.orchestrator.characters,
+        session.orchestrator.game_map,
+        session.orchestrator.combat,
+        session.orchestrator.memory,
+    )
+
+    map_input = {
+        "description": "A dungeon staging area prepared for exploration.",
+        "environment": "dungeon",
+        "terrain_theme": "ancient",
+        "encounter_type": "exploration",
+        "encounter_scale": "medium",
+        "tactical_tags": ["cover", "line_of_sight"],
+        "width": 20,
+        "height": 15,
+    }
+    result = dispatcher.dispatch("generate_map", map_input)
+    if isinstance(result, dict) and result.get("error"):
+        logger.warning("Failed to generate starter map: %s", result.get("error"))
+        return
+
+    session.orchestrator.game_map = dispatcher.game_map
+    session.orchestrator.combat = dispatcher.combat
+    session.orchestrator.memory = dispatcher.memory
+
+
 @app.post("/api/session/create", response_model=CreateSessionResponse)
 async def create_session(req: CreateSessionRequest, request: Request):
     player_id = str(uuid.uuid4())[:8]
     session = session_manager.create_session(host_id=player_id)
+    if req.safety_lines:
+        session.orchestrator.safety_lines = list(req.safety_lines)
+    if req.tracking_flags:
+        session.orchestrator.tracking_flags.update(req.tracking_flags)
+    _ensure_mock_starter_map(session)
     player = Player(id=player_id, name=req.player_name, user_id=_extract_user_id(request))
     session.add_player(player)
     session_start = build_session_start_protocol(session)
@@ -220,6 +260,8 @@ async def join_session(req: JoinSessionRequest, request: Request):
     session = session_manager.get_session(req.room_code)
     if not session:
         return JoinSessionResponse(player_id="", session={"error": "Session not found"})
+
+    _ensure_mock_starter_map(session)
 
     player_id = str(uuid.uuid4())[:8]
     player = Player(id=player_id, name=req.player_name, user_id=_extract_user_id(request))
@@ -434,6 +476,7 @@ async def get_session(room_code: str):
     session = session_manager.get_session(room_code)
     if not session:
         return {"error": "Session not found"}
+    _ensure_mock_starter_map(session)
     state = session.orchestrator.get_full_state()
     state["session"] = session.to_dict()
     state["session_start"] = build_session_start_protocol(session)
@@ -703,8 +746,10 @@ async def resume_campaign(req: ResumeCampaignRequest, request: Request):
 
 @app.post("/api/action")
 async def action_endpoint(req: PlayerActionRequest):
+    logger.info(f"[/api/action] Looking up session: room_code={req.room_code}, player_id={req.player_id}, sessions_count={len(session_manager.sessions)}, available_codes={list(session_manager.sessions.keys())}")
     session = session_manager.get_session(req.room_code)
     if not session:
+        logger.warning(f"[/api/action] Session not found for room_code={req.room_code}")
         return {"error": "Session not found"}
 
     player = session.players.get(req.player_id)
@@ -721,6 +766,14 @@ async def action_endpoint(req: PlayerActionRequest):
         "player_name": player.name,
         "content": action_text,
     })
+
+    # Update spotlight tracking so the DM knows which players are active
+    now = time.time()
+    session.orchestrator.player_activity = {
+        p.name: (now - p.last_action_at) if p.last_action_at else None
+        for p in session.players.values()
+    }
+    player.last_action_at = now
 
     events = await session.orchestrator.process_player_action(
         player_id=player.id,
@@ -835,20 +888,31 @@ async def move_token_endpoint(req: MoveTokenRequest):
     if entity is None:
         return {"error": f"Entity {req.character_id} not found"}
 
-    distance_tiles = abs(int(req.x) - int(entity.x)) + abs(int(req.y) - int(entity.y))
+    # Build collision grid from map
+    grid = CollisionGrid(game_map.width, game_map.height)
+    grid.build_from_map(game_map)
+    
+    # DEBUG: Log tile information
+    total_tiles = len(game_map.tiles)
+    blocked_tiles = sum(1 for tile in game_map.tiles.values() if tile.blocks_movement)
+    print(f"[DEBUG] Total tiles: {total_tiles}, Blocked tiles: {blocked_tiles}", flush=True)
+    
+    # Validate movement using the movement validator
     combat = session.orchestrator.combat
-    if combat and combat.is_active:
-        current = combat.current_participant
-        if current is None:
-            return {"error": "Combat turn state is invalid"}
-        if current.character.id != req.character_id:
-            return {"error": "It is not your turn"}
+    validation_result = MovementValidator.validate_move_request(
+        entity=entity,
+        target_x=int(req.x),
+        target_y=int(req.y),
+        collision_grid=grid,
+        map_data=game_map,
+        combat_state=combat,
+        check_movement_pool=True,
+    )
+    
+    if not validation_result.valid:
+        return {"error": validation_result.error or "Invalid move"}
 
-        remaining_feet = int(current.movement_remaining)
-        required_feet = distance_tiles * 5
-        if required_feet > remaining_feet:
-            return {"error": f"Not enough movement remaining ({remaining_feet} ft left)"}
-
+    # Apply movement via dispatcher (this will update entity position)
     dispatcher = ToolDispatcher(
         session.orchestrator.characters,
         session.orchestrator.game_map,
@@ -868,11 +932,13 @@ async def move_token_endpoint(req: MoveTokenRequest):
     if isinstance(result, dict) and result.get("error"):
         return {"error": str(result.get("error"))}
 
+    # Deduct movement cost based on actual path distance (not Manhattan)
     if combat and combat.is_active:
         current = combat.current_participant
         if current and current.character.id == req.character_id:
-            required_feet = distance_tiles * 5
-            current.movement_remaining = max(0, int(current.movement_remaining) - required_feet)
+            # Use the validated path distance
+            distance_feet = validation_result.distance_feet or 0
+            current.movement_remaining = max(0, int(current.movement_remaining) - distance_feet)
 
     await session.broadcast({
         "type": "map_change",
