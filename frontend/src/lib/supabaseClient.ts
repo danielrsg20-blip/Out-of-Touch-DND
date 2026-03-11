@@ -42,9 +42,9 @@ export async function invokeEdgeFunction<T = Record<string, unknown>>(
     'apikey': anonKey,
   }
 
-  if (accessToken) {
-    headers.Authorization = `Bearer ${accessToken}`
-  }
+  // Always send a Bearer token — use the user session JWT if available, otherwise
+  // fall back to the anon key (which is itself a valid Supabase JWT for public calls).
+  headers.Authorization = `Bearer ${accessToken ?? anonKey}`
 
   const response = await fetch(`${url}/functions/v1/${functionName}`, {
     method: 'POST',
