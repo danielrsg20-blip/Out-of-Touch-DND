@@ -1,0 +1,1262 @@
+{
+  "frames": {
+    "grass_01": {
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 128,
+        "h": 128
+      },
+      "sourceCell": {
+        "col": 0,
+        "row": 0
+      },
+      "baseLabel": "grass"
+    },
+    "grass_02": {
+      "frame": {
+        "x": 128,
+        "y": 0,
+        "w": 128,
+        "h": 128
+      },
+      "sourceCell": {
+        "col": 1,
+        "row": 0
+      },
+      "baseLabel": "grass"
+    },
+    "grass_03": {
+      "frame": {
+        "x": 256,
+        "y": 0,
+        "w": 128,
+        "h": 128
+      },
+      "sourceCell": {
+        "col": 2,
+        "row": 0
+      },
+      "baseLabel": "grass"
+    },
+    "grass_04": {
+      "frame": {
+        "x": 384,
+        "y": 0,
+        "w": 128,
+        "h": 128
+      },
+      "sourceCell": {
+        "col": 3,
+        "row": 0
+      },
+      "baseLabel": "grass"
+    },
+    "grass_with_flowers_01": {
+      "frame": {
+        "x": 512,
+        "y": 0,
+        "w": 128,
+        "h": 128
+      },
+      "sourceCell": {
+        "col": 4,
+        "row": 0
+      },
+      "baseLabel": "grass_with_flowers"
+    },
+    "grass_05": {
+      "frame": {
+        "x": 640,
+        "y": 0,
+        "w": 128,
+        "h": 128
+      },
+      "sourceCell": {
+        "col": 5,
+        "row": 0
+      },
+      "baseLabel": "grass"
+    },
+    "yellow_flowers_01": {
+      "frame": {
+        "x": 768,
+        "y": 0,
+        "w": 128,
+        "h": 128
+      },
+      "sourceCell": {
+        "col": 6,
+        "row": 0
+      },
+      "baseLabel": "yellow_flowers"
+    },
+    "dense_flowers_01": {
+      "frame": {
+        "x": 896,
+        "y": 0,
+        "w": 128,
+        "h": 128
+      },
+      "sourceCell": {
+        "col": 7,
+        "row": 0
+      },
+      "baseLabel": "dense_flowers"
+    },
+    "grass_with_flowers_02": {
+      "frame": {
+        "x": 1024,
+        "y": 0,
+        "w": 128,
+        "h": 128
+      },
+      "sourceCell": {
+        "col": 8,
+        "row": 0
+      },
+      "baseLabel": "grass_with_flowers"
+    },
+    "unknown_01": {
+      "frame": {
+        "x": 1152,
+        "y": 0,
+        "w": 128,
+        "h": 128
+      },
+      "sourceCell": {
+        "col": 9,
+        "row": 0
+      },
+      "baseLabel": "unknown"
+    },
+    "grass_06": {
+      "frame": {
+        "x": 1280,
+        "y": 0,
+        "w": 128,
+        "h": 128
+      },
+      "sourceCell": {
+        "col": 10,
+        "row": 0
+      },
+      "baseLabel": "grass"
+    },
+    "grass_light_01": {
+      "frame": {
+        "x": 1408,
+        "y": 0,
+        "w": 128,
+        "h": 128
+      },
+      "sourceCell": {
+        "col": 11,
+        "row": 0
+      },
+      "baseLabel": "grass_light"
+    },
+    "grass_dense_01": {
+      "frame": {
+        "x": 0,
+        "y": 128,
+        "w": 128,
+        "h": 128
+      },
+      "sourceCell": {
+        "col": 0,
+        "row": 1
+      },
+      "baseLabel": "grass_dense"
+    },
+    "grass_bright_01": {
+      "frame": {
+        "x": 128,
+        "y": 128,
+        "w": 128,
+        "h": 128
+      },
+      "sourceCell": {
+        "col": 1,
+        "row": 1
+      },
+      "baseLabel": "grass_bright"
+    },
+    "red_ground_01": {
+      "frame": {
+        "x": 256,
+        "y": 128,
+        "w": 128,
+        "h": 128
+      },
+      "sourceCell": {
+        "col": 2,
+        "row": 1
+      },
+      "baseLabel": "red_ground"
+    },
+    "brown_ground_01": {
+      "frame": {
+        "x": 384,
+        "y": 128,
+        "w": 128,
+        "h": 128
+      },
+      "sourceCell": {
+        "col": 3,
+        "row": 1
+      },
+      "baseLabel": "brown_ground"
+    },
+    "dark_ground_01": {
+      "frame": {
+        "x": 512,
+        "y": 128,
+        "w": 128,
+        "h": 128
+      },
+      "sourceCell": {
+        "col": 4,
+        "row": 1
+      },
+      "baseLabel": "dark_ground"
+    },
+    "dirt_ground_01": {
+      "frame": {
+        "x": 640,
+        "y": 128,
+        "w": 128,
+        "h": 128
+      },
+      "sourceCell": {
+        "col": 5,
+        "row": 1
+      },
+      "baseLabel": "dirt_ground"
+    },
+    "tan_ground_01": {
+      "frame": {
+        "x": 768,
+        "y": 128,
+        "w": 128,
+        "h": 128
+      },
+      "sourceCell": {
+        "col": 6,
+        "row": 1
+      },
+      "baseLabel": "tan_ground"
+    },
+    "light_ground_01": {
+      "frame": {
+        "x": 896,
+        "y": 128,
+        "w": 128,
+        "h": 128
+      },
+      "sourceCell": {
+        "col": 7,
+        "row": 1
+      },
+      "baseLabel": "light_ground"
+    },
+    "stone_wall_01": {
+      "frame": {
+        "x": 1024,
+        "y": 128,
+        "w": 128,
+        "h": 128
+      },
+      "sourceCell": {
+        "col": 8,
+        "row": 1
+      },
+      "baseLabel": "stone_wall"
+    },
+    "stone_wall_dark_01": {
+      "frame": {
+        "x": 1152,
+        "y": 128,
+        "w": 128,
+        "h": 128
+      },
+      "sourceCell": {
+        "col": 9,
+        "row": 1
+      },
+      "baseLabel": "stone_wall_dark"
+    },
+    "stone_wall_darker_01": {
+      "frame": {
+        "x": 1280,
+        "y": 128,
+        "w": 128,
+        "h": 128
+      },
+      "sourceCell": {
+        "col": 10,
+        "row": 1
+      },
+      "baseLabel": "stone_wall_darker"
+    },
+    "stone_wall_worn_01": {
+      "frame": {
+        "x": 1408,
+        "y": 128,
+        "w": 128,
+        "h": 128
+      },
+      "sourceCell": {
+        "col": 11,
+        "row": 1
+      },
+      "baseLabel": "stone_wall_worn"
+    },
+    "lava_wall_01": {
+      "frame": {
+        "x": 0,
+        "y": 256,
+        "w": 128,
+        "h": 128
+      },
+      "sourceCell": {
+        "col": 0,
+        "row": 2
+      },
+      "baseLabel": "lava_wall"
+    },
+    "stone_wall_cracked_01": {
+      "frame": {
+        "x": 128,
+        "y": 256,
+        "w": 128,
+        "h": 128
+      },
+      "sourceCell": {
+        "col": 1,
+        "row": 2
+      },
+      "baseLabel": "stone_wall_cracked"
+    },
+    "stone_wall_mossy_01": {
+      "frame": {
+        "x": 256,
+        "y": 256,
+        "w": 128,
+        "h": 128
+      },
+      "sourceCell": {
+        "col": 2,
+        "row": 2
+      },
+      "baseLabel": "stone_wall_mossy"
+    },
+    "stone_wall_damaged_01": {
+      "frame": {
+        "x": 384,
+        "y": 256,
+        "w": 128,
+        "h": 128
+      },
+      "sourceCell": {
+        "col": 3,
+        "row": 2
+      },
+      "baseLabel": "stone_wall_damaged"
+    },
+    "stone_wall_aged_01": {
+      "frame": {
+        "x": 512,
+        "y": 256,
+        "w": 128,
+        "h": 128
+      },
+      "sourceCell": {
+        "col": 4,
+        "row": 2
+      },
+      "baseLabel": "stone_wall_aged"
+    },
+    "stone_wall_light_01": {
+      "frame": {
+        "x": 640,
+        "y": 256,
+        "w": 128,
+        "h": 128
+      },
+      "sourceCell": {
+        "col": 5,
+        "row": 2
+      },
+      "baseLabel": "stone_wall_light"
+    },
+    "stone_wall_02": {
+      "frame": {
+        "x": 768,
+        "y": 256,
+        "w": 128,
+        "h": 128
+      },
+      "sourceCell": {
+        "col": 6,
+        "row": 2
+      },
+      "baseLabel": "stone_wall"
+    },
+    "stone_wall_03": {
+      "frame": {
+        "x": 896,
+        "y": 256,
+        "w": 128,
+        "h": 128
+      },
+      "sourceCell": {
+        "col": 7,
+        "row": 2
+      },
+      "baseLabel": "stone_wall"
+    },
+    "stone_wall_04": {
+      "frame": {
+        "x": 1024,
+        "y": 256,
+        "w": 128,
+        "h": 128
+      },
+      "sourceCell": {
+        "col": 8,
+        "row": 2
+      },
+      "baseLabel": "stone_wall"
+    },
+    "stone_wall_05": {
+      "frame": {
+        "x": 1152,
+        "y": 256,
+        "w": 128,
+        "h": 128
+      },
+      "sourceCell": {
+        "col": 9,
+        "row": 2
+      },
+      "baseLabel": "stone_wall"
+    },
+    "stone_wall_06": {
+      "frame": {
+        "x": 1280,
+        "y": 256,
+        "w": 128,
+        "h": 128
+      },
+      "sourceCell": {
+        "col": 10,
+        "row": 2
+      },
+      "baseLabel": "stone_wall"
+    },
+    "stone_wall_07": {
+      "frame": {
+        "x": 1408,
+        "y": 256,
+        "w": 128,
+        "h": 128
+      },
+      "sourceCell": {
+        "col": 11,
+        "row": 2
+      },
+      "baseLabel": "stone_wall"
+    },
+    "stone_wall_08": {
+      "frame": {
+        "x": 0,
+        "y": 384,
+        "w": 128,
+        "h": 128
+      },
+      "sourceCell": {
+        "col": 0,
+        "row": 3
+      },
+      "baseLabel": "stone_wall"
+    },
+    "stone_wall_09": {
+      "frame": {
+        "x": 128,
+        "y": 384,
+        "w": 128,
+        "h": 128
+      },
+      "sourceCell": {
+        "col": 1,
+        "row": 3
+      },
+      "baseLabel": "stone_wall"
+    },
+    "stone_wall_10": {
+      "frame": {
+        "x": 256,
+        "y": 384,
+        "w": 128,
+        "h": 128
+      },
+      "sourceCell": {
+        "col": 2,
+        "row": 3
+      },
+      "baseLabel": "stone_wall"
+    },
+    "stone_wall_11": {
+      "frame": {
+        "x": 384,
+        "y": 384,
+        "w": 128,
+        "h": 128
+      },
+      "sourceCell": {
+        "col": 3,
+        "row": 3
+      },
+      "baseLabel": "stone_wall"
+    },
+    "stone_wall_12": {
+      "frame": {
+        "x": 512,
+        "y": 384,
+        "w": 128,
+        "h": 128
+      },
+      "sourceCell": {
+        "col": 4,
+        "row": 3
+      },
+      "baseLabel": "stone_wall"
+    },
+    "stone_bricks_01": {
+      "frame": {
+        "x": 640,
+        "y": 384,
+        "w": 128,
+        "h": 128
+      },
+      "sourceCell": {
+        "col": 5,
+        "row": 3
+      },
+      "baseLabel": "stone_bricks"
+    },
+    "castle_wall_01": {
+      "frame": {
+        "x": 768,
+        "y": 384,
+        "w": 128,
+        "h": 128
+      },
+      "sourceCell": {
+        "col": 6,
+        "row": 3
+      },
+      "baseLabel": "castle_wall"
+    },
+    "light_stone_wall_01": {
+      "frame": {
+        "x": 896,
+        "y": 384,
+        "w": 128,
+        "h": 128
+      },
+      "sourceCell": {
+        "col": 7,
+        "row": 3
+      },
+      "baseLabel": "light_stone_wall"
+    },
+    "worn_stone_wall_01": {
+      "frame": {
+        "x": 1024,
+        "y": 384,
+        "w": 128,
+        "h": 128
+      },
+      "sourceCell": {
+        "col": 8,
+        "row": 3
+      },
+      "baseLabel": "worn_stone_wall"
+    },
+    "weathered_stone_01": {
+      "frame": {
+        "x": 1152,
+        "y": 384,
+        "w": 128,
+        "h": 128
+      },
+      "sourceCell": {
+        "col": 9,
+        "row": 3
+      },
+      "baseLabel": "weathered_stone"
+    },
+    "aged_stone_wall_01": {
+      "frame": {
+        "x": 1280,
+        "y": 384,
+        "w": 128,
+        "h": 128
+      },
+      "sourceCell": {
+        "col": 10,
+        "row": 3
+      },
+      "baseLabel": "aged_stone_wall"
+    },
+    "damaged_stone_01": {
+      "frame": {
+        "x": 1408,
+        "y": 384,
+        "w": 128,
+        "h": 128
+      },
+      "sourceCell": {
+        "col": 11,
+        "row": 3
+      },
+      "baseLabel": "damaged_stone"
+    },
+    "cracked_stone_01": {
+      "frame": {
+        "x": 0,
+        "y": 512,
+        "w": 128,
+        "h": 128
+      },
+      "sourceCell": {
+        "col": 0,
+        "row": 4
+      },
+      "baseLabel": "cracked_stone"
+    },
+    "mossy_stone_01": {
+      "frame": {
+        "x": 128,
+        "y": 512,
+        "w": 128,
+        "h": 128
+      },
+      "sourceCell": {
+        "col": 1,
+        "row": 4
+      },
+      "baseLabel": "mossy_stone"
+    },
+    "stone_wall_13": {
+      "frame": {
+        "x": 256,
+        "y": 512,
+        "w": 128,
+        "h": 128
+      },
+      "sourceCell": {
+        "col": 2,
+        "row": 4
+      },
+      "baseLabel": "stone_wall"
+    },
+    "stone_wall_14": {
+      "frame": {
+        "x": 384,
+        "y": 512,
+        "w": 128,
+        "h": 128
+      },
+      "sourceCell": {
+        "col": 3,
+        "row": 4
+      },
+      "baseLabel": "stone_wall"
+    },
+    "stone_wall_15": {
+      "frame": {
+        "x": 512,
+        "y": 512,
+        "w": 128,
+        "h": 128
+      },
+      "sourceCell": {
+        "col": 4,
+        "row": 4
+      },
+      "baseLabel": "stone_wall"
+    },
+    "stone_wall_16": {
+      "frame": {
+        "x": 640,
+        "y": 512,
+        "w": 128,
+        "h": 128
+      },
+      "sourceCell": {
+        "col": 5,
+        "row": 4
+      },
+      "baseLabel": "stone_wall"
+    },
+    "stone_wall_17": {
+      "frame": {
+        "x": 768,
+        "y": 512,
+        "w": 128,
+        "h": 128
+      },
+      "sourceCell": {
+        "col": 6,
+        "row": 4
+      },
+      "baseLabel": "stone_wall"
+    },
+    "stone_wall_18": {
+      "frame": {
+        "x": 896,
+        "y": 512,
+        "w": 128,
+        "h": 128
+      },
+      "sourceCell": {
+        "col": 7,
+        "row": 4
+      },
+      "baseLabel": "stone_wall"
+    },
+    "stone_wall_19": {
+      "frame": {
+        "x": 1024,
+        "y": 512,
+        "w": 128,
+        "h": 128
+      },
+      "sourceCell": {
+        "col": 8,
+        "row": 4
+      },
+      "baseLabel": "stone_wall"
+    },
+    "stone_floor_01": {
+      "frame": {
+        "x": 1152,
+        "y": 512,
+        "w": 128,
+        "h": 128
+      },
+      "sourceCell": {
+        "col": 9,
+        "row": 4
+      },
+      "baseLabel": "stone_floor"
+    },
+    "stone_wall_20": {
+      "frame": {
+        "x": 1280,
+        "y": 512,
+        "w": 128,
+        "h": 128
+      },
+      "sourceCell": {
+        "col": 10,
+        "row": 4
+      },
+      "baseLabel": "stone_wall"
+    },
+    "stone_wall_21": {
+      "frame": {
+        "x": 1408,
+        "y": 512,
+        "w": 128,
+        "h": 128
+      },
+      "sourceCell": {
+        "col": 11,
+        "row": 4
+      },
+      "baseLabel": "stone_wall"
+    },
+    "sand_wall_01": {
+      "frame": {
+        "x": 0,
+        "y": 640,
+        "w": 128,
+        "h": 128
+      },
+      "sourceCell": {
+        "col": 0,
+        "row": 5
+      },
+      "baseLabel": "sand_wall"
+    },
+    "stone_wall_22": {
+      "frame": {
+        "x": 128,
+        "y": 640,
+        "w": 128,
+        "h": 128
+      },
+      "sourceCell": {
+        "col": 1,
+        "row": 5
+      },
+      "baseLabel": "stone_wall"
+    },
+    "dark_stone_wall_01": {
+      "frame": {
+        "x": 256,
+        "y": 640,
+        "w": 128,
+        "h": 128
+      },
+      "sourceCell": {
+        "col": 2,
+        "row": 5
+      },
+      "baseLabel": "dark_stone_wall"
+    },
+    "stone_wall_variant_01": {
+      "frame": {
+        "x": 384,
+        "y": 640,
+        "w": 128,
+        "h": 128
+      },
+      "sourceCell": {
+        "col": 3,
+        "row": 5
+      },
+      "baseLabel": "stone_wall_variant"
+    },
+    "sand_wall_02": {
+      "frame": {
+        "x": 512,
+        "y": 640,
+        "w": 128,
+        "h": 128
+      },
+      "sourceCell": {
+        "col": 4,
+        "row": 5
+      },
+      "baseLabel": "sand_wall"
+    },
+    "brick_wall_01": {
+      "frame": {
+        "x": 640,
+        "y": 640,
+        "w": 128,
+        "h": 128
+      },
+      "sourceCell": {
+        "col": 5,
+        "row": 5
+      },
+      "baseLabel": "brick_wall"
+    },
+    "brick_wall_variant_01": {
+      "frame": {
+        "x": 768,
+        "y": 640,
+        "w": 128,
+        "h": 128
+      },
+      "sourceCell": {
+        "col": 6,
+        "row": 5
+      },
+      "baseLabel": "brick_wall_variant"
+    },
+    "brick_wall_dark_01": {
+      "frame": {
+        "x": 896,
+        "y": 640,
+        "w": 128,
+        "h": 128
+      },
+      "sourceCell": {
+        "col": 7,
+        "row": 5
+      },
+      "baseLabel": "brick_wall_dark"
+    },
+    "brick_wall_light_01": {
+      "frame": {
+        "x": 1024,
+        "y": 640,
+        "w": 128,
+        "h": 128
+      },
+      "sourceCell": {
+        "col": 8,
+        "row": 5
+      },
+      "baseLabel": "brick_wall_light"
+    },
+    "water_01": {
+      "frame": {
+        "x": 1152,
+        "y": 640,
+        "w": 128,
+        "h": 128
+      },
+      "sourceCell": {
+        "col": 9,
+        "row": 5
+      },
+      "baseLabel": "water"
+    },
+    "brick_wall_02": {
+      "frame": {
+        "x": 1280,
+        "y": 640,
+        "w": 128,
+        "h": 128
+      },
+      "sourceCell": {
+        "col": 10,
+        "row": 5
+      },
+      "baseLabel": "brick_wall"
+    },
+    "dirt_floor_01": {
+      "frame": {
+        "x": 1408,
+        "y": 640,
+        "w": 128,
+        "h": 128
+      },
+      "sourceCell": {
+        "col": 11,
+        "row": 5
+      },
+      "baseLabel": "dirt_floor"
+    },
+    "dirt_floor_02": {
+      "frame": {
+        "x": 0,
+        "y": 768,
+        "w": 128,
+        "h": 128
+      },
+      "sourceCell": {
+        "col": 0,
+        "row": 6
+      },
+      "baseLabel": "dirt_floor"
+    },
+    "dirt_floor_03": {
+      "frame": {
+        "x": 128,
+        "y": 768,
+        "w": 128,
+        "h": 128
+      },
+      "sourceCell": {
+        "col": 1,
+        "row": 6
+      },
+      "baseLabel": "dirt_floor"
+    },
+    "dirt_floor_04": {
+      "frame": {
+        "x": 256,
+        "y": 768,
+        "w": 128,
+        "h": 128
+      },
+      "sourceCell": {
+        "col": 2,
+        "row": 6
+      },
+      "baseLabel": "dirt_floor"
+    },
+    "dirt_floor_05": {
+      "frame": {
+        "x": 384,
+        "y": 768,
+        "w": 128,
+        "h": 128
+      },
+      "sourceCell": {
+        "col": 3,
+        "row": 6
+      },
+      "baseLabel": "dirt_floor"
+    },
+    "dirt_floor_06": {
+      "frame": {
+        "x": 512,
+        "y": 768,
+        "w": 128,
+        "h": 128
+      },
+      "sourceCell": {
+        "col": 4,
+        "row": 6
+      },
+      "baseLabel": "dirt_floor"
+    },
+    "stone_floor_02": {
+      "frame": {
+        "x": 640,
+        "y": 768,
+        "w": 128,
+        "h": 128
+      },
+      "sourceCell": {
+        "col": 5,
+        "row": 6
+      },
+      "baseLabel": "stone_floor"
+    },
+    "stone_floor_03": {
+      "frame": {
+        "x": 768,
+        "y": 768,
+        "w": 128,
+        "h": 128
+      },
+      "sourceCell": {
+        "col": 6,
+        "row": 6
+      },
+      "baseLabel": "stone_floor"
+    },
+    "water_02": {
+      "frame": {
+        "x": 896,
+        "y": 768,
+        "w": 128,
+        "h": 128
+      },
+      "sourceCell": {
+        "col": 7,
+        "row": 6
+      },
+      "baseLabel": "water"
+    },
+    "stone_wall_23": {
+      "frame": {
+        "x": 1024,
+        "y": 768,
+        "w": 128,
+        "h": 128
+      },
+      "sourceCell": {
+        "col": 8,
+        "row": 6
+      },
+      "baseLabel": "stone_wall"
+    },
+    "cracked_stone_02": {
+      "frame": {
+        "x": 1152,
+        "y": 768,
+        "w": 128,
+        "h": 128
+      },
+      "sourceCell": {
+        "col": 9,
+        "row": 6
+      },
+      "baseLabel": "cracked_stone"
+    },
+    "sand_01": {
+      "frame": {
+        "x": 1280,
+        "y": 768,
+        "w": 128,
+        "h": 128
+      },
+      "sourceCell": {
+        "col": 10,
+        "row": 6
+      },
+      "baseLabel": "sand"
+    },
+    "shallow_water_01": {
+      "frame": {
+        "x": 1408,
+        "y": 768,
+        "w": 128,
+        "h": 128
+      },
+      "sourceCell": {
+        "col": 11,
+        "row": 6
+      },
+      "baseLabel": "shallow_water"
+    },
+    "water_03": {
+      "frame": {
+        "x": 0,
+        "y": 896,
+        "w": 128,
+        "h": 128
+      },
+      "sourceCell": {
+        "col": 0,
+        "row": 7
+      },
+      "baseLabel": "water"
+    },
+    "deep_water_01": {
+      "frame": {
+        "x": 128,
+        "y": 896,
+        "w": 128,
+        "h": 128
+      },
+      "sourceCell": {
+        "col": 1,
+        "row": 7
+      },
+      "baseLabel": "deep_water"
+    },
+    "ocean_water_01": {
+      "frame": {
+        "x": 256,
+        "y": 896,
+        "w": 128,
+        "h": 128
+      },
+      "sourceCell": {
+        "col": 2,
+        "row": 7
+      },
+      "baseLabel": "ocean_water"
+    },
+    "dark_ocean_01": {
+      "frame": {
+        "x": 384,
+        "y": 896,
+        "w": 128,
+        "h": 128
+      },
+      "sourceCell": {
+        "col": 3,
+        "row": 7
+      },
+      "baseLabel": "dark_ocean"
+    },
+    "deep_ocean_01": {
+      "frame": {
+        "x": 512,
+        "y": 896,
+        "w": 128,
+        "h": 128
+      },
+      "sourceCell": {
+        "col": 4,
+        "row": 7
+      },
+      "baseLabel": "deep_ocean"
+    },
+    "night_ocean_01": {
+      "frame": {
+        "x": 640,
+        "y": 896,
+        "w": 128,
+        "h": 128
+      },
+      "sourceCell": {
+        "col": 5,
+        "row": 7
+      },
+      "baseLabel": "night_ocean"
+    },
+    "stone_wall_24": {
+      "frame": {
+        "x": 768,
+        "y": 896,
+        "w": 128,
+        "h": 128
+      },
+      "sourceCell": {
+        "col": 6,
+        "row": 7
+      },
+      "baseLabel": "stone_wall"
+    },
+    "stone_wall_25": {
+      "frame": {
+        "x": 896,
+        "y": 896,
+        "w": 128,
+        "h": 128
+      },
+      "sourceCell": {
+        "col": 7,
+        "row": 7
+      },
+      "baseLabel": "stone_wall"
+    },
+    "stone_wall_26": {
+      "frame": {
+        "x": 1024,
+        "y": 896,
+        "w": 128,
+        "h": 128
+      },
+      "sourceCell": {
+        "col": 8,
+        "row": 7
+      },
+      "baseLabel": "stone_wall"
+    },
+    "stone_wall_27": {
+      "frame": {
+        "x": 1152,
+        "y": 896,
+        "w": 128,
+        "h": 128
+      },
+      "sourceCell": {
+        "col": 9,
+        "row": 7
+      },
+      "baseLabel": "stone_wall"
+    },
+    "stone_wall_28": {
+      "frame": {
+        "x": 1280,
+        "y": 896,
+        "w": 128,
+        "h": 128
+      },
+      "sourceCell": {
+        "col": 10,
+        "row": 7
+      },
+      "baseLabel": "stone_wall"
+    },
+    "damaged_wall_01": {
+      "frame": {
+        "x": 1408,
+        "y": 896,
+        "w": 128,
+        "h": 128
+      },
+      "sourceCell": {
+        "col": 11,
+        "row": 7
+      },
+      "baseLabel": "damaged_wall"
+    }
+  },
+  "meta": {
+    "image": "ChatGPT Image Mar 12, 2026, 03_51_15 PM.png",
+    "tileSize": 128,
+    "sourceGrid": {
+      "cols": 12,
+      "rows": 8
+    },
+    "generatedAt": "2026-03-12T22:58:12.675Z",
+    "frameCount": 96
+  }
+}

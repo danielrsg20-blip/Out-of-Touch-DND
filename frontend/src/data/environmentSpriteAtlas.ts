@@ -12,8 +12,28 @@ type EnvironmentSpriteAtlasEntry = {
   label: string
 }
 
-export const ENVIRONMENT_SPRITESHEET_URL = '/sprites/Environment/Terrain_and_Props.png'
-const ENVIRONMENT_SPRITE_INDEX_URL = '/sprites/Environment/Terrain_and_Props.json'
+type EnvironmentSpriteAtlasFrame = {
+  frame?: {
+    x?: number
+    y?: number
+    w?: number
+    h?: number
+  }
+  baseLabel?: string
+}
+
+type EnvironmentSpriteAtlasPayload =
+  | EnvironmentSpriteAtlasEntry[]
+  | {
+      frames?: Record<string, EnvironmentSpriteAtlasFrame>
+      meta?: {
+        tileSize?: number
+      }
+    }
+
+export const ENVIRONMENT_SPRITESHEET_URL = '/sprites/Environment/Stylized_environment.png'
+const ENVIRONMENT_SPRITE_INDEX_URL = '/sprites/Environment/Stylized_environment.json'
+const LEGACY_ENVIRONMENT_SPRITE_INDEX_URL = '/sprites/Environment/Terrain_and_Props.json'
 
 let lookupCache: Map<string, EnvironmentSpriteRect> | null = null
 let lookupLoadPromise: Promise<Map<string, EnvironmentSpriteRect>> | null = null
@@ -49,6 +69,63 @@ function toLookup(entries: EnvironmentSpriteAtlasEntry[]): Map<string, Environme
   return byLabel
 }
 
+function addLookupEntry(
+  byLabel: Map<string, EnvironmentSpriteRect>,
+  label: string,
+  x: number,
+  y: number,
+  tileSize: number,
+) {
+  const normalized = normalizeLabel(label)
+  if (!normalized || byLabel.has(normalized)) {
+    return
+  }
+  byLabel.set(normalized, { x, y, w: tileSize, h: tileSize })
+}
+
+function toLookupFromFrames(payload: Exclude<EnvironmentSpriteAtlasPayload, EnvironmentSpriteAtlasEntry[]>): Map<string, EnvironmentSpriteRect> {
+  const byLabel = new Map<string, EnvironmentSpriteRect>()
+  const defaultTileSize = payload.meta?.tileSize ?? 32
+  const frames = payload.frames ?? {}
+
+  for (const [frameKey, frameData] of Object.entries(frames)) {
+    const frame = frameData?.frame
+    if (!frame) {
+      continue
+    }
+
+    const x = Number(frame.x ?? 0)
+    const y = Number(frame.y ?? 0)
+    const w = Number(frame.w ?? defaultTileSize)
+    const h = Number(frame.h ?? defaultTileSize)
+    const tileSize = Number.isFinite(w) && w > 0
+      ? w
+      : Number.isFinite(h) && h > 0
+        ? h
+        : defaultTileSize
+
+    if (!Number.isFinite(x) || !Number.isFinite(y) || !Number.isFinite(tileSize) || tileSize <= 0) {
+      continue
+    }
+
+    addLookupEntry(byLabel, frameKey, x, y, tileSize)
+
+    const baseLabel = frameData?.baseLabel?.trim()
+    if (baseLabel) {
+      addLookupEntry(byLabel, baseLabel, x, y, tileSize)
+    }
+  }
+
+  return byLabel
+}
+
+function parseLookup(payload: EnvironmentSpriteAtlasPayload): Map<string, EnvironmentSpriteRect> {
+  if (Array.isArray(payload)) {
+    return toLookup(payload)
+  }
+  return toLookupFromFrames(payload)
+}
+
 export function loadEnvironmentSpriteLookup(): Promise<Map<string, EnvironmentSpriteRect>> {
   if (lookupCache) {
     return Promise.resolve(lookupCache)
@@ -59,12 +136,18 @@ export function loadEnvironmentSpriteLookup(): Promise<Map<string, EnvironmentSp
 
   lookupLoadPromise = fetch(ENVIRONMENT_SPRITE_INDEX_URL)
     .then(async (response) => {
-      if (!response.ok) {
-        throw new Error(`Failed to load environment sprite index: ${response.status}`)
+      if (response.ok) {
+        return response.json() as Promise<EnvironmentSpriteAtlasPayload>
       }
 
-      const entries = (await response.json()) as EnvironmentSpriteAtlasEntry[]
-      const lookup = toLookup(entries)
+      const legacyResponse = await fetch(LEGACY_ENVIRONMENT_SPRITE_INDEX_URL)
+      if (!legacyResponse.ok) {
+        throw new Error(`Failed to load environment sprite index: ${response.status}`)
+      }
+      return legacyResponse.json() as Promise<EnvironmentSpriteAtlasPayload>
+    })
+    .then((payload) => {
+      const lookup = parseLookup(payload)
       lookupCache = lookup
       return lookup
     })
@@ -95,19 +178,20 @@ export function resolveEnvironmentSpriteRect(spriteKey: string): EnvironmentSpri
   }
 
   const normalized = normalizeLabel(label)
-  
-  // First try exact normalized label match (handles "{base}_{variant}" formats)
+
+  // First try exact normalized label match (handles direct base/frame labels).
   const exact = cache.get(normalized)
   if (exact) {
     return exact
   }
 
-  // If variant-suffixed label doesn't exist, try stripping the variant suffix
-  // and falling back to base label (e.g., "stone floor_cracked" → "stone floor")
-  const variantMatch = normalized.match(/^(.+?)_(\w+)$/)
-  if (variantMatch) {
-    const baseLabel = variantMatch[1]
-    const baseExact = cache.get(baseLabel)
+  // For variant-suffixed keys, strip the suffix from the raw label (before
+  // underscore normalization) and retry the base label.
+  const rawVariantMatch = label.match(/^(.+?)_([a-z0-9_]+)$/i)
+  if (rawVariantMatch) {
+    const rawBaseLabel = rawVariantMatch[1]
+    const normalizedBaseLabel = normalizeLabel(rawBaseLabel)
+    const baseExact = cache.get(normalizedBaseLabel)
     if (baseExact) {
       return baseExact
     }

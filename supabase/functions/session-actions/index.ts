@@ -20,24 +20,24 @@ const WORD_LIST = [
 
 const TILE_BASES_BY_ENV: Record<string, { floor: string[]; wall: string[]; water: string[] }> = {
   dungeon: {
-    floor: ['stone corridor', 'stone ground', 'mossy stone', 'cracked brick', 'dark stone'],
-    wall: ['dark stone', 'black stone', 'stone dark', 'stone darker'],
-    water: ['deep water', 'dark water', 'shallow water'],
+    floor: ['stone_floor', 'dirt_floor', 'cracked_stone', 'mossy_stone', 'dark_ground'],
+    wall: ['stone_wall', 'stone_wall_dark', 'stone_wall_darker', 'stone_wall_cracked', 'stone_bricks'],
+    water: ['deep_water', 'water', 'shallow_water'],
   },
   forest: {
-    floor: ['grass', 'dirt path', 'moss', 'ancient dirt', 'dirt terrain'],
-    wall: ['autumn tree', 'dark stone', 'stone ground'],
-    water: ['water surface', 'shallow water', 'deep water'],
+    floor: ['grass', 'grass_dense', 'grass_bright', 'dirt_floor', 'brown_ground'],
+    wall: ['grass_with_flowers', 'stone_wall_mossy', 'stone_wall_aged', 'worn_stone_wall'],
+    water: ['water', 'shallow_water', 'deep_water'],
   },
   cave: {
-    floor: ['stone ground', 'dirt ground', 'rough stone', 'mossy stone'],
-    wall: ['black stone', 'stone dark', 'dark stone'],
-    water: ['water surface', 'deep water', 'shallow water'],
+    floor: ['dark_ground', 'dirt_ground', 'stone_floor', 'mossy_stone', 'sand'],
+    wall: ['dark_stone_wall', 'stone_wall_darker', 'stone_wall_dark', 'stone_wall_variant'],
+    water: ['water', 'deep_water', 'night_ocean'],
   },
   crypt: {
-    floor: ['stone tile', 'dark stone', 'cracked brick', 'mossy stone'],
-    wall: ['black stone', 'dark stone', 'stone darker'],
-    water: ['dark water', 'deep water', 'shallow water'],
+    floor: ['stone_floor', 'cracked_stone', 'weathered_stone', 'damaged_stone', 'dark_ground'],
+    wall: ['stone_wall', 'stone_wall_worn', 'stone_wall_damaged', 'aged_stone_wall', 'castle_wall'],
+    water: ['deep_water', 'dark_ocean', 'water'],
   },
 }
 
@@ -157,10 +157,10 @@ function buildTileVisual(
   }
 
   if (tileType === 'rubble') {
-    return { sprite: 'env:stone rubble' }
+    return { sprite: 'env:cracked_stone' }
   }
   if (tileType === 'pillar') {
-    return { sprite: 'env:cracked pillar' }
+    return { sprite: 'env:stone_wall_dark' }
   }
   return {}
 }

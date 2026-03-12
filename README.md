@@ -52,6 +52,15 @@ python scripts/validate_map_packs.py
 
 The same command validates both map manifests and sprite asset import policy metadata.
 
+Validate generated environment sprite labels against the atlas (release gate):
+
+```bash
+cd backend
+python scripts/check_atlas_resolution.py
+```
+
+This command exits non-zero if any generated `env:` sprite label fails to resolve to a valid atlas frame.
+
 Startup validation mode is controlled by `MAP_PACK_VALIDATION_MODE`:
 
 - `off`: skip validation
@@ -141,6 +150,8 @@ Supabase-only rewrite scaffold (work in progress):
 - `OPENAI_API_KEY` (optional depending on features)
 
 Health endpoint: `/api/health`
+
+Atlas health endpoint (returns `503` when unresolved labels are detected): `/api/health/atlas`
 
 ### Vercel frontend env vars
 

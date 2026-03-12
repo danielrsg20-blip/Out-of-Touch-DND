@@ -8,7 +8,7 @@ import json
 from pathlib import Path
 
 # Load the terrain atlas manually to handle BOM
-atlas_path = Path("frontend/public/sprites/Environment/Terrain_and_Props.json")
+atlas_path = Path("frontend/public/sprites/Environment/Stylized_environment.json")
 with open(atlas_path, 'r', encoding='utf-8-sig') as f:
     entries = json.load(f)
 

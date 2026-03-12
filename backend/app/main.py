@@ -12,11 +12,11 @@ from typing import Any
 
 from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import Response
+from fastapi.responses import JSONResponse, Response
 from pydantic import BaseModel
 
 from .config import CORS_ALLOW_ORIGINS, LOCAL_MOCK_MODE
-from .map_catalog import validate_map_catalog_startup
+from .map_catalog import run_terrain_atlas_resolution_check, validate_map_catalog_startup
 from .session import GameSession, Player, SessionManager
 from .session_start_protocol import build_session_start_protocol
 from .voice import speech_to_text, text_to_speech, dm_speak, mock_tts_audio
@@ -194,6 +194,13 @@ async def list_items(category: str | None = None):
 @app.get("/api/health")
 async def health():
     return {"status": "ok", "sessions": len(session_manager.sessions)}
+
+
+@app.get("/api/health/atlas")
+async def health_atlas():
+    report = run_terrain_atlas_resolution_check()
+    status_code = 200 if bool(report.get("ok")) else 503
+    return JSONResponse(status_code=status_code, content=report)
 
 
 def _extract_user_id(request: Request) -> str | None:

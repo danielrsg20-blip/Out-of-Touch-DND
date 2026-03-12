@@ -44,16 +44,16 @@ const TILE_COLORS: Record<string, string> = {
 }
 
 const TILE_TYPE_ATLAS_FALLBACK: Record<string, string> = {
-  floor: 'env:stone corridor',
-  wall: 'env:dark stone',
-  door: 'env:arched door',
+  floor: 'env:dirt_floor',
+  wall: 'env:stone_wall',
+  door: 'env:stone_bricks',
   water: 'env:deep water',
-  pit: 'env:fire pit',
-  pillar: 'env:cracked pillar',
-  stairs_up: 'env:stone corridor',
-  stairs_down: 'env:stone corridor',
-  chest: 'env:treasure chest',
-  rubble: 'env:stone rubble',
+  pit: 'env:lava_wall',
+  pillar: 'env:stone_wall_dark',
+  stairs_up: 'env:stone_floor',
+  stairs_down: 'env:stone_floor',
+  chest: 'env:stone_bricks',
+  rubble: 'env:cracked_stone',
 }
 
 const ENTITY_COLORS: Record<string, string> = {

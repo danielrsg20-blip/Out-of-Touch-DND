@@ -1,0 +1,37 @@
+name: Atlas Resolution Gate
+
+on:
+  pull_request:
+    branches:
+      - '**'
+  push:
+    branches:
+      - main
+      - master
+      - release/**
+    tags:
+      - 'v*'
+      - 'release-*'
+  workflow_dispatch:
+
+jobs:
+  atlas-resolution-check:
+    name: Verify atlas label resolution
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install backend dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r backend/requirements.txt
+
+      - name: Run atlas resolution release gate
+        run: python backend/scripts/check_atlas_resolution.py

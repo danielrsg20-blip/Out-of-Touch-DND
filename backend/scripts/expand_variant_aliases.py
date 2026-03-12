@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Expand Terrain_and_Props.json with explicit variant alias labels.
+"""Expand Stylized_environment.json with explicit variant alias labels.
 
 Adds alias entries like "orange brick_cracked" that point to the same atlas frame as
 "orange brick". This allows explicit variant lookup keys to resolve directly in the
@@ -11,7 +11,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-ATLAS_PATH = Path(__file__).resolve().parents[2] / "frontend" / "public" / "sprites" / "Environment" / "Terrain_and_Props.json"
+ATLAS_PATH = Path(__file__).resolve().parents[2] / "frontend" / "public" / "sprites" / "Environment" / "Stylized_environment.json"
 
 FLOORISH = ["floor", "stone", "brick", "dirt", "ground", "path", "road", "trail", "mud", "grass", "moss", "wood", "plank", "soil"]
 WALLISH = ["wall", "brick", "stone", "hedge", "tree", "cliff", "rock", "fence", "pillar", "column", "statue", "wood"]

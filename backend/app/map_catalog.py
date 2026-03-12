@@ -5,7 +5,7 @@ import json
 import logging
 import random
 import time
-from collections import OrderedDict, deque
+from collections import Counter, OrderedDict, deque
 from pathlib import Path
 from typing import Any, TypedDict, cast, Optional
 
@@ -69,13 +69,16 @@ class TerrainAtlasEntry(TypedDict):
 
 
 _MAP_LIBRARY_PATH = Path(__file__).resolve().parent / "maps" / "data" / "map_library.json"
-_TERRAIN_ATLAS_PATH = (
+_TERRAIN_ATLAS_DIR = (
     Path(__file__).resolve().parents[2]
     / "frontend"
     / "public"
     / "sprites"
     / "Environment"
-    / "Terrain_and_Props.json"
+)
+_TERRAIN_ATLAS_CANDIDATE_PATHS = (
+    _TERRAIN_ATLAS_DIR / "Stylized_environment.json",
+    _TERRAIN_ATLAS_DIR / "Terrain_and_Props.json",
 )
 _GENERATED_MAP_CACHE: OrderedDict[str, dict[str, Any]] = OrderedDict()
 _GENERATED_CACHE_LIMIT = 64
@@ -178,20 +181,41 @@ def _normalize_label(value: str) -> str:
     return " ".join(value.strip().lower().replace("_", " ").split())
 
 
+def _append_atlas_entry(
+    entries: list[TerrainAtlasEntry],
+    x: int,
+    y: int,
+    tile_size: int,
+    label: str,
+) -> None:
+    normalized = _normalize_label(label)
+    if not normalized:
+        return
+    entries.append({"x": x, "y": y, "tileSize": tile_size, "label": normalized})
+
+
 def _load_terrain_atlas() -> list[TerrainAtlasEntry]:
     global _TERRAIN_ATLAS_CACHE
     if _TERRAIN_ATLAS_CACHE is not None:
         return _TERRAIN_ATLAS_CACHE
 
-    try:
-        with _TERRAIN_ATLAS_PATH.open("r", encoding="utf-8-sig") as f:
-            payload = json.load(f)
-    except FileNotFoundError:
-        logger.warning("Terrain atlas JSON missing at %s", _TERRAIN_ATLAS_PATH)
-        _TERRAIN_ATLAS_CACHE = []
-        return _TERRAIN_ATLAS_CACHE
-    except json.JSONDecodeError as exc:
-        logger.warning("Terrain atlas JSON invalid: %s", exc)
+    payload: Any | None = None
+    atlas_path: Path | None = None
+    for candidate in _TERRAIN_ATLAS_CANDIDATE_PATHS:
+        if not candidate.exists():
+            continue
+        atlas_path = candidate
+        try:
+            with candidate.open("r", encoding="utf-8-sig") as f:
+                payload = json.load(f)
+        except json.JSONDecodeError as exc:
+            logger.warning("Terrain atlas JSON invalid at %s: %s", candidate, exc)
+            _TERRAIN_ATLAS_CACHE = []
+            return _TERRAIN_ATLAS_CACHE
+        break
+
+    if payload is None or atlas_path is None:
+        logger.warning("Terrain atlas JSON missing. Checked: %s", ", ".join(str(p) for p in _TERRAIN_ATLAS_CANDIDATE_PATHS))
         _TERRAIN_ATLAS_CACHE = []
         return _TERRAIN_ATLAS_CACHE
 
@@ -211,7 +235,47 @@ def _load_terrain_atlas() -> list[TerrainAtlasEntry]:
                 continue
             if tile_size <= 0:
                 continue
-            entries.append({"x": x, "y": y, "tileSize": tile_size, "label": label})
+            _append_atlas_entry(entries, x, y, tile_size, label)
+    elif isinstance(payload, dict):
+        meta = payload.get("meta", {})
+        default_tile_size = 32
+        if isinstance(meta, dict):
+            try:
+                default_tile_size = int(meta.get("tileSize", 32))
+            except (TypeError, ValueError):
+                default_tile_size = 32
+
+        frames = payload.get("frames", {})
+        if isinstance(frames, dict):
+            for frame_key, frame_data in frames.items():
+                if not isinstance(frame_data, dict):
+                    continue
+                frame = frame_data.get("frame", {})
+                if not isinstance(frame, dict):
+                    continue
+
+                try:
+                    x = int(frame.get("x", 0))
+                    y = int(frame.get("y", 0))
+                    w = int(frame.get("w", default_tile_size))
+                    h = int(frame.get("h", default_tile_size))
+                except (TypeError, ValueError):
+                    continue
+
+                tile_size = w if w > 0 else h if h > 0 else default_tile_size
+                if tile_size <= 0:
+                    continue
+
+                base_label = str(frame_data.get("baseLabel", "")).strip()
+                frame_label = str(frame_key).strip()
+
+                if base_label:
+                    _append_atlas_entry(entries, x, y, tile_size, base_label)
+                if frame_label:
+                    _append_atlas_entry(entries, x, y, tile_size, frame_label)
+
+    if not entries:
+        logger.warning("Terrain atlas parsed but no usable entries found at %s", atlas_path)
 
     _TERRAIN_ATLAS_CACHE = entries
     return _TERRAIN_ATLAS_CACHE
@@ -581,6 +645,235 @@ def assign_terrain_atlas_sprites(
         deterministic_seed=effective_seed,
     )
     return decorated
+
+
+def _atlas_label_set(entries: list[TerrainAtlasEntry]) -> set[str]:
+    labels: set[str] = set()
+    for entry in entries:
+        normalized = _normalize_label(str(entry.get("label", "")))
+        if normalized:
+            labels.add(normalized)
+    return labels
+
+
+def _extract_env_sprite_label(sprite: Any) -> str | None:
+    if not isinstance(sprite, str):
+        return None
+    normalized = sprite.strip()
+    if not normalized:
+        return None
+    if not normalized.lower().startswith("env:"):
+        return None
+    label = normalized.split(":", 1)[1]
+    return _normalize_label(label)
+
+
+def _atlas_resolves_env_label(base_label: str, variant: str, atlas_labels: set[str]) -> bool:
+    if base_label in atlas_labels:
+        return True
+    if variant:
+        variant_key = _normalize_label(f"{base_label}_{variant}")
+        if variant_key in atlas_labels:
+            return True
+    return False
+
+
+def _collect_unresolved_env_labels(
+    records: list[dict[str, Any]],
+    atlas_labels: set[str],
+) -> tuple[int, Counter[str]]:
+    checked = 0
+    unresolved: Counter[str] = Counter()
+
+    for record in records:
+        base_label = _extract_env_sprite_label(record.get("sprite"))
+        if not base_label:
+            continue
+
+        checked += 1
+        raw_variant = record.get("variant")
+        variant = _normalize_label(str(raw_variant)) if isinstance(raw_variant, str) else ""
+
+        if _atlas_resolves_env_label(base_label, variant, atlas_labels):
+            continue
+
+        key = _normalize_label(f"{base_label}_{variant}") if variant else base_label
+        unresolved[key] += 1
+
+    return checked, unresolved
+
+
+def run_terrain_atlas_resolution_check() -> dict[str, Any]:
+    """Validate that generated env sprite labels resolve to atlas frames.
+
+    Returns a report suitable for health endpoints and CI/release gating.
+    """
+    entries = _load_terrain_atlas()
+    atlas_labels = _atlas_label_set(entries)
+
+    if not entries or not atlas_labels:
+        return {
+            "ok": False,
+            "atlas_entry_count": len(entries),
+            "atlas_label_count": len(atlas_labels),
+            "sample_count": 0,
+            "env_sprite_labels_checked": 0,
+            "unresolved_count": 0,
+            "unresolved_top": [],
+            "errors": ["Terrain atlas is missing or contains no valid labels"],
+        }
+
+    total_checked = 0
+    unresolved_totals: Counter[str] = Counter()
+    sample_reports: list[dict[str, Any]] = []
+    errors: list[str] = []
+
+    generated_requests: list[MapSelectionRequest] = [
+        {
+            "description": "Ancient dungeon with collapsed sections and narrow corridors",
+            "environment": "dungeon",
+            "terrain_theme": "ancient",
+            "encounter_type": "exploration",
+            "encounter_scale": "medium",
+            "tactical_tags": ["cover", "line_of_sight"],
+            "width": 20,
+            "height": 15,
+            "seed": 10101,
+        },
+        {
+            "description": "Dense forest clearing with shallow streams",
+            "environment": "forest",
+            "terrain_theme": "overgrown",
+            "encounter_type": "exploration",
+            "encounter_scale": "medium",
+            "tactical_tags": ["cover"],
+            "width": 20,
+            "height": 15,
+            "seed": 20202,
+        },
+        {
+            "description": "Wind-carved cave chambers and rocky ledges",
+            "environment": "cave",
+            "terrain_theme": "ruined",
+            "encounter_type": "combat",
+            "encounter_scale": "large",
+            "tactical_tags": ["line_of_sight"],
+            "width": 20,
+            "height": 15,
+            "seed": 30303,
+        },
+        {
+            "description": "Busy tavern interior with tables and support pillars",
+            "environment": "tavern",
+            "terrain_theme": "ancient",
+            "encounter_type": "social",
+            "encounter_scale": "small",
+            "tactical_tags": ["cover"],
+            "width": 20,
+            "height": 15,
+            "seed": 40404,
+        },
+        {
+            "description": "Stone city plaza and connecting alleys",
+            "environment": "city",
+            "terrain_theme": "ancient",
+            "encounter_type": "exploration",
+            "encounter_scale": "small",
+            "tactical_tags": ["line_of_sight"],
+            "width": 20,
+            "height": 15,
+            "seed": 50505,
+        },
+    ]
+
+    for idx, request in enumerate(generated_requests):
+        sample_name = f"generated_{idx}_{request['environment']}"
+        try:
+            generated = build_automated_map(request)
+            tiles = [dict(tile) for tile in generated.get("tiles", []) if isinstance(tile, dict)]
+            entities = [dict(entity) for entity in generated.get("entities", []) if isinstance(entity, dict)]
+
+            checked_tiles, unresolved_tiles = _collect_unresolved_env_labels(tiles, atlas_labels)
+            checked_entities, unresolved_entities = _collect_unresolved_env_labels(entities, atlas_labels)
+
+            sample_checked = checked_tiles + checked_entities
+            sample_unresolved = unresolved_tiles + unresolved_entities
+
+            total_checked += sample_checked
+            unresolved_totals.update(sample_unresolved)
+
+            sample_reports.append(
+                {
+                    "name": sample_name,
+                    "checked": sample_checked,
+                    "unresolved": int(sum(sample_unresolved.values())),
+                }
+            )
+        except Exception as exc:  # noqa: BLE001
+            errors.append(f"{sample_name}: {exc}")
+
+    prebuilt_template_tiles: list[dict[str, Any]] = [
+        {"x": 0, "y": 0, "type": "floor"},
+        {"x": 1, "y": 0, "type": "wall"},
+        {"x": 2, "y": 0, "type": "door"},
+        {"x": 3, "y": 0, "type": "water"},
+        {"x": 4, "y": 0, "type": "pit"},
+        {"x": 5, "y": 0, "type": "pillar"},
+        {"x": 6, "y": 0, "type": "rubble"},
+        {"x": 7, "y": 0, "type": "stairs_up"},
+        {"x": 8, "y": 0, "type": "stairs_down"},
+        {"x": 9, "y": 0, "type": "chest"},
+    ]
+
+    for env_index, environment in enumerate(["dungeon", "forest", "cave", "tavern", "city"]):
+        sample_name = f"prebuilt_{environment}"
+        try:
+            decorated = assign_terrain_atlas_sprites(
+                {
+                    "description": f"Prebuilt validation map for {environment}",
+                    "environment": environment,
+                    "terrain_theme": "ancient",
+                    "encounter_type": "exploration",
+                    "encounter_scale": "small",
+                    "tactical_tags": ["line_of_sight"],
+                    "width": 10,
+                    "height": 1,
+                    "seed": 90000 + env_index,
+                },
+                [dict(tile) for tile in prebuilt_template_tiles],
+            )
+
+            checked, unresolved = _collect_unresolved_env_labels(decorated, atlas_labels)
+            total_checked += checked
+            unresolved_totals.update(unresolved)
+            sample_reports.append(
+                {
+                    "name": sample_name,
+                    "checked": checked,
+                    "unresolved": int(sum(unresolved.values())),
+                }
+            )
+        except Exception as exc:  # noqa: BLE001
+            errors.append(f"{sample_name}: {exc}")
+
+    unresolved_total_count = int(sum(unresolved_totals.values()))
+    unresolved_top = [
+        {"label": label, "count": count}
+        for label, count in unresolved_totals.most_common(20)
+    ]
+
+    ok = unresolved_total_count == 0 and not errors
+    return {
+        "ok": ok,
+        "atlas_entry_count": len(entries),
+        "atlas_label_count": len(atlas_labels),
+        "sample_count": len(sample_reports),
+        "env_sprite_labels_checked": total_checked,
+        "unresolved_count": unresolved_total_count,
+        "unresolved_top": unresolved_top,
+        "errors": errors,
+        "samples": sample_reports,
+    }
 
 
 def _spawn_environment_props(
