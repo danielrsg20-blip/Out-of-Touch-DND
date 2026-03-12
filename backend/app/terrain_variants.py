@@ -64,25 +64,25 @@ TERRAIN_VARIANTS: Dict[str, TerrainGroup] = {
         variants=(
             TerrainVariant(
                 id="clean",
-                sprite_label="orange brick",  # fallback to existing atlas
+                sprite_label="stone corridor",
                 weight=5,
                 cluster_bias=-0.3,  # clean tiles prefer low-noise areas
             ),
             TerrainVariant(
                 id="cracked",
-                sprite_label="stone passage",  # will map to "stone floor_cracked" if available
+                sprite_label="cracked brick",
                 weight=2,
                 cluster_bias=0.4,  # cracked tiles prefer high-noise areas
             ),
             TerrainVariant(
                 id="rubble",
-                sprite_label="ruined stone",  # will map to "stone floor_rubble" if available
+                sprite_label="stone rubble",
                 weight=1,
                 cluster_bias=0.6,  # rubble is clustered in highest-noise areas
             ),
             TerrainVariant(
                 id="mossy",
-                sprite_label="water tiles",  # placeholder; will map to "stone floor_mossy" if available
+                sprite_label="mossy stone",
                 weight=1,
                 cluster_bias=0.2,  # subtle clustering
             ),
@@ -96,25 +96,25 @@ TERRAIN_VARIANTS: Dict[str, TerrainGroup] = {
         variants=(
             TerrainVariant(
                 id="smooth",
-                sprite_label="orange brick",
+                sprite_label="dark stone",
                 weight=5,
                 cluster_bias=-0.2,
             ),
             TerrainVariant(
                 id="cracked",
-                sprite_label="stone passage",
+                sprite_label="cracked brick",
                 weight=2,
                 cluster_bias=0.3,
             ),
             TerrainVariant(
                 id="worn",
-                sprite_label="stone pillar",
+                sprite_label="stone darker",
                 weight=1,
                 cluster_bias=0.1,
             ),
             TerrainVariant(
                 id="dark",
-                sprite_label="dark stone wall",  # will map to "stone wall_dark" if available
+                sprite_label="black stone",
                 weight=1,
                 cluster_bias=0.2,
             ),
@@ -128,25 +128,25 @@ TERRAIN_VARIANTS: Dict[str, TerrainGroup] = {
         variants=(
             TerrainVariant(
                 id="clean",
-                sprite_label="green moss",  # earth tone in forest
+                sprite_label="grass",
                 weight=4,
                 cluster_bias=-0.3,
             ),
             TerrainVariant(
                 id="patchy",
-                sprite_label="green tree",  # vegetation creeping in
+                sprite_label="dirt terrain",
                 weight=2,
                 cluster_bias=0.2,
             ),
             TerrainVariant(
                 id="grass_creep",
-                sprite_label="water shallow",  # grass/vegetation overgrowth
+                sprite_label="dirt path",
                 weight=2,
                 cluster_bias=0.3,
             ),
             TerrainVariant(
                 id="stone_patch",
-                sprite_label="stone archway",  # exposed stone
+                sprite_label="ancient dirt",
                 weight=1,
                 cluster_bias=0.1,
             ),
@@ -160,25 +160,25 @@ TERRAIN_VARIANTS: Dict[str, TerrainGroup] = {
         variants=(
             TerrainVariant(
                 id="earthy",
-                sprite_label="green moss",
+                sprite_label="dark stone",
                 weight=5,
                 cluster_bias=-0.2,
             ),
             TerrainVariant(
                 id="root_cluster",
-                sprite_label="green tree",  # roots hanging down
+                sprite_label="black stone",
                 weight=2,
                 cluster_bias=0.4,
             ),
             TerrainVariant(
                 id="cave_wall",
-                sprite_label="stone lit",  # rocky cave
+                sprite_label="stone dark",
                 weight=2,
                 cluster_bias=0.3,
             ),
             TerrainVariant(
                 id="stone_vein",
-                sprite_label="brown crystal",  # mineral deposits
+                sprite_label="stone darker",
                 weight=1,
                 cluster_bias=0.2,
             ),
@@ -192,25 +192,25 @@ TERRAIN_VARIANTS: Dict[str, TerrainGroup] = {
         variants=(
             TerrainVariant(
                 id="calm",
-                sprite_label="water tiles",
+                sprite_label="deep water",
                 weight=3,
                 cluster_bias=-0.2,
             ),
             TerrainVariant(
                 id="waves",
-                sprite_label="water tile",
+                sprite_label="water surface",
                 weight=2,
                 cluster_bias=0.1,
             ),
             TerrainVariant(
                 id="murky",
-                sprite_label="water medium",
+                sprite_label="dark water",
                 weight=2,
                 cluster_bias=0.3,
             ),
             TerrainVariant(
                 id="algae",
-                sprite_label="green moss",  # algae-covered
+                sprite_label="shallow water",
                 weight=1,
                 cluster_bias=0.5,
             ),
@@ -224,25 +224,25 @@ TERRAIN_VARIANTS: Dict[str, TerrainGroup] = {
         variants=(
             TerrainVariant(
                 id="boards",
-                sprite_label="stone passage",  # tan/wood color
+                sprite_label="dirt path",
                 weight=4,
                 cluster_bias=-0.2,
             ),
             TerrainVariant(
                 id="worn",
-                sprite_label="orange brick",  # worn finish
+                sprite_label="ancient dirt",
                 weight=2,
                 cluster_bias=0.2,
             ),
             TerrainVariant(
                 id="cracked",
-                sprite_label="ruined brick",  # splintered wood
+                sprite_label="rough stone",
                 weight=2,
                 cluster_bias=0.4,
             ),
             TerrainVariant(
                 id="rotted",
-                sprite_label="water tiles",  # dark, water-damaged
+                sprite_label="dirt ground",
                 weight=1,
                 cluster_bias=0.5,
             ),
@@ -256,25 +256,25 @@ TERRAIN_VARIANTS: Dict[str, TerrainGroup] = {
         variants=(
             TerrainVariant(
                 id="panels",
-                sprite_label="stone passage",  # wooden boards
+                sprite_label="stone corridor",
                 weight=4,
                 cluster_bias=-0.2,
             ),
             TerrainVariant(
                 id="weathered",
-                sprite_label="orange brick",
+                sprite_label="dark stone",
                 weight=2,
                 cluster_bias=0.2,
             ),
             TerrainVariant(
                 id="splintered",
-                sprite_label="ruined brick",
+                sprite_label="cracked brick",
                 weight=1,
                 cluster_bias=0.4,
             ),
             TerrainVariant(
                 id="rotten",
-                sprite_label="water tiles",
+                sprite_label="stone darker",
                 weight=1,
                 cluster_bias=0.5,
             ),
