@@ -373,6 +373,7 @@ function buildInitialSnapshot(): Record<string, unknown> {
   const tiles = buildProceduralTiles(environment, width, height)
   return {
     characters: {},
+    cold_open_done: false,
     map: {
       width,
       height,

@@ -4,7 +4,13 @@ import { useGameStore } from '../stores/gameStore'
 import { getSupabaseClient, invokeEdgeFunction } from '../lib/supabaseClient'
 import { API_BASE } from '../config/endpoints'
 import { playTTSAudio } from '../components/VoiceControl'
+import { narrationOrchestrator } from '../lib/narrationOrchestrator'
 import type { RealtimeChannel } from '@supabase/supabase-js'
+
+// True when a local Python backend is reachable at API_BASE.
+// In production on Vercel (no VITE_API_URL set) there is no /api/* backend,
+// so any fallbackToLocal() call would hit Vercel's static catch-all and get 405.
+const HAS_LOCAL_BACKEND = import.meta.env.DEV || Boolean(import.meta.env.VITE_API_URL?.trim())
 
 async function parseJsonBody(res: Response): Promise<Record<string, unknown>> {
   const text = await res.text()
@@ -43,6 +49,8 @@ function canUseBrowserSpeechSynthesis(): boolean {
 export function useWebSocket() {
   const channelRef = useRef<RealtimeChannel | null>(null)
   const activeAudioRef = useRef<HTMLAudioElement | null>(null)
+  const coldOpenFiredRef = useRef(false)
+  const narrativeLockRef = useRef(false)
   const lastVoiceNoticeRef = useRef<{ stt: string; tts: string; browserTtsShown: boolean }>({ stt: '', tts: '', browserTtsShown: false })
   const { roomCode, sessionId, playerId, setConnected, addPlayer, setPlayers, getSession, mockMode } = useSessionStore()
   const { setMap, updateEntity, addEntity, removeEntity, setCombat, addNarrative, syncState, setLoading } = useGameStore()
@@ -78,92 +86,9 @@ export function useWebSocket() {
     })
   }, [mockMode])
 
-  const speakNarration = useCallback(async (text: string) => {
-    const state = useGameStore.getState()
-    if (!state.voiceEnabled || !state.ttsEnabled) {
-      return
-    }
-
-    const trimmed = text.trim()
-    if (!trimmed) {
-      return
-    }
-
-    const supabase = getSupabaseClient()
-
-    const playAudioBlob = async (blob: Blob) => {
-      if (activeAudioRef.current) {
-        activeAudioRef.current.pause()
-        activeAudioRef.current = null
-      }
-
-      const url = URL.createObjectURL(blob)
-      const audio = new Audio(url)
-      activeAudioRef.current = audio
-      try {
-        await audio.play()
-      } catch {
-        URL.revokeObjectURL(url)
-        activeAudioRef.current = null
-        throw new Error('Unable to play TTS audio. Browser may require user interaction first.')
-      }
-      audio.onended = () => {
-        URL.revokeObjectURL(url)
-        if (activeAudioRef.current === audio) {
-          activeAudioRef.current = null
-        }
-      }
-    }
-
-    const fallbackToLocal = async () => {
-      const res = await fetch(`${API_BASE}/api/tts`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text: trimmed, voice: 'dm_default', mock_mode: mockMode }),
-      })
-      if (!res.ok) {
-        const payload = await parseJsonBody(res)
-        throw new Error(typeof payload.error === 'string' ? payload.error : `TTS failed (${res.status})`)
-      }
-      const contentType = res.headers.get('content-type') ?? ''
-      if (contentType.includes('application/json')) {
-        const payload = await parseJsonBody(res)
-        throw new Error(typeof payload.error === 'string' ? payload.error : 'TTS did not return playable audio')
-      }
-      const audioBlob = await res.blob()
-      await playAudioBlob(audioBlob)
-    }
-
-    try {
-      if (supabase) {
-        try {
-          const payload = await invokeEdgeFunction<Record<string, unknown>>('voice-tts', {
-            text: trimmed,
-            voiceId: 'onyx',
-            room_code: roomCode,
-            player_id: playerId,
-            mock_mode: mockMode,
-          })
-
-          if (typeof payload.audio === 'string' && payload.audio.trim()) {
-            playTTSAudio(payload.audio)
-            return
-          }
-        } catch {
-          // Fall through to local fallback.
-        }
-      }
-
-      await fallbackToLocal()
-    } catch (error) {
-      reportVoiceIssue('tts', error)
-      const usedBrowserFallback = await tryBrowserSpeechFallback(trimmed)
-      if (usedBrowserFallback && !lastVoiceNoticeRef.current.browserTtsShown) {
-        lastVoiceNoticeRef.current.browserTtsShown = true
-        addNarrative('system', 'Using browser voice fallback for local/dev testing.')
-      }
-    }
-  }, [addNarrative, mockMode, playerId, reportVoiceIssue, roomCode, tryBrowserSpeechFallback])
+  const speakNarration = useCallback((text: string) => {
+    narrationOrchestrator.enqueue(text)
+  }, [])
 
   const renderSessionStartProtocol = useCallback((payload: Record<string, unknown> | undefined) => {
     if (!payload || typeof payload !== 'object') {
@@ -256,7 +181,13 @@ export function useWebSocket() {
           setPlayers(session.players)
         }
         syncState(payload as Parameters<typeof syncState>[0])
-        renderSessionStartProtocol(payload.session_start as Record<string, unknown> | undefined)
+        if (!coldOpenFiredRef.current) {
+          coldOpenFiredRef.current = true
+          setTimeout(
+            () => renderSessionStartProtocol(payload.session_start as Record<string, unknown> | undefined),
+            Number(import.meta.env.VITE_COLD_OPEN_DELAY_MS) || 2000,
+          )
+        }
 
         // If the DM has not spoken yet (fresh session), fire a bootstrap narration
         const dmTurnCount = typeof payload.dm_turn_count === 'number' ? payload.dm_turn_count : 1
@@ -377,11 +308,23 @@ export function useWebSocket() {
         if (msg.game_state) {
           syncState(msg.game_state as Parameters<typeof syncState>[0])
         }
-        renderSessionStartProtocol(msg.session_start as Record<string, unknown> | undefined)
+        if (!coldOpenFiredRef.current) {
+          coldOpenFiredRef.current = true
+          setTimeout(
+            () => renderSessionStartProtocol(msg.session_start as Record<string, unknown> | undefined),
+            Number(import.meta.env.VITE_COLD_OPEN_DELAY_MS) || 2000,
+          )
+        }
         break
 
       case 'session_start':
-        renderSessionStartProtocol(msg)
+        if (!coldOpenFiredRef.current) {
+          coldOpenFiredRef.current = true
+          setTimeout(
+            () => renderSessionStartProtocol(msg),
+            Number(import.meta.env.VITE_COLD_OPEN_DELAY_MS) || 2000,
+          )
+        }
         break
 
       case 'player_connected':
@@ -406,6 +349,7 @@ export function useWebSocket() {
 
       case 'dm_narrative':
         addNarrative('dm', msg.content as string, 'DM')
+        narrativeLockRef.current = false
         setLoading(false)
         if (typeof msg.content === 'string') {
           void speakNarration(msg.content)
@@ -539,6 +483,12 @@ export function useWebSocket() {
       return
     }
 
+    if (narrativeLockRef.current) {
+      addNarrative('system', 'Please wait for the DM to respond before acting again.')
+      return
+    }
+
+    narrativeLockRef.current = true
     setLoading(true)
 
     const sendViaLocal = async () => {
@@ -614,6 +564,7 @@ export function useWebSocket() {
         addNarrative('system', `Unable to send action: ${edgeMessage}`)
       })
       .finally(() => {
+        narrativeLockRef.current = false
         setLoading(false)
       })
   }, [addNarrative, handleMessage, mockMode, playerId, roomCode, setLoading, speakNarration, syncState])
@@ -731,7 +682,10 @@ export function useWebSocket() {
         }
       }
 
-      return await fallbackToLocal()
+      if (HAS_LOCAL_BACKEND) {
+        return await fallbackToLocal()
+      }
+      return null
     } catch (error) {
       reportVoiceIssue('stt', error)
       return null
@@ -740,6 +694,14 @@ export function useWebSocket() {
 
   const runVoiceTest = useCallback(async () => {
     const testLine = 'Voice test check. If you can hear this, your speaker output is working.'
+
+    if (!HAS_LOCAL_BACKEND) {
+      const usedBrowser = await tryBrowserSpeechFallback(testLine)
+      if (!usedBrowser) {
+        addNarrative('system', 'Voice test is only available when connected to a local backend.')
+      }
+      return
+    }
 
     try {
       const res = await fetch(`${API_BASE}/api/tts`, {

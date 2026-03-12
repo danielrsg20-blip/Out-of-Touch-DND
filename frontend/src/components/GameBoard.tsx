@@ -12,6 +12,7 @@ import { useGameStore } from '../stores/gameStore'
 import { useSessionStore } from '../stores/sessionStore'
 import { CollisionGrid } from '../lib/systems/movement/collisionGrid'
 import { MovementController } from '../lib/systems/movement/movementController'
+import { narrationOrchestrator } from '../lib/narrationOrchestrator'
 import './GameBoard.css'
 
 const AVATAR_COLORS = ['#9b59b6', '#3498db', '#2ecc71', '#e67e22', '#e74c3c']
@@ -92,7 +93,8 @@ export default function GameBoard() {
       return
     }
 
-    sendAction(transcript)
+    const ctx = narrationOrchestrator.getInterruptContext()
+    sendAction(ctx ? `${ctx} ${transcript}` : transcript)
   }, [addNarrative, sendAction, transcriptMode, transcribeVoiceInput])
 
   return (
@@ -130,6 +132,7 @@ export default function GameBoard() {
             onTranscriptModeChange={setTranscriptMode}
             onTranscript={handleVoiceTranscript}
             onVoiceTest={runVoiceTest}
+            onPttStart={() => narrationOrchestrator.interrupt()}
           />
           <ChatInput onSend={sendAction} draftText={chatDraft} onDraftTextChange={setChatDraft} />
         </div>

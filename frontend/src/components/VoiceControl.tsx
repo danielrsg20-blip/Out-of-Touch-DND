@@ -25,6 +25,7 @@ interface VoiceControlProps {
   onTranscriptModeChange: (mode: TranscriptMode) => void
   onTranscript?: (audioBase64: string) => void | Promise<void>
   onVoiceTest?: () => void | Promise<void>
+  onPttStart?: () => void
 }
 
 export default function VoiceControl({
@@ -36,6 +37,7 @@ export default function VoiceControl({
   onTranscriptModeChange,
   onTranscript,
   onVoiceTest,
+  onPttStart,
 }: VoiceControlProps) {
   const [recording, setRecording] = useState(false)
   const [isProcessing, setIsProcessing] = useState(false)
@@ -44,6 +46,7 @@ export default function VoiceControl({
   const chunksRef = useRef<Blob[]>([])
 
   const startRecording = useCallback(async () => {
+    onPttStart?.()
     setMicError(null)
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
