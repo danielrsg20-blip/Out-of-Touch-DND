@@ -142,6 +142,9 @@ class CreateSessionRequest(BaseModel):
     player_name: str
     safety_lines: list[str] = []
     tracking_flags: dict[str, bool] = {}
+    campaign_premise: str = ""
+    campaign_tone: str = ""
+    campaign_title: str = ""
 
 class CreateSessionResponse(BaseModel):
     room_code: str
@@ -254,6 +257,12 @@ async def create_session(req: CreateSessionRequest, request: Request):
         session.orchestrator.safety_lines = list(req.safety_lines)
     if req.tracking_flags:
         session.orchestrator.tracking_flags.update(req.tracking_flags)
+    if req.campaign_premise:
+        session.orchestrator.memory.campaign_premise = req.campaign_premise
+    if req.campaign_tone:
+        session.orchestrator.memory.campaign_tone = req.campaign_tone
+    if req.campaign_title:
+        session.orchestrator.memory.campaign_title = req.campaign_title
     _ensure_mock_starter_map(session)
     player = Player(id=player_id, name=req.player_name, user_id=_extract_user_id(request))
     session.add_player(player)

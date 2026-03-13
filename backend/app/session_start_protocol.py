@@ -34,6 +34,18 @@ def _build_recap(session: GameSession) -> str:
             "Your objectives remain unresolved, and the current scene is ready for immediate play."
         )
 
+    # Use campaign premise if set by the host during session creation
+    premise = _normalize(session.orchestrator.memory.campaign_premise)
+    tone = _normalize(session.orchestrator.memory.campaign_tone)
+    if premise:
+        tone_hint = f" Tone: {tone}." if tone else ""
+        return _normalize(
+            f"A new adventure begins.{tone_hint} "
+            f"{premise} "
+            "Draw the party in immediately — set the scene with vivid sensory detail, "
+            "establish any immediate tension, and end with something that demands their first decision."
+        )
+
     return (
         "The party gathers at the start of a new session. "
         "No major events have been recorded yet, so the adventure begins from the current setup. "

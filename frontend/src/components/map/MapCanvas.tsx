@@ -29,6 +29,7 @@ import './MapCanvas.css'
 const TILE_SIZE = 32
 const BASE_TOKEN_SPRITE_SIZE = TILE_SIZE * 0.86
 const CHARACTER_SPRITE_SCALE = 1.5
+const ANIM_FRAME_MS = 350  // ms per frame (~3fps idle animation)
 
 const TILE_COLORS: Record<string, string> = {
   floor: '#3a3a4a',
@@ -149,6 +150,7 @@ export default function MapCanvas({ onTileClick, onEntityClick, targetingMode = 
   const monsterSheetCacheRef = useRef<Map<string, HTMLImageElement | 'loading' | null>>(new Map())
   const spriteCacheRef = useRef<Map<string, HTMLImageElement | 'loading' | null>>(new Map())
   const enemyMonsterVariantByEntityIdRef = useRef<Map<string, string>>(new Map())
+  const enemyFrameKeysRef = useRef<Map<string, string[]>>(new Map())
 
   const tokenAnimationsRef = useRef<Map<string, TokenAnim>>(new Map())
   const prevEntityPositionsRef = useRef<Map<string, { x: number; y: number }>>(new Map())
@@ -234,6 +236,7 @@ export default function MapCanvas({ onTileClick, onEntityClick, targetingMode = 
   useEffect(() => {
     if (!map) {
       enemyMonsterVariantByEntityIdRef.current.clear()
+      enemyFrameKeysRef.current.clear()
       return
     }
 
@@ -244,9 +247,11 @@ export default function MapCanvas({ onTileClick, onEntityClick, targetingMode = 
     )
 
     const cache = enemyMonsterVariantByEntityIdRef.current
+    const frameCache = enemyFrameKeysRef.current
     for (const existingId of Array.from(cache.keys())) {
       if (!aliveEnemyIds.has(existingId)) {
         cache.delete(existingId)
+        frameCache.delete(existingId)
       }
     }
   }, [map])
@@ -315,12 +320,15 @@ export default function MapCanvas({ onTileClick, onEntityClick, targetingMode = 
 
   const getMonsterFrameKeyForEnemy = useCallback((entityId: string, enemyName: string, explicitSpriteKey?: string): string | null => {
     const variantCache = enemyMonsterVariantByEntityIdRef.current
+    const frameCache = enemyFrameKeysRef.current
 
     const explicitKey = explicitSpriteKey?.trim()
     if (explicitKey && explicitKey.toLowerCase() !== 'default') {
       const explicitRect = resolveMonsterSpriteRect(explicitKey)
       if (explicitRect) {
         variantCache.set(entityId, explicitRect.frameKey)
+        const allFrames = getMonsterFrameKeysForBaseLabel(explicitRect.baseLabel)
+        frameCache.set(entityId, allFrames.length > 0 ? allFrames : [explicitRect.frameKey])
         return explicitRect.frameKey
       }
 
@@ -329,12 +337,18 @@ export default function MapCanvas({ onTileClick, onEntityClick, targetingMode = 
       if (explicitVariants.length > 0) {
         const selectedFrame = explicitVariants[0]
         variantCache.set(entityId, selectedFrame)
+        frameCache.set(entityId, explicitVariants)
         return selectedFrame
       }
     }
 
     const existing = variantCache.get(entityId)
     if (existing && resolveMonsterSpriteRect(existing)) {
+      if (!frameCache.has(entityId)) {
+        const existingRect = resolveMonsterSpriteRect(existing)!
+        const allFrames = getMonsterFrameKeysForBaseLabel(existingRect.baseLabel)
+        frameCache.set(entityId, allFrames.length > 0 ? allFrames : [existing])
+      }
       return existing
     }
 
@@ -343,6 +357,8 @@ export default function MapCanvas({ onTileClick, onEntityClick, targetingMode = 
       const directRect = resolveMonsterSpriteRect(candidate)
       if (directRect) {
         variantCache.set(entityId, directRect.frameKey)
+        const allFrames = getMonsterFrameKeysForBaseLabel(directRect.baseLabel)
+        frameCache.set(entityId, allFrames.length > 0 ? allFrames : [directRect.frameKey])
         return directRect.frameKey
       }
 
@@ -351,6 +367,7 @@ export default function MapCanvas({ onTileClick, onEntityClick, targetingMode = 
         const randomIndex = Math.floor(Math.random() * frameKeys.length)
         const selectedFrame = frameKeys[randomIndex]
         variantCache.set(entityId, selectedFrame)
+        frameCache.set(entityId, frameKeys)
         return selectedFrame
       }
     }
@@ -572,7 +589,9 @@ export default function MapCanvas({ onTileClick, onEntityClick, targetingMode = 
       }
     }
 
+    let entityIndex = -1
     for (const entity of map.entities) {
+      entityIndex++
       if (hasVisibility && !visibleSet.has(`${entity.x},${entity.y}`)) continue
 
       const isDefeatedEnemy = entity.type === 'enemy' && (characters[entity.id]?.hp ?? 1) <= 0
@@ -639,7 +658,12 @@ export default function MapCanvas({ onTileClick, onEntityClick, targetingMode = 
       const monsterFrameKey = entity.type === 'enemy'
         ? getMonsterFrameKeyForEnemy(entity.id, entity.name, spriteKey)
         : null
-      const monsterRect = monsterFrameKey ? resolveMonsterSpriteRect(monsterFrameKey) : null
+      // Animate monsters by cycling through all available frames for their base label
+      const monsterAllFrameKeys = monsterFrameKey ? (enemyFrameKeysRef.current.get(entity.id) ?? []) : []
+      const activeMonsterFrameKey = monsterAllFrameKeys.length > 1
+        ? monsterAllFrameKeys[Math.floor(performance.now() / ANIM_FRAME_MS + entityIndex * 3) % monsterAllFrameKeys.length]
+        : monsterFrameKey
+      const monsterRect = activeMonsterFrameKey ? resolveMonsterSpriteRect(activeMonsterFrameKey) : null
       const monsterSheetImage = monsterRect
         ? monsterSheetCacheRef.current.get(MONSTER_SPRITESHEET_URL)
         : null
@@ -672,12 +696,18 @@ export default function MapCanvas({ onTileClick, onEntityClick, targetingMode = 
       const spriteVisualRadius = Math.max(spriteDrawWidth, spriteDrawHeight) / 2
       const shouldRotateDefeated = isDefeatedEnemy
 
+      // Idle bob for player characters: gentle 2px vertical oscillation
+      const bobY = entity.type === 'pc' && !isDefeatedEnemy
+        ? Math.sin(performance.now() / 700 + entityIndex * 1.7) * 2
+        : 0
+
       const drawEntitySprite = (
         drawFn: () => void,
+        yOffset = 0,
         fallbackOpacity = 1,
       ) => {
         ctx.save()
-        ctx.translate(px, py)
+        ctx.translate(px, py + yOffset)
         if (shouldRotateDefeated) {
           ctx.rotate(Math.PI / 2)
           ctx.globalAlpha = 0.72
@@ -753,7 +783,7 @@ export default function MapCanvas({ onTileClick, onEntityClick, targetingMode = 
             spriteDrawWidth,
             spriteDrawHeight,
           )
-        })
+        }, bobY)
         drewSprite = true
       } else if (characterCell && characterSheetUrl && !characterSheetImage) {
         characterSheetCacheRef.current.set(characterSheetUrl, 'loading')
@@ -866,7 +896,7 @@ export default function MapCanvas({ onTileClick, onEntityClick, targetingMode = 
         const char = characters[entity.id]
         const hp = char?.hp ?? hpEntry?.hp ?? null
         const maxHp = char?.max_hp ?? hpEntry?.max_hp ?? null
-        const topOfToken = py - (drewSprite ? spriteVisualRadius : radius)
+        const topOfToken = py + bobY - (drewSprite ? spriteVisualRadius : radius)
 
         if (hp !== null && maxHp !== null && maxHp > 0) {
           const barW = 28
@@ -913,7 +943,7 @@ export default function MapCanvas({ onTileClick, onEntityClick, targetingMode = 
 
       ctx.fillStyle = 'rgba(255,255,255,0.85)'
       ctx.font = `${Math.max(8, 10 * interaction.zoom) / interaction.zoom}px sans-serif`
-      ctx.fillText(entity.name, px, py + (drewSprite ? spriteVisualRadius : radius) + 10)
+      ctx.fillText(entity.name, px, py + bobY + (drewSprite ? spriteVisualRadius : radius) + 10)
 
       if (showAtlasLabels && entity.type === 'object') {
         const category = entity.prop_category?.trim() || 'uncategorized'

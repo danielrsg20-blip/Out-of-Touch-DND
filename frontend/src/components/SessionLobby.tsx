@@ -6,6 +6,82 @@ import './SessionLobby.css'
 
 const MOCK_MODE_STORAGE_KEY = 'otdnd.mockMode'
 
+// ── Adventure hooks & tone options ────────────────────────────────────────
+interface AdventureHook {
+  id: string
+  title: string
+  summary: string
+  premise: string
+  tone: string
+}
+
+const ADVENTURE_HOOKS: AdventureHook[] = [
+  {
+    id: 'hired_blade',
+    title: 'The Hired Blade',
+    summary: 'Escort a mysterious cargo through dangerous territory.',
+    tone: 'High Fantasy',
+    premise: 'Your party has been hired by a cloaked merchant to escort a sealed chest through the Thornwood. The coin is good, the questions are many, and the road ahead is anything but safe.',
+  },
+  {
+    id: 'ruins_aldenvoss',
+    title: 'Ruins of Aldenvoss',
+    summary: 'Ancient ruins surface beneath a town. Nobody who investigates comes back.',
+    tone: 'Mystery & Intrigue',
+    premise: 'Ancient ruins have been discovered beneath the town of Aldenvoss. Strange lights and unearthly sounds emerge every night. The mayor has posted a reward — but the last group that went in never returned.',
+  },
+  {
+    id: 'missing_village',
+    title: 'The Missing Village',
+    summary: 'An entire village vanished overnight. Tracks lead into dark forest.',
+    tone: 'Dark & Gritty',
+    premise: 'You arrive at the village of Millhaven to find it completely empty. No bodies, no sign of struggle — just abandoned meals, open doors, and a trail of strange footprints leading east into the forest.',
+  },
+  {
+    id: 'dark_compact',
+    title: 'The Dark Compact',
+    summary: 'A local lord has made deals with something sinister. His reach is long.',
+    tone: 'Mystery & Intrigue',
+    premise: "Lord Varek of Stonebreach has grown obscenely wealthy over the past year. Rumours swirl of pacts with dark powers. Three investigators who looked into it have disappeared. You are next.",
+  },
+  {
+    id: 'cursed_caravan',
+    title: 'The Cursed Caravan',
+    summary: 'You awaken on a strange road with no memory of how you got here.',
+    tone: 'High Fantasy',
+    premise: 'You find yourself on an unfamiliar road at dusk with no memory of how you got there. Ahead, a merchant caravan lies in ruins — burning wagons, scattered goods, and survivors who desperately need help.',
+  },
+  {
+    id: 'siege_of_redwall',
+    title: 'Siege of Redwall',
+    summary: 'Slip through enemy lines into a besieged fortress to retrieve something vital.',
+    tone: 'High Fantasy',
+    premise: 'The fortress town of Redwall has been under siege for three weeks. Inside its walls is something the enemy will kill to possess. Your party must breach the lines, reach the vault, and escape before the walls fall.',
+  },
+  {
+    id: 'sunken_temple',
+    title: 'The Sunken Temple',
+    summary: 'Treasure hunters keep going into a submerged temple. None come back up.',
+    tone: 'Dark & Gritty',
+    premise: 'Beneath the harbour of Port Maren lies the entrance to an ancient submerged temple. Three parties of treasure hunters have descended into its dark waters. None came back up.',
+  },
+  {
+    id: 'freeform',
+    title: 'Freeform Adventure',
+    summary: 'Let the AI DM build the world entirely from scratch.',
+    tone: 'High Fantasy',
+    premise: 'The adventure begins where all great stories do — in a tavern. The world is wide, the road is open, and your fate is unwritten. Where do you want to go?',
+  },
+]
+
+const TONE_OPTIONS = [
+  { id: 'High Fantasy', icon: '⚔️' },
+  { id: 'Dark & Gritty', icon: '🕯️' },
+  { id: 'Comedic', icon: '😄' },
+  { id: 'Mystery & Intrigue', icon: '🔍' },
+  { id: 'Exploration', icon: '🌊' },
+]
+
 // Deterministic floating particles
 const PARTICLES = Array.from({ length: 20 }, (_, i) => ({
   key: i,
@@ -47,7 +123,10 @@ export default function SessionLobby() {
   const [name, setName] = useState(username ?? '')
   const [joinCode, setJoinCode] = useState('')
   const [mockMode, setMockMode] = useState(false)
-  const [mode, setMode] = useState<'menu' | 'create' | 'join'>('menu')
+  const [mode, setMode] = useState<'menu' | 'create' | 'campaign_setup' | 'join'>('menu')
+  const [selectedHook, setSelectedHook] = useState<AdventureHook | null>(null)
+  const [customPremise, setCustomPremise] = useState('')
+  const [selectedTone, setSelectedTone] = useState('High Fantasy')
   const [error, setError] = useState('')
   const [confirmSlot, setConfirmSlot] = useState<CampaignSlot | null>(null)
   const [resuming, setResuming] = useState(false)
@@ -93,10 +172,18 @@ export default function SessionLobby() {
     listCampaigns().catch(() => {})
   }, [listCampaigns])
 
+  const handleCampaignSetupNext = () => {
+    if (!name.trim()) return
+    setMode('campaign_setup')
+  }
+
   const handleCreate = async () => {
     if (!name.trim()) return
+    const premise = selectedHook ? selectedHook.premise : customPremise.trim()
+    const tone = selectedHook ? selectedHook.tone : selectedTone
+    const title = selectedHook ? selectedHook.title : (customPremise.trim() ? 'Custom Adventure' : 'Freeform Adventure')
     try {
-      await createSession(name.trim(), mockMode)
+      await createSession(name.trim(), mockMode, premise, tone, title)
       useSessionStore.getState().setPhase('character_create')
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Failed to create session.')
@@ -390,7 +477,7 @@ export default function SessionLobby() {
               className="lobby-input"
               maxLength={24}
               autoFocus
-              onKeyDown={e => e.key === 'Enter' && handleCreate()}
+              onKeyDown={e => e.key === 'Enter' && handleCampaignSetupNext()}
             />
             <label className="lobby-toggle-row">
               <input
@@ -400,12 +487,81 @@ export default function SessionLobby() {
               />
               <span>Enable mock mode</span>
             </label>
-            <button className="lobby-btn primary" type="button" onClick={handleCreate} disabled={!name.trim()}>
-              Create
+            <button className="lobby-btn primary" type="button" onClick={handleCampaignSetupNext} disabled={!name.trim()}>
+              Choose Adventure →
             </button>
             <button className="lobby-btn ghost" type="button" onClick={() => setMode('menu')}>
               ← Back
             </button>
+          </div>
+        )}
+
+        {/* ── CAMPAIGN SETUP MODE ── */}
+        {!charPickSlot && mode === 'campaign_setup' && (
+          <div className="lobby-campaign-setup">
+            <h3 className="lobby-form-title">Choose Your Adventure</h3>
+
+            {/* Hook grid */}
+            <div className="lobby-hooks-grid">
+              {ADVENTURE_HOOKS.map(hook => (
+                <button
+                  key={hook.id}
+                  type="button"
+                  className={`lobby-hook-card${selectedHook?.id === hook.id ? ' selected' : ''}`}
+                  onClick={() => { setSelectedHook(hook); setSelectedTone(hook.tone); setCustomPremise('') }}
+                >
+                  <span className="lobby-hook-title">{hook.title}</span>
+                  <span className="lobby-hook-summary">{hook.summary}</span>
+                  <span className="lobby-hook-tone">{hook.tone}</span>
+                </button>
+              ))}
+            </div>
+
+            {/* Custom premise */}
+            <div className="lobby-custom-premise-row">
+              <span className="lobby-custom-premise-label">Or write your own premise:</span>
+              <textarea
+                className="lobby-custom-premise-input"
+                placeholder="Describe the adventure hook…"
+                value={customPremise}
+                rows={3}
+                maxLength={400}
+                onChange={e => { setCustomPremise(e.target.value); if (e.target.value.trim()) setSelectedHook(null) }}
+              />
+            </div>
+
+            {/* Tone selector (only shown for custom premise) */}
+            {!selectedHook && (
+              <div className="lobby-tone-row">
+                <span className="lobby-tone-label">Tone:</span>
+                <div className="lobby-tone-options">
+                  {TONE_OPTIONS.map(t => (
+                    <button
+                      key={t.id}
+                      type="button"
+                      className={`lobby-tone-btn${selectedTone === t.id ? ' selected' : ''}`}
+                      onClick={() => setSelectedTone(t.id)}
+                    >
+                      {t.icon} {t.id}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <div className="lobby-campaign-setup-actions">
+              <button
+                className="lobby-btn primary"
+                type="button"
+                onClick={handleCreate}
+                disabled={!selectedHook && !customPremise.trim()}
+              >
+                Create Campaign
+              </button>
+              <button className="lobby-btn ghost" type="button" onClick={() => setMode('create')}>
+                ← Back
+              </button>
+            </div>
           </div>
         )}
 

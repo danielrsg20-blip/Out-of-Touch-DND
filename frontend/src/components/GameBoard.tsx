@@ -8,6 +8,7 @@ import CharacterSheet from './panels/CharacterSheet'
 import ActionBar from './panels/ActionBar'
 import DiceRoller from './panels/DiceRoller'
 import VoiceControl from './VoiceControl'
+import CampaignBriefOverlay from './CampaignBriefOverlay'
 import { useWebSocket } from '../hooks/useWebSocket'
 import { useGameStore } from '../stores/gameStore'
 import { useSessionStore } from '../stores/sessionStore'
@@ -35,6 +36,16 @@ export default function GameBoard() {
   } = useGameStore()
   const [chatDraft, setChatDraft] = useState('')
   const [targetingSpell, setTargetingSpell] = useState<{ name: string; slotLevel: number } | null>(null)
+  const [briefDismissed, setBriefDismissed] = useState(false)
+
+  const narrative = useGameStore(state => state.narrative)
+  // Show brief when no DM has spoken yet and user hasn't dismissed it
+  const showBrief = !briefDismissed && narrative.filter(e => e.type === 'dm').length === 0
+
+  const handleBeginAdventure = useCallback(() => {
+    setBriefDismissed(true)
+    sendAction('[SESSION_START]')
+  }, [sendAction])
   const [railWidth, setRailWidth] = useState(300)
   const [railCollapsed, setRailCollapsed] = useState(false)
   const [sidebarWidth, setSidebarWidth] = useState(360)
@@ -196,6 +207,9 @@ export default function GameBoard() {
             targetingMode={!!targetingSpell}
           />
           <InitiativeReveal />
+          {showBrief && (
+            <CampaignBriefOverlay onBegin={handleBeginAdventure} />
+          )}
           {targetingSpell && (
             <div className="targeting-hint">
               <span className="targeting-hint-spell">✨ {targetingSpell.name}</span>

@@ -106,9 +106,12 @@ interface SessionState {
   phase: 'lobby' | 'character_create' | 'playing'
   campaigns: CampaignSlot[]
   campaignsLoading: boolean
+  campaignPremise: string | null
+  campaignTone: string | null
+  campaignTitle: string | null
 
   setPhase: (phase: SessionState['phase']) => void
-  createSession: (playerName: string, mockMode?: boolean) => Promise<void>
+  createSession: (playerName: string, mockMode?: boolean, campaignPremise?: string, campaignTone?: string, campaignTitle?: string) => Promise<void>
   joinSession: (roomCode: string, playerName: string) => Promise<void>
   getSession: (roomCode: string) => Promise<Record<string, unknown>>
   setPlayers: (players: PlayerData[]) => void
@@ -133,6 +136,9 @@ export const useSessionStore = create<SessionState>((set) => ({
   phase: 'lobby',
   campaigns: [],
   campaignsLoading: false,
+  campaignPremise: null,
+  campaignTone: null,
+  campaignTitle: null,
 
   setPhase: (phase) => set({ phase }),
 
@@ -187,7 +193,7 @@ export const useSessionStore = create<SessionState>((set) => ({
     return data
   },
 
-  createSession: async (playerName, mockMode = false) => {
+  createSession: async (playerName, mockMode = false, campaignPremise = '', campaignTone = '', campaignTitle = '') => {
     let data: Record<string, unknown> = {}
     let supabaseCreateError: string | null = null
 
@@ -199,6 +205,9 @@ export const useSessionStore = create<SessionState>((set) => ({
             action: 'create_session',
             player_name: playerName,
             mock_mode: mockMode,
+            campaign_premise: campaignPremise,
+            campaign_tone: campaignTone,
+            campaign_title: campaignTitle,
           })
         }
       } catch (error) {
@@ -219,7 +228,7 @@ export const useSessionStore = create<SessionState>((set) => ({
         const res = await fetch(`${API_BASE}/api/session/create`, {
           method: 'POST',
           headers: createHeaders,
-          body: JSON.stringify({ player_name: playerName }),
+          body: JSON.stringify({ player_name: playerName, campaign_premise: campaignPremise, campaign_tone: campaignTone, campaign_title: campaignTitle }),
         })
         data = await parseJsonBody(res)
         if (!res.ok) {
@@ -248,6 +257,9 @@ export const useSessionStore = create<SessionState>((set) => ({
       mockMode,
       isHost: true,
       players: [{ id: data.player_id, name: playerName, character_id: null }],
+      campaignPremise: campaignPremise || null,
+      campaignTone: campaignTone || null,
+      campaignTitle: campaignTitle || null,
     })
 
     if (sessionId) {
@@ -434,6 +446,9 @@ export const useSessionStore = create<SessionState>((set) => ({
       connected: false,
       phase: 'lobby',
       campaigns: [],
+      campaignPremise: null,
+      campaignTone: null,
+      campaignTitle: null,
     })
   },
 }))

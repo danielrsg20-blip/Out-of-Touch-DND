@@ -113,6 +113,9 @@ class CampaignMemory:
     session_summaries: list[str] = field(default_factory=list)
     current_session: int = 1
     party_notes: list[str] = field(default_factory=list)
+    campaign_premise: str = ""
+    campaign_tone: str = ""
+    campaign_title: str = ""
 
     def add_npc(self, npc: NPCMemory) -> None:
         self.npcs[npc.id] = npc
@@ -137,6 +140,11 @@ class CampaignMemory:
     def build_context_block(self) -> str:
         """Build a structured text block for the system prompt."""
         sections = []
+
+        if self.campaign_premise:
+            tone_line = f"\nTone: {self.campaign_tone}" if self.campaign_tone else ""
+            title_line = f"\nTitle: {self.campaign_title}" if self.campaign_title else ""
+            sections.append(f"CAMPAIGN PREMISE:{title_line}{tone_line}\n{self.campaign_premise}")
 
         if self.session_summaries:
             recent = self.session_summaries[-5:]
@@ -172,6 +180,9 @@ class CampaignMemory:
             "session_summaries": self.session_summaries,
             "current_session": self.current_session,
             "party_notes": self.party_notes,
+            "campaign_premise": self.campaign_premise,
+            "campaign_tone": self.campaign_tone,
+            "campaign_title": self.campaign_title,
         }
 
     @classmethod
@@ -180,6 +191,9 @@ class CampaignMemory:
         mem.current_session = data.get("current_session", 1)
         mem.session_summaries = data.get("session_summaries", [])
         mem.party_notes = data.get("party_notes", [])
+        mem.campaign_premise = data.get("campaign_premise", "")
+        mem.campaign_tone = data.get("campaign_tone", "")
+        mem.campaign_title = data.get("campaign_title", "")
 
         for npc_data in data.get("npcs", {}).values():
             mem.npcs[npc_data["id"]] = NPCMemory(**{k: v for k, v in npc_data.items() if k in NPCMemory.__dataclass_fields__})
