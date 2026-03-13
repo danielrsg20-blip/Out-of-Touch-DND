@@ -1,5 +1,6 @@
-import { useCallback, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import MapCanvas from './map/MapCanvas'
+import InitiativeReveal from './map/InitiativeReveal'
 import NarrativeLog from './panels/NarrativeLog'
 import ChatInput from './panels/ChatInput'
 import CombatTracker from './panels/CombatTracker'
@@ -33,6 +34,11 @@ export default function GameBoard() {
     addNarrative,
   } = useGameStore()
   const [chatDraft, setChatDraft] = useState('')
+  const [targetingSpell, setTargetingSpell] = useState<{ name: string; slotLevel: number } | null>(null)
+  const [railWidth, setRailWidth] = useState(300)
+  const [railCollapsed, setRailCollapsed] = useState(false)
+  const [sidebarWidth, setSidebarWidth] = useState(360)
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
 
   const map = useGameStore(state => state.map)
 
@@ -78,8 +84,40 @@ export default function GameBoard() {
   }, [playerId, players, selectedEntityId, map, sendMoveToken, setSelectedEntity, addNarrative])
 
   const handleEntityClick = useCallback((entityId: string) => {
+    if (targetingSpell) {
+      sendSpellCast(targetingSpell.name, targetingSpell.slotLevel, entityId)
+      setTargetingSpell(null)
+      return
+    }
     setSelectedEntity(selectedEntityId === entityId ? null : entityId)
-  }, [selectedEntityId, setSelectedEntity])
+  }, [selectedEntityId, setSelectedEntity, targetingSpell, sendSpellCast])
+
+  useEffect(() => {
+    if (!targetingSpell) return
+    const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') setTargetingSpell(null) }
+    window.addEventListener('keydown', handler)
+    return () => window.removeEventListener('keydown', handler)
+  }, [targetingSpell])
+
+  const handleRailDragStart = (e: React.MouseEvent) => {
+    if (railCollapsed) return
+    const startX = e.clientX, startW = railWidth
+    const onMove = (ev: MouseEvent) => setRailWidth(Math.max(180, Math.min(520, startW + ev.clientX - startX)))
+    const onUp = () => { window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp) }
+    window.addEventListener('mousemove', onMove)
+    window.addEventListener('mouseup', onUp)
+    e.preventDefault()
+  }
+
+  const handleSidebarDragStart = (e: React.MouseEvent) => {
+    if (sidebarCollapsed) return
+    const startX = e.clientX, startW = sidebarWidth
+    const onMove = (ev: MouseEvent) => setSidebarWidth(Math.max(220, Math.min(560, startW - (ev.clientX - startX))))
+    const onUp = () => { window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp) }
+    window.addEventListener('mousemove', onMove)
+    window.addEventListener('mouseup', onUp)
+    e.preventDefault()
+  }
 
   const handleVoiceTranscript = useCallback(async (audioBase64: string) => {
     const transcript = await transcribeVoiceInput(audioBase64)
@@ -121,7 +159,10 @@ export default function GameBoard() {
       </header>
 
       <div className="game-content">
-        <div className="adventure-rail">
+        <div
+          className={`adventure-rail${railCollapsed ? ' panel-collapsed' : ''}`}
+          style={{ width: railCollapsed ? 0 : railWidth }}
+        >
           <NarrativeLog />
           <VoiceControl
             enabled={voiceEnabled}
@@ -137,18 +178,58 @@ export default function GameBoard() {
           <ChatInput onSend={sendAction} draftText={chatDraft} onDraftTextChange={setChatDraft} />
         </div>
 
-        <div className="map-area">
-          <MapCanvas onTileClick={handleTileClick} onEntityClick={handleEntityClick} />
+        <div className="panel-resize-handle" onMouseDown={handleRailDragStart}>
+          <button
+            type="button"
+            className="panel-collapse-btn"
+            onClick={() => setRailCollapsed(v => !v)}
+            title={railCollapsed ? 'Expand narrative' : 'Collapse narrative'}
+          >
+            {railCollapsed ? '›' : '‹'}
+          </button>
         </div>
 
-        <div className="sidebar">
+        <div className="map-area" style={{ position: 'relative' }}>
+          <MapCanvas
+            onTileClick={handleTileClick}
+            onEntityClick={handleEntityClick}
+            targetingMode={!!targetingSpell}
+          />
+          <InitiativeReveal />
+          {targetingSpell && (
+            <div className="targeting-hint">
+              <span className="targeting-hint-spell">✨ {targetingSpell.name}</span>
+              <span>Click target · <kbd>ESC</kbd> to cancel</span>
+            </div>
+          )}
+        </div>
+
+        <div className="panel-resize-handle panel-resize-handle--right" onMouseDown={handleSidebarDragStart}>
+          <button
+            type="button"
+            className="panel-collapse-btn"
+            onClick={() => setSidebarCollapsed(v => !v)}
+            title={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+          >
+            {sidebarCollapsed ? '‹' : '›'}
+          </button>
+        </div>
+
+        <div
+          className={`sidebar${sidebarCollapsed ? ' panel-collapsed' : ''}`}
+          style={{ width: sidebarCollapsed ? 0 : sidebarWidth }}
+        >
           <div className="sidebar-top">
             <CombatTracker />
             <CharacterSheet />
           </div>
           <div className="sidebar-bottom">
-            <ActionBar onSend={sendAction} onCastSpell={sendSpellCast} />
-            <DiceRoller />
+            <ActionBar
+              onSend={sendAction}
+              onCastSpell={sendSpellCast}
+              onInitiateTarget={(name, slotLevel) => setTargetingSpell({ name, slotLevel })}
+            />
+            <DiceRoller onSubmitRoll={sendAction} />
           </div>
         </div>
       </div>

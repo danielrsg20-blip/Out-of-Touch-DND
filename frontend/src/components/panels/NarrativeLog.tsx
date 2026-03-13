@@ -24,6 +24,7 @@ function parseDiceResult(content: string): { label: string; result: string } | n
 
 export default function NarrativeLog() {
   const narrative = useGameStore(s => s.narrative)
+  const isLoading = useGameStore(s => s.isLoading)
   const bottomRef = useRef<HTMLDivElement>(null)
   const [showTimestamps, setShowTimestamps] = useState(false)
 
@@ -33,7 +34,7 @@ export default function NarrativeLog() {
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [narrative.length])
+  }, [narrative.length, isLoading])
 
   return (
     <div className="narrative-log">
@@ -74,6 +75,14 @@ export default function NarrativeLog() {
             </div>
           )
         })}
+        {isLoading && (
+          <div className="dm-typing">
+            <div className="dm-typing-dots">
+              <span /><span /><span />
+            </div>
+            <span>DM is composing…</span>
+          </div>
+        )}
         <div ref={bottomRef} />
       </div>
     </div>

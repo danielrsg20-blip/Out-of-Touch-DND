@@ -102,27 +102,16 @@
 }
 
 .adventure-rail {
-  width: 300px;
   flex-shrink: 0;
+  overflow: hidden;
+  transition: width 0.18s ease;
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
-  border-right: 1px solid var(--border-color);
   background: linear-gradient(180deg, var(--bg-secondary) 0%, rgba(9, 13, 31, 0.6) 100%);
   padding: 0.75rem;
   min-height: 0;
   position: relative;
-}
-
-.adventure-rail::after {
-  content: '';
-  position: absolute;
-  top: 0;
-  right: -1px;
-  width: 1px;
-  height: 100%;
-  background: linear-gradient(180deg, rgba(228, 168, 83, 0.3) 0%, var(--border-color) 40%, transparent 100%);
-  pointer-events: none;
 }
 
 .adventure-rail .narrative-log {
@@ -136,11 +125,11 @@
 }
 
 .sidebar {
-  width: 360px;
   flex-shrink: 0;
+  overflow: hidden;
+  transition: width 0.18s ease;
   display: flex;
   flex-direction: column;
-  border-left: 1px solid var(--border-color);
   background: linear-gradient(180deg, var(--bg-secondary) 0%, rgba(9, 13, 31, 0.6) 100%);
   position: relative;
 }
@@ -183,6 +172,72 @@
   flex-direction: column;
   padding: 0.75rem;
   min-height: 0;
+}
+
+.panel-collapsed {
+  border: none !important;
+}
+
+.panel-resize-handle {
+  width: 8px;
+  flex-shrink: 0;
+  position: relative;
+  cursor: col-resize;
+  background: transparent;
+  transition: background 0.15s;
+  z-index: 10;
+}
+
+.panel-resize-handle:hover {
+  background: rgba(228, 168, 83, 0.08);
+}
+
+.panel-resize-handle::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 2px;
+  height: 36px;
+  background: rgba(228, 168, 83, 0.22);
+  border-radius: 1px;
+  pointer-events: none;
+}
+
+.panel-resize-handle:hover::after {
+  background: rgba(228, 168, 83, 0.55);
+}
+
+.panel-collapse-btn {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 16px;
+  height: 26px;
+  background: var(--bg-secondary, #1a1a2e);
+  border: 1px solid var(--border-color, rgba(255,255,255,0.1));
+  border-radius: 3px;
+  color: var(--text-secondary, #aaa);
+  font-size: 0.7rem;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.15s, color 0.15s;
+  z-index: 11;
+  padding: 0;
+}
+
+.panel-resize-handle:hover .panel-collapse-btn {
+  opacity: 1;
+}
+
+.panel-collapse-btn:hover {
+  color: var(--accent-gold, #e4a853);
 }
 
 @media (max-width: 900px) {

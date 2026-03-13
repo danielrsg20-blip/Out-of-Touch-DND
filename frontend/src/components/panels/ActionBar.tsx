@@ -21,9 +21,10 @@ async function parseJsonBody(res: Response): Promise<Record<string, unknown>> {
 interface ActionBarProps {
   onSend: (message: string) => void
   onCastSpell: (spellName: string, slotLevel: number, targetId?: string) => void
+  onInitiateTarget: (spellName: string, slotLevel: number) => void
 }
 
-export default function ActionBar({ onSend, onCastSpell }: ActionBarProps) {
+export default function ActionBar({ onSend, onCastSpell, onInitiateTarget }: ActionBarProps) {
   const combat = useGameStore(s => s.combat)
   const characters = useGameStore(s => s.characters)
   const addNarrative = useGameStore(s => s.addNarrative)
@@ -74,11 +75,13 @@ export default function ActionBar({ onSend, onCastSpell }: ActionBarProps) {
   const selectedSpellOption = castableSpells.find(s => s.name === selectedSpell)
   const selectedSpellSlots = selectedSpellOption?.slot_options || []
 
-  if (!combatActive || !combat) return null
-
   const castSpell = (spell: CastableSpellOption) => {
     const slotLevel = spell.level === 0 ? 0 : (spell.slot_options[0] ?? spell.level)
-    onCastSpell(spell.name, slotLevel)
+    if (spell.level > 0) {
+      onInitiateTarget(spell.name, slotLevel)
+    } else {
+      onCastSpell(spell.name, slotLevel)
+    }
   }
 
   const handleEndTurn = async () => {
@@ -134,14 +137,43 @@ export default function ActionBar({ onSend, onCastSpell }: ActionBarProps) {
   }
 
   const actions = [
-    { label: 'Attack', action: 'I attack the nearest enemy', icon: '⚔' },
-    { label: 'Dash', action: 'I use my action to Dash, doubling my movement', icon: '💨' },
-    { label: 'Dodge', action: 'I take the Dodge action', icon: '🛡' },
-    { label: 'Disengage', action: 'I take the Disengage action', icon: '🏃' },
-    { label: 'Help', action: 'I use the Help action', icon: '🤝' },
-    { label: 'Hide', action: 'I attempt to Hide', icon: '👤' },
-    { label: 'End Turn', action: 'I end my turn', icon: '⏭' },
+    { label: 'Attack',     action: 'I attack the nearest enemy',              icon: '⚔',  key: 'A' },
+    { label: 'Dash',       action: 'I use my action to Dash, doubling my movement', icon: '💨', key: 'D' },
+    { label: 'Dodge',      action: 'I take the Dodge action',                 icon: '🛡',  key: 'O' },
+    { label: 'Disengage',  action: 'I take the Disengage action',             icon: '🏃',  key: 'G' },
+    { label: 'Help',       action: 'I use the Help action',                   icon: '🤝',  key: 'H' },
+    { label: 'Hide',       action: 'I attempt to Hide',                       icon: '👤',  key: 'I' },
+    { label: 'End Turn',   action: 'I end my turn',                           icon: '⏭',  key: 'E' },
   ]
+
+  useEffect(() => {
+    if (!combatActive || !isMyTurn) return
+    const handler = (e: KeyboardEvent) => {
+      const tag = (e.target as HTMLElement).tagName
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return
+      if (e.metaKey || e.ctrlKey || e.altKey) return
+      switch (e.key.toLowerCase()) {
+        case 'a': onSend('I attack the nearest enemy'); break
+        case 'd': onSend('I use my action to Dash, doubling my movement'); break
+        case 'o': onSend('I take the Dodge action'); break
+        case 'g': onSend('I take the Disengage action'); break
+        case 'h': onSend('I use the Help action'); break
+        case 'i': onSend('I attempt to Hide'); break
+        case 'e': handleEndTurn().catch(() => {}); break
+        default: {
+          const num = parseInt(e.key)
+          if (num >= 1 && num <= 4) {
+            const spell = quickSpells[num - 1]
+            if (spell?.castable) castSpell(spell)
+          }
+        }
+      }
+    }
+    document.addEventListener('keydown', handler)
+    return () => document.removeEventListener('keydown', handler)
+  }, [combatActive, isMyTurn, onSend, handleEndTurn, quickSpells, castSpell])
+
+  if (!combatActive || !combat) return null
 
   return (
     <div className="action-bar">
@@ -155,7 +187,7 @@ export default function ActionBar({ onSend, onCastSpell }: ActionBarProps) {
         )}
       </div>
       <div className="action-buttons">
-          {quickSpells.map(spell => (
+          {quickSpells.map((spell, idx) => (
             <button
               key={`spell-${spell.name}`}
               className={`action-btn spell-action-btn ${!spell.castable ? 'disabled-action' : ''}`}
@@ -165,6 +197,7 @@ export default function ActionBar({ onSend, onCastSpell }: ActionBarProps) {
             >
               <span className="action-icon">✨</span>
               <span className="action-label">{spell.name}</span>
+              {isMyTurn && <kbd className="action-shortcut">{idx + 1}</kbd>}
             </button>
           ))}
 
@@ -184,6 +217,7 @@ export default function ActionBar({ onSend, onCastSpell }: ActionBarProps) {
             >
               <span className="action-icon">{a.icon}</span>
               <span className="action-label">{a.label === 'End Turn' && advancingTurn ? 'Advancing...' : a.label}</span>
+              {isMyTurn && <kbd className="action-shortcut">{a.key}</kbd>}
             </button>
           ))}
 

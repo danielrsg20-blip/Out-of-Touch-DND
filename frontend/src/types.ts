@@ -185,6 +185,15 @@ export interface NarrativeEntry {
   timestamp: number
 }
 
+export interface PendingRoll {
+  characterId: string
+  characterName: string
+  label: string
+  dice: string
+  modifier: number
+  context: string
+}
+
 export interface CampaignSlot {
   id: string
   name: string

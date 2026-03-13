@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import type { MapData, CharacterData, CombatData, NarrativeEntry, EntityData } from '../types'
+import type { MapData, CharacterData, CombatData, NarrativeEntry, EntityData, PendingRoll } from '../types'
 import type { TranscriptMode } from '../components/VoiceControl'
 
 let entryCounter = 0
@@ -15,6 +15,7 @@ interface GameState {
   voiceEnabled: boolean
   ttsEnabled: boolean
   transcriptMode: TranscriptMode
+  pendingRoll: PendingRoll | null
 
   setMap: (map: MapData) => void
   updateEntity: (entityId: string, x: number, y: number) => void
@@ -29,6 +30,7 @@ interface GameState {
   setVoiceEnabled: (enabled: boolean) => void
   setTtsEnabled: (enabled: boolean) => void
   setTranscriptMode: (mode: TranscriptMode) => void
+  setPendingRoll: (roll: PendingRoll | null) => void
   syncState: (state: { characters: Record<string, CharacterData>; map: MapData | null; combat: CombatData | null; usage: GameState['usage'] }) => void
 }
 
@@ -76,6 +78,7 @@ export const useGameStore = create<GameState>((set) => ({
   voiceEnabled: readBoolSetting(VOICE_ENABLED_KEY, true),
   ttsEnabled: readBoolSetting(TTS_ENABLED_KEY, true),
   transcriptMode: readTranscriptModeSetting(),
+  pendingRoll: null,
 
   setMap: (map) => set({ map }),
 
@@ -113,6 +116,7 @@ export const useGameStore = create<GameState>((set) => ({
   })),
 
   setSelectedEntity: (id) => set({ selectedEntityId: id }),
+  setPendingRoll: (roll) => set({ pendingRoll: roll }),
 
   setUsage: (usage) => set({ usage }),
   setLoading: (loading) => set({ isLoading: loading }),

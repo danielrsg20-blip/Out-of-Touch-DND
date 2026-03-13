@@ -63,9 +63,43 @@ const ENTITY_COLORS: Record<string, string> = {
   object: '#e4a853',
 }
 
+interface TokenAnim {
+  fromX: number; fromY: number
+  toX: number; toY: number
+  startTime: number; duration: number
+}
+
+interface DamagePopup {
+  id: number
+  worldX: number; worldY: number
+  text: string; color: string
+  startTime: number; duration: number
+}
+
+let dmgPopupCounter = 0
+
+const CONDITION_INFO: Record<string, { abbr: string; color: string }> = {
+  poisoned:      { abbr: 'PSN', color: '#27ae60' },
+  blinded:       { abbr: 'BLD', color: '#7f8c8d' },
+  stunned:       { abbr: 'STN', color: '#e74c3c' },
+  frightened:    { abbr: 'FRT', color: '#e67e22' },
+  prone:         { abbr: 'PRN', color: '#95a5a6' },
+  paralyzed:     { abbr: 'PAR', color: '#9b59b6' },
+  unconscious:   { abbr: 'UNC', color: '#c0392b' },
+  charmed:       { abbr: 'CHM', color: '#e91e63' },
+  exhaustion:    { abbr: 'EXH', color: '#d35400' },
+  grappled:      { abbr: 'GRP', color: '#2980b9' },
+  incapacitated: { abbr: 'INC', color: '#c0392b' },
+  invisible:     { abbr: 'INV', color: '#bdc3c7' },
+  petrified:     { abbr: 'PET', color: '#7f8c8d' },
+  deafened:      { abbr: 'DEF', color: '#7f8c8d' },
+  restrained:    { abbr: 'RST', color: '#e67e22' },
+}
+
 interface MapCanvasProps {
   onTileClick?: (gx: number, gy: number) => void
   onEntityClick?: (entityId: string) => void
+  targetingMode?: boolean
 }
 
 function inferEnemySpriteIdByName(name: string): string {
@@ -104,7 +138,7 @@ function resolveEnvironmentLabel(spriteKey: string | undefined): string | null {
   return normalized || null
 }
 
-export default function MapCanvas({ onTileClick, onEntityClick }: MapCanvasProps) {
+export default function MapCanvas({ onTileClick, onEntityClick, targetingMode = false }: MapCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
   const fittedMapKeyRef = useRef<string | null>(null)
@@ -115,6 +149,11 @@ export default function MapCanvas({ onTileClick, onEntityClick }: MapCanvasProps
   const monsterSheetCacheRef = useRef<Map<string, HTMLImageElement | 'loading' | null>>(new Map())
   const spriteCacheRef = useRef<Map<string, HTMLImageElement | 'loading' | null>>(new Map())
   const enemyMonsterVariantByEntityIdRef = useRef<Map<string, string>>(new Map())
+
+  const tokenAnimationsRef = useRef<Map<string, TokenAnim>>(new Map())
+  const prevEntityPositionsRef = useRef<Map<string, { x: number; y: number }>>(new Map())
+  const dmgPopupsRef = useRef<DamagePopup[]>([])
+  const prevHpRef = useRef<Map<string, number>>(new Map())
   const map = useGameStore(s => s.map)
   const combat = useGameStore(s => s.combat)
   const characters = useGameStore(s => s.characters)
@@ -209,6 +248,68 @@ export default function MapCanvas({ onTileClick, onEntityClick }: MapCanvasProps
       if (!aliveEnemyIds.has(existingId)) {
         cache.delete(existingId)
       }
+    }
+  }, [map])
+
+  // Detect HP changes and spawn floating damage/heal popups
+  useEffect(() => {
+    const prev = prevHpRef.current
+    const popups = dmgPopupsRef.current
+    const now = performance.now()
+
+    const spawnPopup = (entityId: string, hp: number) => {
+      const prevHp = prev.get(entityId)
+      if (prevHp !== undefined && hp !== prevHp) {
+        const delta = hp - prevHp
+        const entity = map?.entities.find(e => e.id === entityId)
+        if (entity) {
+          popups.push({
+            id: ++dmgPopupCounter,
+            worldX: entity.x * TILE_SIZE + TILE_SIZE / 2 + (Math.random() - 0.5) * 8,
+            worldY: entity.y * TILE_SIZE + TILE_SIZE / 2,
+            text: delta > 0 ? `+${delta}` : `${delta}`,
+            color: delta > 0 ? '#2ecc71' : '#e74c3c',
+            startTime: now,
+            duration: 1400,
+          })
+        }
+      }
+      prev.set(entityId, hp)
+    }
+
+    for (const [id, char] of Object.entries(characters)) {
+      spawnPopup(id, char.hp)
+    }
+    if (combat) {
+      for (const entry of combat.initiative_order) {
+        if (!characters[entry.id]) spawnPopup(entry.id, entry.hp)
+      }
+    }
+  }, [characters, combat, map])
+
+  useEffect(() => {
+    if (!map) return
+    const anims = tokenAnimationsRef.current
+    const prev = prevEntityPositionsRef.current
+    const now = performance.now()
+
+    const liveIds = new Set<string>()
+    for (const entity of map.entities) {
+      liveIds.add(entity.id)
+      const last = prev.get(entity.id)
+      if (last && (last.x !== entity.x || last.y !== entity.y)) {
+        anims.set(entity.id, {
+          fromX: last.x, fromY: last.y,
+          toX: entity.x, toY: entity.y,
+          startTime: now,
+          duration: 280,
+        })
+      }
+      prev.set(entity.id, { x: entity.x, y: entity.y })
+    }
+    // Clean up stale entries
+    for (const id of prev.keys()) {
+      if (!liveIds.has(id)) { prev.delete(id); anims.delete(id) }
     }
   }, [map])
 
@@ -476,8 +577,18 @@ export default function MapCanvas({ onTileClick, onEntityClick }: MapCanvasProps
 
       const isDefeatedEnemy = entity.type === 'enemy' && (characters[entity.id]?.hp ?? 1) <= 0
 
-      const px = entity.x * TILE_SIZE + TILE_SIZE / 2
-      const py = entity.y * TILE_SIZE + TILE_SIZE / 2
+      const anim = tokenAnimationsRef.current.get(entity.id)
+      let drawGX = entity.x
+      let drawGY = entity.y
+      if (anim) {
+        const t = Math.min(1, (performance.now() - anim.startTime) / anim.duration)
+        const ease = 1 - Math.pow(1 - t, 3) // ease-out cubic
+        drawGX = anim.fromX + (anim.toX - anim.fromX) * ease
+        drawGY = anim.fromY + (anim.toY - anim.fromY) * ease
+        if (t >= 1) tokenAnimationsRef.current.delete(entity.id)
+      }
+      const px = drawGX * TILE_SIZE + TILE_SIZE / 2
+      const py = drawGY * TILE_SIZE + TILE_SIZE / 2
       const radius = TILE_SIZE * 0.35
       const color = ENTITY_COLORS[entity.type] || '#fff'
       const spriteKey = entity.sprite?.trim()
@@ -583,6 +694,44 @@ export default function MapCanvas({ onTileClick, onEntityClick }: MapCanvasProps
         ctx.strokeStyle = '#fff'
         ctx.lineWidth = 2
         ctx.stroke()
+      }
+
+      // Spell targeting ring
+      if (targetingMode && (entity.type === 'enemy' || entity.type === 'npc')) {
+        const pulse = Math.sin(performance.now() / 220) * 0.5 + 0.5
+        const ringR = Math.max(radius + 6, spriteVisualRadius + 4)
+        ctx.save()
+        ctx.beginPath()
+        ctx.arc(px, py, ringR, 0, Math.PI * 2)
+        ctx.strokeStyle = `rgba(231, 76, 60, ${0.45 + pulse * 0.55})`
+        ctx.lineWidth = 2
+        ctx.setLineDash([4, 3])
+        ctx.stroke()
+        ctx.setLineDash([])
+        ctx.restore()
+      }
+
+      // Active turn: pulsing ring
+      if (combat?.is_active && combat.current_turn === entity.id) {
+        const isMyTurn = entity.id === myCharacterId
+        const pulse = Math.sin(performance.now() / 300) * 0.5 + 0.5
+        const ringR = Math.max(radius + 5, spriteVisualRadius + 3)
+        ctx.save()
+        // Outer glow
+        ctx.beginPath()
+        ctx.arc(px, py, ringR + 4, 0, Math.PI * 2)
+        ctx.strokeStyle = isMyTurn
+          ? `rgba(228, 168, 83, ${0.25 + pulse * 0.45})`
+          : `rgba(231, 76, 60, ${0.2 + pulse * 0.35})`
+        ctx.lineWidth = 7
+        ctx.stroke()
+        // Sharp inner ring
+        ctx.beginPath()
+        ctx.arc(px, py, ringR, 0, Math.PI * 2)
+        ctx.strokeStyle = isMyTurn ? '#e4a853' : '#e74c3c'
+        ctx.lineWidth = 2
+        ctx.stroke()
+        ctx.restore()
       }
 
       let drewSprite = false
@@ -711,6 +860,57 @@ export default function MapCanvas({ onTileClick, onEntityClick }: MapCanvasProps
         })
       }
 
+      // Floating HP bar + condition badges
+      if (entity.type !== 'object') {
+        const hpEntry = combat?.initiative_order.find(e => e.id === entity.id)
+        const char = characters[entity.id]
+        const hp = char?.hp ?? hpEntry?.hp ?? null
+        const maxHp = char?.max_hp ?? hpEntry?.max_hp ?? null
+        const topOfToken = py - (drewSprite ? spriteVisualRadius : radius)
+
+        if (hp !== null && maxHp !== null && maxHp > 0) {
+          const barW = 28
+          const barH = 4
+          const barX = px - barW / 2
+          const barY = topOfToken - 8
+          const pct = Math.max(0, Math.min(1, hp / maxHp))
+          const barColor = pct > 0.6 ? '#2ecc71' : pct > 0.3 ? '#f39c12' : '#e74c3c'
+          ctx.save()
+          ctx.fillStyle = 'rgba(0,0,0,0.65)'
+          ctx.fillRect(barX - 1, barY - 1, barW + 2, barH + 2)
+          ctx.fillStyle = '#111'
+          ctx.fillRect(barX, barY, barW, barH)
+          ctx.fillStyle = barColor
+          ctx.fillRect(barX, barY, Math.max(0, barW * pct), barH)
+          ctx.restore()
+        }
+
+        // Condition badges — row above the HP bar
+        const conditions = char?.conditions ?? []
+        if (conditions.length > 0) {
+          const badgeW = 19
+          const badgeH = 7
+          const gap = 2
+          const visibleConds = conditions.slice(0, 5)
+          const rowW = visibleConds.length * badgeW + (visibleConds.length - 1) * gap
+          const rowX = px - rowW / 2
+          const rowY = topOfToken - 18
+          ctx.save()
+          ctx.font = 'bold 5px sans-serif'
+          ctx.textBaseline = 'middle'
+          visibleConds.forEach((cond, i) => {
+            const info = CONDITION_INFO[cond.toLowerCase()] ?? { abbr: cond.slice(0, 3).toUpperCase(), color: '#95a5a6' }
+            const bx = rowX + i * (badgeW + gap)
+            ctx.fillStyle = info.color + 'cc'
+            ctx.fillRect(bx, rowY, badgeW, badgeH)
+            ctx.fillStyle = '#fff'
+            ctx.textAlign = 'center'
+            ctx.fillText(info.abbr, bx + badgeW / 2, rowY + badgeH / 2)
+          })
+          ctx.restore()
+        }
+      }
+
       ctx.fillStyle = 'rgba(255,255,255,0.85)'
       ctx.font = `${Math.max(8, 10 * interaction.zoom) / interaction.zoom}px sans-serif`
       ctx.fillText(entity.name, px, py + (drewSprite ? spriteVisualRadius : radius) + 10)
@@ -736,8 +936,29 @@ export default function MapCanvas({ onTileClick, onEntityClick }: MapCanvasProps
 
     drawOverlays(ctx, map, combat, selectedEntityId, myCharacterId)
 
+    // Floating damage / heal popups
+    const nowMs = performance.now()
+    dmgPopupsRef.current = dmgPopupsRef.current.filter(popup => {
+      const t = (nowMs - popup.startTime) / popup.duration
+      if (t >= 1) return false
+      const floatY = popup.worldY - t * 30
+      const alpha = t < 0.55 ? 1 : Math.max(0, 1 - (t - 0.55) / 0.45)
+      ctx.save()
+      ctx.globalAlpha = alpha
+      ctx.font = `bold 12px sans-serif`
+      ctx.textAlign = 'center'
+      ctx.textBaseline = 'middle'
+      ctx.strokeStyle = 'rgba(0,0,0,0.75)'
+      ctx.lineWidth = 3
+      ctx.strokeText(popup.text, popup.worldX, floatY)
+      ctx.fillStyle = popup.color
+      ctx.fillText(popup.text, popup.worldX, floatY)
+      ctx.restore()
+      return true
+    })
+
     ctx.restore()
-  }, [map, combat, characters, interaction.offsetX, interaction.offsetY, interaction.zoom, selectedEntityId, myCharacterId, imageUrl, imageOpacity, resolveCharacterForEntity, showAtlasLabels, getMonsterFrameKeyForEnemy])
+  }, [map, combat, characters, interaction.offsetX, interaction.offsetY, interaction.zoom, selectedEntityId, myCharacterId, imageUrl, imageOpacity, resolveCharacterForEntity, showAtlasLabels, getMonsterFrameKeyForEnemy, targetingMode])
 
   useEffect(() => {
     let frameId: number
@@ -839,7 +1060,7 @@ export default function MapCanvas({ onTileClick, onEntityClick }: MapCanvasProps
   return (
     <div
       ref={containerRef}
-      className="map-container"
+      className={`map-container${targetingMode ? ' targeting-mode' : ''}`}
       onPointerDown={interaction.handlePointerDown}
       onPointerMove={interaction.handlePointerMove}
       onPointerUp={interaction.handlePointerUp}

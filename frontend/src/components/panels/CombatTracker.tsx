@@ -1,9 +1,14 @@
 import { useEffect, useState } from 'react'
 import { useGameStore } from '../../stores/gameStore'
+import { useSessionStore } from '../../stores/sessionStore'
 import './panels.css'
 
 export default function CombatTracker() {
   const combat = useGameStore(s => s.combat)
+  const playerId = useSessionStore(s => s.playerId)
+  const players = useSessionStore(s => s.players)
+  const myCharacterId = players.find(p => p.id === playerId)?.character_id ?? null
+  const isMyTurn = !!(combat?.is_active && combat.current_turn === myCharacterId)
   const [roundPulse, setRoundPulse] = useState(false)
 
   useEffect(() => {
@@ -29,6 +34,9 @@ export default function CombatTracker() {
           Round {combat.round}
         </span>
       </h3>
+      {isMyTurn && (
+        <div className="your-turn-banner">⚔ Your Turn</div>
+      )}
       <div className="movement-status">
         Movement: {currentUsed}/{currentTotal} ft
       </div>

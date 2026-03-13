@@ -803,7 +803,28 @@ async def action_endpoint(req: PlayerActionRequest):
         elif event.get("type") == "tool_result":
             tool_name = str(event.get("tool", ""))
             result = event.get("result")
-            if tool_name in ("attack", "apply_damage", "heal_character", "check_ability", "roll_dice", "cast_spell"):
+            if tool_name == "request_player_roll" and isinstance(result, dict) and result.get("awaiting_player_roll"):
+                # Find the player whose character needs to roll and send the request only to them
+                character_id = str(result.get("character_id", ""))
+                target_player_id: str | None = None
+                for pid, p in session.players.items():
+                    if p.character_id == character_id:
+                        target_player_id = pid
+                        break
+                roll_payload = {
+                    "type": "roll_request",
+                    "character_id": character_id,
+                    "character_name": result.get("character_name", ""),
+                    "label": result.get("label", "Roll"),
+                    "dice": result.get("dice", "d20"),
+                    "modifier": result.get("modifier", 0),
+                    "context": result.get("context", ""),
+                }
+                if target_player_id:
+                    await session.send_to_player(target_player_id, roll_payload)
+                else:
+                    await session.broadcast(roll_payload)
+            elif tool_name in ("attack", "apply_damage", "heal_character", "check_ability", "roll_dice", "cast_spell"):
                 payload = {
                     "type": "dice_result",
                     "tool": tool_name,

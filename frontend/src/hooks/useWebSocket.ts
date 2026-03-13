@@ -53,7 +53,7 @@ export function useWebSocket() {
   const narrativeLockRef = useRef(false)
   const lastVoiceNoticeRef = useRef<{ stt: string; tts: string; browserTtsShown: boolean }>({ stt: '', tts: '', browserTtsShown: false })
   const { roomCode, sessionId, playerId, setConnected, addPlayer, setPlayers, getSession, mockMode } = useSessionStore()
-  const { setMap, updateEntity, addEntity, removeEntity, setCombat, addNarrative, syncState, setLoading } = useGameStore()
+  const { setMap, updateEntity, addEntity, removeEntity, setCombat, addNarrative, syncState, setLoading, setPendingRoll } = useGameStore()
 
 
 
@@ -459,6 +459,18 @@ export function useWebSocket() {
         break
       }
 
+      case 'roll_request': {
+        setPendingRoll({
+          characterId: msg.character_id as string,
+          characterName: (msg.character_name as string) || '',
+          label: (msg.label as string) || 'Roll',
+          dice: (msg.dice as string) || 'd20',
+          modifier: typeof msg.modifier === 'number' ? msg.modifier : 0,
+          context: (msg.context as string) || '',
+        })
+        break
+      }
+
       case 'state_sync':
         if (msg.state) {
           syncState(msg.state as Parameters<typeof syncState>[0])
@@ -474,7 +486,7 @@ export function useWebSocket() {
         setLoading(false)
         break
     }
-  }, [addNarrative, addEntity, addPlayer, removeEntity, renderSessionStartProtocol, setCombat, setLoading, setMap, setPlayers, speakNarration, syncState, updateEntity])
+  }, [addNarrative, addEntity, addPlayer, removeEntity, renderSessionStartProtocol, setCombat, setLoading, setMap, setPlayers, setPendingRoll, speakNarration, syncState, updateEntity])
 
   const sendAction = useCallback((content: string) => {
     if (!roomCode || !playerId) {

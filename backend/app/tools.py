@@ -386,6 +386,40 @@ TOOL_DEFINITIONS: list[dict[str, Any]] = [
             "required": ["x", "y", "tile_type"],
         },
     },
+    {
+        "name": "request_player_roll",
+        "description": (
+            "Request that a player character rolls their own dice for an attack roll, ability check, or saving throw. "
+            "Use this tool instead of attack, roll_dice, or check_ability whenever the action belongs to a player character (PC). "
+            "Monsters, NPCs, environmental hazards, traps, and any hidden or behind-the-scenes checks are still rolled by the DM using the other tools."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "character_id": {
+                    "type": "string",
+                    "description": "ID of the player character who needs to roll",
+                },
+                "label": {
+                    "type": "string",
+                    "description": "Short label for the roll, e.g. 'Attack Roll', 'Stealth Check', 'CON Saving Throw'",
+                },
+                "dice": {
+                    "type": "string",
+                    "description": "Die to roll, e.g. 'd20'",
+                },
+                "modifier": {
+                    "type": "integer",
+                    "description": "Total modifier to add to the die result (from ability score, proficiency bonus, etc.)",
+                },
+                "context": {
+                    "type": "string",
+                    "description": "What this roll is for, e.g. 'Melee attack against the Goblin (AC 13)'",
+                },
+            },
+            "required": ["character_id", "label", "dice", "modifier", "context"],
+        },
+    },
 ]
 
 
@@ -837,3 +871,17 @@ class ToolDispatcher:
             return {"error": "No map loaded"}
         tile = self.game_map.set_tile(inp["x"], inp["y"], inp["tile_type"], inp.get("state"), inp.get("sprite"))
         return {"updated": tile.to_dict()}
+
+    def _tool_request_player_roll(self, inp: dict) -> dict:
+        char = self.characters.get(inp.get("character_id", ""))
+        if not char:
+            return {"error": f"Character {inp.get('character_id')} not found"}
+        return {
+            "awaiting_player_roll": True,
+            "character_id": inp["character_id"],
+            "character_name": char.name,
+            "label": inp["label"],
+            "dice": inp["dice"],
+            "modifier": int(inp.get("modifier", 0)),
+            "context": inp["context"],
+        }
