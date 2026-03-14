@@ -1,4 +1,9 @@
 {
+  "scripts": {
+    "contract:parity": "node scripts/parity/contract-parity.mjs",
+    "ts-runtime:dev": "npm --prefix ts-runtime run dev",
+    "ts-runtime:build": "npm --prefix ts-runtime run build"
+  },
   "devDependencies": {
     "supabase": "^2.77.0"
   }

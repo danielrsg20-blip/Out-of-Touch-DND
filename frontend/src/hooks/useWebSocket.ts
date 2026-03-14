@@ -1,11 +1,13 @@
 import { useEffect, useRef, useCallback } from 'react'
 import { useSessionStore } from '../stores/sessionStore'
 import { useGameStore } from '../stores/gameStore'
+import { useOverlayStore } from '../stores/overlayStore'
 import { getSupabaseClient, invokeEdgeFunction } from '../lib/supabaseClient'
 import { API_BASE } from '../config/endpoints'
 import { playTTSAudio } from '../components/VoiceControl'
 import { narrationOrchestrator } from '../lib/narrationOrchestrator'
 import type { RealtimeChannel } from '@supabase/supabase-js'
+import type { Overlay } from '../types'
 
 // True when a local Python backend is reachable at API_BASE.
 // In production on Vercel (no VITE_API_URL set) there is no /api/* backend,
@@ -54,6 +56,7 @@ export function useWebSocket() {
   const lastVoiceNoticeRef = useRef<{ stt: string; tts: string; browserTtsShown: boolean }>({ stt: '', tts: '', browserTtsShown: false })
   const { roomCode, sessionId, playerId, setConnected, addPlayer, setPlayers, getSession, mockMode } = useSessionStore()
   const { setMap, updateEntity, addEntity, removeEntity, setCombat, addNarrative, syncState, setLoading, setPendingRoll } = useGameStore()
+  const setOverlay = useOverlayStore((s) => s.setOverlay)
 
 
 
@@ -308,6 +311,9 @@ export function useWebSocket() {
         if (msg.game_state) {
           syncState(msg.game_state as Parameters<typeof syncState>[0])
         }
+        if (msg.overlay && typeof msg.overlay === 'object') {
+          setOverlay(msg.overlay as Overlay)
+        }
         if (!coldOpenFiredRef.current) {
           coldOpenFiredRef.current = true
           setTimeout(
@@ -364,6 +370,12 @@ export function useWebSocket() {
 
       case 'map_update':
         setMap(msg.map as Parameters<typeof setMap>[0])
+        break
+
+      case 'overlay_update':
+        if (msg.overlay && typeof msg.overlay === 'object') {
+          setOverlay(msg.overlay as Overlay)
+        }
         break
 
       case 'map_change': {
@@ -474,6 +486,10 @@ export function useWebSocket() {
       case 'state_sync':
         if (msg.state) {
           syncState(msg.state as Parameters<typeof syncState>[0])
+          const state = msg.state as Record<string, unknown>
+          if (state.overlay && typeof state.overlay === 'object') {
+            setOverlay(state.overlay as Overlay)
+          }
         }
         break
 
@@ -486,7 +502,7 @@ export function useWebSocket() {
         setLoading(false)
         break
     }
-  }, [addNarrative, addEntity, addPlayer, removeEntity, renderSessionStartProtocol, setCombat, setLoading, setMap, setPlayers, setPendingRoll, speakNarration, syncState, updateEntity])
+  }, [addNarrative, addEntity, addPlayer, removeEntity, renderSessionStartProtocol, setCombat, setLoading, setMap, setOverlay, setPlayers, setPendingRoll, speakNarration, syncState, updateEntity])
 
   const sendAction = useCallback((content: string) => {
     if (!roomCode || !playerId) {
@@ -544,6 +560,9 @@ export function useWebSocket() {
       if (payload.state) {
         syncState(payload.state as Parameters<typeof syncState>[0])
       }
+      if (payload.overlay && typeof payload.overlay === 'object') {
+        setOverlay(payload.overlay as Overlay)
+      }
     }
 
     const sendViaEdge = async () => {
@@ -579,7 +598,7 @@ export function useWebSocket() {
         narrativeLockRef.current = false
         setLoading(false)
       })
-  }, [addNarrative, handleMessage, mockMode, playerId, roomCode, setLoading, speakNarration, syncState])
+  }, [addNarrative, handleMessage, mockMode, playerId, roomCode, setLoading, setOverlay, speakNarration, syncState])
 
   const sendMoveToken = useCallback((characterId: string, x: number, y: number) => {
     const supabase = getSupabaseClient()

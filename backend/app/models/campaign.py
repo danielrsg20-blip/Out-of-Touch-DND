@@ -20,6 +20,7 @@ class SavedCampaign(Base):
     map_json = Column(Text, nullable=True)
     combat_json = Column(Text, nullable=True)
     conversation_json = Column(Text, default="[]")
+    overlay_json = Column(Text, nullable=True)
     session_count = Column(Integer, default=0)
     owner_id = Column(String, nullable=True, index=True)
     player_characters_json = Column(Text, nullable=True)
@@ -41,6 +42,12 @@ class SavedCampaign(Base):
 
     def get_conversation(self) -> list:
         return json.loads(self.conversation_json or "[]")
+
+    def set_overlay(self, overlay_data: dict | None) -> None:
+        self.overlay_json = json.dumps(overlay_data) if overlay_data else None
+
+    def get_overlay(self) -> dict | None:
+        return json.loads(self.overlay_json) if self.overlay_json else None
 
     def set_player_characters(self, pc_map: dict) -> None:
         self.player_characters_json = json.dumps(pc_map)

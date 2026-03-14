@@ -1,0 +1,26 @@
+{
+  "name": "overlay-generate-forest",
+  "request": {
+    "path": "/api/overlays/generate",
+    "method": "POST",
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "body": {
+      "narrative": "You find yourself standing at the edge of a small clearing in a dense forest. Tall pine trees stretch up around you, their branches creating a canopy that filters the afternoon sunlight into dappled patches on the forest floor. A narrow dirt path winds deeper into the woods ahead of you. The air is cool and carries the scent of pine needles and damp earth. You can hear the distant sound of running water somewhere to the north.",
+      "overlay_id": "overlay_contract_forest",
+      "overlay_name": "Contract Forest",
+      "map_width": 20,
+      "map_height": 15,
+      "tile_size": 32,
+      "replace": true
+    }
+  },
+  "normalize": {
+    "removeAllIds": true,
+    "removePaths": [
+      "overlay.created_at",
+      "overlay.metadata.generated_at"
+    ]
+  }
+}
