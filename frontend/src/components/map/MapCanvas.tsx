@@ -6,8 +6,6 @@ import { drawOverlays } from './OverlayLayer'
 import type { TileData } from '../../types'
 import { renderOverlayLayers } from '../../lib/VectorOverlayRenderer'
 import { useOverlayStore } from '../../stores/overlayStore'
-import { renderOverlayLayers } from '../../lib/VectorOverlayRenderer'
-import { useOverlayStore } from '../../stores/overlayStore'
 import { resolveSpriteUrl } from '../../data/spriteManifest'
 import {
   ENVIRONMENT_SPRITESHEET_URL,

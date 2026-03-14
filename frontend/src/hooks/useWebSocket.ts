@@ -2,7 +2,6 @@ import { useEffect, useRef, useCallback } from 'react'
 import { useSessionStore } from '../stores/sessionStore'
 import { useGameStore } from '../stores/gameStore'
 import { useOverlayStore } from '../stores/overlayStore'
-import { useOverlayStore } from '../stores/overlayStore'
 import { getSupabaseClient, invokeEdgeFunction } from '../lib/supabaseClient'
 import { API_BASE } from '../config/endpoints'
 import { playTTSAudio } from '../components/VoiceControl'
@@ -57,7 +56,6 @@ export function useWebSocket() {
   const lastVoiceNoticeRef = useRef<{ stt: string; tts: string; browserTtsShown: boolean }>({ stt: '', tts: '', browserTtsShown: false })
   const { roomCode, sessionId, playerId, setConnected, addPlayer, setPlayers, getSession, mockMode } = useSessionStore()
   const { setMap, updateEntity, addEntity, removeEntity, setCombat, addNarrative, syncState, setLoading, setPendingRoll } = useGameStore()
-  const setOverlay = useOverlayStore((s) => s.setOverlay)
   const setOverlay = useOverlayStore((s) => s.setOverlay)
 
 
