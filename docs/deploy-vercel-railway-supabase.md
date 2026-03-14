@@ -68,7 +68,20 @@ In Vercel Project → Settings → Environment Variables:
 - `VITE_SUPABASE_URL=https://<your-project-ref>.supabase.co`
 - `VITE_SUPABASE_ANON_KEY=<your-supabase-anon-key>`
 
-Optional legacy compatibility only:
+Choose one backend wiring mode:
+
+Mode A (recommended for Vercel + Supabase): Supabase Edge proxy
+
+- Leave `VITE_API_URL` and `VITE_WS_URL` unset in Vercel.
+- Deploy `supabase/functions/backend-proxy`.
+- Set Supabase function secret:
+
+```bash
+supabase secrets set BACKEND_API_URL=https://<your-backend>
+supabase functions deploy backend-proxy
+```
+
+Mode B: direct frontend → Railway backend
 
 - `VITE_API_URL=https://<your-backend>`
 - `VITE_WS_URL=wss://<your-backend>`
@@ -98,6 +111,7 @@ Then redeploy Vercel so build-time env vars are applied.
 - Create/join session succeeds
 - WebSocket updates work in play session
 - Campaign save/load succeeds
+- Overlay narrative generation reflects latest backend logic (forest/clearing/path/water scenes)
 
 ## Reliability notes
 

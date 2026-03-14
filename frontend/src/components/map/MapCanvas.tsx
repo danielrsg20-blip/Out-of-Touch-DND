@@ -1,9 +1,11 @@
-import { useRef, useEffect, useCallback, useState } from 'react'
+import { useRef, useEffect, useCallback, useState, useMemo } from 'react'
 import { useGameStore } from '../../stores/gameStore'
 import { useSessionStore } from '../../stores/sessionStore'
 import { useMapInteraction } from '../../hooks/useMapInteraction'
 import { drawOverlays } from './OverlayLayer'
 import type { TileData } from '../../types'
+import { renderOverlayLayers } from '../../lib/VectorOverlayRenderer'
+import { useOverlayStore } from '../../stores/overlayStore'
 import { resolveSpriteUrl } from '../../data/spriteManifest'
 import {
   ENVIRONMENT_SPRITESHEET_URL,
@@ -124,6 +126,11 @@ export default function MapCanvas({ onTileClick, onEntityClick }: MapCanvasProps
   const interaction = useMapInteraction()
   const [showAtlasLabels, setShowAtlasLabels] = useState(false)
   const [showPaletteDebug, setShowPaletteDebug] = useState(false)
+  const overlay = useOverlayStore((s) => s.overlay)
+  const vectorOnlyMode = useMemo(
+    () => new URLSearchParams(window.location.search).get('vectorOnly') === '1',
+    []
+  )
 
   const myCharacterId = players.find(p => p.id === playerId)?.character_id ?? null
 
@@ -326,7 +333,7 @@ export default function MapCanvas({ onTileClick, onEntityClick }: MapCanvasProps
     ctx.scale(interaction.zoom, interaction.zoom)
 
     const loadedImage = imageRef.current
-    if (loadedImage && imageUrlRef.current === imageUrl) {
+    if (!vectorOnlyMode && loadedImage && imageUrlRef.current === imageUrl) {
       ctx.save()
       ctx.globalAlpha = imageOpacity
       ctx.imageSmoothingEnabled = false
@@ -398,7 +405,7 @@ export default function MapCanvas({ onTileClick, onEntityClick }: MapCanvasProps
           ? environmentSheetCacheRef.current.get(ENVIRONMENT_SPRITESHEET_URL)
           : null
 
-        if (tileRect && environmentSheetImageForTile && environmentSheetImageForTile !== 'loading') {
+        if (!vectorOnlyMode && tileRect && environmentSheetImageForTile && environmentSheetImageForTile !== 'loading') {
           ctx.imageSmoothingEnabled = false
           ctx.drawImage(
             environmentSheetImageForTile,
@@ -420,7 +427,7 @@ export default function MapCanvas({ onTileClick, onEntityClick }: MapCanvasProps
           ctx.fillRect(px, py, TILE_SIZE, TILE_SIZE)
           ctx.globalAlpha = 1
 
-          if (tileRect && environmentSheetImageForTile === undefined) {
+          if (!vectorOnlyMode && tileRect && environmentSheetImageForTile === undefined) {
             environmentSheetCacheRef.current.set(ENVIRONMENT_SPRITESHEET_URL, 'loading')
             const img = new Image()
             img.decoding = 'async'
@@ -734,10 +741,21 @@ export default function MapCanvas({ onTileClick, onEntityClick }: MapCanvasProps
       }
     }
 
+    // Render vector overlay layers (before movement/FOW overlays)
+    if (overlay) {
+      renderOverlayLayers(overlay, {
+        ctx,
+        mapBounds: { x: 0, y: 0, width: map.width * TILE_SIZE, height: map.height * TILE_SIZE },
+        zoom: interaction.zoom,
+        panX: interaction.offsetX,
+        panY: interaction.offsetY,
+      })
+    }
+
     drawOverlays(ctx, map, combat, selectedEntityId, myCharacterId)
 
     ctx.restore()
-  }, [map, combat, characters, interaction.offsetX, interaction.offsetY, interaction.zoom, selectedEntityId, myCharacterId, imageUrl, imageOpacity, resolveCharacterForEntity, showAtlasLabels, getMonsterFrameKeyForEnemy])
+  }, [map, combat, characters, interaction.offsetX, interaction.offsetY, interaction.zoom, selectedEntityId, myCharacterId, imageUrl, imageOpacity, resolveCharacterForEntity, showAtlasLabels, getMonsterFrameKeyForEnemy, overlay, vectorOnlyMode])
 
   useEffect(() => {
     let frameId: number

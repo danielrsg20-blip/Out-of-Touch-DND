@@ -7,6 +7,7 @@ import CharacterSheet from './panels/CharacterSheet'
 import ActionBar from './panels/ActionBar'
 import DiceRoller from './panels/DiceRoller'
 import VoiceControl from './VoiceControl'
+import VectorOverlayTester from './VectorOverlayTester'
 import { useWebSocket } from '../hooks/useWebSocket'
 import { useGameStore } from '../stores/gameStore'
 import { useSessionStore } from '../stores/sessionStore'
@@ -16,6 +17,10 @@ import { narrationOrchestrator } from '../lib/narrationOrchestrator'
 import './GameBoard.css'
 
 const AVATAR_COLORS = ['#9b59b6', '#3498db', '#2ecc71', '#e67e22', '#e74c3c']
+
+function showOverlayTester(): boolean {
+  return new URLSearchParams(window.location.search).get('overlayDebug') === '1'
+}
 
 export default function GameBoard() {
   const { sendAction, sendMoveToken, sendSpellCast, transcribeVoiceInput, runVoiceTest } = useWebSocket()
@@ -138,6 +143,7 @@ export default function GameBoard() {
         </div>
 
         <div className="map-area">
+          {showOverlayTester() && <VectorOverlayTester />}
           <MapCanvas onTileClick={handleTileClick} onEntityClick={handleEntityClick} />
         </div>
 

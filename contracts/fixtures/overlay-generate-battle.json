@@ -1,0 +1,26 @@
+{
+  "name": "overlay-generate-battle",
+  "request": {
+    "path": "/api/overlays/generate",
+    "method": "POST",
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "body": {
+      "narrative": "The aftermath of a fierce battle covers the ruined courtyard with scorch marks and blood trails.",
+      "overlay_id": "overlay_contract_battle",
+      "overlay_name": "Contract Battle",
+      "map_width": 20,
+      "map_height": 15,
+      "tile_size": 32,
+      "replace": true
+    }
+  },
+  "normalize": {
+    "removeAllIds": true,
+    "removePaths": [
+      "overlay.created_at",
+      "overlay.metadata.generated_at"
+    ]
+  }
+}

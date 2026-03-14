@@ -1,0 +1,83 @@
+name: Contract Parity
+
+on:
+  pull_request:
+    branches:
+      - '**'
+  push:
+    branches:
+      - main
+      - master
+  workflow_dispatch:
+
+jobs:
+  contract-parity:
+    name: Python vs TS parity
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install Node dependencies
+        run: |
+          npm install
+          npm --prefix ts-runtime install
+
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r backend/requirements.txt
+
+      - name: Build TS runtime
+        run: npm run ts-runtime:build
+
+      - name: Start Python backend
+        run: |
+          nohup bash -lc 'cd backend && python -m uvicorn app.main:app --host 127.0.0.1 --port 8010' > backend.log 2>&1 &
+
+      - name: Start TS runtime (bridge mode)
+        run: |
+          nohup bash -lc 'cd ts-runtime && PYTHON_BRIDGE_BASE_URL=http://127.0.0.1:8010 TS_RUNTIME_USE_PYTHON_BRIDGE=true TS_RUNTIME_PORT=19010 npm run dev' > ts-runtime.log 2>&1 &
+
+      - name: Wait for services
+        run: |
+          for i in {1..60}; do
+            if curl -fsS http://127.0.0.1:8010/api/health > /dev/null; then
+              break
+            fi
+            sleep 1
+          done
+
+          for i in {1..60}; do
+            if curl -fsS http://127.0.0.1:19010/api/health > /dev/null; then
+              break
+            fi
+            sleep 1
+          done
+
+      - name: Run contract parity
+        env:
+          PYTHON_BASE_URL: http://127.0.0.1:8010
+          TS_BASE_URL: http://127.0.0.1:19010
+          PARITY_NUMERIC_EPSILON: 1e-9
+        run: npm run contract:parity
+
+      - name: Upload service logs on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: contract-parity-logs
+          path: |
+            backend.log
+            ts-runtime.log

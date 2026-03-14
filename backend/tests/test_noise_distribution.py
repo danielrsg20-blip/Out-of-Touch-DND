@@ -31,7 +31,8 @@ class NoiseDistributionTests(unittest.TestCase):
         self.assertGreater(len(low_positions), 50)
 
         worn_ids = {"cracked", "rubble", "worn", "rotted", "murky", "algae"}
-        clean_ids = {"clean", "smooth", "boards", "earthy", "calm"}
+        # Base tiles are emitted as "default" by select_variant when dominant base is selected.
+        clean_ids = {"default", "clean", "smooth", "boards", "earthy", "calm"}
 
         high_worn = 0
         high_clean = 0
