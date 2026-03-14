@@ -1,0 +1,139 @@
+/* VectorOverlayTester.css */
+
+.vector-overlay-tester {
+  background: #1a1a2a;
+  border: 1px solid #444;
+  border-radius: 4px;
+  padding: 12px;
+  font-family: monospace;
+  font-size: 12px;
+  color: #ccc;
+  margin: 8px 0;
+}
+
+.vector-overlay-tester h3 {
+  margin: 0 0 12px 0;
+  color: #4ecdc4;
+  font-size: 14px;
+}
+
+.vector-overlay-tester h4 {
+  margin: 8px 0 6px 0;
+  color: #95e1d3;
+  font-size: 12px;
+}
+
+.controls {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.button-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.btn {
+  padding: 6px 10px;
+  background: #3a3a4a;
+  border: 1px solid #555;
+  color: #ccc;
+  border-radius: 3px;
+  cursor: pointer;
+  font-size: 11px;
+  font-family: monospace;
+}
+
+.btn:hover:not(:disabled) {
+  background: #4a4a5a;
+  border-color: #666;
+  color: #fff;
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-small {
+  padding: 4px 8px;
+  font-size: 11px;
+}
+
+.overlay-prompt {
+  width: 100%;
+  min-height: 64px;
+  background: #0a0a1a;
+  border: 1px solid #444;
+  border-radius: 3px;
+  color: #ddd;
+  padding: 8px;
+  font-size: 11px;
+  font-family: monospace;
+  resize: vertical;
+}
+
+.overlay-prompt:focus {
+  outline: none;
+  border-color: #4ecdc4;
+}
+
+.layers-panel {
+  border: 1px solid #444;
+  border-radius: 3px;
+  padding: 8px;
+  background: #0a0a1a;
+}
+
+.layer-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 4px;
+  border-bottom: 1px solid #2a2a3a;
+  gap: 8px;
+}
+
+.layer-item:last-child {
+  border-bottom: none;
+}
+
+.layer-item label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 1;
+  cursor: pointer;
+}
+
+.layer-item input[type='checkbox'] {
+  cursor: pointer;
+}
+
+.layer-name {
+  color: #4ecdc4;
+  flex: 1;
+}
+
+.layer-meta {
+  color: #999;
+  font-size: 10px;
+}
+
+.info-panel {
+  border: 1px solid #444;
+  border-radius: 3px;
+  padding: 8px;
+  background: #0a0a1a;
+}
+
+.info-panel p {
+  margin: 4px 0;
+  color: #aaa;
+}
+
+.info-panel strong {
+  color: #95e1d3;
+}

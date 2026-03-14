@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import type { CampaignCharacter, CampaignSlot, PlayerData } from '../types'
 import { API_BASE } from '../config/endpoints'
+import { callBackendApi } from '../lib/backendApi'
 import { getSupabaseClient, hasSupabaseConfig, invokeEdgeFunction } from '../lib/supabaseClient'
 import type { RealtimeChannel } from '@supabase/supabase-js'
 
@@ -369,14 +370,14 @@ export const useSessionStore = create<SessionState>((set) => ({
   listCampaigns: async () => {
     const { useAuthStore } = await import('./authStore')
     const token = useAuthStore.getState().token
-    if (!token || !HAS_EXPLICIT_API_URL) return
+    if (!token) return
     set({ campaignsLoading: true })
     try {
-      const res = await fetch(`${API_BASE}/api/campaign/list`, {
+      const res = await callBackendApi('/api/campaign/list', {
         headers: { Authorization: `Bearer ${token}` },
       })
       if (res.ok) {
-        const data = await parseJsonBody(res)
+        const data = res.data
         const campaigns = Array.isArray(data.campaigns) ? (data.campaigns as CampaignSlot[]) : []
         set({ campaigns })
       }
@@ -390,30 +391,33 @@ export const useSessionStore = create<SessionState>((set) => ({
   fetchCampaignCharacters: async (campaignId) => {
     const { useAuthStore } = await import('./authStore')
     const token = useAuthStore.getState().token
-    if (!token || !HAS_EXPLICIT_API_URL) return []
-    const res = await fetch(`${API_BASE}/api/campaign/${campaignId}/characters`, {
-      headers: { Authorization: `Bearer ${token}` },
-    })
-    if (!res.ok) return []
-    const data = await parseJsonBody(res)
-    return Array.isArray(data.characters) ? (data.characters as CampaignCharacter[]) : []
+    if (!token) return []
+    try {
+      const res = await callBackendApi(`/api/campaign/${campaignId}/characters`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      if (!res.ok) return []
+      const data = res.data
+      return Array.isArray(data.characters) ? (data.characters as CampaignCharacter[]) : []
+    } catch {
+      return []
+    }
   },
 
   resumeCampaign: async (campaignId, playerName, characterId?) => {
     const { useAuthStore } = await import('./authStore')
     const token = useAuthStore.getState().token
-    if (!token || !HAS_EXPLICIT_API_URL) {
+    if (!token) {
       throw new Error('Authentication required to resume a campaign.')
     }
-    const res = await fetch(`${API_BASE}/api/campaign/resume`, {
+    const res = await callBackendApi('/api/campaign/resume', {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json',
         Authorization: `Bearer ${token}`,
       },
-      body: JSON.stringify({ campaign_id: campaignId, player_name: playerName, character_id: characterId ?? null }),
+      body: { campaign_id: campaignId, player_name: playerName, character_id: characterId ?? null },
     })
-    const data = await parseJsonBody(res)
+    const data = res.data
     if (!res.ok || typeof data.error === 'string') {
       throw new Error(typeof data.error === 'string' ? data.error : 'Failed to resume campaign.')
     }

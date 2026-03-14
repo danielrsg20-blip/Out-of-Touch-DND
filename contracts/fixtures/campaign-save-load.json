@@ -1,0 +1,75 @@
+{
+  "name": "campaign-save-load-payload",
+  "scenario": "campaign-save-load-resume",
+  "notes": "Runs save/load/list/resume campaign contract checks using runtime-specific session setup and payload assertions.",
+  "normalize": {
+    "removeAllIds": true,
+    "removePaths": [
+      "updated_at",
+      "session_start.generated_at"
+    ]
+  },
+  "contracts": [
+    {
+      "path": "/api/campaign/save",
+      "method": "POST",
+      "requiredKeys": ["saved", "campaign_id", "name"],
+      "assertions": [
+        { "path": "saved", "equals": true },
+        { "path": "campaign_id", "type": "string" },
+        { "path": "campaign_id", "equalsFrom": "request.body.room_code" },
+        { "path": "name", "equalsFrom": "scenario.campaignName" }
+      ],
+      "capture": [
+        { "from": "campaign_id", "as": "savedCampaignId" }
+      ]
+    },
+    {
+      "path": "/api/campaign/list",
+      "method": "GET",
+      "requiredKeys": ["campaigns"],
+      "assertions": [
+        { "path": "campaigns", "type": "array" },
+        { "path": "campaigns", "lengthAtLeast": 1 },
+        { "path": "campaigns.0.name", "equalsFrom": "scenario.campaignName" },
+        { "path": "campaigns.0.session_count", "numericAtLeast": 1 },
+        { "path": "campaigns.0.my_character", "type": "object" },
+        { "path": "campaigns.0.my_character.name", "type": "string" },
+        { "path": "campaigns.0.my_character.name", "lengthAtLeast": 1 },
+        { "path": "campaigns.0.my_character.class", "type": "string" },
+        { "path": "campaigns.0.my_character.char_id", "type": "string" }
+      ]
+    },
+    {
+      "path": "/api/campaign/load",
+      "method": "POST",
+      "requiredKeys": ["loaded", "name", "characters", "overlay"],
+      "assertions": [
+        { "path": "loaded", "equals": true },
+        { "path": "name", "equalsFrom": "scenario.campaignName" },
+        { "path": "characters", "type": "number" },
+        { "path": "characters", "equals": 1 },
+        { "path": "overlay", "oneOfTypes": ["object", "null"] }
+      ]
+    },
+    {
+      "path": "/api/campaign/resume",
+      "method": "POST",
+      "requiredKeys": ["room_code", "player_id", "campaign_name", "characters_count", "has_character", "overlay", "session_start"],
+      "assertions": [
+        { "path": "room_code", "type": "string" },
+        { "path": "player_id", "type": "string" },
+        { "path": "campaign_name", "equalsFrom": "scenario.campaignName" },
+        { "path": "characters_count", "equals": 1 },
+        { "path": "has_character", "equals": true },
+        { "path": "overlay", "oneOfTypes": ["object", "null"] },
+        { "path": "session_start", "type": "object" },
+        { "path": "session_start.protocol", "type": "object" },
+        { "path": "session_start.protocol.SESSION_RECAP", "type": "string" },
+        { "path": "session_start.protocol.SESSION_RECAP", "lengthAtLeast": 1 },
+        { "path": "session_start.protocol.PARTY_STATUS", "type": "array" },
+        { "path": "session_start.protocol.PARTY_STATUS", "lengthAtLeast": 1 }
+      ]
+    }
+  ]
+}

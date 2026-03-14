@@ -28,3 +28,4 @@ async def init_db() -> None:
         await conn.run_sync(Base.metadata.create_all)
         await _add_column_if_missing(conn, "campaigns", "owner_id", "VARCHAR")
         await _add_column_if_missing(conn, "campaigns", "player_characters_json", "TEXT")
+        await _add_column_if_missing(conn, "campaigns", "overlay_json", "TEXT")

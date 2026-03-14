@@ -209,3 +209,149 @@ export interface CampaignCharacter {
   level: number
   is_mine: boolean
 }
+
+// ============================================================================
+// VECTOR OVERLAY SYSTEM TYPES
+// ============================================================================
+
+export interface Point {
+  x: number
+  y: number
+}
+
+export interface GradientStop {
+  offset: number // 0–1
+  color: string // "#rrggbbaa"
+}
+
+export interface GradientDef {
+  type: 'linear' | 'radial'
+  start?: Point // linear only
+  end?: Point // linear only
+  center?: Point // radial
+  radius?: number // radial
+  stops: GradientStop[]
+}
+
+export interface FillStyle {
+  color: string // "#rrggbbaa"
+  gradient?: GradientDef
+}
+
+export interface StrokeStyle {
+  color: string
+  width: number
+  line_cap?: 'butt' | 'round' | 'square'
+  line_join?: 'miter' | 'round' | 'bevel'
+  dash_array?: number[]
+  width_profile?: number[] // for paths: taper effect
+}
+
+export interface NoiseMask {
+  enabled: boolean
+  intensity: number // 0–1
+  scale: number // 0.1–50
+  seed: number
+  octaves: number // 1–4
+}
+
+export interface DecalStampDef {
+  id: string
+  name: string
+  svg_data: string // simplified SVG path
+  bounding_box: { w: number; h: number }
+  color_key: string
+  variations?: string[]
+}
+
+export interface StyleDefinition {
+  id: string
+  name: string
+  palette: Record<string, string>
+  noise_seed: number
+  paper_texture?: {
+    enabled: boolean
+    intensity: number
+    scale: number
+  }
+  edge_feathering?: number
+  jitter?: number
+  decal_library: Record<string, DecalStampDef>
+}
+
+export interface Region {
+  type: 'polygon'
+  id: string
+  name: string
+  points: Point[]
+  fill: FillStyle
+  fill_opacity?: number
+  stroke?: StrokeStyle
+  noise_mask?: NoiseMask
+  feather?: number
+  tags?: string[]
+}
+
+export interface Path {
+  type: 'polyline'
+  id: string
+  name: string
+  points: Point[]
+  stroke: StrokeStyle
+  stroke_opacity?: number
+  style_jitter?: number
+  noise_mask?: NoiseMask
+  end_cap_style?: 'round' | 'square' | 'arrow' | 'none'
+  tags?: string[]
+}
+
+export interface Decal {
+  type: 'decal'
+  id: string
+  name: string
+  position: Point
+  decal_type: string
+  scale?: number
+  rotation?: number
+  opacity?: number
+  blend_mode?: string
+  tags?: string[]
+}
+
+export type OverlayElement = Region | Path | Decal
+
+export interface OverlayLayer {
+  id: string
+  name: string
+  z_index: number
+  visible: boolean
+  blend_mode: 'normal' | 'multiply' | 'screen' | 'overlay' | 'darken' | 'lighten' | 'color-dodge' | 'color-burn'
+  opacity: number
+  elements: OverlayElement[]
+  clip_region?: Point[]
+  clipped_to_bounds?: boolean
+}
+
+export interface OverlayMetadata {
+  narrative_tags?: string[]
+  seed?: number
+  story_context?: string
+}
+
+export interface Overlay {
+  id: string
+  name: string
+  version: string
+  created_at: string
+  map_id?: string
+  metadata?: OverlayMetadata
+  styles: Record<string, StyleDefinition>
+  layers: OverlayLayer[]
+}
+
+// Undo/redo command for overlay editing
+export interface OverlayCommand {
+  type: string
+  execute: () => void
+  undo: () => void
+}

@@ -34,6 +34,7 @@ from .rules.spells import (
     initialize_spell_slots,
     validate_spell_selections,
 )
+from .overlay_api import overlay_api
 from .models.user import User  # noqa: F401 — ensures table is created by init_db
 from .auth import create_access_token, decode_token, hash_password, verify_password
 
@@ -185,6 +186,67 @@ class LevelUpRequest(BaseModel):
     prepared_spells: list[str] | None = None
 
 
+class OverlayCreateRequest(BaseModel):
+    overlay_id: str
+    name: str
+    map_id: str | None = None
+
+
+class OverlayRegionRequest(BaseModel):
+    overlay_id: str
+    layer_name: str
+    name: str
+    polygon_points: list[dict[str, float]]
+    fill_color: str
+    stroke_color: str | None = None
+    stroke_width: float = 1.0
+    noise_intensity: float = 0.0
+    feather: float = 0.0
+    tags: list[str] | None = None
+
+
+class OverlayPathRequest(BaseModel):
+    overlay_id: str
+    layer_name: str
+    name: str
+    polyline_points: list[dict[str, float]]
+    stroke_color: str
+    stroke_width: float = 1.0
+    jitter: float = 0.0
+    width_profile: list[float] | None = None
+    tags: list[str] | None = None
+
+
+class OverlayDecalRequest(BaseModel):
+    overlay_id: str
+    layer_name: str
+    decal_type: str
+    positions: list[dict[str, float]]
+    scale: float = 1.0
+    rotation: float = 0.0
+    tags: list[str] | None = None
+
+
+class OverlayLayerVisibilityRequest(BaseModel):
+    overlay_id: str
+    layer_id: str
+    visible: bool
+
+
+class OverlayGenerateRequest(BaseModel):
+    narrative: str
+    overlay_id: str | None = None
+    overlay_name: str | None = None
+    room_code: str | None = None
+    map_id: str | None = None
+    map_width: int | None = None
+    map_height: int | None = None
+    tile_size: int = 32
+    style_id: str = "default"
+    seed: int | None = None
+    replace: bool = True
+
+
 @app.get("/api/items")
 async def list_items(category: str | None = None):
     from .rules.items import ITEM_CATALOG
@@ -204,6 +266,155 @@ async def health_atlas():
     report = run_terrain_atlas_resolution_check()
     status_code = 200 if bool(report.get("ok")) else 503
     return JSONResponse(status_code=status_code, content=report)
+
+
+@app.post("/api/overlays/create")
+async def create_overlay(req: OverlayCreateRequest):
+    overlay = overlay_api.create_overlay(req.overlay_id, req.name, req.map_id)
+    return {"overlay": json.loads(overlay_api.save_overlay_to_json(overlay.id) or "{}")}
+
+
+@app.get("/api/overlays")
+async def list_overlays():
+    overlays = overlay_api.list_overlays()
+    return {
+        "overlays": [
+            {
+                "id": o.id,
+                "name": o.name,
+                "map_id": o.map_id,
+                "created_at": o.created_at,
+                "layer_count": len(o.layers),
+            }
+            for o in overlays
+        ]
+    }
+
+
+@app.get("/api/overlays/{overlay_id}")
+async def get_overlay(overlay_id: str):
+    overlay = overlay_api.get_overlay(overlay_id)
+    if not overlay:
+        return JSONResponse(status_code=404, content={"error": "Overlay not found"})
+    return {"overlay": json.loads(overlay_api.save_overlay_to_json(overlay_id) or "{}")}
+
+
+@app.post("/api/overlays/region")
+async def add_overlay_region(req: OverlayRegionRequest):
+    region = overlay_api.create_region(
+        overlay_id=req.overlay_id,
+        layer_name=req.layer_name,
+        name=req.name,
+        polygon_points=req.polygon_points,
+        fill_color=req.fill_color,
+        stroke_color=req.stroke_color,
+        stroke_width=req.stroke_width,
+        noise_intensity=req.noise_intensity,
+        feather=req.feather,
+        tags=req.tags,
+    )
+    if not region:
+        return JSONResponse(status_code=404, content={"error": "Overlay or layer not found"})
+    return {"ok": True, "region_id": region.id}
+
+
+@app.post("/api/overlays/path")
+async def add_overlay_path(req: OverlayPathRequest):
+    path = overlay_api.create_path(
+        overlay_id=req.overlay_id,
+        layer_name=req.layer_name,
+        name=req.name,
+        polyline_points=req.polyline_points,
+        stroke_color=req.stroke_color,
+        stroke_width=req.stroke_width,
+        jitter=req.jitter,
+        width_profile=req.width_profile,
+        tags=req.tags,
+    )
+    if not path:
+        return JSONResponse(status_code=404, content={"error": "Overlay or layer not found"})
+    return {"ok": True, "path_id": path.id}
+
+
+@app.post("/api/overlays/decals")
+async def add_overlay_decals(req: OverlayDecalRequest):
+    decals = overlay_api.stamp_decals(
+        overlay_id=req.overlay_id,
+        layer_name=req.layer_name,
+        decal_type=req.decal_type,
+        positions=req.positions,
+        scale=req.scale,
+        rotation=req.rotation,
+        tags=req.tags,
+    )
+    if not decals:
+        return JSONResponse(status_code=404, content={"error": "Overlay or layer not found"})
+    return {"ok": True, "decal_ids": [d.id for d in decals]}
+
+
+@app.post("/api/overlays/layer/visibility")
+async def set_overlay_layer_visibility(req: OverlayLayerVisibilityRequest):
+    ok = overlay_api.set_layer_visibility(req.overlay_id, req.layer_id, req.visible)
+    if not ok:
+        return JSONResponse(status_code=404, content={"error": "Overlay or layer not found"})
+    return {"ok": True}
+
+
+@app.get("/api/overlays/{overlay_id}/export")
+async def export_overlay_json(overlay_id: str):
+    payload = overlay_api.save_overlay_to_json(overlay_id)
+    if not payload:
+        return JSONResponse(status_code=404, content={"error": "Overlay not found"})
+    return Response(content=payload, media_type="application/json")
+
+
+@app.post("/api/overlays/generate")
+async def generate_overlay_from_narrative(req: OverlayGenerateRequest):
+    if not req.narrative.strip():
+        return JSONResponse(status_code=400, content={"error": "Narrative prompt is required"})
+
+    resolved_overlay_id = req.overlay_id or f"overlay_{uuid.uuid4().hex[:10]}"
+    overlay = overlay_api.get_overlay(resolved_overlay_id)
+    if not overlay:
+        overlay = overlay_api.create_overlay(
+            resolved_overlay_id,
+            req.overlay_name or "Narrative Overlay",
+            req.map_id,
+        )
+
+    map_context: dict[str, Any] = {
+        "tile_size": req.tile_size,
+    }
+
+    if req.map_width and req.map_height:
+        map_context["width"] = req.map_width
+        map_context["height"] = req.map_height
+
+    if req.room_code:
+        session = session_manager.get_session(req.room_code)
+        if session and session.orchestrator.game_map:
+            map_context["width"] = session.orchestrator.game_map.width
+            map_context["height"] = session.orchestrator.game_map.height
+            map_context["map_id"] = req.map_id or req.room_code
+
+    generated = overlay_api.generate_from_narrative(
+        overlay_id=resolved_overlay_id,
+        narrative=req.narrative,
+        map_context=map_context,
+        style_id=req.style_id,
+        seed=req.seed,
+        replace=req.replace,
+    )
+
+    if not generated:
+        return JSONResponse(status_code=404, content={"error": "Overlay not found"})
+
+    payload = overlay_api.save_overlay_to_json(resolved_overlay_id)
+    return {
+        "overlay": json.loads(payload or "{}"),
+        "overlay_id": resolved_overlay_id,
+        "narrative": req.narrative,
+    }
 
 
 def _extract_user_id(request: Request) -> str | None:
@@ -299,6 +510,7 @@ async def _auto_save_campaign(session: GameSession, room_code: str, user_id: str
             campaign.owner_id = user_id
         campaign.set_characters({cid: c.to_dict() for cid, c in session.orchestrator.characters.items()})
         campaign.set_conversation(session.orchestrator.conversation_history[-20:])
+        campaign.set_overlay(_get_overlay_payload_for_room(room_code))
         campaign.session_count = (campaign.session_count or 0) + 1
         pc_map: dict[str, dict] = {}
         for p in session.players.values():
@@ -312,6 +524,45 @@ async def _auto_save_campaign(session: GameSession, room_code: str, user_id: str
         campaign.set_player_characters(pc_map)
         await db.commit()
     logger.info("Auto-saved campaign %s for user %s", room_code, user_id)
+
+
+def _overlay_id_for_room(room_code: str) -> str:
+    return f"overlay_room_{room_code}"
+
+
+def _get_overlay_payload_for_room(room_code: str) -> dict[str, Any] | None:
+    payload = overlay_api.save_overlay_to_json(_overlay_id_for_room(room_code))
+    if not payload:
+        return None
+    try:
+        decoded = json.loads(payload)
+        return decoded if isinstance(decoded, dict) else None
+    except json.JSONDecodeError:
+        return None
+
+
+def _restore_overlay_for_room(room_code: str, overlay_payload: dict[str, Any] | None) -> dict[str, Any] | None:
+    if not overlay_payload or not isinstance(overlay_payload, dict):
+        return None
+
+    try:
+        restored = dict(overlay_payload)
+        restored["id"] = _overlay_id_for_room(room_code)
+        restored["map_id"] = room_code
+        loaded = overlay_api.load_overlay_from_json(
+            json.dumps(restored),
+            overlay_id=restored["id"],
+        )
+        if not loaded:
+            return None
+        payload = overlay_api.save_overlay_to_json(loaded.id)
+        if not payload:
+            return None
+        decoded = json.loads(payload)
+        return decoded if isinstance(decoded, dict) else None
+    except Exception:
+        logger.exception("Failed to restore overlay for room %s", room_code)
+        return None
 
 
 @app.post("/api/character/create")
@@ -494,6 +745,7 @@ async def get_session(room_code: str):
         return {"error": "Session not found"}
     _ensure_mock_starter_map(session)
     state = session.orchestrator.get_full_state()
+    state["overlay"] = _get_overlay_payload_for_room(room_code)
     state["session"] = session.to_dict()
     state["session_start"] = build_session_start_protocol(session)
     return state
@@ -526,6 +778,7 @@ async def save_campaign(req: SaveCampaignRequest, request: Request):
         if session.orchestrator.game_map:
             campaign.set_map(session.orchestrator.game_map.to_dict())
         campaign.set_conversation(session.orchestrator.conversation_history[-20:])
+        campaign.set_overlay(_get_overlay_payload_for_room(req.room_code))
         campaign.session_count = (campaign.session_count or 0) + 1
 
         if user_id and not campaign.owner_id:
@@ -644,7 +897,14 @@ async def load_campaign(req: LoadCampaignRequest):
     conversation = campaign.get_conversation()
     session.orchestrator.conversation_history = conversation
 
-    return {"loaded": True, "name": campaign.name, "characters": len(chars_data)}
+    restored_overlay = _restore_overlay_for_room(req.room_code, campaign.get_overlay())
+
+    return {
+        "loaded": True,
+        "name": campaign.name,
+        "characters": len(chars_data),
+        "overlay": restored_overlay,
+    }
 
 
 class ResumeCampaignRequest(BaseModel):
@@ -737,6 +997,7 @@ async def resume_campaign(req: ResumeCampaignRequest, request: Request):
         session.orchestrator.game_map = build_map_from_data(map_data)
 
     session.orchestrator.conversation_history = campaign.get_conversation()
+    restored_overlay = _restore_overlay_for_room(session.room_code, campaign.get_overlay())
 
     pc_map = campaign.get_player_characters()
     if req.character_id and req.character_id in chars_data:
@@ -756,6 +1017,7 @@ async def resume_campaign(req: ResumeCampaignRequest, request: Request):
         "campaign_name": campaign.name,
         "characters_count": len(chars_data),
         "has_character": player.character_id is not None,
+        "overlay": restored_overlay,
         "session_start": session_start,
     }
 
@@ -842,6 +1104,20 @@ async def action_endpoint(req: PlayerActionRequest):
                 dice_results.append(payload)
                 await session.broadcast(payload)
 
+    overlay_payload = None
+    if narratives:
+        overlay_payload = _auto_generate_overlay_for_session(
+            session=session,
+            narrative="\n".join(narratives),
+            replace=True,
+        )
+        if overlay_payload:
+            await session.broadcast({
+                "type": "overlay_update",
+                "action": "generate_from_narrative",
+                "overlay": overlay_payload,
+            })
+
     state = session.orchestrator.get_full_state()
     await session.broadcast({"type": "state_sync", "state": state})
 
@@ -849,8 +1125,48 @@ async def action_endpoint(req: PlayerActionRequest):
         "ok": True,
         "narratives": narratives,
         "dice_results": dice_results,
+        "overlay": overlay_payload,
         "state": state,
     }
+
+
+def _auto_generate_overlay_for_session(
+    session: GameSession,
+    narrative: str,
+    replace: bool = True,
+) -> dict[str, Any] | None:
+    """Generate/update a room-scoped overlay directly from DM narrative text."""
+    prompt = narrative.strip()
+    if not prompt:
+        return None
+
+    try:
+        overlay_id = f"overlay_room_{session.room_code}"
+        overlay = overlay_api.get_overlay(overlay_id)
+        if not overlay:
+            overlay = overlay_api.create_overlay(overlay_id, f"Room {session.room_code} Overlay", session.room_code)
+
+        map_context: dict[str, Any] = {"tile_size": 32, "map_id": session.room_code}
+        if session.orchestrator.game_map:
+            map_context["width"] = session.orchestrator.game_map.width
+            map_context["height"] = session.orchestrator.game_map.height
+
+        generated = overlay_api.generate_from_narrative(
+            overlay_id=overlay.id,
+            narrative=prompt,
+            map_context=map_context,
+            style_id="default",
+            seed=None,
+            replace=replace,
+        )
+        if not generated:
+            return None
+
+        payload = overlay_api.save_overlay_to_json(overlay.id)
+        return json.loads(payload) if payload else None
+    except Exception:
+        logger.exception("Failed to auto-generate overlay for room %s", session.room_code)
+        return None
 
 
 @app.post("/api/combat/next-turn")
@@ -1078,6 +1394,7 @@ async def websocket_endpoint(websocket: WebSocket, room_code: str, player_id: st
         "player_id": player_id,
         "session": session.to_dict(),
         "game_state": session.orchestrator.get_full_state(),
+        "overlay": _get_overlay_payload_for_room(room_code),
         "session_start": session_start,
     })
 
@@ -1178,8 +1495,11 @@ async def handle_ws_message(session: GameSession, player: Player, msg: dict[str,
             action=action_text,
         )
 
+        narrative_chunks: list[str] = []
+
         for event in events:
             if event["type"] == "narrative":
+                narrative_chunks.append(str(event.get("content", "")).strip())
                 await session.broadcast({
                     "type": "dm_narrative",
                     "content": event["content"],
@@ -1266,6 +1586,19 @@ async def handle_ws_message(session: GameSession, player: Player, msg: dict[str,
                 await session.send_to_player(player.id, {
                     "type": "error",
                     "content": event["content"],
+                })
+
+        if any(narrative_chunks):
+            overlay_payload = _auto_generate_overlay_for_session(
+                session=session,
+                narrative="\n".join(c for c in narrative_chunks if c),
+                replace=True,
+            )
+            if overlay_payload:
+                await session.broadcast({
+                    "type": "overlay_update",
+                    "action": "generate_from_narrative",
+                    "overlay": overlay_payload,
                 })
 
         state = session.orchestrator.get_full_state()
