@@ -1,0 +1,1665 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>D&D Vector Map Generator</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#1a1a2e;--bg2:#16213e;--bg3:#0f3460;--panel:#1e2a4a;--panel2:#243050;
+  --border:#2a3a6a;--text:#e0e8ff;--text2:#8899cc;
+  --accent:#e8b84b;--accent2:#c9963a;
+  --red:#e84b4b;--green:#4be88a;
+}
+html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,sans-serif;font-size:13px}
+#app{display:flex;flex-direction:column;height:100vh}
+#main-row{display:flex;flex:1;overflow:hidden}
+#toolbar{width:56px;background:var(--panel);border-right:1px solid var(--border);display:flex;flex-direction:column;align-items:center;padding:8px 0;gap:4px;flex-shrink:0;overflow-y:auto}
+.tool-btn{width:40px;height:40px;border:1px solid transparent;border-radius:8px;background:transparent;color:var(--text2);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.15s;font-size:17px;position:relative;flex-shrink:0}
+.tool-btn:hover{background:var(--panel2);color:var(--text)}
+.tool-btn.active{background:var(--accent);color:#1a1a00;border-color:var(--accent2)}
+.tool-sep{width:32px;height:1px;background:var(--border);margin:2px 0;flex-shrink:0}
+.tool-btn[data-tip]:hover::after{content:attr(data-tip);position:absolute;left:48px;top:50%;transform:translateY(-50%);background:#000c;color:#fff;padding:4px 8px;border-radius:4px;white-space:nowrap;font-size:11px;z-index:100;pointer-events:none}
+#left-panel{width:204px;background:var(--panel);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;flex-shrink:0}
+.panel-section{padding:10px;border-bottom:1px solid var(--border);flex-shrink:0}
+.panel-title{font-size:10px;font-weight:600;letter-spacing:0.08em;color:var(--text2);text-transform:uppercase;margin-bottom:8px}
+.btn{width:100%;padding:6px 10px;background:var(--panel2);border:1px solid var(--border);color:var(--text);border-radius:6px;cursor:pointer;font-size:12px;text-align:left;transition:all 0.15s}
+.btn:hover{background:var(--bg3);border-color:var(--accent)}
+.btn.primary{background:var(--accent);color:#1a1a00;border-color:var(--accent2);font-weight:600;text-align:center}
+.btn.primary:hover{background:var(--accent2)}
+.btn.danger{border-color:var(--red);color:var(--red)}
+.btn.danger:hover{background:rgba(232,75,75,0.1)}
+select,input[type=number],input[type=text]{width:100%;padding:5px 8px;background:var(--bg2);border:1px solid var(--border);color:var(--text);border-radius:5px;font-size:12px}
+select:focus,input:focus{outline:none;border-color:var(--accent)}
+label{display:block;color:var(--text2);font-size:11px;margin-bottom:3px}
+.field{margin-bottom:8px}
+.row{display:flex;gap:6px}
+.row .field{flex:1}
+input[type=range]{width:100%;accent-color:var(--accent)}
+.layer-item{display:flex;align-items:center;gap:6px;padding:5px 6px;border-radius:5px;cursor:pointer}
+.layer-item:hover{background:var(--panel2)}
+.layer-item.active{background:var(--bg3)}
+.layer-item input[type=checkbox]{width:14px;height:14px;accent-color:var(--accent);cursor:pointer}
+.layer-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+.layer-name{flex:1;font-size:12px}
+.scroll-panel{overflow-y:auto;flex:1}
+.tmpl-grid{display:grid;grid-template-columns:1fr 1fr;gap:5px;padding:8px}
+.tmpl-btn{padding:7px 4px;background:var(--panel2);border:1px solid var(--border);color:var(--text2);border-radius:6px;cursor:pointer;font-size:10px;text-align:center;transition:all 0.15s;line-height:1.3}
+.tmpl-btn:hover{border-color:var(--accent);color:var(--text);background:var(--bg3)}
+.tmpl-icon{font-size:16px;display:block;margin-bottom:2px}
+#canvas-wrap{flex:1;overflow:hidden;position:relative;background:#3a3a42}
+#map-canvas{position:absolute;top:0;left:0;display:block;cursor:crosshair}
+#ui-canvas{position:absolute;top:0;left:0;pointer-events:none}
+#right-panel{width:200px;background:var(--panel);border-left:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;flex-shrink:0}
+.prop-row{display:flex;align-items:center;gap:6px;padding:3px 0}
+.prop-label{color:var(--text2);font-size:11px;min-width:56px}
+.prop-val{flex:1;font-size:12px}
+.seed-badge{font-family:monospace;font-size:10px;color:var(--accent);padding:2px 5px;background:var(--bg2);border-radius:4px;border:1px solid var(--border)}
+#statusbar{height:24px;background:var(--panel);border-top:1px solid var(--border);display:flex;align-items:center;padding:0 12px;gap:16px;font-size:11px;color:var(--text2);flex-shrink:0}
+#statusbar span{color:var(--text)}
+#minimap{position:absolute;bottom:10px;right:10px;width:128px;height:128px;background:rgba(0,0,0,.75);border:1px solid var(--border);border-radius:6px;overflow:hidden}
+#mm-canvas{width:100%;height:100%}
+.swatch-row{display:flex;gap:3px;flex-wrap:wrap}
+.sw{width:20px;height:20px;border-radius:3px;cursor:pointer;border:2px solid transparent;flex-shrink:0}
+.sw.on{border-color:#fff}
+</style>
+</head>
+<body>
+<div id="app">
+<div id="main-row">
+
+<div id="toolbar">
+  <div class="tool-btn active" id="tb-select"  data-tip="Select (V)"     onclick="setTool('select')">⬚</div>
+  <div class="tool-sep"></div>
+  <div class="tool-btn" id="tb-room-r" data-tip="Rect Room (R)"          onclick="setTool('room-r')">⬜</div>
+  <div class="tool-btn" id="tb-room-c" data-tip="Round Room (C)"         onclick="setTool('room-c')">⭕</div>
+  <div class="tool-btn" id="tb-corr"   data-tip="Corridor (L)"           onclick="setTool('corr')">┄</div>
+  <div class="tool-btn" id="tb-wall"   data-tip="Wall Line (W)"          onclick="setTool('wall')">┃</div>
+  <div class="tool-sep"></div>
+  <div class="tool-btn" id="tb-door"   data-tip="Door (D)"               onclick="setTool('door')">🚪</div>
+  <div class="tool-btn" id="tb-stairs" data-tip="Stairs (S)"             onclick="setTool('stairs')">🔼</div>
+  <div class="tool-btn" id="tb-label"  data-tip="Label (T)"              onclick="setTool('label')">T</div>
+  <div class="tool-sep"></div>
+  <div class="tool-btn" id="tb-erase"  data-tip="Erase (E)"              onclick="setTool('erase')">✕</div>
+  <div class="tool-sep"></div>
+  <div class="tool-btn" data-tip="Undo (Ctrl+Z)" onclick="undo()">↺</div>
+  <div class="tool-btn" data-tip="Redo (Ctrl+Y)" onclick="redo()">↻</div>
+  <div class="tool-sep"></div>
+  <div class="tool-btn" data-tip="Zoom In (+)"   onclick="doZoom(1.2)">+</div>
+  <div class="tool-btn" data-tip="Zoom Out (-)"  onclick="doZoom(0.8)">−</div>
+  <div class="tool-btn" data-tip="Fit View (F)"  onclick="fitView()">⊡</div>
+</div>
+
+<div id="left-panel">
+  <div class="panel-section">
+    <div class="panel-title">Generate</div>
+    <div class="field">
+      <label>Location Type</label>
+      <select id="gen-type">
+        <option value="dungeon">Dungeon</option>
+        <option value="cavern">Cavern</option>
+        <option value="tavern">Tavern / Inn</option>
+        <option value="temple">Temple</option>
+        <option value="tower">Wizard Tower</option>
+        <option value="crypt">Crypt</option>
+        <option value="mine">Mine</option>
+        <option value="sewer">Sewer</option>
+        <option value="village">Village Block</option>
+        <option value="campsite">Forest Campsite</option>
+      </select>
+    </div>
+    <div class="row">
+      <div class="field"><label>Rooms</label><input type="number" id="gen-rooms" value="8" min="3" max="20"></div>
+      <div class="field"><label>Size</label>
+        <select id="gen-size"><option value="sm">S</option><option value="md" selected>M</option><option value="lg">L</option></select>
+      </div>
+    </div>
+    <div class="field">
+      <label>Seed <span id="seed-badge" class="seed-badge">—</span></label>
+      <input type="text" id="gen-seed" placeholder="random or text" style="font-family:monospace;font-size:11px">
+    </div>
+    <div class="field"><label>Map Title</label><input type="text" id="map-title" value="Dungeon of Vaelthar"></div>
+    <button class="btn primary" onclick="generateMap()">⚔ Generate Map</button>
+  </div>
+  <div class="panel-section">
+    <div class="panel-title">Templates</div>
+    <div style="max-height:136px;overflow-y:auto">
+      <div class="tmpl-grid">
+        <div class="tmpl-btn" onclick="placeTemplate('room-r')"><span class="tmpl-icon">⬜</span>Rect Room</div>
+        <div class="tmpl-btn" onclick="placeTemplate('room-c')"><span class="tmpl-icon">⭕</span>Round Room</div>
+        <div class="tmpl-btn" onclick="placeTemplate('boss')"><span class="tmpl-icon">👑</span>Boss Room</div>
+        <div class="tmpl-btn" onclick="placeTemplate('treasury')"><span class="tmpl-icon">💰</span>Treasury</div>
+        <div class="tmpl-btn" onclick="placeTemplate('entrance')"><span class="tmpl-icon">🔲</span>Entrance</div>
+        <div class="tmpl-btn" onclick="placeTemplate('prison')"><span class="tmpl-icon">🔒</span>Prison</div>
+        <div class="tmpl-btn" onclick="placeTemplate('shrine')"><span class="tmpl-icon">⛩</span>Shrine</div>
+        <div class="tmpl-btn" onclick="placeTemplate('pool')"><span class="tmpl-icon">💧</span>Pool Room</div>
+      </div>
+    </div>
+  </div>
+  <div class="panel-section scroll-panel" style="flex:1;min-height:80px">
+    <div class="panel-title">Layers</div>
+    <div id="layer-list"></div>
+  </div>
+  <div class="panel-section">
+    <button class="btn danger" onclick="clearMap()" style="margin-bottom:6px">🗑 Clear Map</button>
+    <div class="row">
+      <button class="btn" onclick="exportSVG()" style="flex:1">⬇ SVG</button>
+      <button class="btn" onclick="exportJSON()" style="flex:1">⬇ JSON</button>
+    </div>
+  </div>
+</div>
+
+<div id="canvas-wrap">
+  <canvas id="map-canvas"></canvas>
+  <canvas id="ui-canvas"></canvas>
+  <div id="minimap"><canvas id="mm-canvas"></canvas></div>
+</div>
+
+<div id="right-panel">
+  <div class="panel-section">
+    <div class="panel-title">Selection</div>
+    <div id="sel-props"><div style="color:var(--text2);font-size:11px;padding:4px 0">Nothing selected</div></div>
+  </div>
+  <div class="panel-section">
+    <div class="panel-title">Grid</div>
+    <div class="field"><label>Type</label>
+      <select id="grid-type" onchange="render()">
+        <option value="square">Square</option><option value="hex">Hex</option><option value="none">None</option>
+      </select>
+    </div>
+    <div class="field"><label>Cell: <span id="gs-val">32</span>px</label>
+      <input type="range" id="grid-size" min="16" max="64" value="32" oninput="document.getElementById('gs-val').textContent=this.value;render()">
+    </div>
+    <div class="field"><label><input type="checkbox" id="snap" checked style="width:auto;margin-right:4px"> Snap to grid</label></div>
+  </div>
+  <div class="panel-section">
+    <div class="panel-title">Map Info</div>
+    <div class="prop-row"><span class="prop-label">Rooms</span><span class="prop-val" id="st-rooms">0</span></div>
+    <div class="prop-row"><span class="prop-label">Objects</span><span class="prop-val" id="st-objs">0</span></div>
+    <div class="prop-row"><span class="prop-label">Connected</span><span class="prop-val" id="st-conn">—</span></div>
+  </div>
+  <div class="panel-section scroll-panel" style="flex:1;min-height:80px">
+    <div class="panel-title">Draw Colors</div>
+    <div class="field"><label>Wall Color</label><div class="swatch-row" id="sw-stroke"></div></div>
+    <div class="field"><label>Floor Color</label><div class="swatch-row" id="sw-fill"></div></div>
+    <div class="field"><label>Wall Thickness</label><input type="range" id="wall-t" min="4" max="20" value="8"></div>
+  </div>
+  <div class="panel-section">
+    <div class="panel-title">Validate</div>
+    <button class="btn" onclick="validate()" style="margin-bottom:6px">🔍 Check Map</button>
+    <div id="val-out" style="font-size:11px;color:var(--text2)">Run to check</div>
+  </div>
+</div>
+
+</div>
+<div id="statusbar">
+  Tool: <span id="st-tool">Select</span>&nbsp;&nbsp;
+  Pos: <span id="st-pos">0, 0</span>&nbsp;&nbsp;
+  Zoom: <span id="st-zoom">100%</span>&nbsp;&nbsp;
+  <span id="st-hint" style="color:var(--text2)">Click to select · Alt+drag or middle-mouse to pan</span>
+</div>
+</div>
+
+<script>
+'use strict';
+// ═══════════════════════════════════════════════
+// CARTOGRAPHIC PALETTE  (all 6 colours from guide)
+// ═══════════════════════════════════════════════
+const P={
+  wall:   '#6b6b7a',  // background stone
+  wallW:  '#7a6a52',  // warm-brown wall ring
+  floor:  '#c8d4b0',  // pale sage green floor
+  grid:   '#aab898',  // grid lines
+  water:  '#6aabcc',  // water
+  wood:   '#9a7a50',  // wood — doors, barrels
+  gold:   '#d4b860',  // gold — flames, locks, candles
+  dark:   '#2a1e10',  // banner bg
+  darkW:  '#4a3a28',  // label / stroke dark
+  stone2: '#8a8a9a',  // lighter stone variant
+};
+
+const LAYERS=[
+  {id:'bg',      name:'Background', color:'#6b6b7a', visible:true},
+  {id:'floors',  name:'Floors',     color:'#c8d4b0', visible:true},
+  {id:'grid',    name:'Grid Lines', color:'#aab898', visible:true},
+  {id:'walls',   name:'Wall Lines', color:'#7a6a52', visible:true},
+  {id:'features',name:'Features',   color:'#d4b860', visible:true},
+  {id:'labels',  name:'Labels',     color:'#cc88ff', visible:true},
+];
+
+let scene={entities:[],nextId:1,seed:null,title:'Dungeon of Vaelthar'};
+let view={x:0,y:0,scale:1};
+let pen={tool:'select',drawing:false,sx:0,sy:0,cx:0,cy:0,
+         selIds:[],dragging:false,dragX:0,dragY:0,
+         stroke:P.wallW,fill:P.floor,wallT:8};
+let hist=[],histIdx=-1;
+
+const wrap=document.getElementById('canvas-wrap');
+const mc=document.getElementById('map-canvas');
+const uc=document.getElementById('ui-canvas');
+const mmc=document.getElementById('mm-canvas');
+const ctx=mc.getContext('2d');
+const uctx=uc.getContext('2d');
+const mmctx=mmc.getContext('2d');
+
+function resize(){
+  const w=wrap.clientWidth,h=wrap.clientHeight;
+  mc.width=w;mc.height=h;uc.width=w;uc.height=h;
+  mmc.width=128;mmc.height=128;
+  render();
+}
+window.addEventListener('resize',resize);
+
+// ── RNG ────────────────────────────────────────
+function mkRng(seed){
+  let s=(seed||Math.floor(Math.random()*0xFFFFFF))>>>0;
+  return{next(){s=(s*1664525+1013904223)>>>0;return s/0x100000000;},
+         int(a,b){return Math.floor(this.next()*(b-a+1))+a;},seed:s};
+}
+function hashStr(s){let h=0;for(const c of s){h=(h<<5)-h+c.charCodeAt(0);h|=0;}return Math.abs(h);}
+
+// ── Coords ─────────────────────────────────────
+function snapXY(x,y){
+  if(!document.getElementById('snap').checked)return[x,y];
+  const g=+document.getElementById('grid-size').value;
+  return[Math.round(x/g)*g,Math.round(y/g)*g];
+}
+function s2w(sx,sy){return[(sx-view.x)/view.scale,(sy-view.y)/view.scale];}
+
+// ── Entity factories ───────────────────────────
+// Rooms: two-shape technique (outer=wall, inner=floor)
+function mkRoomRect(x,y,w,h,label='',o={}){
+  return{id:scene.nextId++,type:'room-r',layer:'floors',x,y,w,h,label,
+    wallColor:o.wallColor||P.wallW,floorColor:o.floorColor||P.floor,wallT:o.wallT||8,special:o.special||null};
+}
+function mkRoomCircle(cx,cy,r,label='',o={}){
+  return{id:scene.nextId++,type:'room-c',layer:'floors',cx,cy,r,label,
+    wallColor:o.wallColor||P.wallW,floorColor:o.floorColor||P.floor,wallT:o.wallT||8,special:o.special||null};
+}
+// Corridors: floor-rect + thick wall-colour stroke on long edges
+function mkCorridor(x1,y1,x2,y2,width=32,o={}){
+  return{id:scene.nextId++,type:'corr',layer:'floors',x1,y1,x2,y2,width,
+    floorColor:o.floorColor||P.floor,wallColor:o.wallColor||P.wallW};
+}
+function mkWall(x1,y1,x2,y2,o={}){
+  return{id:scene.nextId++,type:'wall',layer:'walls',x1,y1,x2,y2,
+    color:o.color||P.wallW,lw:o.lw||3,dashed:o.dashed||false};
+}
+function mkDoor(x,y,horiz=true,secret=false){
+  return{id:scene.nextId++,type:'door',layer:'features',x,y,horiz,secret};
+}
+function mkStairs(x,y,w=48,h=28,o={}){
+  return{id:scene.nextId++,type:'stairs',layer:'features',x,y,w,h,color:o.color||P.wallW};
+}
+function mkFeature(x,y,kind){
+  return{id:scene.nextId++,type:'feature',layer:'features',x,y,kind};
+}
+function mkLabel(x,y,text,size=9,o={}){
+  return{id:scene.nextId++,type:'label',layer:'labels',x,y,text,size,color:o.color||P.darkW};
+}
+function mkBg(x,y,w,h){return{id:scene.nextId++,type:'bg',layer:'bg',x,y,w,h};}
+function mkWater(x,y,w,h){return{id:scene.nextId++,type:'water',layer:'floors',x,y,w,h};}
+
+// ── Outdoor palette (forest guide 6-stop ramp + support) ──
+const F={
+  shadow: '#2a5a20', // deep shadow canopy
+  mid1:   '#3a6a28', // mid canopy
+  mid2:   '#4a7a30', // light canopy
+  hi1:    '#5a8a38', // highlight canopy
+  hi2:    '#6a9a40', // bright highlight
+  grass:  '#5a8a40', // base grass
+  dirt:   '#8a7050', // clearing dirt
+  dirt2:  '#7a6848', // darker dirt variant
+  darkDirt:'#6a5838',// dark patches
+  stain:  '#5a3828', // blood/rot stain
+  stone:  '#5a5248', // stone path
+  stone2: '#6a6258', // stone path lighter
+  log:    '#5a3a20', // log dark
+  logHi:  '#7a5a38', // log highlight
+  grid:   '#4a7a3a', // grid lines
+  trunk:  '#2a4018', // trunk dots
+};
+
+// Outdoor scene: single entity that stores everything needed for the
+// layered-painter outdoor render. All outdoor data lives here.
+function mkOutdoorScene(data){
+  return{id:scene.nextId++,type:'outdoor',layer:'bg',data};
+}
+// Outdoor path (road / stone path) — drawn 3× at decreasing widths
+function mkOutdoorPath(pts,o={}){
+  return{id:scene.nextId++,type:'opath',layer:'floors',pts,
+    color:o.color||F.stone,width:o.width||28,kind:o.kind||'stone'};
+}
+// Tree cluster — array of {cx,cy,r,shade} circles
+function mkTreeCluster(circles,trunkX,trunkY){
+  return{id:scene.nextId++,type:'trees',layer:'features',circles,trunkX,trunkY};
+}
+// Clearing ellipse
+function mkClearing(cx,cy,rx,ry){
+  return{id:scene.nextId++,type:'clearing',layer:'floors',cx,cy,rx,ry};
+}
+// Fern group
+function mkFern(x,y){
+  return{id:scene.nextId++,type:'fern',layer:'features',x,y};
+}
+// Log pair
+function mkLog(x1,y1,x2,y2){
+  return{id:scene.nextId++,type:'log',layer:'features',x1,y1,x2,y2};
+}
+// Cave entrance
+function mkCave(x,y,rx,ry){
+  return{id:scene.nextId++,type:'cave',layer:'features',x,y,rx,ry};
+}
+// Loose stone
+function mkLooseStone(x,y,rx,ry){
+  return{id:scene.nextId++,type:'looseStone',layer:'features',x,y,rx,ry};
+}
+
+function add(e){scene.entities.push(e);return e;}
+
+// ═══════════════════════════════════════════════
+// RENDERING  (background = walls principle)
+// ═══════════════════════════════════════════════
+function render(){
+  const W=mc.width,H=mc.height;
+  const isOutdoor=scene.entities.some(e=>e.type==='outdoor');
+  ctx.clearRect(0,0,W,H);
+  // Canvas bg: wall stone for dungeons, mid grass for outdoor
+  ctx.fillStyle=isOutdoor?F.grass:P.wall;
+  ctx.fillRect(0,0,W,H);
+
+  ctx.save();
+  ctx.translate(view.x,view.y);
+  ctx.scale(view.scale,view.scale);
+
+  const vis=new Set(LAYERS.filter(l=>l.visible).map(l=>l.id));
+  for(const lid of['bg','floors','grid','walls','features','labels']){
+    if(!vis.has(lid))continue;
+    for(const e of scene.entities){
+      if(e.layer!==lid)continue;
+      ctx.save();drawEntity(e);ctx.restore();
+    }
+  }
+
+  if(scene.entities.length){drawCompassRose();drawTitleBanner();}
+  for(const id of pen.selIds)drawSelHL(id);
+  ctx.restore();
+
+  if(pen.drawing)drawPreview();
+  drawMinimap();
+  updateStats();
+}
+
+function drawEntity(e){
+  switch(e.type){
+    case'bg':         drawBg(e);break;
+    case'room-r':     drawRoomRect(e);break;
+    case'room-c':     drawRoomCircle(e);break;
+    case'corr':       drawCorridor(e);break;
+    case'wall':       drawWallLine(e);break;
+    case'door':       drawDoor(e);break;
+    case'stairs':     drawStairs(e);break;
+    case'feature':    drawFeature(e);break;
+    case'label':      drawLabel(e);break;
+    case'water':      drawWater(e);break;
+    case'outdoor':    drawOutdoorBg(e);break;
+    case'opath':      drawOutdoorPath(e);break;
+    case'clearing':   drawClearing(e);break;
+    case'trees':      drawTreeCluster(e);break;
+    case'fern':       drawFern(e);break;
+    case'log':        drawLog(e);break;
+    case'cave':       drawCave(e);break;
+    case'looseStone': drawLooseStone(e);break;
+  }
+}
+
+function drawBg(e){ctx.fillStyle=P.wall;ctx.fillRect(e.x,e.y,e.w,e.h);}
+
+// Two-rect room: outer=wallColor, inner=floorColor
+function drawRoomRect(e){
+  const t=e.wallT||8;
+  ctx.fillStyle=e.wallColor;ctx.fillRect(e.x,e.y,e.w,e.h);
+  ctx.fillStyle=e.floorColor;ctx.fillRect(e.x+t,e.y+t,e.w-t*2,e.h-t*2);
+  // Grid only over floor area
+  ctx.save();ctx.rect(e.x+t,e.y+t,e.w-t*2,e.h-t*2);ctx.clip();
+  drawGridLines(e.x+t,e.y+t,e.w-t*2,e.h-t*2);ctx.restore();
+  if(e.special==='boss'){ctx.fillStyle='rgba(200,60,30,0.12)';ctx.fillRect(e.x+t,e.y+t,e.w-t*2,e.h-t*2);}
+  if(e.special==='entrance'){ctx.fillStyle='rgba(80,200,80,0.1)';ctx.fillRect(e.x+t,e.y+t,e.w-t*2,e.h-t*2);}
+  if(e.label)drawRoomLbl(e.x+e.w/2,e.y+e.h+11,e.label);
+}
+
+// Two-circle room: outer=wallColor, inner=floorColor
+function drawRoomCircle(e){
+  const t=e.wallT||8;
+  ctx.beginPath();ctx.arc(e.cx,e.cy,e.r,0,Math.PI*2);
+  ctx.fillStyle=e.wallColor;ctx.fill();
+  ctx.beginPath();ctx.arc(e.cx,e.cy,e.r-t,0,Math.PI*2);
+  ctx.fillStyle=e.floorColor;ctx.fill();
+  ctx.save();ctx.beginPath();ctx.arc(e.cx,e.cy,e.r-t,0,Math.PI*2);ctx.clip();
+  drawGridLines(e.cx-(e.r-t),e.cy-(e.r-t),(e.r-t)*2,(e.r-t)*2);ctx.restore();
+  if(e.special==='boss'){
+    ctx.save();ctx.beginPath();ctx.arc(e.cx,e.cy,e.r-t,0,Math.PI*2);ctx.clip();
+    ctx.fillStyle='rgba(200,60,30,0.12)';ctx.fillRect(e.cx-e.r,e.cy-e.r,e.r*2,e.r*2);ctx.restore();
+  }
+  if(e.label)drawRoomLbl(e.cx,e.cy+e.r+11,e.label);
+}
+
+// Corridor: floor rect + thick wall-colour stroke on long edges
+function drawCorridor(e){
+  const dx=e.x2-e.x1,dy=e.y2-e.y1,len=Math.sqrt(dx*dx+dy*dy);
+  if(len<1)return;
+  const nx=-dy/len,ny=dx/len,hw=e.width/2;
+  ctx.save();
+  ctx.beginPath();
+  ctx.moveTo(e.x1+nx*hw,e.y1+ny*hw);ctx.lineTo(e.x2+nx*hw,e.y2+ny*hw);
+  ctx.lineTo(e.x2-nx*hw,e.y2-ny*hw);ctx.lineTo(e.x1-nx*hw,e.y1-ny*hw);
+  ctx.closePath();
+  ctx.fillStyle=e.floorColor;ctx.fill();
+  ctx.clip();
+  const bx=Math.min(e.x1,e.x2)-hw,by=Math.min(e.y1,e.y2)-hw;
+  drawGridLines(bx,by,Math.abs(e.x2-e.x1)+hw*2,Math.abs(e.y2-e.y1)+hw*2);
+  ctx.restore();
+  // Wall edges (thick stroke = wall)
+  ctx.strokeStyle=e.wallColor;ctx.lineWidth=5;ctx.lineCap='round';
+  ctx.beginPath();ctx.moveTo(e.x1+nx*hw,e.y1+ny*hw);ctx.lineTo(e.x2+nx*hw,e.y2+ny*hw);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(e.x1-nx*hw,e.y1-ny*hw);ctx.lineTo(e.x2-nx*hw,e.y2-ny*hw);ctx.stroke();
+}
+
+// Grid lines: dashed, only over floor, slightly darker than floor
+// Not called for outdoor maps — those handle grid in drawOutdoorBg
+function drawGridLines(fx,fy,fw,fh){
+  if(scene.entities.some(e=>e.type==='outdoor'))return; // outdoor grid handled in bg layer
+  const type=document.getElementById('grid-type').value;
+  if(type==='none')return;
+  if(!LAYERS.find(l=>l.id==='grid')?.visible)return;
+  const gs=+document.getElementById('grid-size').value;
+  ctx.strokeStyle=P.grid;ctx.lineWidth=0.5;ctx.setLineDash([4,4]);
+  if(type==='square'){
+    ctx.beginPath();
+    for(let x=Math.ceil(fx/gs)*gs;x<=fx+fw;x+=gs){ctx.moveTo(x,fy);ctx.lineTo(x,fy+fh);}
+    for(let y=Math.ceil(fy/gs)*gs;y<=fy+fh;y+=gs){ctx.moveTo(fx,y);ctx.lineTo(fx+fw,y);}
+    ctx.stroke();
+  }else if(type==='hex'){
+    const hr=gs/2,hs=gs*Math.sqrt(3)/2;
+    ctx.beginPath();
+    for(let col=Math.floor(fx/(gs*1.5))-1;col<(fx+fw)/(gs*1.5)+1;col++){
+      for(let row=Math.floor(fy/hs)-1;row<(fy+fh)/hs+1;row++){
+        const hx=col*gs*1.5,hy=row*hs+(col%2?hs/2:0);
+        for(let i=0;i<6;i++){const a=Math.PI/3*i-Math.PI/6;i===0?ctx.moveTo(hx+hr*Math.cos(a),hy+hr*Math.sin(a)):ctx.lineTo(hx+hr*Math.cos(a),hy+hr*Math.sin(a));}
+        ctx.closePath();
+      }
+    }
+    ctx.stroke();
+  }
+  ctx.setLineDash([]);
+}
+
+function drawWallLine(e){
+  ctx.strokeStyle=e.color;ctx.lineWidth=e.lw;ctx.lineCap='round';
+  if(e.dashed)ctx.setLineDash([6,4]);
+  ctx.beginPath();ctx.moveTo(e.x1,e.y1);ctx.lineTo(e.x2,e.y2);ctx.stroke();
+  ctx.setLineDash([]);
+}
+
+function drawDoor(e){
+  const c=e.secret?'#cc4488':P.wood;
+  ctx.strokeStyle=c;ctx.fillStyle=e.secret?'rgba(200,60,120,0.15)':'rgba(154,122,80,0.2)';
+  ctx.lineWidth=2;if(e.secret)ctx.setLineDash([3,3]);
+  // Door body
+  ctx.fillRect(e.x-14,e.y-3,28,6);ctx.strokeRect(e.x-14,e.y-3,28,6);
+  // Swing arc
+  ctx.beginPath();ctx.arc(e.x-14,e.y,14,0,Math.PI/2);ctx.fill();ctx.stroke();
+  ctx.setLineDash([]);
+}
+
+function drawStairs(e){
+  const sw=e.w/5;
+  ctx.fillStyle=P.floor;ctx.fillRect(e.x,e.y,e.w,e.h);
+  ctx.strokeStyle=e.color;ctx.lineWidth=1;ctx.strokeRect(e.x,e.y,e.w,e.h);
+  for(let i=1;i<5;i++){ctx.beginPath();ctx.moveTo(e.x+sw*i,e.y);ctx.lineTo(e.x+sw*i,e.y+e.h);ctx.stroke();}
+  ctx.fillStyle=e.color;
+  ctx.beginPath();ctx.moveTo(e.x+e.w/2,e.y+3);ctx.lineTo(e.x+e.w/2+5,e.y+11);ctx.lineTo(e.x+e.w/2-5,e.y+11);ctx.closePath();ctx.fill();
+}
+
+// All features from primitives (guide section 6)
+function drawFeature(e){
+  const{x,y,kind}=e;
+  ctx.save();
+  if(kind==='chest')     drawChest(x,y);
+  else if(kind==='altar')   drawAltar(x,y);
+  else if(kind==='well')    drawWell(x,y);
+  else if(kind==='bars')    drawBars(x,y);
+  else if(kind==='barrel')  drawBarrel(x,y);
+  else if(kind==='candle')  drawCandle(x,y);
+  else if(kind==='pool')    drawPool(x,y);
+  else if(kind==='star')    drawStar(x,y);
+  else if(kind==='ritual')  drawRitual(x,y);
+  ctx.restore();
+}
+function drawChest(x,y){
+  ctx.fillStyle=P.wood;ctx.strokeStyle=P.darkW;ctx.lineWidth=1;
+  ctx.fillRect(x-10,y,20,10);ctx.strokeRect(x-10,y,20,10);      // body
+  ctx.fillRect(x-10,y-7,20,8);ctx.strokeRect(x-10,y-7,20,8);    // lid
+  ctx.fillStyle=P.gold;ctx.fillRect(x-2,y+3,4,4);ctx.strokeRect(x-2,y+3,4,4); // lock
+}
+function drawAltar(x,y){
+  ctx.fillStyle=P.stone2;ctx.strokeStyle=P.darkW;ctx.lineWidth=1;
+  ctx.fillRect(x-12,y-14,6,14);ctx.strokeRect(x-12,y-14,6,14);
+  ctx.fillRect(x+6,y-14,6,14);ctx.strokeRect(x+6,y-14,6,14);
+  ctx.fillRect(x-14,y-4,28,8);ctx.strokeRect(x-14,y-4,28,8);
+}
+function drawWell(x,y){
+  ctx.beginPath();ctx.arc(x,y,12,0,Math.PI*2);ctx.fillStyle=P.wallW;ctx.fill();
+  ctx.beginPath();ctx.arc(x,y,8,0,Math.PI*2);ctx.fillStyle=P.water;ctx.fill();
+  ctx.beginPath();ctx.ellipse(x,y,5,3,0,0,Math.PI*2);
+  ctx.strokeStyle=P.water;ctx.lineWidth=0.8;ctx.globalAlpha=0.7;ctx.stroke();ctx.globalAlpha=1;
+}
+function drawBars(x,y){
+  ctx.fillStyle=P.darkW;
+  for(let i=-2;i<=2;i++)ctx.fillRect(x+i*5-1,y-12,2,24);
+  ctx.fillRect(x-13,y-2,26,2);
+}
+function drawBarrel(x,y){
+  ctx.beginPath();ctx.arc(x,y,9,0,Math.PI*2);
+  ctx.fillStyle=P.wood;ctx.fill();ctx.strokeStyle=P.darkW;ctx.lineWidth=1.5;ctx.stroke();
+  ctx.beginPath();ctx.moveTo(x-9,y);ctx.lineTo(x+9,y);ctx.stroke();
+}
+function drawCandle(x,y){
+  ctx.fillStyle=P.floor;ctx.strokeStyle=P.darkW;ctx.lineWidth=0.8;
+  ctx.fillRect(x-3,y-8,6,14);ctx.strokeRect(x-3,y-8,6,14);
+  ctx.beginPath();ctx.arc(x,y-10,3,0,Math.PI*2);ctx.fillStyle=P.gold;ctx.fill();
+}
+function drawPool(x,y){
+  ctx.beginPath();ctx.ellipse(x,y,18,12,0,0,Math.PI*2);
+  ctx.fillStyle=P.water;ctx.globalAlpha=0.85;ctx.fill();ctx.globalAlpha=1;
+  ctx.strokeStyle='#4a90b0';ctx.lineWidth=1;ctx.stroke();
+  ctx.beginPath();ctx.ellipse(x,y,10,6,0,0,Math.PI*2);
+  ctx.strokeStyle=P.water;ctx.lineWidth=0.8;ctx.globalAlpha=0.7;ctx.stroke();ctx.globalAlpha=1;
+}
+function drawStar(x,y){
+  const pts=[],n=10,R=10,r=4;
+  for(let i=0;i<n;i++){const a=Math.PI*i/5-Math.PI/2,rad=i%2===0?R:r;pts.push([x+rad*Math.cos(a),y+rad*Math.sin(a)]);}
+  ctx.beginPath();ctx.moveTo(pts[0][0],pts[0][1]);
+  for(const p of pts)ctx.lineTo(p[0],p[1]);ctx.closePath();
+  ctx.fillStyle=P.gold;ctx.fill();ctx.strokeStyle=P.darkW;ctx.lineWidth=0.8;ctx.stroke();
+}
+function drawRitual(x,y){
+  ctx.beginPath();ctx.arc(x,y,16,0,Math.PI*2);
+  ctx.setLineDash([4,3]);ctx.strokeStyle=P.darkW;ctx.lineWidth=1;ctx.stroke();ctx.setLineDash([]);
+  ctx.beginPath();ctx.arc(x,y,8,0,Math.PI*2);ctx.stroke();
+  ctx.beginPath();ctx.arc(x,y,3,0,Math.PI*2);ctx.fillStyle=P.dark;ctx.fill();
+}
+
+// Serif italic cartographic labels
+function drawLabel(e){
+  ctx.fillStyle=e.color||P.darkW;ctx.font=`italic ${e.size||9}px serif`;
+  ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(e.text,e.x,e.y);
+}
+function drawRoomLbl(x,y,text){
+  ctx.fillStyle=P.darkW;ctx.font='italic 8px serif';
+  ctx.textAlign='center';ctx.textBaseline='top';ctx.fillText(text,x,y);
+}
+
+function drawWater(e){
+  ctx.globalAlpha=0.85;
+  ctx.fillStyle=P.water;ctx.strokeStyle='#4a90b0';ctx.lineWidth=1;
+  ctx.fillRect(e.x,e.y,e.w,e.h);ctx.strokeRect(e.x,e.y,e.w,e.h);
+  ctx.globalAlpha=0.4;ctx.strokeStyle=P.water;ctx.lineWidth=0.8;
+  for(let ry=e.y+8;ry<e.y+e.h;ry+=8){
+    ctx.beginPath();ctx.moveTo(e.x+4,ry);
+    ctx.bezierCurveTo(e.x+e.w*0.3,ry-3,e.x+e.w*0.7,ry+3,e.x+e.w-4,ry);ctx.stroke();
+  }
+  ctx.globalAlpha=1;
+}
+
+// ═══════════════════════════════════════════════
+// OUTDOOR RENDERING  (forest guide principles)
+// ═══════════════════════════════════════════════
+
+// Layer 1: grass base fill + dashed grid overlay
+function drawOutdoorBg(e){
+  const{x,y,w,h}=e.data;
+  // Base grass (entire canvas area) — background IS the ground
+  ctx.fillStyle=F.grass;
+  ctx.fillRect(x,y,w,h);
+  // Grass blade texture — short angled lines tiled across
+  ctx.strokeStyle='#4a7a32';ctx.lineWidth=0.6;ctx.globalAlpha=0.45;
+  const gs2=40;
+  for(let gx=x;gx<x+w;gx+=gs2){
+    for(let gy=y;gy<y+h;gy+=gs2){
+      ctx.beginPath();ctx.moveTo(gx+8,gy+38);ctx.lineTo(gx+10,gy+32);ctx.stroke();
+      ctx.beginPath();ctx.moveTo(gx+18,gy+36);ctx.lineTo(gx+20,gy+30);ctx.stroke();
+      ctx.beginPath();ctx.moveTo(gx+28,gy+37);ctx.lineTo(gx+30,gy+31);ctx.stroke();
+      ctx.beginPath();ctx.moveTo(gx+4,gy+34);ctx.lineTo(gx+6,gy+28);ctx.stroke();
+    }
+  }
+  ctx.globalAlpha=1;
+  // Grid overlay — drawn inline here; skip dungeon grid layer for outdoor maps
+  const gridType=document.getElementById('grid-type').value;
+  const gridVisible=LAYERS.find(l=>l.id==='grid')?.visible;
+  if(gridType!=='none'&&gridVisible){
+    const gs=+document.getElementById('grid-size').value;
+    ctx.strokeStyle=F.grid;ctx.lineWidth=0.3;ctx.globalAlpha=0.5;ctx.setLineDash([]);
+    ctx.beginPath();
+    for(let gx=Math.ceil(x/gs)*gs;gx<=x+w;gx+=gs){ctx.moveTo(gx,y);ctx.lineTo(gx,y+h);}
+    for(let gy=Math.ceil(y/gs)*gs;gy<=y+h;gy+=gs){ctx.moveTo(x,gy);ctx.lineTo(x+w,gy);}
+    ctx.stroke();ctx.globalAlpha=1;
+  }
+}
+
+// Stone path drawn 3× at decreasing widths (guide section 3)
+function drawOutdoorPath(e){
+  if(!e.pts||e.pts.length<4)return;
+  // pts format: [startX,startY, qcx,qcy,ex,ey,  qcx,qcy,ex,ey, ...]
+  // For simple polyline fallback if pts is just [x,y,x,y,...] pairs
+  const buildPath=()=>{
+    ctx.beginPath();ctx.moveTo(e.pts[0],e.pts[1]);
+    if(e.pts.length>=6){
+      for(let i=2;i+3<e.pts.length;i+=4){
+        ctx.quadraticCurveTo(e.pts[i],e.pts[i+1],e.pts[i+2],e.pts[i+3]);
+      }
+    } else {
+      ctx.lineTo(e.pts[e.pts.length-2],e.pts[e.pts.length-1]);
+    }
+  };
+  ctx.lineCap='round';
+  // Layer 1: shadow
+  buildPath();ctx.strokeStyle='#4a4238';ctx.lineWidth=e.width+4;ctx.globalAlpha=0.4;ctx.stroke();
+  // Layer 2: base stone
+  buildPath();ctx.strokeStyle=F.stone;ctx.lineWidth=e.width;ctx.globalAlpha=0.65;ctx.stroke();
+  // Layer 3: dashed slab texture on top
+  buildPath();ctx.strokeStyle=F.stone2;ctx.lineWidth=e.width-4;
+  ctx.setLineDash([18,6]);ctx.globalAlpha=0.55;ctx.stroke();ctx.setLineDash([]);
+  ctx.globalAlpha=1;
+  // Loose stones scattered alongside
+  if(e.looseStones){
+    for(const s of e.looseStones){
+      ctx.beginPath();ctx.ellipse(s.x,s.y,s.rx,s.ry,s.a||0,0,Math.PI*2);
+      ctx.fillStyle=s.c||F.stone;ctx.globalAlpha=0.65;ctx.fill();ctx.globalAlpha=1;
+    }
+  }
+}
+
+// Central clearing: layered ellipses (guide section 4)
+function drawClearing(e){
+  const{cx,cy,rx,ry}=e;
+  // Base dirt fill
+  ctx.beginPath();ctx.ellipse(cx,cy,rx,ry,0,0,Math.PI*2);
+  ctx.fillStyle=F.dirt;ctx.fill();
+  // Dirt texture dots
+  ctx.fillStyle=F.darkDirt;
+  for(const d of(e.dirtDots||[])){
+    ctx.beginPath();ctx.arc(d.x,d.y,d.r,0,Math.PI*2);ctx.globalAlpha=d.a;ctx.fill();
+  }
+  ctx.globalAlpha=1;
+  // Variation patches
+  for(const p of(e.patches||[])){
+    ctx.beginPath();ctx.ellipse(p.cx,p.cy,p.rx,p.ry,p.rot||0,0,Math.PI*2);
+    ctx.fillStyle=p.c;ctx.globalAlpha=p.a;ctx.fill();
+  }
+  ctx.globalAlpha=1;
+  // Soft grassy border — two thick stroked ellipses blend the hard edge
+  ctx.beginPath();ctx.ellipse(cx,cy,rx+2,ry+2,0,0,Math.PI*2);
+  ctx.strokeStyle='#4a7030';ctx.lineWidth=14;ctx.globalAlpha=0.55;ctx.stroke();
+  ctx.beginPath();ctx.ellipse(cx,cy,rx+1,ry+1,0,0,Math.PI*2);
+  ctx.strokeStyle='#5a8038';ctx.lineWidth=9;ctx.globalAlpha=0.45;ctx.stroke();
+  ctx.globalAlpha=1;
+}
+
+// Tree cluster: 4–6 offset circles in 3 shades + trunk dot (guide section 5–6)
+function drawTreeCluster(e){
+  for(const c of e.circles){
+    ctx.beginPath();ctx.arc(c.cx,c.cy,c.r,0,Math.PI*2);
+    ctx.fillStyle=c.fill;ctx.globalAlpha=c.a||0.88;ctx.fill();
+  }
+  ctx.globalAlpha=1;
+  // Soft outline on outermost dark circle
+  if(e.circles.length){
+    const outer=e.circles[0];
+    ctx.beginPath();ctx.arc(outer.cx,outer.cy,outer.r,0,Math.PI*2);
+    ctx.strokeStyle=F.shadow;ctx.lineWidth=1;ctx.globalAlpha=0.25;ctx.stroke();
+  }
+  ctx.globalAlpha=1;
+  // Jagged canopy edge path on top of circles (guide section 10)
+  if(e.jagged){
+    ctx.beginPath();
+    const jp=e.jagged;
+    ctx.moveTo(jp[0],jp[1]);
+    for(let i=2;i<jp.length;i+=4){ctx.quadraticCurveTo(jp[i],jp[i+1],jp[i+2]||jp[i],jp[i+3]||jp[i+1]);}
+    ctx.fillStyle=F.mid1;ctx.globalAlpha=0.65;ctx.fill();ctx.globalAlpha=1;
+  }
+  // Trunk dot — small dark circle at cluster center
+  if(e.trunkX!==undefined){
+    ctx.beginPath();ctx.arc(e.trunkX,e.trunkY,3.5,0,Math.PI*2);
+    ctx.fillStyle=F.trunk;ctx.globalAlpha=0.58;ctx.fill();ctx.globalAlpha=1;
+  }
+}
+
+// Fern: 5 radiating lines from base point (guide section 7)
+function drawFern(e){
+  const blades=[[-8,-10],[8,-10],[-4,-12],[4,-12],[0,-13]];
+  const colors=[F.mid1,F.mid1,F.mid2,F.mid2,F.mid1];
+  ctx.globalAlpha=0.7;ctx.lineCap='round';
+  blades.forEach(([dx,dy],i)=>{
+    ctx.strokeStyle=colors[i];ctx.lineWidth=i<2?1.2:1;
+    ctx.beginPath();ctx.moveTo(e.x,e.y);ctx.lineTo(e.x+dx,e.y+dy);ctx.stroke();
+  });
+  ctx.globalAlpha=1;
+}
+
+// Log: thick line drawn twice (body + highlight), end circles (guide section 9)
+function drawLog(e){
+  ctx.lineCap='round';
+  ctx.strokeStyle=F.log;ctx.lineWidth=7;
+  ctx.beginPath();ctx.moveTo(e.x1,e.y1);ctx.lineTo(e.x2,e.y2);ctx.stroke();
+  ctx.strokeStyle=F.logHi;ctx.lineWidth=5;ctx.globalAlpha=0.6;
+  ctx.beginPath();ctx.moveTo(e.x1,e.y1);ctx.lineTo(e.x2,e.y2);ctx.stroke();
+  ctx.globalAlpha=1;
+  // End cross-section circles
+  [e.x1,e.x2].forEach((x,i)=>{
+    const y=i===0?e.y1:e.y2;
+    ctx.beginPath();ctx.arc(x,y,4,0,Math.PI*2);
+    ctx.fillStyle=F.log;ctx.fill();
+  });
+}
+
+// Cave entrance: two ellipses (guide section 8)
+function drawCave(e){
+  ctx.beginPath();ctx.ellipse(e.x,e.y,e.rx,e.ry,0,0,Math.PI*2);
+  ctx.fillStyle='#0a0a08';ctx.globalAlpha=0.95;ctx.fill();ctx.globalAlpha=1;
+  ctx.beginPath();ctx.ellipse(e.x,e.y,e.rx,e.ry,0,0,Math.PI*2);
+  ctx.strokeStyle='#2a2a20';ctx.lineWidth=3;ctx.globalAlpha=0.6;ctx.stroke();ctx.globalAlpha=1;
+}
+
+// Loose stone alongside path
+function drawLooseStone(e){
+  ctx.beginPath();ctx.ellipse(e.x,e.y,e.rx,e.ry,e.angle||0,0,Math.PI*2);
+  ctx.fillStyle=e.fill||F.stone;ctx.globalAlpha=0.7;ctx.fill();ctx.globalAlpha=1;
+}
+
+// ── Helper: build a tree cluster entity from a center + rng ──
+function buildTreeCluster(cx,cy,baseR,rng){
+  const shades=[F.shadow,F.shadow,F.mid1,F.mid2,F.hi1,F.hi2];
+  const circles=[];
+  // 4–5 base/mid circles, offset irregularly
+  const n=rng.int(4,5);
+  for(let i=0;i<n;i++){
+    const angle=rng.next()*Math.PI*2;
+    const dist=rng.int(0,Math.round(baseR*0.45));
+    const r=baseR*rng.int(70,100)/100;
+    const shade=shades[rng.int(0,3)];
+    circles.push({cx:cx+Math.cos(angle)*dist,cy:cy+Math.sin(angle)*dist,r,fill:shade,a:rng.int(80,92)/100});
+  }
+  // 2–3 highlight circles (smaller, brighter)
+  for(let i=0;i<rng.int(2,3);i++){
+    const angle=rng.next()*Math.PI*2;
+    const dist=rng.int(Math.round(baseR*0.1),Math.round(baseR*0.4));
+    circles.push({cx:cx+Math.cos(angle)*dist,cy:cy+Math.sin(angle)*dist,r:baseR*rng.int(30,55)/100,fill:shades[rng.int(4,5)],a:rng.int(50,65)/100});
+  }
+  // Jagged edge path around the cluster perimeter
+  const jagged=[];
+  const steps=14;
+  for(let i=0;i<=steps;i++){
+    const a=(i/steps)*Math.PI*2-Math.PI/2;
+    const jr=baseR*(0.85+rng.next()*0.3);
+    const px=cx+Math.cos(a)*jr,py=cy+Math.sin(a)*jr;
+    if(i===0){jagged.push(px,py);}
+    else{
+      const qa=(((i-0.5)/steps)*Math.PI*2-Math.PI/2);
+      const qr=baseR*(0.9+rng.next()*0.25);
+      jagged.push(cx+Math.cos(qa)*qr,cy+Math.sin(qa)*qr,px,py);
+    }
+  }
+  return mkTreeCluster(circles,cx,cy);
+}
+
+// ── Helper: place a ring of tree clusters around a clearing ──
+function buildForestRing(cx,cy,clearRx,clearRy,density,rng,mapW,mapH){
+  // Outer forest wall (fill canvas with clusters)
+  const outerCount=density*3;
+  for(let i=0;i<outerCount;i++){
+    const angle=rng.next()*Math.PI*2;
+    const dist=Math.max(clearRx,clearRy)*rng.int(120,220)/100;
+    const tcx=cx+Math.cos(angle)*dist,tcy=cy+Math.sin(angle)*dist;
+    const baseR=rng.int(38,70);
+    add(buildTreeCluster(tcx,tcy,baseR,rng));
+  }
+  // Edge forest masses near the map boundary
+  for(let i=0;i<density*2;i++){
+    const side=rng.int(0,3);
+    let tcx,tcy;
+    if(side===0){tcx=rng.int(0,mapW);tcy=rng.int(-20,40);}
+    else if(side===1){tcx=rng.int(0,mapW);tcy=rng.int(mapH-40,mapH+20);}
+    else if(side===2){tcx=rng.int(-20,40);tcy=rng.int(0,mapH);}
+    else{tcx=rng.int(mapW-40,mapW+20);tcy=rng.int(0,mapH);}
+    add(buildTreeCluster(tcx,tcy,rng.int(42,72),rng));
+  }
+  // Inner bush ring — tighter clusters just outside the clearing edge
+  const innerCount=density*2;
+  for(let i=0;i<innerCount;i++){
+    const angle=(i/innerCount)*Math.PI*2+rng.next()*0.4;
+    const dist=(clearRx+clearRy)/2*rng.int(108,130)/100;
+    const tcx=cx+Math.cos(angle)*(dist*clearRx/((clearRx+clearRy)/2));
+    const tcy=cy+Math.sin(angle)*(dist*clearRy/((clearRx+clearRy)/2));
+    add(buildTreeCluster(tcx,tcy,rng.int(28,46),rng));
+  }
+}
+
+// Compass rose (polygon arrows, guide section 10)
+function drawCompassRose(){
+  const b=getBounds(),wx=b.maxX+40,wy=b.maxY-60;
+  const isOutdoor=scene.entities.some(e=>e.type==='outdoor');
+  const ptColor=isOutdoor?F.mid2:P.floor;
+  ctx.beginPath();ctx.arc(wx,wy,16,0,Math.PI*2);
+  ctx.fillStyle=P.dark;ctx.globalAlpha=0.75;ctx.fill();ctx.globalAlpha=1;
+  const arrows={N:[wx,wy-22,wx+4,wy-12,wx,wy-9,wx-4,wy-12],
+                S:[wx,wy+22,wx+4,wy+12,wx,wy+9,wx-4,wy+12],
+                E:[wx+22,wy,wx+12,wy-4,wx+9,wy,wx+12,wy+4],
+                W:[wx-22,wy,wx-12,wy-4,wx-9,wy,wx-12,wy+4]};
+  const clr={N:ptColor,S:'#8a8a7a',E:ptColor,W:'#8a8a7a'};
+  for(const[d,p]of Object.entries(arrows)){
+    ctx.beginPath();ctx.moveTo(p[0],p[1]);ctx.lineTo(p[2],p[3]);ctx.lineTo(p[4],p[5]);ctx.lineTo(p[6],p[7]);ctx.closePath();
+    ctx.fillStyle=clr[d];ctx.fill();ctx.strokeStyle=P.darkW;ctx.lineWidth=0.5;ctx.stroke();
+  }
+  ctx.beginPath();ctx.arc(wx,wy,4,0,Math.PI*2);ctx.fillStyle=P.darkW;ctx.fill();
+  ctx.font='bold 7px serif';ctx.fillStyle=ptColor;ctx.textAlign='center';ctx.textBaseline='middle';
+  ctx.fillText('N',wx,wy-30);
+}
+
+// Title banner (guide section 11)
+function drawTitleBanner(){
+  if(!scene.title)return;
+  const b=getBounds(),bx=b.minX,by=b.minY-32;
+  const isOutdoor=scene.entities.some(e=>e.type==='outdoor');
+  if(isOutdoor){
+    // Parchment-style banner for outdoor maps
+    ctx.fillStyle='rgba(200,190,150,0.88)';ctx.globalAlpha=0.9;
+    ctx.fillRect(bx,by-4,scene.title.length*7.2+20,22);
+    ctx.globalAlpha=1;ctx.fillStyle=P.dark;
+  }else{
+    ctx.fillStyle=P.dark;ctx.globalAlpha=0.82;
+    ctx.fillRect(bx,by-4,scene.title.length*7.2+20,22);
+    ctx.globalAlpha=1;ctx.fillStyle='#d4c080';
+  }
+  ctx.font='bold italic 12px serif';ctx.textAlign='left';ctx.textBaseline='middle';
+  ctx.fillText(scene.title,bx+10,by+7);
+}
+
+function drawSelHL(id){
+  const e=scene.entities.find(en=>en.id===id);if(!e)return;
+  ctx.strokeStyle='rgba(232,184,75,0.9)';ctx.lineWidth=2/view.scale;ctx.setLineDash([4/view.scale,3/view.scale]);
+  if(e.type==='room-r'){ctx.strokeRect(e.x-2,e.y-2,e.w+4,e.h+4);}
+  else if(e.type==='room-c'){ctx.beginPath();ctx.arc(e.cx,e.cy,e.r+3,0,Math.PI*2);ctx.stroke();}
+  else{const ex=e.cx||e.x||0,ey=e.cy||e.y||0;ctx.beginPath();ctx.arc(ex,ey,22,0,Math.PI*2);ctx.stroke();}
+  ctx.setLineDash([]);
+}
+
+function drawPreview(){
+  const{sx,sy,cx,cy,tool:t}=pen;
+  const x=Math.min(sx,cx),y=Math.min(sy,cy),w=Math.abs(cx-sx),h=Math.abs(cy-sy);
+  uctx.clearRect(0,0,uc.width,uc.height);
+  uctx.save();uctx.translate(view.x,view.y);uctx.scale(view.scale,view.scale);
+  uctx.strokeStyle='rgba(232,184,75,0.8)';uctx.fillStyle='rgba(232,184,75,0.05)';
+  uctx.lineWidth=1.5/view.scale;uctx.setLineDash([5/view.scale,4/view.scale]);
+  if(t==='room-r'){uctx.strokeRect(x,y,w,h);uctx.fillRect(x,y,w,h);}
+  else if(t==='room-c'){uctx.beginPath();uctx.ellipse(x+w/2,y+h/2,w/2,h/2,0,0,Math.PI*2);uctx.fill();uctx.stroke();}
+  else if(t==='corr'||t==='wall'){uctx.beginPath();uctx.moveTo(sx,sy);uctx.lineTo(cx,cy);uctx.stroke();}
+  uctx.restore();
+}
+
+function drawMinimap(){
+  mmctx.clearRect(0,0,128,128);
+  // Detect if this is an outdoor map
+  const isOutdoor=scene.entities.some(e=>e.type==='outdoor');
+  mmctx.fillStyle=isOutdoor?F.grass:P.wall;
+  mmctx.fillRect(0,0,128,128);
+  if(!scene.entities.length)return;
+  const b=getBounds(),bw=b.maxX-b.minX||100,bh=b.maxY-b.minY||100;
+  const sc=Math.min(120/bw,120/bh);
+  const ox=4+(120-bw*sc)/2-b.minX*sc,oy=4+(120-bh*sc)/2-b.minY*sc;
+  for(const e of scene.entities){
+    if(e.type==='room-r'){const t=e.wallT||8;mmctx.fillStyle=e.floorColor||P.floor;mmctx.fillRect((e.x+t)*sc+ox,(e.y+t)*sc+oy,(e.w-t*2)*sc,(e.h-t*2)*sc);}
+    else if(e.type==='room-c'){mmctx.beginPath();mmctx.arc(e.cx*sc+ox,e.cy*sc+oy,(e.r-(e.wallT||8))*sc,0,Math.PI*2);mmctx.fillStyle=e.floorColor||P.floor;mmctx.fill();}
+    else if(e.type==='corr'){
+      const dx=e.x2-e.x1,dy=e.y2-e.y1,len=Math.sqrt(dx*dx+dy*dy);
+      if(len>0){const nx=-dy/len*e.width/2*sc,ny=dx/len*e.width/2*sc;
+        mmctx.beginPath();mmctx.moveTo(e.x1*sc+ox+nx,e.y1*sc+oy+ny);mmctx.lineTo(e.x2*sc+ox+nx,e.y2*sc+oy+ny);
+        mmctx.lineTo(e.x2*sc+ox-nx,e.y2*sc+oy-ny);mmctx.lineTo(e.x1*sc+ox-nx,e.y1*sc+oy-ny);
+        mmctx.fillStyle=e.floorColor||P.floor;mmctx.fill();}
+    } else if(e.type==='clearing'){
+      mmctx.beginPath();mmctx.ellipse(e.cx*sc+ox,e.cy*sc+oy,e.rx*sc,e.ry*sc,0,0,Math.PI*2);
+      mmctx.fillStyle=F.dirt;mmctx.fill();
+    } else if(e.type==='trees'){
+      if(e.circles&&e.circles.length){
+        const c=e.circles[0];
+        mmctx.beginPath();mmctx.arc(c.cx*sc+ox,c.cy*sc+oy,c.r*sc,0,Math.PI*2);
+        mmctx.fillStyle=F.shadow;mmctx.globalAlpha=0.7;mmctx.fill();mmctx.globalAlpha=1;
+      }
+    }
+  }
+  const vx=-view.x/view.scale,vy=-view.y/view.scale,vw=mc.width/view.scale,vh=mc.height/view.scale;
+  mmctx.strokeStyle='rgba(232,184,75,0.7)';mmctx.lineWidth=1;
+  mmctx.strokeRect(vx*sc+ox,vy*sc+oy,vw*sc,vh*sc);
+}
+
+// ═══════════════════════════════════════════════
+// GENERATORS
+// ═══════════════════════════════════════════════
+const CFGS={
+  sm:{minW:48,maxW:96,minH:48,maxH:96,cw:24,cR:28,mapW:600,mapH:500},
+  md:{minW:64,maxW:144,minH:64,maxH:144,cw:32,cR:36,mapW:900,mapH:700},
+  lg:{minW:80,maxW:200,minH:80,maxH:200,cw:40,cR:50,mapW:1300,mapH:1000},
+};
+const RNAMES=['Guard Room','Storage','Barracks','Armory','Study','Shrine','Prison Cell',
+              'Torture Chamber','Alchemy Lab','Vault','Crypt','Mess Hall','Guardpost'];
+const FKINDS=['chest','altar','well','bars','barrel','candle','pool','star','ritual'];
+
+function generateMap(){
+  const type=document.getElementById('gen-type').value;
+  const count=+document.getElementById('gen-rooms').value;
+  const size=document.getElementById('gen-size').value;
+  const si=document.getElementById('gen-seed').value.trim();
+  const raw=si?(parseInt(si)||hashStr(si)):undefined;
+  const rng=mkRng(raw);
+  scene.seed=rng.seed;
+  scene.title=document.getElementById('map-title').value||'Unnamed Dungeon';
+  document.getElementById('seed-badge').textContent=scene.seed;
+  document.getElementById('gen-seed').value=scene.seed;
+  saveHist();scene.entities=[];scene.nextId=1;
+  const cfg=CFGS[size];
+  ({dungeon,cavern,tavern,temple,tower:wizardTower,crypt,mine,sewer,village,campsite})[type]?.(rng,cfg,count);
+  fitView();render();
+}
+
+function overlaps(x,y,w,h,list,m=16){for(const r of list)if(x<r.x2+m&&x+w+m>r.x1&&y<r.y2+m&&y+h+m>r.y1)return true;return false;}
+function rCenter(e){return e.cx!=null?[e.cx,e.cy]:[e.x+(e.w||0)/2,e.y+(e.h||0)/2];}
+function d2(a,b){const[ax,ay]=rCenter(a),[bx,by]=rCenter(b);return(ax-bx)**2+(ay-by)**2;}
+function connectC(ax,ay,bx,by,cw,rng,o={}){
+  if(rng.next()>0.5){add(mkCorridor(ax,ay,bx,ay,cw,o));add(mkCorridor(bx,ay,bx,by,cw,o));}
+  else{add(mkCorridor(ax,ay,ax,by,cw,o));add(mkCorridor(ax,by,bx,by,cw,o));}
+}
+function rFeat(r,rng){const[cx,cy]=rCenter(r);add(mkFeature(cx,cy,FKINDS[rng.int(0,FKINDS.length-1)]));}
+
+function placeDungeonRooms(rng,cfg,count){
+  const placed=[];
+  for(let a=0;placed.length<count&&a<count*10;a++){
+    const useCirc=rng.next()>0.5;
+    if(useCirc){
+      const r=rng.int(cfg.cR,Math.round(cfg.cR*1.7));
+      const cx=rng.int(r+10,cfg.mapW-r-10),cy=rng.int(r+10,cfg.mapH-r-10);
+      const fake={x1:cx-r,y1:cy-r,x2:cx+r,y2:cy+r,cx,cy,r,circ:true};
+      if(!overlaps(cx-r,cy-r,r*2,r*2,placed))placed.push(fake);
+    }else{
+      const w=rng.int(cfg.minW,cfg.maxW),h=rng.int(cfg.minH,cfg.maxH);
+      const x=rng.int(10,cfg.mapW-w-10),y=rng.int(10,cfg.mapH-h-10);
+      const fake={x1:x,y1:y,x2:x+w,y2:y+h,x,y,w,h,circ:false};
+      if(!overlaps(x,y,w,h,placed))placed.push(fake);
+    }
+  }
+  return placed;
+}
+
+function dungeon(rng,cfg,count){
+  add(mkBg(-60,-60,cfg.mapW+120,cfg.mapH+120));
+  const placed=placeDungeonRooms(rng,cfg,count);
+  const ents=[];
+  for(let i=0;i<placed.length;i++){
+    const p=placed[i];
+    const isE=i===0,isB=i===placed.length-1;
+    const lbl=isE?'Entrance':isB?'Boss Chamber':rng.next()>0.6?RNAMES[rng.int(0,RNAMES.length-1)]:'';
+    let re;
+    if(p.circ) re=add(mkRoomCircle(p.cx,p.cy,p.r,lbl,{special:isE?'entrance':isB?'boss':null}));
+    else       re=add(mkRoomRect(p.x,p.y,p.w,p.h,lbl,{special:isE?'entrance':isB?'boss':null}));
+    ents.push(re);
+    if(rng.next()>0.45)rFeat(re,rng);
+    if(isE||isB){const[cx,cy]=rCenter(re);add(mkStairs(cx-24,cy+10,48,28));}
+  }
+  // MST + extra loops
+  const conn=[0];
+  for(let i=1;i<ents.length;i++){
+    let best=0,bd=Infinity;
+    for(const j of conn){const dd=d2(ents[i],ents[j]);if(dd<bd){bd=dd;best=j;}}
+    conn.push(i);
+    const[ax,ay]=rCenter(ents[i]),[bx,by]=rCenter(ents[best]);
+    connectC(ax,ay,bx,by,cfg.cw,rng);
+  }
+  for(let k=0;k<Math.floor(ents.length*0.3);k++){
+    const a=rng.int(0,ents.length-1),b=rng.int(0,ents.length-1);
+    if(a!==b){const[ax,ay]=rCenter(ents[a]),[bx,by]=rCenter(ents[b]);connectC(ax,ay,bx,by,cfg.cw,rng);}
+  }
+  for(const e of scene.entities.filter(e=>e.type==='corr'))
+    if(rng.next()>0.5)add(mkDoor(e.x1,e.y1,Math.abs(e.x2-e.x1)>Math.abs(e.y2-e.y1),rng.next()>0.85));
+}
+
+function cavern(rng,cfg,count){
+  add(mkBg(-60,-60,cfg.mapW+120,cfg.mapH+120));
+  const placed=[];
+  for(let a=0;placed.length<count&&a<count*10;a++){
+    const r=rng.int(cfg.cR,Math.round(cfg.cR*2.2));
+    const cx=rng.int(r+20,cfg.mapW-r-20),cy=rng.int(r+20,cfg.mapH-r-20);
+    const fake={x1:cx-r,y1:cy-r,x2:cx+r,y2:cy+r,cx,cy,r};
+    if(!overlaps(cx-r,cy-r,r*2,r*2,placed,8))placed.push(fake);
+  }
+  const ents=[];
+  for(const p of placed){
+    const e=add(mkRoomCircle(p.cx,p.cy,p.r,'',{wallColor:'#8a7a62',wallT:10}));
+    if(rng.next()>0.5)rFeat(e,rng);ents.push(e);
+  }
+  for(let i=0;i<3;i++)add(mkWater(rng.int(40,cfg.mapW-120),rng.int(40,cfg.mapH-80),rng.int(40,90),rng.int(30,60)));
+  const conn=[0];
+  for(let i=1;i<placed.length;i++){
+    let best=0,bd=Infinity;
+    for(const j of conn){const dd=d2(placed[i],placed[j]);if(dd<bd){bd=dd;best=j;}}
+    conn.push(i);
+    connectC(placed[i].cx,placed[i].cy,placed[best].cx,placed[best].cy,cfg.cw*rng.int(6,9)/8,rng,{wallColor:'#8a7a62'});
+  }
+}
+
+function tavern(rng,cfg){
+  const bw=rng.int(260,360),bh=rng.int(220,300),bx=80,by=60;
+  add(mkBg(bx-40,by-40,bw+80,bh+80));
+  const nH=Math.floor(bh*0.55);
+  add(mkRoomRect(bx,by,bw,bh,'The Tavern',{wallT:10}));
+  add(mkRoomRect(bx+14,by+14,bw-28,nH,'Common Room',{wallT:6}));
+  add(mkRoomRect(bx+14,by+14+nH+6,Math.floor(bw*0.4),bh-nH-42,'Kitchen',{wallT:6}));
+  add(mkRoomRect(bx+14+Math.floor(bw*0.4)+6,by+14+nH+6,bw-28-Math.floor(bw*0.4)-6,Math.floor(bh*0.22),'Bar',{wallT:6}));
+  add(mkRoomRect(bx+14+Math.floor(bw*0.4)+6,by+14+nH+6+Math.floor(bh*0.22)+6,bw-28-Math.floor(bw*0.4)-6,bh-nH-Math.floor(bh*0.22)-54,'Storage',{wallT:6}));
+  add(mkDoor(bx+bw/2,by+bh,true));add(mkStairs(bx+bw-70,by+bh-50,48,28));
+  add(mkFeature(bx+bw*0.3,by+nH*0.5,'barrel'));add(mkFeature(bx+bw*0.65,by+nH*0.5,'candle'));
+}
+
+function temple(rng,cfg){
+  const bw=rng.int(240,320),bh=rng.int(320,420),bx=80,by=40;
+  add(mkBg(bx-40,by-40,bw+80,bh+80));
+  const wc='#7a7050';const nH=Math.floor(bh*0.5);
+  add(mkRoomRect(bx,by,bw,bh,'Temple',{wallT:10,wallColor:wc}));
+  add(mkRoomRect(bx+20,by+20,bw-40,nH,'Nave',{wallT:6,wallColor:wc}));
+  add(mkRoomCircle(bx+bw/2,by+20+nH+Math.floor(bh*0.12),Math.floor(bh*0.12),'Apse',{wallT:8,wallColor:wc}));
+  add(mkRoomRect(bx+20,by+20+nH+Math.floor(bh*0.28),bw-40,bh-nH-Math.floor(bh*0.28)-40,'Vestry',{wallT:6,wallColor:wc}));
+  add(mkRoomRect(bx+10,by+20,14,nH,'',{wallT:4,wallColor:wc}));
+  add(mkRoomRect(bx+bw-24,by+20,14,nH,'',{wallT:4,wallColor:wc}));
+  add(mkDoor(bx+bw/2,by,false));add(mkStairs(bx+bw/2-24,by+bh-50,48,28));
+  add(mkFeature(bx+bw/2,by+20+nH+Math.floor(bh*0.12),'altar'));
+  add(mkFeature(bx+bw*0.3,by+20+nH*0.5,'candle'));add(mkFeature(bx+bw*0.7,by+20+nH*0.5,'candle'));
+  add(mkFeature(bx+bw*0.5,by+20+nH*0.5,'star'));
+}
+
+function wizardTower(rng,cfg){
+  const floors=4,baseR=rng.int(70,100),shrink=10,by=40,bx=80+baseR;
+  add(mkBg(bx-baseR-40,by-40,baseR*2+80,(baseR*2+20)*floors+80));
+  const lbls=['Ground Floor','Library','Laboratory','Observatory'];
+  const fts=['barrel','altar','star','ritual'];
+  for(let f=0;f<floors;f++){
+    const r=baseR-f*shrink,fy=by+f*(r*2+20)+r;
+    add(mkRoomCircle(bx,fy,r,lbls[f],{wallT:8,wallColor:'#6a5880'}));
+    add(mkFeature(bx,fy,fts[f]));
+    if(f<floors-1)add(mkStairs(bx-24,fy+r-30,48,28));
+  }
+  add(mkDoor(bx,by+baseR,false));
+}
+
+function crypt(rng,cfg,count){
+  add(mkBg(-60,-60,cfg.mapW+120,cfg.mapH+120));
+  const mW=rng.int(180,260),mH=rng.int(160,220),mx=cfg.mapW/2-mW/2,my=cfg.mapH/2-mH/2;
+  add(mkRoomRect(mx,my,mW,mH,'Burial Chamber',{wallT:10,wallColor:'#6a608a'}));
+  add(mkStairs(mx+mW/2-24,my+16,48,28));add(mkFeature(mx+mW/2,my+mH/2,'ritual'));
+  for(let i=0;i<rng.int(4,8);i++){
+    const side=rng.int(0,3),aw=rng.int(28,52),ah=rng.int(22,36);
+    let ax,ay;
+    if(side===0){ax=rng.int(mx+10,mx+mW-aw-10);ay=my-ah-6;}
+    else if(side===1){ax=rng.int(mx+10,mx+mW-aw-10);ay=my+mH+6;}
+    else if(side===2){ax=mx-aw-6;ay=rng.int(my+10,my+mH-ah-10);}
+    else{ax=mx+mW+6;ay=rng.int(my+10,my+mH-ah-10);}
+    add(mkRoomRect(ax,ay,aw,ah,'Crypt',{wallT:6,wallColor:'#6a608a'}));
+    add(mkDoor(ax+aw/2,ay+ah/2,side<2,rng.next()>0.65));
+  }
+}
+
+function mine(rng,cfg,count){
+  add(mkBg(-60,-60,cfg.mapW+120,cfg.mapH+120));
+  const sx=cfg.mapW/2;
+  add(mkCorridor(sx,40,sx,cfg.mapH-40,cfg.cw,{wallColor:'#7a6840'}));
+  const ores=['Iron Vein','Gold Seam','Mithral Lode','Empty Cavern','Kobold Nest'];
+  for(let i=0;i<count;i++){
+    const y=40+(cfg.mapH-80)*(i+1)/(count+1),side=i%2===0?-1:1;
+    const ex=sx+side*rng.int(80,cfg.mapW*0.35);
+    add(mkCorridor(sx,y,ex,y,cfg.cw*0.75,{wallColor:'#7a6840'}));
+    const rw=rng.int(56,110),rh=rng.int(44,88);
+    const e=add(mkRoomRect(ex+(side>0?4:-rw-4),y-rh/2,rw,rh,ores[rng.int(0,4)],{wallT:7,wallColor:'#7a6840'}));
+    add(mkFeature(e.x+e.w/2,e.y+e.h/2,rng.next()>0.5?'barrel':'candle'));
+  }
+  add(mkStairs(sx-16,44,32,20));
+}
+
+function sewer(rng,cfg,count){
+  add(mkBg(-60,-60,cfg.mapW+120,cfg.mapH+120));
+  const placed=[];
+  for(let a=0;placed.length<count&&a<count*10;a++){
+    const w=rng.int(cfg.minW,Math.round(cfg.maxW*0.7)),h=rng.int(cfg.minH,Math.round(cfg.maxH*0.7));
+    const x=rng.int(0,cfg.mapW-w),y=rng.int(0,cfg.mapH-h);
+    const fake={x1:x,y1:y,x2:x+w,y2:y+h,x,y,w,h};
+    if(!overlaps(x,y,w,h,placed,10))placed.push(fake);
+  }
+  const ents=placed.map(p=>add(mkRoomRect(p.x,p.y,p.w,p.h,'',{wallT:7,wallColor:'#507050'})));
+  for(let i=1;i<ents.length;i++){
+    let best=0,bd=Infinity;
+    for(let j=0;j<i;j++){const dd=d2(ents[i],ents[j]);if(dd<bd){bd=dd;best=j;}}
+    const[ax,ay]=rCenter(ents[i]),[bx,by]=rCenter(ents[best]);
+    connectC(ax,ay,bx,by,Math.round(cfg.cw*0.65),rng,{wallColor:'#507050'});
+  }
+  for(let i=0;i<Math.min(4,placed.length);i++)
+    add(mkWater(placed[i].x+placed[i].w*0.2,placed[i].y+placed[i].h*0.2,placed[i].w*0.6,placed[i].h*0.5));
+}
+
+function village(rng,cfg){
+  const mapW=cfg.mapW, mapH=cfg.mapH;
+  const cx=mapW/2, cy=mapH/2;
+
+  // Layer 1: grass base
+  add(mkOutdoorScene({x:-60,y:-60,w:mapW+120,h:mapH+120}));
+
+  // Layer 2: two crossing stone roads through village center — 3-stroke each
+  const roadW=rng.int(26,34);
+  // Vertical road (Q bezier: qcx,qcy,ex,ey pairs)
+  add(mkOutdoorPath([cx,0,
+    cx+rng.int(-8,8), cy*0.5,   cx+rng.int(-6,6), cy,
+    cx+rng.int(-8,8), cy*1.5,   cx,                mapH],{width:roadW}));
+  // Horizontal road
+  add(mkOutdoorPath([0,cy,
+    cx*0.5,  cy+rng.int(-6,6),  cx,       cy+rng.int(-8,8),
+    cx*1.5,  cy+rng.int(-6,6),  mapW,     cy+rng.int(-8,8)],{width:roadW}));
+
+  // Loose stones along roads
+  for(let i=0;i<20;i++){
+    add(mkLooseStone(rng.int(cx-roadW*3,cx+roadW*3),rng.int(0,mapH),
+      rng.int(3,5),rng.int(2,4)));
+  }
+
+  // Layer 3: border forest masses
+  buildForestRing(cx,cy,mapW*0.52,mapH*0.52,8,rng,mapW,mapH);
+
+  // Layer 4: central cleared area (village green)
+  const clearRx=rng.int(160,200),clearRy=rng.int(130,170);
+  const dirtDots=[];
+  for(let i=0;i<20;i++) dirtDots.push({x:cx+rng.int(-clearRx,clearRx)*0.7,y:cy+rng.int(-clearRy,clearRy)*0.7,r:rng.int(3,10),a:rng.int(10,35)/100});
+  const patches=[
+    {cx:cx,cy:cy,rx:clearRx*0.7,ry:clearRy*0.7,rot:0,c:F.dirt2,a:0.25},
+    {cx:cx+rng.int(-30,30),cy:cy+rng.int(-20,20),rx:rng.int(20,50),ry:rng.int(15,40),rot:rng.next(),c:F.darkDirt,a:0.18},
+  ];
+  add({...mkClearing(cx,cy,clearRx,clearRy),dirtDots,patches});
+
+  // Layer 5: buildings placed on the cleared ground
+  const bldgs=[{n:'Blacksmith',w:110,h:90},{n:'General Store',w:130,h:85},{n:'Inn',w:170,h:120},
+    {n:'Herbalist',w:85,h:75},{n:'Town Hall',w:150,h:130},{n:'Stables',w:130,h:75},
+    {n:'Chapel',w:110,h:140},{n:'Barracks',w:150,h:100}];
+  const placed=[];
+  for(const b of bldgs){
+    for(let a=0;a<80;a++){
+      // Place buildings within the clearing area
+      const px=cx+rng.int(-clearRx+b.w/2,clearRx-b.w/2)-b.w/2;
+      const py=cy+rng.int(-clearRy+b.h/2,clearRy-b.h/2)-b.h/2;
+      const fake={x1:px,y1:py,x2:px+b.w,y2:py+b.h,x:px,y:py,w:b.w,h:b.h};
+      if(!overlaps(px,py,b.w,b.h,placed,20)){placed.push({...fake,n:b.n});break;}
+    }
+  }
+  for(const b of placed){
+    add(mkRoomRect(b.x,b.y,b.w,b.h,b.n,{wallT:8,wallColor:'#9a7850',floorColor:'#c8b888'}));
+    add(mkDoor(b.x+b.w/2,b.y+b.h,true));
+  }
+
+  // Ferns at clearing border
+  for(let i=0;i<8;i++){
+    const a=rng.next()*Math.PI*2;
+    const d=(clearRx+clearRy)/2*rng.int(80,95)/100;
+    add(mkFern(cx+Math.cos(a)*d*(clearRx/((clearRx+clearRy)/2)),
+               cy+Math.sin(a)*d*(clearRy/((clearRx+clearRy)/2))));
+  }
+
+  add(mkLabel(cx,cy-clearRy-28,scene.title||'Village',10,{color:P.dark}));
+}
+
+function campsite(rng,cfg){
+  const mapW=cfg.mapW, mapH=cfg.mapH;
+  const cx=mapW/2, cy=mapH/2;
+
+  // Layer 1: grass base + grid
+  add(mkOutdoorScene({x:-60,y:-60,w:mapW+120,h:mapH+120}));
+
+  // Layer 2: stone path entering from map edge — 3-stroke technique
+  // Format: startX,startY then pairs of qcx,qcy,ex,ey for quadratic bezier
+  const pathPts=[
+    0, cy+rng.int(-20,20),
+    cx*0.25, cy+rng.int(-30,30),  cx*0.5,  cy+rng.int(-20,20),
+    cx*0.75, cy+rng.int(-15,15),  cx,      cy
+  ];
+  // Build loose stones along path
+  const looseStones=[];
+  for(let i=0;i<14;i++){
+    const t=rng.next();
+    const px=t*cx, py=cy+rng.int(-40,40);
+    looseStones.push({x:px+rng.int(-18,18),y:py+rng.int(-8,8),
+      rx:rng.int(3,6),ry:rng.int(2,4),a:rng.next()*0.6,
+      c:rng.next()>0.5?F.stone:F.stone2});
+  }
+  add({...mkOutdoorPath(pathPts,{width:28,kind:'stone'}),looseStones});
+
+  // Layer 3: dense outer forest (fills rest of map)
+  // Layer 4: inner bush ring around clearing
+  buildForestRing(cx,cy,rng.int(130,160),rng.int(110,140),10,rng,mapW,mapH);
+
+  // Layer 5: central clearing — layered ellipses
+  const clearRx=rng.int(120,150), clearRy=rng.int(100,130);
+  // Generate dirt texture dots + variation patches
+  const dirtDots=[];
+  for(let i=0;i<30;i++) dirtDots.push({x:cx+rng.int(-clearRx,clearRx)*0.8,y:cy+rng.int(-clearRy,clearRy)*0.8,r:rng.int(2,8),a:rng.int(15,45)/100});
+  const patches=[
+    {cx:cx+rng.int(-40,40),cy:cy+rng.int(-30,30),rx:rng.int(30,60),ry:rng.int(20,45),rot:rng.next(),c:F.dirt2,a:0.4},
+    {cx:cx+rng.int(-50,50),cy:cy+rng.int(-40,40),rx:rng.int(20,40),ry:rng.int(15,35),rot:rng.next(),c:F.darkDirt,a:0.35},
+    {cx:cx+rng.int(-30,30),cy:cy+rng.int(-20,20),rx:rng.int(15,30),ry:rng.int(10,25),rot:rng.next(),c:F.stain,a:0.28},
+  ];
+  add({...mkClearing(cx,cy,clearRx,clearRy),dirtDots,patches});
+
+  // Layer 6: interior details — ferns, cave, logs
+  // Ferns scattered around clearing interior edge
+  for(let i=0;i<rng.int(8,12);i++){
+    const a=rng.next()*Math.PI*2;
+    const d=(clearRx+clearRy)/2*rng.int(55,88)/100;
+    add(mkFern(cx+Math.cos(a)*d*(clearRx/((clearRx+clearRy)/2)),
+               cy+Math.sin(a)*d*(clearRy/((clearRx+clearRy)/2))));
+  }
+  // Cave entrance at edge of inner tree ring
+  const caveAngle=rng.next()*Math.PI*2;
+  const caveDist=(clearRx+clearRy)/2*1.05;
+  add(mkCave(cx+Math.cos(caveAngle)*caveDist*(clearRx/((clearRx+clearRy)/2)),
+             cy+Math.sin(caveAngle)*caveDist*(clearRy/((clearRx+clearRy)/2)),
+             14,11));
+
+  // Two crossed fallen logs
+  const la=rng.next()*Math.PI*0.5;
+  const logLen=rng.int(50,80);
+  const lx=cx+rng.int(-40,40), ly=cy+rng.int(-30,30);
+  add(mkLog(lx-Math.cos(la)*logLen/2, ly-Math.sin(la)*logLen/2,
+            lx+Math.cos(la)*logLen/2, ly+Math.sin(la)*logLen/2));
+  const lb=la+rng.int(30,60)*Math.PI/180;
+  add(mkLog(lx+8-Math.cos(lb)*logLen*0.6, ly+8-Math.sin(lb)*logLen*0.6,
+            lx+8+Math.cos(lb)*logLen*0.6, ly+8+Math.sin(lb)*logLen*0.6));
+
+  // Campfire at center
+  add(mkFeature(cx,cy,'pool'));
+  add(mkFeature(cx,cy,'candle'));
+  add(mkLabel(cx,cy+28,'Campfire',8,{color:P.gold}));
+
+  // Tents as small structures (still use room-r for these)
+  for(const a of[0,60,120,180,240,300]){
+    const tr=clearRx*0.62;
+    const tx=cx+tr*Math.cos(a*Math.PI/180)*(clearRx/((clearRx+clearRy)/2));
+    const ty=cy+tr*Math.sin(a*Math.PI/180)*(clearRy/((clearRx+clearRy)/2));
+    add(mkRoomRect(tx-18,ty-14,36,28,'Tent',{wallT:5,wallColor:'#9a7850',floorColor:'#b89060'}));
+  }
+
+  // Title
+  add(mkLabel(cx,cy-clearRy-28,scene.title||'Forest Campsite',10,{color:P.dark}));
+}
+
+// ── Templates ──────────────────────────────────
+function placeTemplate(type){
+  const cx=(-view.x+mc.width/2)/view.scale,cy=(-view.y+mc.height/2)/view.scale;
+  saveHist();
+  ({
+    'room-r':()=>add(mkRoomRect(cx-64,cy-48,128,96,'Room')),
+    'room-c':()=>add(mkRoomCircle(cx,cy,52,'Room')),
+    'boss':()=>add(mkRoomRect(cx-80,cy-64,160,128,'Boss Chamber',{special:'boss',wallColor:'#8a4030'})),
+    'treasury':()=>{add(mkRoomRect(cx-48,cy-48,96,96,'Treasury',{wallColor:'#7a6820'}));add(mkFeature(cx,cy,'chest'));},
+    'entrance':()=>{add(mkRoomRect(cx-64,cy-48,128,96,'Entrance',{special:'entrance'}));add(mkDoor(cx,cy+48,true));add(mkStairs(cx-24,cy,48,28));},
+    'prison':()=>{add(mkRoomRect(cx-80,cy-48,160,96,'Prison'));add(mkFeature(cx,cy,'bars'));},
+    'shrine':()=>{add(mkRoomCircle(cx,cy,56,'Shrine',{wallColor:'#7a7050'}));add(mkFeature(cx,cy,'altar'));},
+    'pool':()=>{add(mkRoomRect(cx-60,cy-50,120,100,'Pool Room'));add(mkWater(cx-30,cy-24,60,48));},
+  })[type]?.();
+  render();
+}
+
+// ── History ─────────────────────────────────────
+function saveHist(){
+  const snap=JSON.stringify({entities:scene.entities,nextId:scene.nextId});
+  hist=hist.slice(0,histIdx+1);hist.push(snap);
+  if(hist.length>60)hist.shift();histIdx=hist.length-1;
+}
+function undo(){if(histIdx>0){histIdx--;restoreHist();}}
+function redo(){if(histIdx<hist.length-1){histIdx++;restoreHist();}}
+function restoreHist(){const s=JSON.parse(hist[histIdx]);scene.entities=s.entities;scene.nextId=s.nextId;pen.selIds=[];render();}
+
+// ── Input ──────────────────────────────────────
+let panning=false,panStart={x:0,y:0},panOrig={x:0,y:0};
+
+mc.addEventListener('mousedown',e=>{
+  const[wx,wy]=s2w(e.offsetX,e.offsetY);const[sx,sy]=snapXY(wx,wy);
+  if(e.button===1||(e.button===0&&e.altKey)){
+    panning=true;panStart={x:e.offsetX,y:e.offsetY};panOrig={x:view.x,y:view.y};mc.style.cursor='grabbing';return;
+  }
+  if(pen.tool==='select'){
+    const h=hitTest(wx,wy);
+    if(h){if(!pen.selIds.includes(h.id))pen.selIds=[h.id];pen.dragging=true;pen.dragX=wx;pen.dragY=wy;}
+    else pen.selIds=[];
+    updateSelProps();render();return;
+  }
+  if(pen.tool==='erase'){const h=hitTest(wx,wy);if(h){saveHist();scene.entities=scene.entities.filter(e=>e.id!==h.id);render();}return;}
+  if(pen.tool==='label'){const t=prompt('Label text:');if(t){saveHist();add(mkLabel(sx,sy,t));render();}return;}
+  if(pen.tool==='door'){saveHist();add(mkDoor(sx,sy,true));render();return;}
+  if(pen.tool==='stairs'){saveHist();add(mkStairs(sx-24,sy-14,48,28));render();return;}
+  pen.drawing=true;pen.sx=sx;pen.sy=sy;pen.cx=sx;pen.cy=sy;
+});
+
+mc.addEventListener('mousemove',e=>{
+  const[wx,wy]=s2w(e.offsetX,e.offsetY);const[sx,sy]=snapXY(wx,wy);
+  document.getElementById('st-pos').textContent=`${Math.round(wx)}, ${Math.round(wy)}`;
+  if(panning){view.x=panOrig.x+(e.offsetX-panStart.x);view.y=panOrig.y+(e.offsetY-panStart.y);render();return;}
+  if(pen.dragging&&pen.selIds.length){
+    const dx=wx-pen.dragX,dy=wy-pen.dragY;
+    for(const id of pen.selIds){
+      const en=scene.entities.find(e=>e.id===id);if(!en)continue;
+      if(en.x!==undefined){en.x+=dx;en.y+=dy;}
+      if(en.cx!==undefined){en.cx+=dx;en.cy+=dy;}
+      if(en.x1!==undefined){en.x1+=dx;en.y1+=dy;en.x2+=dx;en.y2+=dy;}
+    }
+    pen.dragX=wx;pen.dragY=wy;render();return;
+  }
+  if(pen.drawing){pen.cx=sx;pen.cy=sy;drawPreview();}
+});
+
+mc.addEventListener('mouseup',e=>{
+  if(panning){panning=false;mc.style.cursor='crosshair';return;}
+  if(pen.dragging){saveHist();pen.dragging=false;return;}
+  if(!pen.drawing)return;
+  pen.drawing=false;uctx.clearRect(0,0,uc.width,uc.height);
+  const{sx,sy,cx,cy,tool:t}=pen;
+  const x=Math.min(sx,cx),y=Math.min(sy,cy),w=Math.abs(cx-sx),h=Math.abs(cy-sy);
+  if(w<8&&h<8)return;
+  saveHist();
+  const wt=+document.getElementById('wall-t').value;
+  if(t==='room-r')add(mkRoomRect(x,y,w,h,'',{wallColor:pen.stroke,floorColor:pen.fill,wallT:wt}));
+  else if(t==='room-c')add(mkRoomCircle(x+w/2,y+h/2,Math.min(w,h)/2,'',{wallColor:pen.stroke,floorColor:pen.fill,wallT:wt}));
+  else if(t==='corr')add(mkCorridor(sx,sy,cx,cy,32,{wallColor:pen.stroke,floorColor:pen.fill}));
+  else if(t==='wall')add(mkWall(sx,sy,cx,cy,{color:pen.stroke}));
+  render();
+});
+
+mc.addEventListener('dblclick',e=>{
+  const[wx,wy]=s2w(e.offsetX,e.offsetY);const h=hitTest(wx,wy);if(!h)return;
+  const nv=prompt('Edit label:',h.label||h.text||'');if(nv===null)return;
+  saveHist();if(h.label!==undefined)h.label=nv;if(h.text!==undefined)h.text=nv;render();
+});
+
+mc.addEventListener('wheel',e=>{
+  e.preventDefault();const f=e.deltaY>0?0.9:1.1;
+  view.x=e.offsetX-(e.offsetX-view.x)*f;view.y=e.offsetY-(e.offsetY-view.y)*f;
+  view.scale=Math.max(0.1,Math.min(8,view.scale*f));
+  document.getElementById('st-zoom').textContent=Math.round(view.scale*100)+'%';render();
+},{passive:false});
+
+document.addEventListener('keydown',e=>{
+  if(e.target.tagName==='INPUT'||e.target.tagName==='SELECT')return;
+  const k=e.key.toLowerCase();
+  if(e.ctrlKey||e.metaKey){if(k==='z'){undo();return;}if(k==='y'){redo();return;}if(k==='a'){pen.selIds=scene.entities.map(e=>e.id);render();return;}}
+  const tm={v:'select',r:'room-r',c:'room-c',l:'corr',w:'wall',d:'door',s:'stairs',t:'label',e:'erase'};
+  if(tm[k])setTool(tm[k]);
+  if((k==='delete'||k==='backspace')&&pen.selIds.length){saveHist();scene.entities=scene.entities.filter(en=>!pen.selIds.includes(en.id));pen.selIds=[];render();}
+  if(k==='f')fitView();if(k==='+')doZoom(1.2);if(k==='-')doZoom(0.8);
+});
+
+// ── Hit test ───────────────────────────────────
+function hitTest(wx,wy){
+  for(let i=scene.entities.length-1;i>=0;i--){
+    const e=scene.entities[i];
+    if(e.type==='room-r'){if(wx>=e.x&&wx<=e.x+e.w&&wy>=e.y&&wy<=e.y+e.h)return e;}
+    else if(e.type==='room-c'){if(Math.hypot(wx-e.cx,wy-e.cy)<=e.r)return e;}
+    else if(e.type==='corr'){
+      const dx=e.x2-e.x1,dy=e.y2-e.y1,l2=dx*dx+dy*dy;
+      if(l2>0){const tt=Math.max(0,Math.min(1,((wx-e.x1)*dx+(wy-e.y1)*dy)/l2));
+        if(Math.hypot(wx-(e.x1+tt*dx),wy-(e.y1+tt*dy))<e.width/2+6)return e;}
+    }else if(e.type==='wall'){
+      const dx=e.x2-e.x1,dy=e.y2-e.y1,l2=dx*dx+dy*dy;
+      if(l2>0){const tt=Math.max(0,Math.min(1,((wx-e.x1)*dx+(wy-e.y1)*dy)/l2));
+        if(Math.hypot(wx-(e.x1+tt*dx),wy-(e.y1+tt*dy))<10)return e;}
+    }else if(e.type!=='bg'){const ex=e.cx||e.x||0,ey=e.cy||e.y||0;if(Math.hypot(wx-ex,wy-ey)<22)return e;}
+  }
+  return null;
+}
+
+// ── UI ─────────────────────────────────────────
+function setTool(t){
+  pen.tool=t;
+  document.querySelectorAll('.tool-btn').forEach(b=>b.classList.remove('active'));
+  const btn=document.getElementById('tb-'+t);if(btn)btn.classList.add('active');
+  const hints={select:'Click select · Drag move · Del delete · Dbl-click rename','room-r':'Drag: outer rect=wall, inner rect=floor (two-rect technique)','room-c':'Drag: outer circle=wall, inner circle=floor (two-circle technique)',corr:'Drag corridor — floor rect with wall-colour edge strokes',wall:'Drag explicit wall line',door:'Click to place door',stairs:'Click to place stairs',label:'Click to place italic serif label',erase:'Click to erase'};
+  document.getElementById('st-hint').textContent=hints[t]||'';
+  document.getElementById('st-tool').textContent=t.replace(/-/g,' ').replace(/\b\w/g,c=>c.toUpperCase());
+}
+function doZoom(f){
+  const cx=mc.width/2,cy=mc.height/2;
+  view.x=cx-(cx-view.x)*f;view.y=cy-(cy-view.y)*f;
+  view.scale=Math.max(0.1,Math.min(8,view.scale*f));
+  document.getElementById('st-zoom').textContent=Math.round(view.scale*100)+'%';render();
+}
+function fitView(){
+  if(!scene.entities.length){view.x=80;view.y=60;view.scale=1;render();return;}
+  const b=getBounds(),pw=mc.width-80,ph=mc.height-80;
+  view.scale=Math.min(pw/(b.maxX-b.minX||1),ph/(b.maxY-b.minY||1),4);
+  view.x=40-b.minX*view.scale+(pw-(b.maxX-b.minX)*view.scale)/2;
+  view.y=40-b.minY*view.scale+(ph-(b.maxY-b.minY)*view.scale)/2;
+  document.getElementById('st-zoom').textContent=Math.round(view.scale*100)+'%';render();
+}
+function getBounds(){
+  let minX=Infinity,minY=Infinity,maxX=-Infinity,maxY=-Infinity;
+  for(const e of scene.entities){
+    if(e.type==='outdoor'){minX=Math.min(minX,e.data.x);maxX=Math.max(maxX,e.data.x+e.data.w);minY=Math.min(minY,e.data.y);maxY=Math.max(maxY,e.data.y+e.data.h);}
+    else if(e.x!==undefined&&e.type!=='outdoor'){minX=Math.min(minX,e.x);maxX=Math.max(maxX,e.x+(e.w||0));minY=Math.min(minY,e.y);maxY=Math.max(maxY,e.y+(e.h||0));}
+    if(e.cx!==undefined){minX=Math.min(minX,e.cx-(e.r||e.rx||0));maxX=Math.max(maxX,e.cx+(e.r||e.rx||0));minY=Math.min(minY,e.cy-(e.r||e.ry||0));maxY=Math.max(maxY,e.cy+(e.r||e.ry||0));}
+    if(e.x1!==undefined){minX=Math.min(minX,e.x1,e.x2);maxX=Math.max(maxX,e.x1,e.x2);minY=Math.min(minY,e.y1,e.y2);maxY=Math.max(maxY,e.y1,e.y2);}
+  }
+  return isFinite(minX)?{minX,minY,maxX,maxY}:{minX:0,minY:0,maxX:800,maxY:600};
+}
+function updateSelProps(){
+  const p=document.getElementById('sel-props');
+  if(!pen.selIds.length){p.innerHTML='<div style="color:var(--text2);font-size:11px;padding:4px 0">Nothing selected</div>';return;}
+  const e=scene.entities.find(en=>en.id===pen.selIds[0]);if(!e)return;
+  const lbl=e.label!==undefined?e.label:(e.text||'');
+  p.innerHTML=`
+    <div class="prop-row"><span class="prop-label">Type</span><span class="prop-val">${e.type}</span></div>
+    <div class="field"><label>Label</label><input type="text" value="${lbl}" onchange="setProp('label',this.value);setProp('text',this.value)"></div>
+    ${e.x!==undefined?`<div class="row"><div class="field"><label>X</label><input type="number" value="${Math.round(e.x)}" onchange="setProp('x',+this.value)"></div><div class="field"><label>Y</label><input type="number" value="${Math.round(e.y)}" onchange="setProp('y',+this.value)"></div></div><div class="row"><div class="field"><label>W</label><input type="number" value="${Math.round(e.w||0)}" onchange="setProp('w',+this.value)"></div><div class="field"><label>H</label><input type="number" value="${Math.round(e.h||0)}" onchange="setProp('h',+this.value)"></div></div>`:''}
+    ${e.cx!==undefined?`<div class="row"><div class="field"><label>CX</label><input type="number" value="${Math.round(e.cx)}" onchange="setProp('cx',+this.value)"></div><div class="field"><label>CY</label><input type="number" value="${Math.round(e.cy)}" onchange="setProp('cy',+this.value)"></div></div><div class="field"><label>Radius</label><input type="number" value="${Math.round(e.r||0)}" onchange="setProp('r',+this.value)"></div>`:''}
+    ${e.wallColor?`<div class="field"><label>Wall Color</label><input type="color" value="${toHex(e.wallColor)}" oninput="setProp('wallColor',this.value)" style="width:100%;height:26px;padding:1px"></div>`:''}
+    ${e.floorColor?`<div class="field"><label>Floor Color</label><input type="color" value="${toHex(e.floorColor)}" oninput="setProp('floorColor',this.value)" style="width:100%;height:26px;padding:1px"></div>`:''}
+    ${e.wallT!==undefined?`<div class="field"><label>Wall Thickness</label><input type="number" value="${e.wallT}" min="2" max="24" onchange="setProp('wallT',+this.value)"></div>`:''}
+  `;
+}
+function setProp(k,v){const e=scene.entities.find(en=>pen.selIds.includes(en.id));if(e){saveHist();e[k]=v;render();}}
+function toHex(c){if(!c||c.startsWith('rgba'))return'#7a6a52';return c.startsWith('#')?c:'#7a6a52';}
+function clearMap(){if(!confirm('Clear map?'))return;saveHist();scene.entities=[];pen.selIds=[];render();}
+
+function updateStats(){
+  const rooms=scene.entities.filter(e=>e.type==='room-r'||e.type==='room-c').length;
+  const objs=scene.entities.filter(e=>['door','stairs','feature','label'].includes(e.type)).length;
+  document.getElementById('st-rooms').textContent=rooms;
+  document.getElementById('st-objs').textContent=objs;
+  const ok=checkConn();
+  const el=document.getElementById('st-conn');
+  el.textContent=ok?'✓ Yes':'⚠ No';el.style.color=ok?'var(--green)':'var(--red)';
+}
+
+function checkConn(){
+  const rooms=scene.entities.filter(e=>e.type==='room-r'||e.type==='room-c');
+  if(rooms.length<2)return true;
+  const corrs=scene.entities.filter(e=>e.type==='corr');
+  const adj=new Map(rooms.map(r=>[r.id,[]]));
+  for(const c of corrs)for(const r1 of rooms)for(const r2 of rooms){
+    if(r1.id===r2.id)continue;
+    const[cx1,cy1]=rCenter(r1),[cx2,cy2]=rCenter(r2);
+    const dx=c.x2-c.x1,dy=c.y2-c.y1,l2=dx*dx+dy*dy;if(l2===0)continue;
+    const t1=Math.max(0,Math.min(1,((cx1-c.x1)*dx+(cy1-c.y1)*dy)/l2));
+    const t2=Math.max(0,Math.min(1,((cx2-c.x1)*dx+(cy2-c.y1)*dy)/l2));
+    const d1=Math.hypot(cx1-(c.x1+t1*dx),cy1-(c.y1+t1*dy));
+    const d2c=Math.hypot(cx2-(c.x1+t2*dx),cy2-(c.y1+t2*dy));
+    const thr1=r1.r?r1.r+8:Math.max(r1.w||0,r1.h||0)/2+8;
+    const thr2=r2.r?r2.r+8:Math.max(r2.w||0,r2.h||0)/2+8;
+    if(d1<thr1&&d2c<thr2){adj.get(r1.id)?.push(r2.id);adj.get(r2.id)?.push(r1.id);}
+  }
+  const vis=new Set([rooms[0].id]),q=[rooms[0].id];
+  while(q.length){const n=q.shift();for(const nb of(adj.get(n)||[])){if(!vis.has(nb)){vis.add(nb);q.push(nb);}}}
+  return vis.size===rooms.length;
+}
+
+function validate(){
+  const res=[],rooms=scene.entities.filter(e=>e.type==='room-r'||e.type==='room-c');
+  if(!rooms.length)res.push('⚠ No rooms');
+  else{if(!checkConn())res.push('⚠ Isolated rooms');if(rooms.filter(r=>!r.label).length>rooms.length*0.6)res.push('ℹ Many unlabeled rooms');}
+  if(rooms.length>2&&!scene.entities.some(e=>e.type==='door'))res.push('⚠ No doors');
+  if(!scene.entities.some(e=>e.type==='stairs')&&rooms.length>3)res.push('ℹ No stairs');
+  if(!res.length)res.push('✓ Map looks good!');
+  document.getElementById('val-out').innerHTML=res.map(r=>`<div style="padding:2px 0;color:${r.startsWith('✓')?'var(--green)':r.startsWith('ℹ')?'var(--text2)':'var(--red)'}">${r}</div>`).join('');
+}
+
+function buildLayers(){
+  document.getElementById('layer-list').innerHTML=LAYERS.map(l=>`
+    <div class="layer-item">
+      <input type="checkbox" ${l.visible?'checked':''} onclick="event.stopPropagation();toggleLayer('${l.id}',this.checked)">
+      <div class="layer-dot" style="background:${l.color}"></div>
+      <span class="layer-name">${l.name}</span>
+    </div>`).join('');
+}
+function toggleLayer(id,v){const l=LAYERS.find(l=>l.id===id);if(l){l.visible=v;render();}}
+
+function buildSwatches(){
+  const strokes=[P.wallW,P.wall,'#6a608a','#507050','#7a6840','#7a7050','#6a5880','#9a7850','#3a6a30','#8a4030'];
+  const fills=[P.floor,P.water,'#c0b090','#4a8a38','rgba(100,180,100,0.2)','rgba(120,100,180,0.15)','rgba(0,0,0,0)','rgba(200,180,80,0.15)','rgba(200,60,30,0.12)','rgba(80,80,100,0.2)'];
+  document.getElementById('sw-stroke').innerHTML=strokes.map(c=>`<div class="sw ${pen.stroke===c?'on':''}" style="background:${c}" onclick="pen.stroke='${c}';buildSwatches()"></div>`).join('');
+  document.getElementById('sw-fill').innerHTML=fills.map(c=>`<div class="sw" style="background:${c};border:1px solid #444" onclick="pen.fill='${c}';buildSwatches()"></div>`).join('');
+}
+
+// ── SVG Export ─────────────────────────────────
+function exportSVG(){
+  const b=getBounds(),pad=60;
+  const W=b.maxX-b.minX+pad*2,H=b.maxY-b.minY+pad*2;
+  const ox=pad-b.minX,oy=pad-b.minY;
+  const gs=+document.getElementById('grid-size').value;
+  const tx=x=>x+ox,ty=y=>y+oy;
+  let s=`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}">\n`;
+  s+=`<rect width="100%" height="100%" fill="${P.wall}"/>\n`;
+  s+=`<g stroke="${P.grid}" stroke-width="0.5" stroke-dasharray="4 4" opacity="0.8">\n`;
+  for(let x=Math.floor(b.minX/gs)*gs;x<=b.maxX;x+=gs)s+=`<line x1="${tx(x)}" y1="${ty(b.minY)}" x2="${tx(x)}" y2="${ty(b.maxY)}"/>\n`;
+  for(let y=Math.floor(b.minY/gs)*gs;y<=b.maxY;y+=gs)s+=`<line x1="${tx(b.minX)}" y1="${ty(y)}" x2="${tx(b.maxX)}" y2="${ty(y)}"/>\n`;
+  s+=`</g>\n`;
+  for(const e of scene.entities){
+    if(e.type==='room-r'){
+      const t=e.wallT||8;
+      s+=`<rect x="${tx(e.x)}" y="${ty(e.y)}" width="${e.w}" height="${e.h}" fill="${e.wallColor}"/>\n`;
+      s+=`<rect x="${tx(e.x+t)}" y="${ty(e.y+t)}" width="${e.w-t*2}" height="${e.h-t*2}" fill="${e.floorColor}"/>\n`;
+      if(e.label)s+=`<text x="${tx(e.x+e.w/2)}" y="${ty(e.y+e.h+11)}" text-anchor="middle" font-family="serif" font-style="italic" font-size="9" fill="${P.darkW}">${e.label}</text>\n`;
+    }else if(e.type==='room-c'){
+      const t=e.wallT||8;
+      s+=`<circle cx="${tx(e.cx)}" cy="${ty(e.cy)}" r="${e.r}" fill="${e.wallColor}"/>\n`;
+      s+=`<circle cx="${tx(e.cx)}" cy="${ty(e.cy)}" r="${e.r-t}" fill="${e.floorColor}"/>\n`;
+      if(e.label)s+=`<text x="${tx(e.cx)}" y="${ty(e.cy+e.r+11)}" text-anchor="middle" font-family="serif" font-style="italic" font-size="9" fill="${P.darkW}">${e.label}</text>\n`;
+    }else if(e.type==='corr'){
+      const dx=e.x2-e.x1,dy=e.y2-e.y1,len=Math.sqrt(dx*dx+dy*dy);if(len<1)continue;
+      const nx=-dy/len*e.width/2,ny=dx/len*e.width/2;
+      s+=`<polygon points="${tx(e.x1+nx)},${ty(e.y1+ny)} ${tx(e.x2+nx)},${ty(e.y2+ny)} ${tx(e.x2-nx)},${ty(e.y2-ny)} ${tx(e.x1-nx)},${ty(e.y1-ny)}" fill="${e.floorColor}"/>\n`;
+      s+=`<line x1="${tx(e.x1+nx)}" y1="${ty(e.y1+ny)}" x2="${tx(e.x2+nx)}" y2="${ty(e.y2+ny)}" stroke="${e.wallColor}" stroke-width="5" stroke-linecap="round"/>\n`;
+      s+=`<line x1="${tx(e.x1-nx)}" y1="${ty(e.y1-ny)}" x2="${tx(e.x2-nx)}" y2="${ty(e.y2-ny)}" stroke="${e.wallColor}" stroke-width="5" stroke-linecap="round"/>\n`;
+    }else if(e.type==='wall'){
+      s+=`<line x1="${tx(e.x1)}" y1="${ty(e.y1)}" x2="${tx(e.x2)}" y2="${ty(e.y2)}" stroke="${e.color}" stroke-width="${e.lw}" stroke-linecap="round"${e.dashed?' stroke-dasharray="6,4"':''}/>\n`;
+    }else if(e.type==='stairs'){
+      const sw=e.w/5;
+      s+=`<rect x="${tx(e.x)}" y="${ty(e.y)}" width="${e.w}" height="${e.h}" fill="${P.floor}" stroke="${P.wallW}" stroke-width="1"/>\n`;
+      for(let i=1;i<5;i++)s+=`<line x1="${tx(e.x+sw*i)}" y1="${ty(e.y)}" x2="${tx(e.x+sw*i)}" y2="${ty(e.y+e.h)}" stroke="${P.wallW}" stroke-width="1"/>\n`;
+    }else if(e.type==='door'){
+      s+=`<rect x="${tx(e.x-14)}" y="${ty(e.y-3)}" width="28" height="6" fill="${P.wood}" stroke="${P.darkW}" stroke-width="1"${e.secret?' stroke-dasharray="3,3"':''}/>\n`;
+    }else if(e.type==='label'){
+      s+=`<text x="${tx(e.x)}" y="${ty(e.y)}" text-anchor="middle" font-family="serif" font-style="italic" font-size="${e.size||9}" fill="${e.color||P.darkW}">${e.text}</text>\n`;
+    }else if(e.type==='feature'){
+      const fx=tx(e.x),fy=ty(e.y);
+      if(e.kind==='chest')s+=`<rect x="${fx-10}" y="${fy}" width="20" height="10" fill="${P.wood}" stroke="${P.darkW}" stroke-width="1"/><rect x="${fx-10}" y="${fy-7}" width="20" height="8" fill="${P.wood}" stroke="${P.darkW}" stroke-width="1"/><rect x="${fx-2}" y="${fy+3}" width="4" height="4" fill="${P.gold}"/>\n`;
+      else if(e.kind==='well')s+=`<circle cx="${fx}" cy="${fy}" r="12" fill="${P.wallW}"/><circle cx="${fx}" cy="${fy}" r="8" fill="${P.water}"/>\n`;
+      else if(e.kind==='altar')s+=`<rect x="${fx-14}" y="${fy-4}" width="28" height="8" fill="${P.stone2}" stroke="${P.darkW}" stroke-width="1"/><rect x="${fx-12}" y="${fy-14}" width="6" height="14" fill="${P.stone2}" stroke="${P.darkW}" stroke-width="1"/><rect x="${fx+6}" y="${fy-14}" width="6" height="14" fill="${P.stone2}" stroke="${P.darkW}" stroke-width="1"/>\n`;
+      else if(e.kind==='barrel')s+=`<circle cx="${fx}" cy="${fy}" r="9" fill="${P.wood}" stroke="${P.darkW}" stroke-width="1.5"/><line x1="${fx-9}" y1="${fy}" x2="${fx+9}" y2="${fy}" stroke="${P.darkW}" stroke-width="1.5"/>\n`;
+      else if(e.kind==='candle')s+=`<rect x="${fx-3}" y="${fy-8}" width="6" height="14" fill="${P.floor}" stroke="${P.darkW}" stroke-width="0.8"/><circle cx="${fx}" cy="${fy-10}" r="3" fill="${P.gold}"/>\n`;
+      else if(e.kind==='ritual')s+=`<circle cx="${fx}" cy="${fy}" r="16" fill="none" stroke="${P.darkW}" stroke-width="1" stroke-dasharray="4,3"/><circle cx="${fx}" cy="${fy}" r="8" fill="none" stroke="${P.darkW}" stroke-width="1"/><circle cx="${fx}" cy="${fy}" r="3" fill="${P.dark}"/>\n`;
+      else if(e.kind==='bars'){let bs='';for(let i=-2;i<=2;i++)bs+=`<rect x="${fx+i*5-1}" y="${fy-12}" width="2" height="24" fill="${P.darkW}"/>`;s+=bs+`<rect x="${fx-13}" y="${fy-2}" width="26" height="2" fill="${P.darkW}"/>\n`;}
+    }else if(e.type==='water'){
+      s+=`<rect x="${tx(e.x)}" y="${ty(e.y)}" width="${e.w}" height="${e.h}" fill="${P.water}" stroke="#4a90b0" stroke-width="1" opacity="0.85"/>\n`;
+    // ── Outdoor SVG exports ──
+    }else if(e.type==='outdoor'){
+      // Grass base
+      s+=`<rect x="${tx(e.data.x)}" y="${ty(e.data.y)}" width="${e.data.w}" height="${e.data.h}" fill="${F.grass}"/>\n`;
+      // Grass blade texture via pattern (simplified for SVG export)
+      s+=`<defs><pattern id="gp" width="40" height="40" patternUnits="userSpaceOnUse"><rect width="40" height="40" fill="${F.grass}"/><line x1="8" y1="38" x2="10" y2="32" stroke="#4a7a32" stroke-width="0.6"/><line x1="18" y1="36" x2="20" y2="30" stroke="#4a7a32" stroke-width="0.6"/><line x1="28" y1="37" x2="30" y2="31" stroke="#4a7a32" stroke-width="0.6"/><line x1="4" y1="34" x2="6" y2="28" stroke="#4a7a32" stroke-width="0.6"/></pattern></defs>\n`;
+      s+=`<rect x="${tx(e.data.x)}" y="${ty(e.data.y)}" width="${e.data.w}" height="${e.data.h}" fill="url(#gp)" opacity="0.6"/>\n`;
+    }else if(e.type==='opath'){
+      if(e.pts&&e.pts.length>=4){
+        const buildD=()=>{let d=`M${tx(e.pts[0])},${ty(e.pts[1])}`;for(let i=2;i<e.pts.length;i+=4){d+=` Q${tx(e.pts[i])},${ty(e.pts[i+1])} ${tx(e.pts[i+2]||e.pts[i])},${ty(e.pts[i+3]||e.pts[i+1])}`;}return d;};
+        s+=`<path d="${buildD()}" fill="none" stroke="#4a4238" stroke-width="${e.width+4}" stroke-linecap="round" opacity="0.4"/>\n`;
+        s+=`<path d="${buildD()}" fill="none" stroke="${F.stone}" stroke-width="${e.width}" stroke-linecap="round" opacity="0.6"/>\n`;
+        s+=`<path d="${buildD()}" fill="none" stroke="${F.stone2}" stroke-width="${e.width-4}" stroke-linecap="round" stroke-dasharray="18,6" opacity="0.5"/>\n`;
+      }
+    }else if(e.type==='clearing'){
+      s+=`<ellipse cx="${tx(e.cx)}" cy="${ty(e.cy)}" rx="${e.rx}" ry="${e.ry}" fill="${F.dirt}"/>\n`;
+      for(const p of(e.patches||[]))
+        s+=`<ellipse cx="${tx(p.cx)}" cy="${ty(p.cy)}" rx="${p.rx}" ry="${p.ry}" fill="${p.c}" opacity="${p.a}"/>\n`;
+      s+=`<ellipse cx="${tx(e.cx)}" cy="${ty(e.cy)}" rx="${e.rx+2}" ry="${e.ry+2}" fill="none" stroke="#4a7030" stroke-width="14" opacity="0.55"/>\n`;
+      s+=`<ellipse cx="${tx(e.cx)}" cy="${ty(e.cy)}" rx="${e.rx+1}" ry="${e.ry+1}" fill="none" stroke="#5a8038" stroke-width="9" opacity="0.45"/>\n`;
+    }else if(e.type==='trees'){
+      for(const c of(e.circles||[]))
+        s+=`<circle cx="${tx(c.cx)}" cy="${ty(c.cy)}" r="${c.r}" fill="${c.fill}" opacity="${c.a||0.88}"/>\n`;
+      if(e.trunkX!==undefined)
+        s+=`<circle cx="${tx(e.trunkX)}" cy="${ty(e.trunkY)}" r="3.5" fill="${F.trunk}" opacity="0.58"/>\n`;
+    }else if(e.type==='fern'){
+      const blades=[[-8,-10],[8,-10],[-4,-12],[4,-12],[0,-13]];
+      blades.forEach(([dx,dy],i)=>{
+        s+=`<line x1="${tx(e.x)}" y1="${ty(e.y)}" x2="${tx(e.x+dx)}" y2="${ty(e.y+dy)}" stroke="${i<2?F.mid1:F.mid2}" stroke-width="${i<2?1.2:1}" stroke-linecap="round" opacity="0.7"/>\n`;
+      });
+    }else if(e.type==='log'){
+      s+=`<line x1="${tx(e.x1)}" y1="${ty(e.y1)}" x2="${tx(e.x2)}" y2="${ty(e.y2)}" stroke="${F.log}" stroke-width="7" stroke-linecap="round"/>\n`;
+      s+=`<line x1="${tx(e.x1)}" y1="${ty(e.y1)}" x2="${tx(e.x2)}" y2="${ty(e.y2)}" stroke="${F.logHi}" stroke-width="5" stroke-linecap="round" opacity="0.6"/>\n`;
+      s+=`<circle cx="${tx(e.x1)}" cy="${ty(e.y1)}" r="4" fill="${F.log}"/><circle cx="${tx(e.x2)}" cy="${ty(e.y2)}" r="4" fill="${F.log}"/>\n`;
+    }else if(e.type==='cave'){
+      s+=`<ellipse cx="${tx(e.x)}" cy="${ty(e.y)}" rx="${e.rx}" ry="${e.ry}" fill="#0a0a08" opacity="0.95"/>\n`;
+      s+=`<ellipse cx="${tx(e.x)}" cy="${ty(e.y)}" rx="${e.rx}" ry="${e.ry}" fill="none" stroke="#2a2a20" stroke-width="3" opacity="0.6"/>\n`;
+    }else if(e.type==='looseStone'){
+      s+=`<ellipse cx="${tx(e.x)}" cy="${ty(e.y)}" rx="${e.rx}" ry="${e.ry}" fill="${e.fill||F.stone}" opacity="0.7"/>\n`;
+    }
+  }
+  // Title banner — use parchment color for outdoor, gold for dungeon
+  const isOutdoorSVG=scene.entities.some(e=>e.type==='outdoor');
+  const bannerTextColor=isOutdoorSVG?P.dark:'#d4c080';
+  const bannerBg=isOutdoorSVG?'rgba(200,190,160,0.88)':P.dark;
+  const compassPt=isOutdoorSVG?F.mid2:P.floor;
+  if(scene.title){
+    s+=`<rect x="${tx(b.minX)}" y="${ty(b.minY-32)}" width="${scene.title.length*7.2+20}" height="22" rx="3" fill="${bannerBg}" opacity="0.9"/>\n`;
+    s+=`<text x="${tx(b.minX+10)}" y="${ty(b.minY-20)}" font-family="serif" font-style="italic" font-weight="bold" font-size="12" fill="${bannerTextColor}">${scene.title}</text>\n`;
+  }
+  // Compass rose
+  const rx=tx(b.maxX+40),ry=ty(b.maxY-60);
+  s+=`<circle cx="${rx}" cy="${ry}" r="16" fill="${P.dark}" opacity="0.75"/>\n`;
+  s+=`<polygon points="${rx},${ry-22} ${rx+4},${ry-12} ${rx},${ry-9} ${rx-4},${ry-12}" fill="${compassPt}" stroke="${P.darkW}" stroke-width="0.5"/>\n`;
+  s+=`<polygon points="${rx},${ry+22} ${rx+4},${ry+12} ${rx},${ry+9} ${rx-4},${ry+12}" fill="#8a8a7a" stroke="${P.darkW}" stroke-width="0.5"/>\n`;
+  s+=`<polygon points="${rx+22},${ry} ${rx+12},${ry-4} ${rx+9},${ry} ${rx+12},${ry+4}" fill="${compassPt}" stroke="${P.darkW}" stroke-width="0.5"/>\n`;
+  s+=`<polygon points="${rx-22},${ry} ${rx-12},${ry-4} ${rx-9},${ry} ${rx-12},${ry+4}" fill="#8a8a7a" stroke="${P.darkW}" stroke-width="0.5"/>\n`;
+  s+=`<circle cx="${rx}" cy="${ry}" r="4" fill="${P.darkW}"/>\n`;
+  s+=`<text x="${rx}" y="${ry-30}" text-anchor="middle" font-family="serif" font-weight="bold" font-size="7" fill="${compassPt}">N</text>\n`;
+  s+=`</svg>`;
+  dl(new Blob([s],{type:'image/svg+xml'}),`${isOutdoorSVG?'outdoor':'dungeon'}-${scene.seed||'map'}.svg`);
+}
+
+function exportJSON(){
+  const data={version:'2.0',seed:scene.seed,title:scene.title,palette:P,
+    grid:{type:document.getElementById('grid-type').value,size:+document.getElementById('grid-size').value},
+    entities:scene.entities};
+  dl(new Blob([JSON.stringify(data,null,2)],{type:'application/json'}),`dungeon-${scene.seed||'map'}.json`);
+}
+function dl(blob,name){const u=URL.createObjectURL(blob),a=document.createElement('a');a.href=u;a.download=name;a.click();URL.revokeObjectURL(u);}
+
+function init(){resize();buildLayers();buildSwatches();saveHist();generateMap();}
+init();
+</script>
+</body>
+</html>

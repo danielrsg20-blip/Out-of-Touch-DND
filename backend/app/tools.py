@@ -2,6 +2,11 @@
 
 from __future__ import annotations
 
+import logging
+import os
+import json
+from urllib import error as urllib_error
+from urllib import request as urllib_request
 from typing import Any
 
 from .map_catalog import build_automated_map, assign_terrain_atlas_sprites
@@ -26,6 +31,195 @@ from .rules.spells import (
     use_spell_slot,
 )
 from .memory import CampaignMemory, NPCMemory, QuestMemory, LocationMemory
+
+logger = logging.getLogger(__name__)
+
+
+def _parse_env_flag(name: str, default: bool) -> bool:
+    raw = os.getenv(name)
+    if raw is None:
+        return default
+    normalized = raw.strip().lower()
+    if normalized in {"1", "true", "yes", "on"}:
+        return True
+    if normalized in {"0", "false", "no", "off"}:
+        return False
+    return default
+
+_LEGACY_SPRITE_PIPELINE_ENABLED = str(os.getenv("OTDND_ENABLE_LEGACY_SPRITES", "0")).strip().lower() in {
+    "1", "true", "yes", "on",
+}
+_TS_VECTOR_MAP_FORWARD_ENABLED = _parse_env_flag("OTDND_TS_VECTOR_MAP_FORWARD_ENABLED", _parse_env_flag("TS_VECTOR_MAP_FORWARD_ENABLED", False))
+_TS_RUNTIME_BASE_URL = (os.getenv("OTDND_TS_RUNTIME_BASE_URL") or os.getenv("TS_RUNTIME_BASE_URL") or "http://127.0.0.1:9010").rstrip("/")
+_TS_RUNTIME_TIMEOUT_SECONDS = float(os.getenv("OTDND_TS_RUNTIME_TIMEOUT_SECONDS", "20"))
+
+_BIOME_BY_ENVIRONMENT = {
+    "dungeon": "dungeon",
+    "forest": "forest",
+    "woods": "forest",
+    "village": "village",
+    "town": "village",
+    "crypt": "crypt",
+    "tomb": "crypt",
+    "mine": "mine",
+    "cave": "cavern",
+    "cavern": "cavern",
+}
+
+
+def is_vector_map_forwarding_enabled() -> bool:
+    return _TS_VECTOR_MAP_FORWARD_ENABLED
+
+
+def _biome_from_generate_map_input(inp: dict[str, Any]) -> str:
+    environment = str(inp.get("environment", "")).strip().lower()
+    return _BIOME_BY_ENVIRONMENT.get(environment, "dungeon")
+
+
+def _vector_request_from_generate_map_input(inp: dict[str, Any]) -> dict[str, Any]:
+    width = max(5, int(inp.get("width", 20)))
+    height = max(5, int(inp.get("height", 15)))
+    scale = 2 if _parse_env_flag("GRID_RESOLUTION_V2_ENABLED", True) else 1
+    encounter_scale = str(inp.get("encounter_scale", "medium")).strip().lower()
+    room_count = {
+        "small": 5,
+        "medium": 7,
+        "large": 10,
+    }.get(encounter_scale, 7)
+
+    return {
+        "seed": int(inp.get("seed")) if inp.get("seed") is not None else 1,
+        "map_id": str(inp.get("map_id", "python_forwarded_map")),
+        "name": str(inp.get("description", "Generated Vector Map"))[:80] or "Generated Vector Map",
+        "biome": _biome_from_generate_map_input(inp),
+        "story_prompt": str(inp.get("description", "")),
+        "style_preset": "default",
+        "bounds_world": {
+            "origin_x": 0,
+            "origin_y": 0,
+            "width_world": width * 5,
+            "height_world": height * 5,
+        },
+        "generation_params": {
+            "room_count": room_count,
+            "corridor_width_cells": 2,
+            "obstacle_density": 0.12,
+            "hazard_density": 0.08,
+        },
+        "grid_config": {
+            "base_cell_size_world": 5,
+            "resolution_scale": scale,
+            "diagonal_policy": "allow",
+            "movement_cost_mode": "world_units",
+        },
+        "validation_mode": "fixup",
+    }
+
+
+def forward_generate_vector_map_request(inp: dict[str, Any]) -> dict[str, Any]:
+    if not _TS_VECTOR_MAP_FORWARD_ENABLED:
+        raise RuntimeError("TypeScript vector-map forwarding is disabled")
+
+    if isinstance(inp.get("bounds_world"), dict):
+        payload = dict(inp)
+    else:
+        payload = _vector_request_from_generate_map_input(inp)
+    request = urllib_request.Request(
+        f"{_TS_RUNTIME_BASE_URL}/api/tools/generate_vector_map",
+        data=json.dumps(payload).encode("utf-8"),
+        headers={"Content-Type": "application/json"},
+        method="POST",
+    )
+
+    try:
+        with urllib_request.urlopen(request, timeout=_TS_RUNTIME_TIMEOUT_SECONDS) as response:
+            body = response.read().decode("utf-8")
+            return json.loads(body)
+    except urllib_error.HTTPError as exc:
+        body = exc.read().decode("utf-8", errors="replace")
+        raise RuntimeError(f"TS vector-map forward failed with HTTP {exc.code}: {body}") from exc
+    except urllib_error.URLError as exc:
+        raise RuntimeError(f"TS vector-map forward failed: {exc.reason}") from exc
+
+
+def _map_data_from_vector_payload(payload: dict[str, Any], description: str, override_entities: list[dict[str, Any]] | None = None) -> dict[str, Any]:
+    compatibility = payload.get("compatibility") if isinstance(payload.get("compatibility"), dict) else {}
+    legacy_tiles = compatibility.get("legacy_tiles") if isinstance(compatibility.get("legacy_tiles"), dict) else {}
+    legacy_entities = compatibility.get("legacy_entities") if isinstance(compatibility.get("legacy_entities"), dict) else {}
+    overlay = payload.get("overlay") if isinstance(payload.get("overlay"), dict) else {}
+    traversal_grid = payload.get("traversal_grid") if isinstance(payload.get("traversal_grid"), dict) else None
+    hashes = payload.get("hashes") if isinstance(payload.get("hashes"), dict) else {}
+    movement_model = payload.get("movement_model") if isinstance(payload.get("movement_model"), dict) else {}
+    overlay_metadata = overlay.get("metadata") if isinstance(overlay.get("metadata"), dict) else {}
+
+    map_data = {
+        "width": int(legacy_tiles.get("width", 0)),
+        "height": int(legacy_tiles.get("height", 0)),
+        "tiles": list(legacy_tiles.get("tiles", [])),
+        "entities": list(override_entities if override_entities is not None else legacy_entities.get("entities", [])),
+        "traversal_grid": traversal_grid,
+        "metadata": {
+            "map_source": "ts_vector_forwarded",
+            "map_id": overlay.get("map_id") or payload.get("map_id") or "ts_vector_forwarded",
+            "grid_size": 5,
+            "grid_units": "ft",
+            "tile_size_px": 32,
+            "cache_hit": False,
+            "description": description,
+            "hashes": hashes,
+            "movement_model": movement_model,
+            "rollout_flags": overlay_metadata.get("rollout_flags", {}),
+            "overlay": overlay,
+            "traversal_grid": traversal_grid,
+        },
+    }
+    return map_data
+
+
+def _strip_sprite_fields_from_map_payload(map_data: dict[str, Any]) -> dict[str, int]:
+    removed = {
+        "tile_sprite": 0,
+        "tile_variant": 0,
+        "entity_sprite": 0,
+    }
+
+    for tile in map_data.get("tiles", []):
+        if isinstance(tile, dict):
+            if "sprite" in tile:
+                tile.pop("sprite", None)
+                removed["tile_sprite"] += 1
+            if "variant" in tile:
+                tile.pop("variant", None)
+                removed["tile_variant"] += 1
+
+    for entity in map_data.get("entities", []):
+        if not isinstance(entity, dict):
+            continue
+        sprite = entity.get("sprite")
+        if isinstance(sprite, str) and sprite.strip() and sprite.strip().lower() != "default":
+            removed["entity_sprite"] += 1
+        entity["sprite"] = "default"
+
+    return removed
+
+
+def _assert_sprite_free_payload(map_data: dict[str, Any]) -> None:
+    tile_has_sprite = any(
+        isinstance(tile, dict) and (
+            isinstance(tile.get("sprite"), str)
+            or isinstance(tile.get("variant"), str)
+        )
+        for tile in map_data.get("tiles", [])
+    )
+    entity_has_nondefault_sprite = any(
+        isinstance(entity, dict)
+        and isinstance(entity.get("sprite"), str)
+        and entity.get("sprite", "").strip().lower() not in {"", "default"}
+        for entity in map_data.get("entities", [])
+    )
+
+    if tile_has_sprite or entity_has_nondefault_sprite:
+        raise AssertionError("Legacy sprite payload detected while sprite pipeline is disabled")
 
 TOOL_DEFINITIONS: list[dict[str, Any]] = [
     {
@@ -612,7 +806,7 @@ class ToolDispatcher:
         if user_tiles:
             tiles = [dict(tile) for tile in user_tiles]
             has_sprite_assignments = any(isinstance(t.get("sprite"), str) and bool(str(t.get("sprite", "")).strip()) for t in tiles)
-            if not has_sprite_assignments:
+            if not has_sprite_assignments and _LEGACY_SPRITE_PIPELINE_ENABLED:
                 tiles = assign_terrain_atlas_sprites(
                     {
                         "description": str(inp.get("description", "")),
@@ -642,6 +836,13 @@ class ToolDispatcher:
                     "cache_hit": False,
                 },
             }
+        elif _TS_VECTOR_MAP_FORWARD_ENABLED:
+            payload = forward_generate_vector_map_request(inp)
+            map_data = _map_data_from_vector_payload(
+                payload,
+                str(inp.get("description", "")),
+                inp.get("entities") if isinstance(inp.get("entities"), list) else None,
+            )
         else:
             map_data = build_automated_map({
                 "description": str(inp.get("description", "")),
@@ -657,6 +858,19 @@ class ToolDispatcher:
 
             if inp.get("entities"):
                 map_data["entities"] = inp.get("entities", [])
+
+        map_metadata = map_data.setdefault("metadata", {})
+        if _LEGACY_SPRITE_PIPELINE_ENABLED:
+            map_metadata["sprite_pipeline_enabled"] = True
+            map_metadata["sprite_render_verification"] = "legacy_enabled"
+        else:
+            removed = _strip_sprite_fields_from_map_payload(map_data)
+            map_metadata["sprite_pipeline_enabled"] = False
+            map_metadata["sprite_fields_removed"] = removed
+            map_metadata["sprite_render_verification"] = "assert_sprite_free"
+            _assert_sprite_free_payload(map_data)
+            if any(removed.values()):
+                logger.info("Sprite payload stripped during map generation: %s", removed)
 
         self.game_map = build_map_from_data(map_data)
         result = self.game_map.to_dict()

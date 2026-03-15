@@ -118,6 +118,36 @@ class Decal:
 
 
 @dataclass
+class TextLabel:
+    type: str = 'text'
+    id: str = None
+    name: str = None
+    parent_object_id: Optional[str] = None
+    position: Point = None
+    text: str = ''
+    offset: Optional[Point] = None
+    color: str = '#f6f7fb'
+    font_family: str = 'Segoe UI, sans-serif'
+    font_size: float = 11.0
+    align: str = 'center'
+    baseline: str = 'middle'
+    outline_color: Optional[str] = None
+    outline_width: Optional[float] = None
+    chip_color: Optional[str] = None
+    chip_padding: Optional[float] = None
+    dm_only: bool = False
+    visible: bool = True
+    scale_with_zoom: bool = True
+    min_screen_px: Optional[float] = None
+    max_screen_px: Optional[float] = None
+    tags: Optional[List[str]] = None
+
+    def __post_init__(self):
+        if self.id is None:
+            self.id = f"text_{uuid.uuid4().hex[:12]}"
+
+
+@dataclass
 class OverlayLayer:
     id: str
     name: str
@@ -603,6 +633,40 @@ class OverlayAPI:
                                         rotation=float(element_data.get("rotation", 0.0) or 0.0),
                                         opacity=float(element_data.get("opacity", 1.0) or 1.0),
                                         blend_mode=str(element_data.get("blend_mode") or "normal"),
+                                        tags=element_data.get("tags") if isinstance(element_data.get("tags"), list) else None,
+                                    )
+                                )
+                            elif etype == "text":
+                                position = element_data.get("position") if isinstance(element_data.get("position"), dict) else {}
+                                offset_payload = element_data.get("offset") if isinstance(element_data.get("offset"), dict) else None
+                                layer.elements.append(
+                                    TextLabel(
+                                        id=str(element_data.get("id") or f"text_{uuid.uuid4().hex[:12]}"),
+                                        name=str(element_data.get("name") or "Label"),
+                                        parent_object_id=str(element_data.get("parent_object_id")) if element_data.get("parent_object_id") else None,
+                                        position=Point(
+                                            x=float(position.get("x", 0.0)),
+                                            y=float(position.get("y", 0.0)),
+                                        ),
+                                        text=str(element_data.get("text") or ""),
+                                        offset=Point(
+                                            x=float(offset_payload.get("x", 0.0)),
+                                            y=float(offset_payload.get("y", 0.0)),
+                                        ) if offset_payload else None,
+                                        color=str(element_data.get("color") or "#f6f7fb"),
+                                        font_family=str(element_data.get("font_family") or "Segoe UI, sans-serif"),
+                                        font_size=float(element_data.get("font_size", 11.0) or 11.0),
+                                        align=str(element_data.get("align") or "center"),
+                                        baseline=str(element_data.get("baseline") or "middle"),
+                                        outline_color=str(element_data.get("outline_color")) if element_data.get("outline_color") is not None else None,
+                                        outline_width=float(element_data.get("outline_width")) if element_data.get("outline_width") is not None else None,
+                                        chip_color=str(element_data.get("chip_color")) if element_data.get("chip_color") is not None else None,
+                                        chip_padding=float(element_data.get("chip_padding")) if element_data.get("chip_padding") is not None else None,
+                                        dm_only=bool(element_data.get("dm_only", False)),
+                                        visible=bool(element_data.get("visible", True)),
+                                        scale_with_zoom=bool(element_data.get("scale_with_zoom", True)),
+                                        min_screen_px=float(element_data.get("min_screen_px")) if element_data.get("min_screen_px") is not None else None,
+                                        max_screen_px=float(element_data.get("max_screen_px")) if element_data.get("max_screen_px") is not None else None,
                                         tags=element_data.get("tags") if isinstance(element_data.get("tags"), list) else None,
                                     )
                                 )

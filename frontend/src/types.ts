@@ -318,7 +318,32 @@ export interface Decal {
   tags?: string[]
 }
 
-export type OverlayElement = Region | Path | Decal
+export interface TextLabel {
+  type: 'text'
+  id: string
+  name: string
+  parent_object_id?: string
+  position: Point
+  text: string
+  offset?: Point
+  color?: string
+  font_family?: string
+  font_size?: number
+  align?: CanvasTextAlign
+  baseline?: CanvasTextBaseline
+  outline_color?: string
+  outline_width?: number
+  chip_color?: string
+  chip_padding?: number
+  dm_only?: boolean
+  visible?: boolean
+  scale_with_zoom?: boolean
+  min_screen_px?: number
+  max_screen_px?: number
+  tags?: string[]
+}
+
+export type OverlayElement = Region | Path | Decal | TextLabel
 
 export interface OverlayLayer {
   id: string
@@ -336,6 +361,11 @@ export interface OverlayMetadata {
   narrative_tags?: string[]
   seed?: number
   story_context?: string
+  vectorized_from_map?: boolean
+  label_mode?: {
+    showLabels: boolean
+    showDmOnlyLabels: boolean
+  }
 }
 
 export interface Overlay {

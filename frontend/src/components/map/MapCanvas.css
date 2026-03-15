@@ -135,9 +135,81 @@
   background: rgba(15, 45, 62, 0.65);
 }
 
+.map-label-toggle-btn,
+.map-dm-label-toggle-btn,
+.map-label-scale-toggle-btn {
+  position: absolute;
+  right: 0.6rem;
+  z-index: 2;
+  border: 1px solid var(--border-color);
+  background: rgba(0, 0, 0, 0.58);
+  color: var(--text-primary);
+  border-radius: 4px;
+  padding: 0.25rem 0.5rem;
+  font-size: 0.68rem;
+  cursor: pointer;
+}
+
+.map-label-toggle-btn {
+  top: 5.85rem;
+}
+
+.map-dm-label-toggle-btn {
+  top: 7.6rem;
+}
+
+.map-label-scale-toggle-btn {
+  top: 9.35rem;
+}
+
+.map-label-toggle-btn:hover,
+.map-dm-label-toggle-btn:hover,
+.map-label-scale-toggle-btn:hover {
+  border-color: var(--accent-gold);
+  color: var(--accent-gold);
+}
+
+.map-label-toggle-btn.is-active,
+.map-dm-label-toggle-btn.is-active,
+.map-label-scale-toggle-btn.is-active {
+  border-color: var(--accent-gold);
+  color: var(--accent-gold);
+  background: rgba(78, 62, 20, 0.62);
+}
+
+.map-sprite-status-pill {
+  position: absolute;
+  top: 11.2rem;
+  left: 0.75rem;
+  z-index: 2;
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  border-radius: 999px;
+  padding: 0.2rem 0.6rem;
+  font-size: 0.68rem;
+  letter-spacing: 0.02em;
+  background: rgba(12, 18, 28, 0.76);
+  color: #d9e4f2;
+}
+
+.map-sprite-status-pill.is-clean {
+  border-color: rgba(88, 190, 120, 0.55);
+  color: #9be3b2;
+}
+
+.map-sprite-status-pill.is-legacy {
+  border-color: rgba(228, 168, 83, 0.65);
+  color: #f1c57f;
+}
+
+.map-sprite-status-pill.is-failed {
+  border-color: rgba(231, 76, 60, 0.78);
+  color: #ff9d90;
+  background: rgba(36, 10, 12, 0.8);
+}
+
 .map-palette-debug-panel {
   position: absolute;
-  top: 5.95rem;
+  top: 11.2rem;
   right: 0.6rem;
   z-index: 2;
   width: min(520px, calc(100% - 1.2rem));

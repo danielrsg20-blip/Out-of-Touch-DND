@@ -26,6 +26,8 @@ import {
   getCharacterSpritesheetUrl,
 } from '../../config/characterSprites'
 import { getMonsterSpriteCandidates } from '../../config/monsterSprites'
+import { buildVectorBaseOverlayFromMap } from '../../lib/mapToVectorOverlay'
+import { createSpritePipelineAssertHarness, type SpritePipelineHarnessSnapshot } from '../../lib/spritePipelineAssert'
 import './MapCanvas.css'
 
 const TILE_SIZE = 32
@@ -167,11 +169,53 @@ export default function MapCanvas({ onTileClick, onEntityClick, targetingMode = 
   const interaction = useMapInteraction()
   const [showAtlasLabels, setShowAtlasLabels] = useState(false)
   const [showPaletteDebug, setShowPaletteDebug] = useState(false)
+  const [showVectorLabels, setShowVectorLabels] = useState(true)
+  const [showDmOnlyLabels, setShowDmOnlyLabels] = useState(false)
+  const [scaleLabelsWithZoom, setScaleLabelsWithZoom] = useState(true)
   const overlay = useOverlayStore((s) => s.overlay)
-  const vectorOnlyMode = useMemo(
-    () => new URLSearchParams(window.location.search).get('vectorOnly') === '1',
-    []
+  const useLegacySpritePipeline = useMemo(() => {
+    const configured = String(import.meta.env.VITE_ENABLE_LEGACY_SPRITES ?? '0').trim().toLowerCase()
+    return configured === '1' || configured === 'true' || configured === 'yes' || configured === 'on'
+  }, [])
+
+  const spritePipelineHarness = useMemo(
+    () => createSpritePipelineAssertHarness({
+      legacyEnabled: useLegacySpritePipeline,
+      throwOnFailure: Boolean(import.meta.env.DEV),
+    }),
+    [useLegacySpritePipeline],
   )
+  const [spritePipelineSnapshot, setSpritePipelineSnapshot] = useState<SpritePipelineHarnessSnapshot>(
+    () => spritePipelineHarness.getSnapshot(),
+  )
+
+  useEffect(() => {
+    spritePipelineHarness.bootstrap()
+    setSpritePipelineSnapshot(spritePipelineHarness.getSnapshot())
+  }, [spritePipelineHarness])
+
+  useEffect(() => {
+    const sync = () => {
+      setSpritePipelineSnapshot(spritePipelineHarness.getSnapshot())
+    }
+    const id = window.setInterval(sync, 250)
+    return () => window.clearInterval(id)
+  }, [spritePipelineHarness])
+
+  const runtimeOverlay = useMemo(() => {
+    if (!map) {
+      return overlay
+    }
+    return buildVectorBaseOverlayFromMap(
+      map,
+      {
+        showLabels: showVectorLabels,
+        showDmOnlyLabels,
+        scaleLabelsWithZoom,
+      },
+      overlay,
+    )
+  }, [map, overlay, showVectorLabels, showDmOnlyLabels, scaleLabelsWithZoom])
 
   const myCharacterId = players.find(p => p.id === playerId)?.character_id ?? null
 
@@ -231,6 +275,12 @@ export default function MapCanvas({ onTileClick, onEntityClick, targetingMode = 
   }, [imageUrl])
 
   useEffect(() => {
+    if (!useLegacySpritePipeline) {
+      return
+    }
+
+    spritePipelineHarness.recordLegacyHit('atlas-bootstrap')
+
     void loadEnvironmentSpriteLookup().catch(() => {
       // Keep fallback token rendering if the optional environment atlas fails to load.
     })
@@ -238,7 +288,7 @@ export default function MapCanvas({ onTileClick, onEntityClick, targetingMode = 
     void loadMonsterSpriteLookup().catch(() => {
       // Keep fallback token rendering if the optional monster atlas fails to load.
     })
-  }, [])
+  }, [useLegacySpritePipeline, spritePipelineHarness])
 
   useEffect(() => {
     if (!map) {
@@ -450,8 +500,11 @@ export default function MapCanvas({ onTileClick, onEntityClick, targetingMode = 
     ctx.translate(interaction.offsetX, interaction.offsetY)
     ctx.scale(interaction.zoom, interaction.zoom)
 
+    spritePipelineHarness.assertNoLegacyHits('draw-start')
+
     const loadedImage = imageRef.current
-    if (!vectorOnlyMode && loadedImage && imageUrlRef.current === imageUrl) {
+    if (useLegacySpritePipeline && loadedImage && imageUrlRef.current === imageUrl) {
+      spritePipelineHarness.recordLegacyHit('background-image-draw')
       ctx.save()
       ctx.globalAlpha = imageOpacity
       ctx.imageSmoothingEnabled = false
@@ -483,7 +536,9 @@ export default function MapCanvas({ onTileClick, onEntityClick, targetingMode = 
         .map((e) => `${e.x},${e.y}`),
     )
 
-    for (let y = 0; y < map.height; y++) {
+    if (useLegacySpritePipeline) {
+      spritePipelineHarness.recordLegacyHit('tile-entity-draw-loop')
+      for (let y = 0; y < map.height; y++) {
       for (let x = 0; x < map.width; x++) {
         const key = `${x},${y}`
         const tile = tileMap.get(key)
@@ -523,7 +578,7 @@ export default function MapCanvas({ onTileClick, onEntityClick, targetingMode = 
           ? environmentSheetCacheRef.current.get(ENVIRONMENT_SPRITESHEET_URL)
           : null
 
-        if (!vectorOnlyMode && tileRect && environmentSheetImageForTile && environmentSheetImageForTile !== 'loading') {
+        if (tileRect && environmentSheetImageForTile && environmentSheetImageForTile !== 'loading') {
           ctx.imageSmoothingEnabled = false
           ctx.drawImage(
             environmentSheetImageForTile,
@@ -545,7 +600,7 @@ export default function MapCanvas({ onTileClick, onEntityClick, targetingMode = 
           ctx.fillRect(px, py, TILE_SIZE, TILE_SIZE)
           ctx.globalAlpha = 1
 
-          if (!vectorOnlyMode && tileRect && environmentSheetImageForTile === undefined) {
+          if (tileRect && environmentSheetImageForTile === undefined) {
             environmentSheetCacheRef.current.set(ENVIRONMENT_SPRITESHEET_URL, 'loading')
             const img = new Image()
             img.decoding = 'async'
@@ -596,8 +651,8 @@ export default function MapCanvas({ onTileClick, onEntityClick, targetingMode = 
       }
     }
 
-    let entityIndex = -1
-    for (const entity of map.entities) {
+      let entityIndex = -1
+      for (const entity of map.entities) {
       entityIndex++
       if (hasVisibility && !visibleSet.has(`${entity.x},${entity.y}`)) continue
 
@@ -969,16 +1024,22 @@ export default function MapCanvas({ onTileClick, onEntityClick, targetingMode = 
         ctx.fillText(debugText, px, debugY)
         ctx.restore()
       }
+      }
     }
 
     // Render vector overlay layers (before movement/FOW overlays)
-    if (overlay) {
-      renderOverlayLayers(overlay, {
+    if (runtimeOverlay) {
+      renderOverlayLayers(runtimeOverlay, {
         ctx,
         mapBounds: { x: 0, y: 0, width: map.width * TILE_SIZE, height: map.height * TILE_SIZE },
         zoom: interaction.zoom,
         panX: interaction.offsetX,
         panY: interaction.offsetY,
+      }, undefined, {
+        labels: {
+          show: showVectorLabels,
+          showDmOnly: showDmOnlyLabels,
+        },
       })
     }
 
@@ -1006,7 +1067,7 @@ export default function MapCanvas({ onTileClick, onEntityClick, targetingMode = 
     })
 
     ctx.restore()
-  }, [map, combat, characters, interaction.offsetX, interaction.offsetY, interaction.zoom, selectedEntityId, myCharacterId, imageUrl, imageOpacity, resolveCharacterForEntity, showAtlasLabels, getMonsterFrameKeyForEnemy, targetingMode, overlay, vectorOnlyMode, overlay, vectorOnlyMode])
+  }, [map, combat, characters, interaction.offsetX, interaction.offsetY, interaction.zoom, selectedEntityId, myCharacterId, imageUrl, imageOpacity, resolveCharacterForEntity, showAtlasLabels, getMonsterFrameKeyForEnemy, targetingMode, runtimeOverlay, showVectorLabels, showDmOnlyLabels, useLegacySpritePipeline, spritePipelineHarness])
 
   useEffect(() => {
     let frameId: number
@@ -1060,6 +1121,9 @@ export default function MapCanvas({ onTileClick, onEntityClick, targetingMode = 
   }
 
   const sourceLabel = (() => {
+    if (!useLegacySpritePipeline) {
+      return 'Vector Draw'
+    }
     const src = mapMetadata?.map_source
     if (src === 'library') return 'Library Map'
     if (src === 'generated') return 'AI Generated'
@@ -1105,6 +1169,20 @@ export default function MapCanvas({ onTileClick, onEntityClick, targetingMode = 
     return entries
   })()
 
+  const spriteStatusClass = spritePipelineSnapshot.failures > 0
+    ? 'is-failed'
+    : spritePipelineSnapshot.legacyEnabled
+      ? 'is-legacy'
+      : 'is-clean'
+  const spriteStatusText = spritePipelineSnapshot.failures > 0
+    ? `Sprite assert fail (${spritePipelineSnapshot.failures})`
+    : spritePipelineSnapshot.legacyEnabled
+      ? `Legacy sprites on (${spritePipelineSnapshot.hits})`
+      : `Sprite hits: ${spritePipelineSnapshot.hits}`
+  const spriteStatusTitle = spritePipelineSnapshot.lastReason
+    ? `Last sprite branch: ${spritePipelineSnapshot.lastReason}`
+    : 'No legacy sprite branch recorded'
+
   return (
     <div
       ref={containerRef}
@@ -1149,6 +1227,37 @@ export default function MapCanvas({ onTileClick, onEntityClick, targetingMode = 
       >
         {showPaletteDebug ? 'Hide tile palette debug' : 'Show tile palette debug'}
       </button>
+      <button
+        type="button"
+        className={`map-label-toggle-btn ${showVectorLabels ? 'is-active' : ''}`}
+        onClick={() => setShowVectorLabels((v) => !v)}
+        title="Show/hide generated vector labels"
+      >
+        {showVectorLabels ? 'Hide labels' : 'Show labels'}
+      </button>
+      <button
+        type="button"
+        className={`map-dm-label-toggle-btn ${showDmOnlyLabels ? 'is-active' : ''}`}
+        onClick={() => setShowDmOnlyLabels((v) => !v)}
+        title="Show/hide DM-only labels"
+      >
+        {showDmOnlyLabels ? 'Hide DM labels' : 'Show DM labels'}
+      </button>
+      <button
+        type="button"
+        className={`map-label-scale-toggle-btn ${scaleLabelsWithZoom ? 'is-active' : ''}`}
+        onClick={() => setScaleLabelsWithZoom((v) => !v)}
+        title="Toggle zoom-based label scaling"
+      >
+        {scaleLabelsWithZoom ? 'Label zoom: on' : 'Label zoom: off'}
+      </button>
+      <div
+        className={`map-sprite-status-pill ${spriteStatusClass}`}
+        aria-live="polite"
+        title={spriteStatusTitle}
+      >
+        {spriteStatusText}
+      </div>
       {showPaletteDebug && (
         <div className="map-palette-debug-panel" aria-live="polite">
           <div className="map-palette-debug-title">Tile Palette Debug</div>

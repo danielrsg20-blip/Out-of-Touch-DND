@@ -5,6 +5,7 @@ from __future__ import annotations
 import base64
 import json
 import logging
+import os
 import time
 import uuid
 from contextlib import asynccontextmanager
@@ -22,7 +23,7 @@ from .session_start_protocol import build_session_start_protocol
 from .voice import speech_to_text, text_to_speech, dm_speak, mock_tts_audio
 from .models.database import init_db, async_session
 from .models.campaign import SavedCampaign
-from .tools import ToolDispatcher
+from .tools import ToolDispatcher, forward_generate_vector_map_request, is_vector_map_forwarding_enabled
 from .movement import CollisionGrid, AStarPathfinder, MovementValidator, NavNode
 from .rules.spells import (
     get_castable_spell_options,
@@ -35,6 +36,7 @@ from .rules.spells import (
     validate_spell_selections,
 )
 from .overlay_api import overlay_api
+from .map_to_overlay import build_overlay_payload_from_map
 from .models.user import User  # noqa: F401 — ensures table is created by init_db
 from .auth import create_access_token, decode_token, hash_password, verify_password
 
@@ -62,6 +64,8 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+TS_RUNTIME_BASE_URL = (os.getenv("OTDND_TS_RUNTIME_BASE_URL") or os.getenv("TS_RUNTIME_BASE_URL") or "http://127.0.0.1:9010").rstrip("/")
 
 
 # --- REST Endpoints ---
@@ -261,6 +265,29 @@ async def health():
     return {"status": "ok", "sessions": len(session_manager.sessions)}
 
 
+@app.post("/api/tools/generate_vector_map")
+async def forward_generate_vector_map(request: Request):
+    if not is_vector_map_forwarding_enabled():
+        return JSONResponse(
+            status_code=503,
+            content={
+                "error": "TypeScript vector-map forwarding is disabled",
+                "ts_runtime_base_url": TS_RUNTIME_BASE_URL,
+            },
+        )
+
+    body = await request.json()
+    if not isinstance(body, dict):
+        return JSONResponse(status_code=400, content={"error": "Request body must be a JSON object"})
+
+    try:
+        payload = forward_generate_vector_map_request(body)
+    except RuntimeError as exc:
+        return JSONResponse(status_code=502, content={"error": str(exc), "ts_runtime_base_url": TS_RUNTIME_BASE_URL})
+
+    return JSONResponse(status_code=200, content=payload)
+
+
 @app.get("/api/health/atlas")
 async def health_atlas():
     report = run_terrain_atlas_resolution_check()
@@ -431,6 +458,7 @@ def _extract_user_id(request: Request) -> str | None:
 
 def _ensure_mock_starter_map(session: GameSession) -> None:
     if session.orchestrator.game_map is not None:
+        _ensure_vector_overlay_for_session(session)
         return
 
     dispatcher = ToolDispatcher(
@@ -458,6 +486,7 @@ def _ensure_mock_starter_map(session: GameSession) -> None:
     session.orchestrator.game_map = dispatcher.game_map
     session.orchestrator.combat = dispatcher.combat
     session.orchestrator.memory = dispatcher.memory
+    _ensure_vector_overlay_for_session(session)
 
 
 @app.post("/api/session/create", response_model=CreateSessionResponse)
@@ -510,7 +539,7 @@ async def _auto_save_campaign(session: GameSession, room_code: str, user_id: str
             campaign.owner_id = user_id
         campaign.set_characters({cid: c.to_dict() for cid, c in session.orchestrator.characters.items()})
         campaign.set_conversation(session.orchestrator.conversation_history[-20:])
-        campaign.set_overlay(_get_overlay_payload_for_room(room_code))
+        campaign.set_overlay(_get_overlay_payload_for_room(room_code, session=session))
         campaign.session_count = (campaign.session_count or 0) + 1
         pc_map: dict[str, dict] = {}
         for p in session.players.values():
@@ -530,9 +559,45 @@ def _overlay_id_for_room(room_code: str) -> str:
     return f"overlay_room_{room_code}"
 
 
-def _get_overlay_payload_for_room(room_code: str) -> dict[str, Any] | None:
+def _ensure_vector_overlay_for_session(session: GameSession) -> dict[str, Any] | None:
+    overlay_id = _overlay_id_for_room(session.room_code)
+    existing_payload = overlay_api.save_overlay_to_json(overlay_id)
+    if existing_payload:
+        try:
+            decoded_existing = json.loads(existing_payload)
+            return decoded_existing if isinstance(decoded_existing, dict) else None
+        except json.JSONDecodeError:
+            logger.warning("Existing overlay payload for room %s is invalid JSON", session.room_code)
+
+    game_map = session.orchestrator.game_map
+    if not game_map:
+        return None
+
+    try:
+        generated_payload = build_overlay_payload_from_map(
+            game_map.to_dict(),
+            overlay_id=overlay_id,
+            map_id=session.room_code,
+            overlay_name=f"Room {session.room_code} Overlay",
+        )
+        loaded = overlay_api.load_overlay_from_json(json.dumps(generated_payload), overlay_id=overlay_id)
+        if not loaded:
+            return None
+        serialized = overlay_api.save_overlay_to_json(overlay_id)
+        if not serialized:
+            return None
+        decoded = json.loads(serialized)
+        return decoded if isinstance(decoded, dict) else None
+    except Exception:
+        logger.exception("Failed to build vector overlay from map for room %s", session.room_code)
+        return None
+
+
+def _get_overlay_payload_for_room(room_code: str, *, session: GameSession | None = None) -> dict[str, Any] | None:
     payload = overlay_api.save_overlay_to_json(_overlay_id_for_room(room_code))
     if not payload:
+        if session is not None:
+            return _ensure_vector_overlay_for_session(session)
         return None
     try:
         decoded = json.loads(payload)
@@ -563,6 +628,12 @@ def _restore_overlay_for_room(room_code: str, overlay_payload: dict[str, Any] | 
     except Exception:
         logger.exception("Failed to restore overlay for room %s", room_code)
         return None
+
+
+def _state_with_overlay(session: GameSession) -> dict[str, Any]:
+    state = session.orchestrator.get_full_state()
+    state["overlay"] = _get_overlay_payload_for_room(session.room_code, session=session)
+    return state
 
 
 @app.post("/api/character/create")
@@ -744,8 +815,7 @@ async def get_session(room_code: str):
     if not session:
         return {"error": "Session not found"}
     _ensure_mock_starter_map(session)
-    state = session.orchestrator.get_full_state()
-    state["overlay"] = _get_overlay_payload_for_room(room_code)
+    state = _state_with_overlay(session)
     state["session"] = session.to_dict()
     state["session_start"] = build_session_start_protocol(session)
     return state
@@ -778,7 +848,7 @@ async def save_campaign(req: SaveCampaignRequest, request: Request):
         if session.orchestrator.game_map:
             campaign.set_map(session.orchestrator.game_map.to_dict())
         campaign.set_conversation(session.orchestrator.conversation_history[-20:])
-        campaign.set_overlay(_get_overlay_payload_for_room(req.room_code))
+        campaign.set_overlay(_get_overlay_payload_for_room(req.room_code, session=session))
         campaign.session_count = (campaign.session_count or 0) + 1
 
         if user_id and not campaign.owner_id:
@@ -898,6 +968,8 @@ async def load_campaign(req: LoadCampaignRequest):
     session.orchestrator.conversation_history = conversation
 
     restored_overlay = _restore_overlay_for_room(req.room_code, campaign.get_overlay())
+    if not restored_overlay and session.orchestrator.game_map:
+        restored_overlay = _ensure_vector_overlay_for_session(session)
 
     return {
         "loaded": True,
@@ -998,6 +1070,8 @@ async def resume_campaign(req: ResumeCampaignRequest, request: Request):
 
     session.orchestrator.conversation_history = campaign.get_conversation()
     restored_overlay = _restore_overlay_for_room(session.room_code, campaign.get_overlay())
+    if not restored_overlay and session.orchestrator.game_map:
+        restored_overlay = _ensure_vector_overlay_for_session(session)
 
     pc_map = campaign.get_player_characters()
     if req.character_id and req.character_id in chars_data:
@@ -1118,7 +1192,7 @@ async def action_endpoint(req: PlayerActionRequest):
                 "overlay": overlay_payload,
             })
 
-    state = session.orchestrator.get_full_state()
+    state = _state_with_overlay(session)
     await session.broadcast({"type": "state_sync", "state": state})
 
     return {
@@ -1143,6 +1217,9 @@ def _auto_generate_overlay_for_session(
     try:
         overlay_id = f"overlay_room_{session.room_code}"
         overlay = overlay_api.get_overlay(overlay_id)
+        if not overlay:
+            _ensure_vector_overlay_for_session(session)
+            overlay = overlay_api.get_overlay(overlay_id)
         if not overlay:
             overlay = overlay_api.create_overlay(overlay_id, f"Room {session.room_code} Overlay", session.room_code)
 
@@ -1209,7 +1286,7 @@ async def combat_next_turn(req: NextTurnRequest):
         "combat": combat_state,
     })
 
-    state = session.orchestrator.get_full_state()
+    state = _state_with_overlay(session)
     await session.broadcast({"type": "state_sync", "state": state})
 
     return {
@@ -1309,7 +1386,7 @@ async def move_token_endpoint(req: MoveTokenRequest):
             },
         })
 
-    state = session.orchestrator.get_full_state()
+    state = _state_with_overlay(session)
     await session.broadcast({"type": "state_sync", "state": state})
 
     return {
@@ -1365,7 +1442,7 @@ async def player_equip_endpoint(req: PlayerEquipRequest):
         "data": result,
     })
 
-    state = session.orchestrator.get_full_state()
+    state = _state_with_overlay(session)
     await session.broadcast({"type": "state_sync", "state": state})
 
     return {"ok": True, "data": result}
@@ -1394,7 +1471,7 @@ async def websocket_endpoint(websocket: WebSocket, room_code: str, player_id: st
         "player_id": player_id,
         "session": session.to_dict(),
         "game_state": session.orchestrator.get_full_state(),
-        "overlay": _get_overlay_payload_for_room(room_code),
+        "overlay": _get_overlay_payload_for_room(room_code, session=session),
         "session_start": session_start,
     })
 
@@ -1473,7 +1550,7 @@ async def handle_ws_message(session: GameSession, player: Player, msg: dict[str,
                 "data": result,
             })
 
-        state = session.orchestrator.get_full_state()
+        state = _state_with_overlay(session)
         await session.broadcast({"type": "state_sync", "state": state})
         return
 
@@ -1601,7 +1678,7 @@ async def handle_ws_message(session: GameSession, player: Player, msg: dict[str,
                     "overlay": overlay_payload,
                 })
 
-        state = session.orchestrator.get_full_state()
+        state = _state_with_overlay(session)
         await session.broadcast({"type": "state_sync", "state": state})
 
     elif msg_type == "voice_input":

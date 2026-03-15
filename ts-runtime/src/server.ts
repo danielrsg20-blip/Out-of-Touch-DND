@@ -1,7 +1,10 @@
 import Fastify from 'fastify'
+import { registerAuthRoutes } from './routes/auth.js'
+import { registerRuntimeCompatRoutes } from './routes/runtimeCompat.js'
 import { registerOverlayGenerateRoute } from './routes/overlayGenerate.js'
 import { registerCampaignRoutes } from './routes/campaign.js'
 import { registerSessionRoutes } from './routes/session.js'
+import { registerVectorMapGenerateRoute } from './routes/vectorMapGenerate.js'
 
 const PORT = Number(process.env.TS_RUNTIME_PORT || 9010)
 const HOST = process.env.TS_RUNTIME_HOST || '0.0.0.0'
@@ -9,10 +12,11 @@ const HOST = process.env.TS_RUNTIME_HOST || '0.0.0.0'
 async function buildServer() {
   const app = Fastify({ logger: true })
 
-  app.get('/api/health', async () => ({ status: 'ok', service: 'ts-runtime' }))
-
+  await registerRuntimeCompatRoutes(app)
+  await registerAuthRoutes(app)
   await registerSessionRoutes(app)
   await registerOverlayGenerateRoute(app)
+  await registerVectorMapGenerateRoute(app)
   await registerCampaignRoutes(app)
 
   return app

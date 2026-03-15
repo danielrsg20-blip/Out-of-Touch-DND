@@ -11,6 +11,23 @@ const corsHeaders = {
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 }
 
+function parseEnvFlag(name: string, fallback: boolean): boolean {
+  const raw = Deno.env.get(name) ?? Deno.env.get(name.toUpperCase())
+  if (raw == null) return fallback
+  const normalized = raw.trim().toLowerCase()
+  if (['1', 'true', 'yes', 'on'].includes(normalized)) return true
+  if (['0', 'false', 'no', 'off'].includes(normalized)) return false
+  return fallback
+}
+
+const FEATURE_FLAGS = {
+  vector_map_generation_ts_enabled: parseEnvFlag('VECTOR_MAP_GENERATION_TS_ENABLED', true),
+  vector_grid_derivation_enabled: parseEnvFlag('VECTOR_GRID_DERIVATION_ENABLED', true),
+  vector_grid_authoritative_enabled: parseEnvFlag('VECTOR_GRID_AUTHORITATIVE_ENABLED', false),
+  vector_compat_outputs_enabled: parseEnvFlag('VECTOR_COMPAT_OUTPUTS_ENABLED', true),
+  grid_resolution_v2_enabled: parseEnvFlag('GRID_RESOLUTION_V2_ENABLED', false),
+}
+
 type SnapshotState = {
   characters: Record<string, Record<string, unknown>>
   map: Record<string, unknown> | null
@@ -954,6 +971,23 @@ interface NavNode {
   y: number
 }
 
+type TraversalGridCell = {
+  x: number
+  y: number
+  traversable: boolean
+  movement_cost?: number
+  movement_blocking_tags?: string[]
+  tags?: string[]
+}
+
+type TraversalGridPayload = {
+  width_cells: number
+  height_cells: number
+  cell_size_world: number
+  resolution_scale?: number
+  cells: TraversalGridCell[]
+}
+
 class CollisionGrid {
   width: number
   height: number
@@ -1048,6 +1082,77 @@ class CollisionGrid {
 
     return neighbors
   }
+}
+
+function getTraversalGridFromMap(map: Record<string, unknown>): TraversalGridPayload | null {
+  const candidate = map.traversal_grid
+  if (!candidate || typeof candidate !== 'object') {
+    return null
+  }
+  const grid = candidate as Record<string, unknown>
+  if (!Array.isArray(grid.cells)) {
+    return null
+  }
+  const width = Number(grid.width_cells)
+  const height = Number(grid.height_cells)
+  const cellSizeWorld = Number(grid.cell_size_world)
+  if (!Number.isFinite(width) || !Number.isFinite(height) || width <= 0 || height <= 0) {
+    return null
+  }
+  if (!Number.isFinite(cellSizeWorld) || cellSizeWorld <= 0) {
+    return null
+  }
+  return {
+    width_cells: width,
+    height_cells: height,
+    cell_size_world: cellSizeWorld,
+    resolution_scale: Number(grid.resolution_scale ?? 1),
+    cells: grid.cells as TraversalGridCell[],
+  }
+}
+
+function hydrateCollisionGridFromTraversalGrid(
+  grid: CollisionGrid,
+  traversal: TraversalGridPayload,
+  mapWidth: number,
+  mapHeight: number,
+): void {
+  const byKey = new Map<string, TraversalGridCell>()
+  for (const cell of traversal.cells) {
+    byKey.set(`${cell.x},${cell.y}`, cell)
+  }
+
+  const scaleX = traversal.width_cells / Math.max(1, mapWidth)
+  const scaleY = traversal.height_cells / Math.max(1, mapHeight)
+
+  for (let y = 0; y < mapHeight; y += 1) {
+    for (let x = 0; x < mapWidth; x += 1) {
+      const sx0 = Math.floor(x * scaleX)
+      const sx1 = Math.max(sx0, Math.floor((x + 1) * scaleX) - 1)
+      const sy0 = Math.floor(y * scaleY)
+      const sy1 = Math.max(sy0, Math.floor((y + 1) * scaleY) - 1)
+
+      let anyTraversable = false
+      for (let sy = sy0; sy <= sy1 && !anyTraversable; sy += 1) {
+        for (let sx = sx0; sx <= sx1; sx += 1) {
+          const sub = byKey.get(`${sx},${sy}`)
+          if (sub?.traversable) {
+            anyTraversable = true
+            break
+          }
+        }
+      }
+
+      grid.walkable[y][x] = anyTraversable
+    }
+  }
+}
+
+function movementFeetPerStepFromTraversalGrid(traversal: TraversalGridPayload, mapWidth: number, mapHeight: number): number {
+  const scaleX = traversal.width_cells / Math.max(1, mapWidth)
+  const scaleY = traversal.height_cells / Math.max(1, mapHeight)
+  const aggregateScale = Math.max(1, Math.max(scaleX, scaleY))
+  return traversal.cell_size_world * aggregateScale
 }
 
 function astarPathfind(
@@ -2221,17 +2326,18 @@ async function actionMoveToken(body: Record<string, unknown>) {
   // 4. Build collision grid and find path
   const grid = new CollisionGrid(width, height)
   const tiles = Array.isArray(map.tiles) ? (map.tiles as Array<Record<string, unknown>>) : []
-  
-  // DEBUG: Log tile information
-  const blockedTiles = tiles.filter(t => tileBlocksMovement(t))
-  console.log(`[DEBUG] Total tiles: ${tiles.length}, Blocked tiles: ${blockedTiles.length}`)
-  console.log(`[DEBUG] Sample tiles:`, tiles.slice(0, 5).map(t => ({ x: t.x, y: t.y, type: t.type })))
-  console.log(`[DEBUG] Sample blocked tiles:`, blockedTiles.slice(0, 5).map(t => ({ x: t.x, y: t.y, type: t.type })))
-  
-  grid.buildFromMap(tiles)
+
+  const traversalGrid = FEATURE_FLAGS.vector_grid_authoritative_enabled && FEATURE_FLAGS.vector_grid_derivation_enabled
+    ? getTraversalGridFromMap(map)
+    : null
+
+  if (traversalGrid) {
+    hydrateCollisionGridFromTraversalGrid(grid, traversalGrid, width, height)
+  } else {
+    grid.buildFromMap(tiles)
+  }
+
   grid.updateEntityBlocking(entities.filter((e) => String(e.id ?? '') !== characterId))
-  
-  console.log(`[DEBUG] Checking destination (${x}, ${y}): walkable=${grid.isWalkable(x, y)}`)
 
   const start: NavNode = { x: Number(mover.x), y: Number(mover.y) }
   const goal: NavNode = { x, y }
@@ -2241,7 +2347,9 @@ async function actionMoveToken(body: Record<string, unknown>) {
     throw new Error('No path to target.')
   }
 
-  const moveDistance = pathDistance(path)
+  const moveDistance = traversalGrid
+    ? (path.length <= 1 ? 0 : Math.round((path.length - 1) * movementFeetPerStepFromTraversalGrid(traversalGrid, width, height)))
+    : pathDistance(path)
 
   // 5. Check destination walkability
   if (!grid.isWalkable(x, y)) {

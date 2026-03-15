@@ -1,0 +1,30 @@
+{
+  "name": "vector-map-bridge-fixture",
+  "request": {
+    "seed": 90210,
+    "map_id": "bridge_fixture_map",
+    "name": "Bridge Fixture Map",
+    "biome": "dungeon",
+    "story_prompt": "A narrow dungeon bridge over a chasm with crumbling walls and ambush cover.",
+    "style_preset": "default",
+    "bounds_world": {
+      "origin_x": 0,
+      "origin_y": 0,
+      "width_world": 100,
+      "height_world": 75
+    },
+    "generation_params": {
+      "room_count": 7,
+      "corridor_width_cells": 2,
+      "obstacle_density": 0.12,
+      "hazard_density": 0.08
+    },
+    "grid_config": {
+      "base_cell_size_world": 5,
+      "resolution_scale": 2,
+      "diagonal_policy": "allow",
+      "movement_cost_mode": "world_units"
+    },
+    "validation_mode": "fixup"
+  }
+}

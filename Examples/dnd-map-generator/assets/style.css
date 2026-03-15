@@ -1,0 +1,269 @@
+/* ═══════════════════════════════════════════════
+   D&D Vector Map Generator — Stylesheet
+   ═══════════════════════════════════════════════ */
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  /* UI chrome */
+  --bg:      #1a1a2e;
+  --bg2:     #16213e;
+  --bg3:     #0f3460;
+  --panel:   #1e2a4a;
+  --panel2:  #243050;
+  --border:  #2a3a6a;
+  --text:    #e0e8ff;
+  --text2:   #8899cc;
+  --accent:  #e8b84b;
+  --accent2: #c9963a;
+  --red:     #e84b4b;
+  --green:   #4be88a;
+}
+
+html, body {
+  height: 100%;
+  overflow: hidden;
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Segoe UI', system-ui, sans-serif;
+  font-size: 13px;
+}
+
+/* ── App layout ─────────────────────────────── */
+#app        { display: flex; flex-direction: column; height: 100vh; }
+#main-row   { display: flex; flex: 1; overflow: hidden; }
+
+/* ── Toolbar ────────────────────────────────── */
+#toolbar {
+  width: 56px;
+  background: var(--panel);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 8px 0;
+  gap: 4px;
+  flex-shrink: 0;
+  overflow-y: auto;
+}
+
+.tool-btn {
+  width: 40px; height: 40px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text2);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s;
+  font-size: 17px;
+  position: relative;
+  flex-shrink: 0;
+}
+.tool-btn:hover  { background: var(--panel2); color: var(--text); }
+.tool-btn.active { background: var(--accent); color: #1a1a00; border-color: var(--accent2); }
+
+.tool-btn[data-tip]:hover::after {
+  content: attr(data-tip);
+  position: absolute;
+  left: 48px; top: 50%;
+  transform: translateY(-50%);
+  background: #000c;
+  color: #fff;
+  padding: 4px 8px;
+  border-radius: 4px;
+  white-space: nowrap;
+  font-size: 11px;
+  z-index: 100;
+  pointer-events: none;
+}
+
+.tool-sep {
+  width: 32px; height: 1px;
+  background: var(--border);
+  margin: 2px 0;
+  flex-shrink: 0;
+}
+
+/* ── Panels ─────────────────────────────────── */
+#left-panel {
+  width: 204px;
+  background: var(--panel);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+#right-panel {
+  width: 200px;
+  background: var(--panel);
+  border-left: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.panel-section {
+  padding: 10px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.panel-title {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  color: var(--text2);
+  text-transform: uppercase;
+  margin-bottom: 8px;
+}
+
+.scroll-panel { overflow-y: auto; flex: 1; }
+
+/* ── Form elements ──────────────────────────── */
+select, input[type=number], input[type=text] {
+  width: 100%;
+  padding: 5px 8px;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  color: var(--text);
+  border-radius: 5px;
+  font-size: 12px;
+}
+select:focus, input:focus { outline: none; border-color: var(--accent); }
+
+label {
+  display: block;
+  color: var(--text2);
+  font-size: 11px;
+  margin-bottom: 3px;
+}
+
+.field   { margin-bottom: 8px; }
+.row     { display: flex; gap: 6px; }
+.row .field { flex: 1; }
+
+input[type=range] { width: 100%; accent-color: var(--accent); }
+
+/* ── Buttons ────────────────────────────────── */
+.btn {
+  width: 100%;
+  padding: 6px 10px;
+  background: var(--panel2);
+  border: 1px solid var(--border);
+  color: var(--text);
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 12px;
+  text-align: left;
+  transition: all 0.15s;
+}
+.btn:hover          { background: var(--bg3); border-color: var(--accent); }
+.btn.primary        { background: var(--accent); color: #1a1a00; border-color: var(--accent2); font-weight: 600; text-align: center; }
+.btn.primary:hover  { background: var(--accent2); }
+.btn.danger         { border-color: var(--red); color: var(--red); }
+.btn.danger:hover   { background: rgba(232,75,75,0.1); }
+
+/* ── Layer list ─────────────────────────────── */
+.layer-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 6px;
+  border-radius: 5px;
+  cursor: pointer;
+}
+.layer-item:hover        { background: var(--panel2); }
+.layer-item.active       { background: var(--bg3); }
+.layer-item input[type=checkbox] { width: 14px; height: 14px; accent-color: var(--accent); cursor: pointer; }
+.layer-dot  { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+.layer-name { flex: 1; font-size: 12px; }
+
+/* ── Templates grid ─────────────────────────── */
+.tmpl-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 5px;
+  padding: 8px;
+}
+.tmpl-btn {
+  padding: 7px 4px;
+  background: var(--panel2);
+  border: 1px solid var(--border);
+  color: var(--text2);
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 10px;
+  text-align: center;
+  transition: all 0.15s;
+  line-height: 1.3;
+}
+.tmpl-btn:hover    { border-color: var(--accent); color: var(--text); background: var(--bg3); }
+.tmpl-icon         { font-size: 16px; display: block; margin-bottom: 2px; }
+
+/* ── Canvas area ────────────────────────────── */
+#canvas-wrap {
+  flex: 1;
+  overflow: hidden;
+  position: relative;
+  background: #3a3a42;
+}
+#map-canvas { position: absolute; top: 0; left: 0; display: block; cursor: crosshair; }
+#ui-canvas  { position: absolute; top: 0; left: 0; pointer-events: none; }
+
+/* ── Minimap ────────────────────────────────── */
+#minimap {
+  position: absolute;
+  bottom: 10px; right: 10px;
+  width: 128px; height: 128px;
+  background: rgba(0,0,0,.75);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  overflow: hidden;
+}
+#mm-canvas { width: 100%; height: 100%; }
+
+/* ── Status bar ─────────────────────────────── */
+#statusbar {
+  height: 24px;
+  background: var(--panel);
+  border-top: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  padding: 0 12px;
+  gap: 16px;
+  font-size: 11px;
+  color: var(--text2);
+  flex-shrink: 0;
+}
+#statusbar span { color: var(--text); }
+
+/* ── Properties panel ───────────────────────── */
+.prop-row   { display: flex; align-items: center; gap: 6px; padding: 3px 0; }
+.prop-label { color: var(--text2); font-size: 11px; min-width: 56px; }
+.prop-val   { flex: 1; font-size: 12px; }
+.seed-badge {
+  font-family: monospace;
+  font-size: 10px;
+  color: var(--accent);
+  padding: 2px 5px;
+  background: var(--bg2);
+  border-radius: 4px;
+  border: 1px solid var(--border);
+}
+
+/* ── Color swatches ─────────────────────────── */
+.swatch-row { display: flex; gap: 3px; flex-wrap: wrap; }
+.sw {
+  width: 20px; height: 20px;
+  border-radius: 3px;
+  cursor: pointer;
+  border: 2px solid transparent;
+  flex-shrink: 0;
+}
+.sw.on { border-color: #fff; }

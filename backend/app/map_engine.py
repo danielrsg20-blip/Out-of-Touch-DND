@@ -80,6 +80,7 @@ class GameMap:
     entities: dict[str, MapEntity] = field(default_factory=dict)
     revealed: set[tuple[int, int]] = field(default_factory=set)
     metadata: dict[str, Any] = field(default_factory=dict)
+    traversal_grid: dict[str, Any] | None = None
 
     def get_tile(self, x: int, y: int) -> Tile | None:
         return self.tiles.get((x, y))
@@ -192,12 +193,18 @@ class GameMap:
             "revealed": revealed_list,
             "visible": [{"x": v[0], "y": v[1]} for v in visible_tiles] if visible_tiles else [],
             "metadata": dict(self.metadata),
+            "traversal_grid": dict(self.traversal_grid) if isinstance(self.traversal_grid, dict) else self.traversal_grid,
         }
 
 
 def build_map_from_data(data: dict) -> GameMap:
     gmap = GameMap(width=data["width"], height=data["height"])
     gmap.metadata = dict(data.get("metadata", {}))
+    traversal_grid = data.get("traversal_grid")
+    if traversal_grid is None and isinstance(gmap.metadata.get("traversal_grid"), dict):
+        traversal_grid = gmap.metadata.get("traversal_grid")
+    if isinstance(traversal_grid, dict):
+        gmap.traversal_grid = dict(traversal_grid)
 
     for td in data.get("tiles", []):
         gmap.set_tile(

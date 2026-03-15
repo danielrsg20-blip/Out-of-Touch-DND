@@ -28,6 +28,7 @@ export type SessionSnapshot = {
   game_state: {
     characters: Record<string, JsonRecord>
     map: JsonRecord | null
+    combat: JsonRecord | null
     narrative_history: unknown[]
   }
   overlay: JsonRecord | null
@@ -161,6 +162,7 @@ export function createSessionSnapshot(playerName: string, userId: string | null)
     game_state: {
       characters: {},
       map: null,
+      combat: null,
       narrative_history: [],
     },
     overlay: null,
@@ -272,6 +274,7 @@ export function createCharacterInSession(params: {
     temp_hp: 0,
     ac: 10,
     speed: 30,
+    movement_remaining: 30,
     known_spells: params.knownSpells ?? [],
     prepared_spells: params.preparedSpells ?? [],
     sprite_id: params.spriteId ?? null,
@@ -292,6 +295,7 @@ export function mutateSessionSnapshot(
   roomCode: string,
   mutation: {
     map?: JsonRecord | null
+    combat?: JsonRecord | null
     overlay?: JsonRecord | null
     appendNarrative?: unknown[]
     replaceNarrative?: unknown[]
@@ -301,6 +305,9 @@ export function mutateSessionSnapshot(
   return updateSessionSnapshot(roomCode, (snapshot) => {
     if (Object.prototype.hasOwnProperty.call(mutation, 'map')) {
       snapshot.game_state.map = mutation.map ?? null
+    }
+    if (Object.prototype.hasOwnProperty.call(mutation, 'combat')) {
+      snapshot.game_state.combat = mutation.combat ?? null
     }
     if (Object.prototype.hasOwnProperty.call(mutation, 'overlay')) {
       snapshot.overlay = mutation.overlay ?? null
@@ -329,6 +336,7 @@ export function applyCampaignToSession(
   campaignState: {
     characters: Record<string, JsonRecord>
     map: JsonRecord | null
+    combat?: JsonRecord | null
     conversation: unknown[]
     overlay: JsonRecord | null
   },
@@ -337,9 +345,43 @@ export function applyCampaignToSession(
     snapshot.game_state = {
       characters: clone(campaignState.characters),
       map: clone(campaignState.map),
+      combat: clone(campaignState.combat ?? null),
       narrative_history: clone(campaignState.conversation),
     }
     snapshot.overlay = clone(campaignState.overlay)
     return refreshSessionStart(snapshot)
   })
+}
+
+export function getSessionCount(): number {
+  return sessions.size
+}
+
+export function buildRuntimeState(roomCode: string): {
+  characters: Record<string, JsonRecord>
+  map: JsonRecord | null
+  combat: JsonRecord | null
+  usage: {
+    input_tokens: number
+    output_tokens: number
+    estimated_cost_usd: number
+  }
+  overlay: JsonRecord | null
+} | null {
+  const snapshot = getSessionSnapshot(roomCode)
+  if (!snapshot) {
+    return null
+  }
+
+  return {
+    characters: clone(snapshot.game_state.characters),
+    map: clone(snapshot.game_state.map),
+    combat: clone(snapshot.game_state.combat),
+    usage: {
+      input_tokens: 0,
+      output_tokens: 0,
+      estimated_cost_usd: 0,
+    },
+    overlay: clone(snapshot.overlay),
+  }
 }

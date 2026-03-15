@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>D&D Vector Map Generator</title>
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<div id="app">
+<div id="main-row">
+
+  <!-- TOOLBAR -->
+  <div id="toolbar">
+    <div class="tool-btn active" id="tb-select"  data-tip="Select (V)"     onclick="setTool('select')">⬚</div>
+    <div class="tool-sep"></div>
+    <div class="tool-btn" id="tb-room-r" data-tip="Rect Room (R)"          onclick="setTool('room-r')">⬜</div>
+    <div class="tool-btn" id="tb-room-c" data-tip="Round Room (C)"         onclick="setTool('room-c')">⭕</div>
+    <div class="tool-btn" id="tb-corr"   data-tip="Corridor (L)"           onclick="setTool('corr')">┄</div>
+    <div class="tool-btn" id="tb-wall"   data-tip="Wall Line (W)"          onclick="setTool('wall')">┃</div>
+    <div class="tool-sep"></div>
+    <div class="tool-btn" id="tb-door"   data-tip="Door (D)"               onclick="setTool('door')">🚪</div>
+    <div class="tool-btn" id="tb-stairs" data-tip="Stairs (S)"             onclick="setTool('stairs')">🔼</div>
+    <div class="tool-btn" id="tb-label"  data-tip="Label (T)"              onclick="setTool('label')">T</div>
+    <div class="tool-sep"></div>
+    <div class="tool-btn" id="tb-erase"  data-tip="Erase (E)"              onclick="setTool('erase')">✕</div>
+    <div class="tool-sep"></div>
+    <div class="tool-btn" data-tip="Undo (Ctrl+Z)" onclick="undo()">↺</div>
+    <div class="tool-btn" data-tip="Redo (Ctrl+Y)" onclick="redo()">↻</div>
+    <div class="tool-sep"></div>
+    <div class="tool-btn" data-tip="Zoom In (+)"   onclick="doZoom(1.2)">+</div>
+    <div class="tool-btn" data-tip="Zoom Out (-)"  onclick="doZoom(0.8)">−</div>
+    <div class="tool-btn" data-tip="Fit View (F)"  onclick="fitView()">⊡</div>
+  </div>
+
+  <!-- LEFT PANEL -->
+  <div id="left-panel">
+    <div class="panel-section">
+      <div class="panel-title">Generate</div>
+      <div class="field">
+        <label>Location Type</label>
+        <select id="gen-type">
+          <option value="dungeon">Dungeon</option>
+          <option value="cavern">Cavern</option>
+          <option value="tavern">Tavern / Inn</option>
+          <option value="temple">Temple</option>
+          <option value="tower">Wizard Tower</option>
+          <option value="crypt">Crypt</option>
+          <option value="mine">Mine</option>
+          <option value="sewer">Sewer</option>
+          <option value="village">Village Block</option>
+          <option value="campsite">Forest Campsite</option>
+        </select>
+      </div>
+      <div class="row">
+        <div class="field"><label>Rooms</label><input type="number" id="gen-rooms" value="8" min="3" max="20"></div>
+        <div class="field"><label>Size</label>
+          <select id="gen-size"><option value="sm">S</option><option value="md" selected>M</option><option value="lg">L</option></select>
+        </div>
+      </div>
+      <div class="field">
+        <label>Seed <span id="seed-badge" class="seed-badge">—</span></label>
+        <input type="text" id="gen-seed" placeholder="random or text" style="font-family:monospace;font-size:11px">
+      </div>
+      <div class="field"><label>Map Title</label><input type="text" id="map-title" value="Dungeon of Vaelthar"></div>
+      <button class="btn primary" onclick="generateMap()">⚔ Generate Map</button>
+    </div>
+
+    <div class="panel-section">
+      <div class="panel-title">Templates</div>
+      <div style="max-height:136px;overflow-y:auto">
+        <div class="tmpl-grid">
+          <div class="tmpl-btn" onclick="placeTemplate('room-r')"><span class="tmpl-icon">⬜</span>Rect Room</div>
+          <div class="tmpl-btn" onclick="placeTemplate('room-c')"><span class="tmpl-icon">⭕</span>Round Room</div>
+          <div class="tmpl-btn" onclick="placeTemplate('boss')"><span class="tmpl-icon">👑</span>Boss Room</div>
+          <div class="tmpl-btn" onclick="placeTemplate('treasury')"><span class="tmpl-icon">💰</span>Treasury</div>
+          <div class="tmpl-btn" onclick="placeTemplate('entrance')"><span class="tmpl-icon">🔲</span>Entrance</div>
+          <div class="tmpl-btn" onclick="placeTemplate('prison')"><span class="tmpl-icon">🔒</span>Prison</div>
+          <div class="tmpl-btn" onclick="placeTemplate('shrine')"><span class="tmpl-icon">⛩</span>Shrine</div>
+          <div class="tmpl-btn" onclick="placeTemplate('pool')"><span class="tmpl-icon">💧</span>Pool Room</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel-section scroll-panel" style="flex:1;min-height:80px">
+      <div class="panel-title">Layers</div>
+      <div id="layer-list"></div>
+    </div>
+
+    <div class="panel-section">
+      <button class="btn danger" onclick="clearMap()" style="margin-bottom:6px">🗑 Clear Map</button>
+      <div class="row">
+        <button class="btn" onclick="exportSVG()" style="flex:1">⬇ SVG</button>
+        <button class="btn" onclick="exportJSON()" style="flex:1">⬇ JSON</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- CANVAS -->
+  <div id="canvas-wrap">
+    <canvas id="map-canvas"></canvas>
+    <canvas id="ui-canvas"></canvas>
+    <div id="minimap"><canvas id="mm-canvas"></canvas></div>
+  </div>
+
+  <!-- RIGHT PANEL -->
+  <div id="right-panel">
+    <div class="panel-section">
+      <div class="panel-title">Selection</div>
+      <div id="sel-props"><div style="color:var(--text2);font-size:11px;padding:4px 0">Nothing selected</div></div>
+    </div>
+    <div class="panel-section">
+      <div class="panel-title">Grid</div>
+      <div class="field"><label>Type</label>
+        <select id="grid-type" onchange="render()">
+          <option value="square">Square</option><option value="hex">Hex</option><option value="none">None</option>
+        </select>
+      </div>
+      <div class="field"><label>Cell: <span id="gs-val">32</span>px</label>
+        <input type="range" id="grid-size" min="16" max="64" value="32" oninput="document.getElementById('gs-val').textContent=this.value;render()">
+      </div>
+      <div class="field"><label><input type="checkbox" id="snap" checked style="width:auto;margin-right:4px"> Snap to grid</label></div>
+    </div>
+    <div class="panel-section">
+      <div class="panel-title">Map Info</div>
+      <div class="prop-row"><span class="prop-label">Rooms</span><span class="prop-val" id="st-rooms">0</span></div>
+      <div class="prop-row"><span class="prop-label">Objects</span><span class="prop-val" id="st-objs">0</span></div>
+      <div class="prop-row"><span class="prop-label">Connected</span><span class="prop-val" id="st-conn">—</span></div>
+    </div>
+    <div class="panel-section scroll-panel" style="flex:1;min-height:80px">
+      <div class="panel-title">Draw Colors</div>
+      <div class="field"><label>Wall Color</label><div class="swatch-row" id="sw-stroke"></div></div>
+      <div class="field"><label>Floor Color</label><div class="swatch-row" id="sw-fill"></div></div>
+      <div class="field"><label>Wall Thickness</label><input type="range" id="wall-t" min="4" max="20" value="8"></div>
+    </div>
+    <div class="panel-section">
+      <div class="panel-title">Validate</div>
+      <button class="btn" onclick="validate()" style="margin-bottom:6px">🔍 Check Map</button>
+      <div id="val-out" style="font-size:11px;color:var(--text2)">Run to check</div>
+    </div>
+  </div>
+
+</div><!-- main-row -->
+<div id="statusbar">
+  Tool: <span id="st-tool">Select</span>&nbsp;&nbsp;
+  Pos: <span id="st-pos">0, 0</span>&nbsp;&nbsp;
+  Zoom: <span id="st-zoom">100%</span>&nbsp;&nbsp;
+  <span id="st-hint" style="color:var(--text2)">Click to select · Alt+drag or middle-mouse to pan</span>
+</div>
+</div><!-- app -->
+
+<!-- Scripts loaded in dependency order -->
+<script src="src/palette.js"></script>
+<script src="src/scene.js"></script>
+<script src="src/tools/history.js"></script>
+<script src="src/render/grid.js"></script>
+<script src="src/render/dungeon.js"></script>
+<script src="src/render/outdoor.js"></script>
+<script src="src/render/renderer.js"></script>
+<script src="src/generators/shared.js"></script>
+<script src="src/generators/dungeon.js"></script>
+<script src="src/generators/outdoor.js"></script>
+<script src="src/tools/input.js"></script>
+<script src="src/tools/ui.js"></script>
+<script src="src/export.js"></script>
+<script src="src/main.js"></script>
+</body>
+</html>

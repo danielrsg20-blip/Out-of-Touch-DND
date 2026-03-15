@@ -1,4 +1,5 @@
 import type { FastifyInstance } from 'fastify'
+import { decodeSubjectWithoutVerify } from '../lib/authToken.js'
 import { createCharacterInSession, createSessionSnapshot, getSessionSnapshot, joinSessionSnapshot, mutateSessionSnapshot } from '../lib/sessionStore.js'
 
 type JsonRecord = Record<string, unknown>
@@ -38,17 +39,7 @@ function decodeUserIdFromAuthorization(authorization: unknown): string | null {
   }
 
   const token = authorization.slice('Bearer '.length).trim()
-  const parts = token.split('.')
-  if (parts.length < 2) {
-    return null
-  }
-
-  try {
-    const payload = JSON.parse(Buffer.from(parts[1]!.replace(/-/g, '+').replace(/_/g, '/'), 'base64').toString('utf8')) as JsonRecord
-    return asString(payload.sub)
-  } catch {
-    return null
-  }
+  return decodeSubjectWithoutVerify(token)
 }
 
 export async function registerSessionRoutes(app: FastifyInstance): Promise<void> {
@@ -142,6 +133,7 @@ export async function registerSessionRoutes(app: FastifyInstance): Promise<void>
     }
 
     const map = Object.prototype.hasOwnProperty.call(body, 'map') ? asRecord(body.map) : undefined
+    const combat = Object.prototype.hasOwnProperty.call(body, 'combat') ? asRecord(body.combat) : undefined
     const overlay = Object.prototype.hasOwnProperty.call(body, 'overlay') ? asRecord(body.overlay) : undefined
     const appendNarrative = Array.isArray(body.append_narrative) ? body.append_narrative : undefined
     const replaceNarrative = Array.isArray(body.replace_narrative) ? body.replace_narrative : undefined
@@ -159,6 +151,7 @@ export async function registerSessionRoutes(app: FastifyInstance): Promise<void>
 
     const updated = mutateSessionSnapshot(roomCode, {
       map,
+      combat,
       overlay,
       appendNarrative,
       replaceNarrative,

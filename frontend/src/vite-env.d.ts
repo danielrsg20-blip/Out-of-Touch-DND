@@ -11,3 +11,18 @@ interface ImportMetaEnv {
 interface ImportMeta {
   readonly env: ImportMetaEnv
 }
+
+interface Window {
+  __otdndSpritePipelineHits?: number
+  __otdndSpritePipelineHarness?: {
+    getSnapshot: () => {
+      legacyEnabled: boolean
+      hits: number
+      lastReason: string | null
+      assertions: number
+      failures: number
+    }
+    assertNoLegacyHits: (context?: string) => boolean
+    reset: () => void
+  }
+}

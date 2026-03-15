@@ -1,4 +1,5 @@
 import type { FastifyInstance } from 'fastify'
+import { decodeSubjectWithoutVerify } from '../lib/authToken.js'
 import { getCampaign, listCampaigns, saveCampaign, type PlayerCharacterSummary } from '../lib/campaignStore.js'
 import { applyCampaignToSession, createSessionSnapshot, getSessionSnapshot, setHostCharacter } from '../lib/sessionStore.js'
 
@@ -26,17 +27,7 @@ function decodeUserIdFromAuthorization(authorization: unknown): string | null {
   }
 
   const token = authorization.slice('Bearer '.length).trim()
-  const parts = token.split('.')
-  if (parts.length < 2) {
-    return null
-  }
-
-  try {
-    const payload = JSON.parse(Buffer.from(parts[1]!.replace(/-/g, '+').replace(/_/g, '/'), 'base64').toString('utf8')) as JsonRecord
-    return asString(payload.sub)
-  } catch {
-    return null
-  }
+  return decodeSubjectWithoutVerify(token)
 }
 
 function extractCharactersFromSnapshot(sessionPayload: JsonRecord): Record<string, JsonRecord> {

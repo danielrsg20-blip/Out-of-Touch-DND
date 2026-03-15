@@ -8,6 +8,13 @@ from app.map_catalog import MapSelectionRequest
 from app.seeded_random import select_variant
 
 
+def _tile_layout_signature(map_data: dict) -> list[tuple[int, int, str]]:
+    return sorted(
+        (int(tile.get("x", 0)), int(tile.get("y", 0)), str(tile.get("type", "")))
+        for tile in map_data.get("tiles", [])
+    )
+
+
 class SeededDeterminismTests(unittest.TestCase):
     def test_select_variant_is_deterministic_for_same_seed_and_position(self) -> None:
         first = select_variant("stone_floor", 7, 3, base_seed=12345)
@@ -29,11 +36,7 @@ class SeededDeterminismTests(unittest.TestCase):
         b = build_automated_map(req)
 
         self.assertEqual(len(a["tiles"]), len(b["tiles"]))
-        same_tiles = all(
-            ta.get("sprite") == tb.get("sprite") and ta.get("variant") == tb.get("variant")
-            for ta, tb in zip(a["tiles"], b["tiles"])
-        )
-        self.assertTrue(same_tiles)
+        self.assertEqual(_tile_layout_signature(a), _tile_layout_signature(b))
 
     def test_generate_map_differs_for_different_seeds(self) -> None:
         base: MapSelectionRequest = {
@@ -49,11 +52,9 @@ class SeededDeterminismTests(unittest.TestCase):
         b = build_automated_map({**base, "seed": 222})
 
         # Not guaranteed to differ at every tile, but should differ overall.
-        differences = sum(
-            1
-            for ta, tb in zip(a["tiles"], b["tiles"])
-            if ta.get("sprite") != tb.get("sprite") or ta.get("variant") != tb.get("variant")
-        )
+        layout_a = _tile_layout_signature(a)
+        layout_b = _tile_layout_signature(b)
+        differences = sum(1 for ta, tb in zip(layout_a, layout_b) if ta != tb)
         self.assertGreater(differences, 0)
 
 

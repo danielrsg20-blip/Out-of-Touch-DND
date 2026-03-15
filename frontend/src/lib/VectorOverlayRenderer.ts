@@ -13,6 +13,7 @@ import type {
   Region,
   Path,
   Decal,
+  TextLabel,
   Point,
   NoiseMask,
   GradientDef,
@@ -27,6 +28,13 @@ interface RenderContext {
   panY: number
 }
 
+interface RenderOptions {
+  labels?: {
+    show: boolean
+    showDmOnly: boolean
+  }
+}
+
 function toCanvasBlendMode(mode: OverlayLayer['blend_mode'] | string | undefined): GlobalCompositeOperation {
   if (!mode || mode === 'normal') return 'source-over'
   return mode as GlobalCompositeOperation
@@ -38,7 +46,8 @@ function toCanvasBlendMode(mode: OverlayLayer['blend_mode'] | string | undefined
 export function renderOverlayLayers(
   overlay: Overlay,
   context: RenderContext,
-  visibleLayers?: string[]
+  visibleLayers?: string[],
+  options?: RenderOptions
 ): void {
   if (!overlay || !overlay.layers) return
 
@@ -48,7 +57,7 @@ export function renderOverlayLayers(
     .sort((a, b) => a.z_index - b.z_index)
 
   sortedLayers.forEach((layer) => {
-    renderLayer(layer, overlay, context)
+    renderLayer(layer, overlay, context, options)
   })
 }
 
@@ -58,7 +67,8 @@ export function renderOverlayLayers(
 function renderLayer(
   layer: OverlayLayer,
   overlay: Overlay,
-  context: RenderContext
+  context: RenderContext,
+  options?: RenderOptions
 ): void {
   const { ctx } = context
 
@@ -76,7 +86,7 @@ function renderLayer(
 
   // Render each element in the layer
   layer.elements.forEach((element) => {
-    renderElement(element, context, overlay)
+    renderElement(element, context, overlay, options)
   })
 
   // Restore canvas state
@@ -89,7 +99,8 @@ function renderLayer(
 function renderElement(
   element: OverlayElement,
   context: RenderContext,
-  overlay?: Overlay
+  overlay?: Overlay,
+  options?: RenderOptions
 ): void {
   const { ctx } = context
 
@@ -107,9 +118,73 @@ function renderElement(
         renderDecal(element as Decal, overlay, context)
       }
       break
+    case 'text':
+      renderTextLabel(element as TextLabel, context, options)
+      break
   }
 
   ctx.restore()
+}
+
+function clamp(value: number, min: number, max: number): number {
+  return Math.max(min, Math.min(max, value))
+}
+
+function renderTextLabel(
+  label: TextLabel,
+  context: RenderContext,
+  options?: RenderOptions
+): void {
+  const { ctx, zoom } = context
+  if (label.visible === false) {
+    return
+  }
+
+  const showLabels = options?.labels?.show ?? true
+  if (!showLabels) {
+    return
+  }
+
+  if (label.dm_only && !(options?.labels?.showDmOnly ?? false)) {
+    return
+  }
+
+  const baseSize = label.font_size ?? 11
+  const minScreenPx = label.min_screen_px ?? 9
+  const maxScreenPx = label.max_screen_px ?? 16
+  const shouldScale = label.scale_with_zoom !== false
+  const requestedScreenPx = shouldScale ? baseSize * zoom : baseSize
+  const screenPx = clamp(requestedScreenPx, minScreenPx, maxScreenPx)
+  const worldPx = screenPx / Math.max(zoom, 0.001)
+
+  const offset = label.offset ?? { x: 0, y: 0 }
+  const x = label.position.x + offset.x
+  const y = label.position.y + offset.y
+
+  const fontFamily = label.font_family ?? 'Segoe UI, sans-serif'
+  ctx.font = `${worldPx}px ${fontFamily}`
+  ctx.textAlign = label.align ?? 'center'
+  ctx.textBaseline = label.baseline ?? 'middle'
+
+  if (label.chip_color) {
+    const pad = label.chip_padding ?? 3
+    const metrics = ctx.measureText(label.text)
+    const textWidth = metrics.width
+    const textHeight = worldPx
+    const chipX = x - textWidth / 2 - pad
+    const chipY = y - textHeight / 2 - pad
+    ctx.fillStyle = label.chip_color
+    ctx.fillRect(chipX, chipY, textWidth + pad * 2, textHeight + pad * 2)
+  }
+
+  if (label.outline_color) {
+    ctx.lineWidth = label.outline_width ?? 2
+    ctx.strokeStyle = label.outline_color
+    ctx.strokeText(label.text, x, y)
+  }
+
+  ctx.fillStyle = label.color ?? '#f6f7fb'
+  ctx.fillText(label.text, x, y)
 }
 
 /**

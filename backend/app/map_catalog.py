@@ -3,6 +3,7 @@ from __future__ import annotations
 import hashlib
 import json
 import logging
+import os
 import random
 import time
 from collections import Counter, OrderedDict, deque
@@ -84,6 +85,10 @@ _GENERATED_MAP_CACHE: OrderedDict[str, dict[str, Any]] = OrderedDict()
 _GENERATED_CACHE_LIMIT = 64
 _TERRAIN_ATLAS_CACHE: list[TerrainAtlasEntry] | None = None
 logger = logging.getLogger(__name__)
+
+_LEGACY_SPRITE_PIPELINE_ENABLED = str(os.getenv("OTDND_ENABLE_LEGACY_SPRITES", "0")).strip().lower() in {
+    "1", "true", "yes", "on",
+}
 
 _ENV_KEYWORDS: dict[str, list[str]] = {
     "dungeon": ["dungeon", "crypt", "ruin", "catacomb", "vault", "corridor"],
@@ -608,6 +613,16 @@ def assign_terrain_atlas_sprites(
     
     If the request contains a 'seed' parameter, uses deterministic variant selection.
     """
+    if not _LEGACY_SPRITE_PIPELINE_ENABLED:
+        return [
+            {
+                k: v
+                for k, v in dict(tile).items()
+                if k not in {"sprite", "variant"}
+            }
+            for tile in tiles
+        ]
+
     request = _normalize_request(raw_request)
     
     # Extract optional deterministic seed; otherwise use generated seed per call.
@@ -1253,31 +1268,39 @@ def _build_from_library(entry: MapLibraryEntry, request: NormalizedMapSelectionR
     if not _is_valid_layout(width, height, tiles):
         tiles = _empty_map(width, height)
 
-    palette = _build_tile_sprite_palette(
-        environment=entry["environment"],
-        terrain_theme=request.get("terrain_theme", ""),
-        description=request["description"],
-        mock_mode=LOCAL_MOCK_MODE,
-        rng=rng,
-    )
-    tiles, blocked_variants = _assign_tile_sprites(
-        tiles,
-        palette,
-        rng,
-        environment=entry["environment"],
-        deterministic_seed=deterministic_seed,
-    )
+    blocked_variants: list[str] = []
+    palette: dict[str, list[str]] = {}
+    if _LEGACY_SPRITE_PIPELINE_ENABLED:
+        palette = _build_tile_sprite_palette(
+            environment=entry["environment"],
+            terrain_theme=request.get("terrain_theme", ""),
+            description=request["description"],
+            mock_mode=LOCAL_MOCK_MODE,
+            rng=rng,
+        )
+        tiles, blocked_variants = _assign_tile_sprites(
+            tiles,
+            palette,
+            rng,
+            environment=entry["environment"],
+            deterministic_seed=deterministic_seed,
+        )
 
-    # TEMP DEBUG: Track selected environment/theme and first floor sprite keys.
-    floor_sprites = [str(t.get("sprite", "")) for t in tiles if str(t.get("type", "")) == "floor" and t.get("sprite")]
-    logger.info(
-        "[terrain-debug] map_source=library env=%s theme=%s floor_sprites_first20=%s",
-        entry["environment"],
-        request.get("terrain_theme", ""),
-        floor_sprites[:20],
-    )
+        # TEMP DEBUG: Track selected environment/theme and first floor sprite keys.
+        floor_sprites = [str(t.get("sprite", "")) for t in tiles if str(t.get("type", "")) == "floor" and t.get("sprite")]
+        logger.info(
+            "[terrain-debug] map_source=library env=%s theme=%s floor_sprites_first20=%s",
+            entry["environment"],
+            request.get("terrain_theme", ""),
+            floor_sprites[:20],
+        )
+    else:
+        tiles = [{k: v for k, v in dict(tile).items() if k not in {"sprite", "variant"}} for tile in tiles]
 
     entities = _spawn_environment_props(tiles, entry["environment"], palette, rng)
+    if not _LEGACY_SPRITE_PIPELINE_ENABLED:
+        for entity in entities:
+            entity["sprite"] = "default"
 
     license_info = _resolve_license(entry)
 
@@ -1337,31 +1360,39 @@ def _generate_dynamic(request: NormalizedMapSelectionRequest, rng: random.Random
             best_tiles = tiles
             break
 
-    palette = _build_tile_sprite_palette(
-        environment=request["environment"],
-        terrain_theme=request.get("terrain_theme", ""),
-        description=request["description"],
-        mock_mode=LOCAL_MOCK_MODE,
-        rng=rng,
-    )
-    best_tiles, blocked_variants = _assign_tile_sprites(
-        best_tiles,
-        palette,
-        rng,
-        environment=request["environment"],
-        deterministic_seed=deterministic_seed,
-    )
+    blocked_variants: list[str] = []
+    palette: dict[str, list[str]] = {}
+    if _LEGACY_SPRITE_PIPELINE_ENABLED:
+        palette = _build_tile_sprite_palette(
+            environment=request["environment"],
+            terrain_theme=request.get("terrain_theme", ""),
+            description=request["description"],
+            mock_mode=LOCAL_MOCK_MODE,
+            rng=rng,
+        )
+        best_tiles, blocked_variants = _assign_tile_sprites(
+            best_tiles,
+            palette,
+            rng,
+            environment=request["environment"],
+            deterministic_seed=deterministic_seed,
+        )
 
-    # TEMP DEBUG: Track selected environment/theme and first floor sprite keys.
-    floor_sprites = [str(t.get("sprite", "")) for t in best_tiles if str(t.get("type", "")) == "floor" and t.get("sprite")]
-    logger.info(
-        "[terrain-debug] map_source=generated env=%s theme=%s floor_sprites_first20=%s",
-        request["environment"],
-        request.get("terrain_theme", ""),
-        floor_sprites[:20],
-    )
+        # TEMP DEBUG: Track selected environment/theme and first floor sprite keys.
+        floor_sprites = [str(t.get("sprite", "")) for t in best_tiles if str(t.get("type", "")) == "floor" and t.get("sprite")]
+        logger.info(
+            "[terrain-debug] map_source=generated env=%s theme=%s floor_sprites_first20=%s",
+            request["environment"],
+            request.get("terrain_theme", ""),
+            floor_sprites[:20],
+        )
+    else:
+        best_tiles = [{k: v for k, v in dict(tile).items() if k not in {"sprite", "variant"}} for tile in best_tiles]
 
     entities = _spawn_environment_props(best_tiles, request["environment"], palette, rng)
+    if not _LEGACY_SPRITE_PIPELINE_ENABLED:
+        for entity in entities:
+            entity["sprite"] = "default"
 
     fingerprint = hashlib.sha256(
         json.dumps(
