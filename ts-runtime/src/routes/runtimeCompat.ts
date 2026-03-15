@@ -3,6 +3,7 @@ import { ITEM_CATALOG } from '../lib/itemCatalog.js'
 import { buildRuntimeState, getSessionCount, getSessionSnapshot, mutateSessionSnapshot } from '../lib/sessionStore.js'
 import { validateMoveRequest } from '../lib/movement.js'
 import { advanceCombatTurn, runActionEngine } from '../lib/actionEngine.js'
+import { generateDmNarrative } from '../lib/dmProvider.js'
 
 type JsonRecord = Record<string, unknown>
 
@@ -194,6 +195,8 @@ export async function registerRuntimeCompatRoutes(app: FastifyInstance): Promise
 
     const result = runActionEngine(snapshot, playerId, content)
 
+    const dmResult = await generateDmNarrative(snapshot, content, result)
+
     mutateSessionSnapshot(roomCode, {
       map: Object.prototype.hasOwnProperty.call(result, 'map') ? (result.map ?? null) : undefined,
       combat: Object.prototype.hasOwnProperty.call(result, 'combat') ? (result.combat ?? null) : undefined,
@@ -201,7 +204,7 @@ export async function registerRuntimeCompatRoutes(app: FastifyInstance): Promise
       mergeCharacters: result.mergeCharacters,
       appendNarrative: [
         { role: 'player', player_id: playerId, player_name: player.name, content },
-        ...result.narratives.map((line) => ({ role: 'dm', content: line })),
+        ...dmResult.narratives.map((line) => ({ role: 'dm', content: line })),
       ],
     })
 
@@ -211,8 +214,9 @@ export async function registerRuntimeCompatRoutes(app: FastifyInstance): Promise
     }
 
     return reply.send({
-      narratives: result.narratives,
+      narratives: dmResult.narratives,
       dice_results: result.dice_results,
+      dm_generation: dmResult.dm_generation,
       state,
       overlay: state.overlay,
     })

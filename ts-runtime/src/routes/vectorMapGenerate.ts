@@ -53,6 +53,14 @@ function parseRequest(body: JsonRecord): GenerateVectorMapRequest {
       movement_cost_mode: 'world_units',
     },
     validation_mode: asString(body.validation_mode, 'fixup') as 'strict' | 'fixup',
+    saturation_constraint: (() => {
+      const sc = asRecord(body.saturation_constraint)
+      if (!sc) return undefined
+      return {
+        max_saturation: asNumber(sc.max_saturation, 0.65),
+        allow_magic_glow: typeof sc.allow_magic_glow === 'boolean' ? sc.allow_magic_glow : false,
+      }
+    })(),
   }
 }
 

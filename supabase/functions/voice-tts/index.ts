@@ -15,6 +15,13 @@ const VOICE_MAP: Record<string, string> = {
   npc_young: 'shimmer',
 }
 
+function clampSpeed(value: unknown): number {
+  if (typeof value !== 'number' || !Number.isFinite(value)) {
+    return 1
+  }
+  return Math.min(4, Math.max(0.25, Number(value.toFixed(2))))
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
@@ -26,6 +33,7 @@ Deno.serve(async (req) => {
   const body = await req.json().catch(() => ({})) as Record<string, unknown>
   const text = typeof body.text === 'string' ? body.text.trim() : ''
   const voiceKey = typeof body.voiceId === 'string' ? body.voiceId : 'dm_default'
+  const speed = clampSpeed(body.speed)
   const mockMode = body.mock_mode === true
 
   if (!text) {
@@ -35,7 +43,7 @@ Deno.serve(async (req) => {
   if (mockMode || !OPENAI_API_KEY) {
     const silenceB64 = 'SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjU4LjI5LjEwMAAAAAAAAAAAAAAA//tQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWGluZwAAAA8AAAACAAADhAD///////////////////////////////////////////8AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA//sQZAAP8AAAaQAAAAgAAA0gAAABAAABpAAAACAAADSAAAAE'
     return Response.json(
-      { audio: silenceB64, duration_ms: 1000, voice: voiceKey },
+      { audio: silenceB64, duration_ms: 1000, voice: voiceKey, speed },
       { headers: corsHeaders },
     )
   }
@@ -48,7 +56,7 @@ Deno.serve(async (req) => {
       Authorization: `Bearer ${OPENAI_API_KEY}`,
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify({ model: 'tts-1', voice, input: text, response_format: 'mp3' }),
+    body: JSON.stringify({ model: 'tts-1', voice, input: text, response_format: 'mp3', speed }),
   })
 
   if (!ttsRes.ok) {
@@ -69,7 +77,7 @@ Deno.serve(async (req) => {
   const durationMs = Math.round((audioBuffer.byteLength / 32000) * 1000)
 
   return Response.json(
-    { audio: base64, duration_ms: durationMs, voice },
+    { audio: base64, duration_ms: durationMs, voice, speed },
     { headers: corsHeaders },
   )
 })

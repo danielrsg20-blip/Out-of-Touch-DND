@@ -3,8 +3,9 @@ import { useGameStore } from '../../stores/gameStore'
 import { useSessionStore } from '../../stores/sessionStore'
 import { useMapInteraction } from '../../hooks/useMapInteraction'
 import { drawOverlays } from './OverlayLayer'
-import type { TileData } from '../../types'
+import type { TileData, GridOverlayMode } from '../../types'
 import { renderOverlayLayers } from '../../lib/VectorOverlayRenderer'
+import { renderGridOverlay } from '../../lib/GridOverlayRenderer'
 import { useOverlayStore } from '../../stores/overlayStore'
 import { resolveSpriteUrl } from '../../data/spriteManifest'
 import {
@@ -173,6 +174,9 @@ export default function MapCanvas({ onTileClick, onEntityClick, targetingMode = 
   const [showDmOnlyLabels, setShowDmOnlyLabels] = useState(false)
   const [scaleLabelsWithZoom, setScaleLabelsWithZoom] = useState(true)
   const overlay = useOverlayStore((s) => s.overlay)
+  const traversalGrid = useOverlayStore((s) => s.traversalGrid)
+  const gridOverlayConfig = useOverlayStore((s) => s.gridOverlayConfig)
+  const setGridOverlayConfig = useOverlayStore((s) => s.setGridOverlayConfig)
   const useLegacySpritePipeline = useMemo(() => {
     const configured = String(import.meta.env.VITE_ENABLE_LEGACY_SPRITES ?? '0').trim().toLowerCase()
     return configured === '1' || configured === 'true' || configured === 'yes' || configured === 'on'
@@ -1043,6 +1047,9 @@ export default function MapCanvas({ onTileClick, onEntityClick, targetingMode = 
       })
     }
 
+    // Render traversal-grid debug overlay (always runs; no-ops when visible=false)
+    renderGridOverlay(ctx, gridOverlayConfig, map, traversalGrid)
+
     drawOverlays(ctx, map, combat, selectedEntityId, myCharacterId)
 
     // Floating damage / heal popups
@@ -1067,7 +1074,7 @@ export default function MapCanvas({ onTileClick, onEntityClick, targetingMode = 
     })
 
     ctx.restore()
-  }, [map, combat, characters, interaction.offsetX, interaction.offsetY, interaction.zoom, selectedEntityId, myCharacterId, imageUrl, imageOpacity, resolveCharacterForEntity, showAtlasLabels, getMonsterFrameKeyForEnemy, targetingMode, runtimeOverlay, showVectorLabels, showDmOnlyLabels, useLegacySpritePipeline, spritePipelineHarness])
+  }, [map, combat, characters, interaction.offsetX, interaction.offsetY, interaction.zoom, selectedEntityId, myCharacterId, imageUrl, imageOpacity, resolveCharacterForEntity, showAtlasLabels, getMonsterFrameKeyForEnemy, targetingMode, runtimeOverlay, showVectorLabels, showDmOnlyLabels, useLegacySpritePipeline, spritePipelineHarness, gridOverlayConfig, traversalGrid])
 
   useEffect(() => {
     let frameId: number
@@ -1250,6 +1257,34 @@ export default function MapCanvas({ onTileClick, onEntityClick, targetingMode = 
         title="Toggle zoom-based label scaling"
       >
         {scaleLabelsWithZoom ? 'Label zoom: on' : 'Label zoom: off'}
+      </button>
+      <button
+        type="button"
+        className={`map-grid-overlay-btn ${gridOverlayConfig.visible ? 'is-active' : ''}`}
+        onClick={() => {
+          const modes: GridOverlayMode[] = ['outlines', 'blocked', 'movement_cost', 'tags']
+          if (!gridOverlayConfig.visible) {
+            setGridOverlayConfig({ visible: true, mode: 'outlines' })
+          } else {
+            const idx = modes.indexOf(gridOverlayConfig.mode)
+            if (idx < 0 || idx === modes.length - 1) {
+              setGridOverlayConfig({ visible: false })
+            } else {
+              setGridOverlayConfig({ mode: modes[idx + 1] })
+            }
+          }
+        }}
+        title="Cycle traversal-grid overlay: off → outlines → blocked → heat → tags → off"
+      >
+        {!gridOverlayConfig.visible
+          ? 'Grid: off'
+          : gridOverlayConfig.mode === 'outlines'
+            ? 'Grid: lines'
+            : gridOverlayConfig.mode === 'blocked'
+              ? 'Grid: blocked'
+              : gridOverlayConfig.mode === 'movement_cost'
+                ? 'Grid: heat'
+                : 'Grid: tags'}
       </button>
       <div
         className={`map-sprite-status-pill ${spriteStatusClass}`}

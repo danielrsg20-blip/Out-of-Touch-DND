@@ -6,11 +6,22 @@ import { registerCampaignRoutes } from './routes/campaign.js'
 import { registerSessionRoutes } from './routes/session.js'
 import { registerVectorMapGenerateRoute } from './routes/vectorMapGenerate.js'
 
-const PORT = Number(process.env.TS_RUNTIME_PORT || 9010)
+const PORT = Number(process.env.TS_RUNTIME_PORT || 9020)
 const HOST = process.env.TS_RUNTIME_HOST || '0.0.0.0'
 
 async function buildServer() {
   const app = Fastify({ logger: true })
+
+  // Allow frontend dev origin to call runtime APIs with auth/content-type headers.
+  app.addHook('onRequest', async (request, reply) => {
+    reply.header('Access-Control-Allow-Origin', '*')
+    reply.header('Access-Control-Allow-Methods', 'GET,POST,PUT,PATCH,DELETE,OPTIONS')
+    reply.header('Access-Control-Allow-Headers', 'Authorization,Content-Type')
+
+    if (request.method === 'OPTIONS') {
+      reply.code(204).send()
+    }
+  })
 
   await registerRuntimeCompatRoutes(app)
   await registerAuthRoutes(app)

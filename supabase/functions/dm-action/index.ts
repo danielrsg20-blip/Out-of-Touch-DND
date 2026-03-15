@@ -1,4 +1,5 @@
 import { createClient } from 'npm:@supabase/supabase-js@2'
+import { buildFallbackNarrative, generateDmNarrative, type DmGenerationResult, type DmProviderConfig } from './dmNarrative.ts'
 
 const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? ''
 const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
@@ -20,6 +21,18 @@ function parseEnvFlag(name: string, fallback: boolean): boolean {
   return fallback
 }
 
+function parseEnvInt(name: string, fallback: number, min: number, max: number): number {
+  const raw = Deno.env.get(name)
+  if (raw == null || !raw.trim()) {
+    return fallback
+  }
+  const parsed = Number.parseInt(raw, 10)
+  if (!Number.isFinite(parsed)) {
+    return fallback
+  }
+  return Math.max(min, Math.min(max, parsed))
+}
+
 const FEATURE_FLAGS = {
   vector_map_generation_ts_enabled: parseEnvFlag('VECTOR_MAP_GENERATION_TS_ENABLED', true),
   vector_grid_derivation_enabled: parseEnvFlag('VECTOR_GRID_DERIVATION_ENABLED', true),
@@ -27,6 +40,22 @@ const FEATURE_FLAGS = {
   vector_compat_outputs_enabled: parseEnvFlag('VECTOR_COMPAT_OUTPUTS_ENABLED', true),
   grid_resolution_v2_enabled: parseEnvFlag('GRID_RESOLUTION_V2_ENABLED', false),
 }
+
+const DM_PROVIDER = (Deno.env.get('OTDND_DM_PROVIDER') ?? Deno.env.get('DM_PROVIDER') ?? 'anthropic').trim().toLowerCase()
+const DM_MODEL = (Deno.env.get('OTDND_DM_MODEL') ?? Deno.env.get('DM_MODEL') ?? 'claude-sonnet-4-20250514').trim()
+const DM_MAX_TOKENS = parseEnvInt('OTDND_DM_MAX_TOKENS', 220, 64, 2048)
+const DM_TIMEOUT_MS = parseEnvInt('OTDND_DM_TIMEOUT_MS', 12000, 1000, 60000)
+const ANTHROPIC_API_KEY = (Deno.env.get('ANTHROPIC_API_KEY') ?? Deno.env.get('OTDND_ANTHROPIC_API_KEY') ?? '').trim()
+const OPENAI_API_KEY = (Deno.env.get('OPENAI_API_KEY') ?? Deno.env.get('OTDND_OPENAI_API_KEY') ?? '').trim()
+const GROQ_API_KEY = (Deno.env.get('GROQ_API_KEY') ?? Deno.env.get('OTDND_GROQ_API_KEY') ?? '').trim()
+
+const DM_SYSTEM_PROMPT = [
+  'You are the Dungeon Master for a D&D 5e game.',
+  'Respond in 2-4 sentences, immersive but concise.',
+  'Respect the latest player action and current scene state.',
+  'Do not invent exact dice outcomes unless provided in context.',
+  'End with a direct prompt for what the player does next.',
+].join(' ')
 
 type SnapshotState = {
   characters: Record<string, Record<string, unknown>>
@@ -251,6 +280,17 @@ function isMockModeEnabled(body: Record<string, unknown>): boolean {
 
   const edgeMock = parseBool(Deno.env.get('OTDND_MOCK_MODE'))
   return edgeMock === true
+}
+
+const DM_PROVIDER_CONFIG: DmProviderConfig = {
+  provider: DM_PROVIDER,
+  model: DM_MODEL,
+  maxTokens: DM_MAX_TOKENS,
+  timeoutMs: DM_TIMEOUT_MS,
+  systemPrompt: DM_SYSTEM_PROMPT,
+  anthropicApiKey: ANTHROPIC_API_KEY,
+  openAiApiKey: OPENAI_API_KEY,
+  groqApiKey: GROQ_API_KEY,
 }
 
 const SHEET_SPRITE_RACES = new Set(['human', 'elf', 'dwarf', 'dragonborn', 'gnome', 'halfling', 'half-elf', 'half-orc', 'tiefling'])
@@ -2176,14 +2216,34 @@ async function actionPlayerAction(body: Record<string, unknown>) {
 
   let nextSnapshot = snapshot
   let combatPayload: Record<string, unknown> | null = null
-  let narrative = `The DM considers your action: "${content}"`
+  let narrative = buildFallbackNarrative(member.playerName, content)
   let combatAdvanceMessage: string | null = null
+  let dmGeneration: DmGenerationResult = {
+    narrative,
+    provider: 'mock',
+    model: 'mock',
+    usedFallback: true,
+    reason: 'default',
+    latencyMs: 0,
+    inputTokens: 0,
+    outputTokens: 0,
+  }
 
   if (startCombat) {
     const encounter = buildMockEncounter(snapshot, content)
     nextSnapshot = encounter.nextSnapshot
     combatPayload = encounter.combat
     narrative = encounter.intro
+    dmGeneration = {
+      narrative,
+      provider: mockModeEnabled ? 'mock' : DM_PROVIDER,
+      model: mockModeEnabled ? 'mock' : DM_MODEL,
+      usedFallback: true,
+      reason: 'combat_intro',
+      latencyMs: 0,
+      inputTokens: 0,
+      outputTokens: 0,
+    }
     await saveSnapshot(sessionId, version, nextSnapshot)
   } else if (/\bend\s*(my\s*)?turn\b/i.test(content) && snapshot.combat) {
     const advanced = advanceCombatState(snapshot, member.characterId, true)
@@ -2193,7 +2253,39 @@ async function actionPlayerAction(body: Record<string, unknown>) {
       ? (advanced.endReason ?? 'Combat ends.')
       : (advanced.messages.join(' ') || `${advanced.combat?.initiative_order[advanced.combat?.turn_index ?? 0]?.name ?? 'Next combatant'} takes the next turn.`)
     await saveSnapshot(sessionId, version, nextSnapshot)
+
+    dmGeneration = await generateDmNarrative({
+      playerName: member.playerName,
+      content,
+      snapshot: nextSnapshot,
+      mockModeEnabled,
+      providerConfig: DM_PROVIDER_CONFIG,
+    })
+    narrative = dmGeneration.narrative
+  } else {
+    dmGeneration = await generateDmNarrative({
+      playerName: member.playerName,
+      content,
+      snapshot: nextSnapshot,
+      mockModeEnabled,
+      providerConfig: DM_PROVIDER_CONFIG,
+    })
+    narrative = dmGeneration.narrative
   }
+
+  console.info(JSON.stringify({
+    event: 'dm_action_generation',
+    provider: dmGeneration.provider,
+    model: dmGeneration.model,
+    fallback: dmGeneration.usedFallback,
+    reason: dmGeneration.reason,
+    latency_ms: dmGeneration.latencyMs,
+    input_tokens: dmGeneration.inputTokens,
+    output_tokens: dmGeneration.outputTokens,
+    session_id: sessionId,
+    room_code: roomCode,
+    player_id: playerId,
+  }))
 
   await publishEvent(sessionId, 'player_message', {
     player_id: playerId,
@@ -2232,7 +2324,18 @@ async function actionPlayerAction(body: Record<string, unknown>) {
     content: narrative,
   }, null)
 
-  return { ok: true, combat_started: startCombat, combat_advanced: combatAdvanceMessage !== null }
+  return {
+    ok: true,
+    combat_started: startCombat,
+    combat_advanced: combatAdvanceMessage !== null,
+    dm_generation: {
+      provider: dmGeneration.provider,
+      model: dmGeneration.model,
+      fallback: dmGeneration.usedFallback,
+      reason: dmGeneration.reason,
+      latency_ms: dmGeneration.latencyMs,
+    },
+  }
 }
 
 async function actionNextCombatTurn(body: Record<string, unknown>) {

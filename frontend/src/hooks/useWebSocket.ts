@@ -2,12 +2,23 @@ import { useEffect, useRef, useCallback } from 'react'
 import { useSessionStore } from '../stores/sessionStore'
 import { useGameStore } from '../stores/gameStore'
 import { useOverlayStore } from '../stores/overlayStore'
-import { getSupabaseClient, invokeEdgeFunction } from '../lib/supabaseClient'
+import { getSupabaseClient, invokeEdgeFunction, invokeEdgeFunctionWithAnon } from '../lib/supabaseClient'
 import { API_BASE } from '../config/endpoints'
 import { playTTSAudio } from '../components/VoiceControl'
 import { narrationOrchestrator } from '../lib/narrationOrchestrator'
 import type { RealtimeChannel } from '@supabase/supabase-js'
-import type { Overlay } from '../types'
+import type { Overlay, FrontendTraversalGrid } from '../types'
+
+const HAS_EXPLICIT_API_URL = Boolean(import.meta.env.VITE_API_URL?.trim())
+const DM_ACTION_TARGET = (import.meta.env.VITE_DM_ACTION_TARGET ?? '').trim().toLowerCase()
+
+function shouldUseLocalRuntime(): boolean {
+  return import.meta.env.DEV && HAS_EXPLICIT_API_URL
+}
+
+function shouldPreferEdgeDmAction(): boolean {
+  return DM_ACTION_TARGET === 'edge' || DM_ACTION_TARGET === 'supabase'
+}
 
 async function parseJsonBody(res: Response): Promise<Record<string, unknown>> {
   const text = await res.text()
@@ -43,14 +54,25 @@ function canUseBrowserSpeechSynthesis(): boolean {
   return typeof window !== 'undefined' && 'speechSynthesis' in window && typeof SpeechSynthesisUtterance !== 'undefined'
 }
 
+/** Extract traversal_grid from a runtime state payload (state.map.traversal_grid). */
+function pickTraversalGrid(state: unknown): FrontendTraversalGrid | null {
+  if (!state || typeof state !== 'object') return null
+  const map = (state as Record<string, unknown>).map
+  if (!map || typeof map !== 'object') return null
+  const grid = (map as Record<string, unknown>).traversal_grid
+  if (!grid || typeof grid !== 'object' || Array.isArray(grid)) return null
+  return grid as FrontendTraversalGrid
+}
+
 export function useWebSocket() {
   const channelRef = useRef<RealtimeChannel | null>(null)
   const coldOpenFiredRef = useRef(false)
   const narrativeLockRef = useRef(false)
   const lastVoiceNoticeRef = useRef<{ stt: string; tts: string; browserTtsShown: boolean }>({ stt: '', tts: '', browserTtsShown: false })
   const { roomCode, sessionId, playerId, setConnected, addPlayer, setPlayers, getSession, mockMode } = useSessionStore()
-  const { setMap, updateEntity, addEntity, removeEntity, setCombat, addNarrative, syncState, setLoading, setPendingRoll } = useGameStore()
+  const { setMap, updateEntity, addEntity, removeEntity, setCombat, addNarrative, syncState, setLoading, setPendingRoll, setDmGenerationStatus, setTtsPlaybackStatus, voiceSpeed } = useGameStore()
   const setOverlay = useOverlayStore((s) => s.setOverlay)
+  const setTraversalGrid = useOverlayStore((s) => s.setTraversalGrid)
 
 
 
@@ -72,7 +94,7 @@ export function useWebSocket() {
       try {
         window.speechSynthesis.cancel()
         const utterance = new SpeechSynthesisUtterance(text)
-        utterance.rate = 1
+        utterance.rate = voiceSpeed
         utterance.pitch = 0.95
         utterance.onend = () => resolve(true)
         utterance.onerror = () => resolve(false)
@@ -81,7 +103,7 @@ export function useWebSocket() {
         resolve(false)
       }
     })
-  }, [mockMode])
+  }, [mockMode, voiceSpeed])
 
   const speakNarration = useCallback((text: string) => {
     narrationOrchestrator.enqueue(text)
@@ -166,7 +188,7 @@ export function useWebSocket() {
   // Local FastAPI mode: fetch initial game state on mount (no Supabase Realtime)
   useEffect(() => {
     if (!roomCode || !playerId) return
-    if (getSupabaseClient()) return
+    if (!shouldUseLocalRuntime()) return
 
     const fetchInitialState = async () => {
       try {
@@ -177,7 +199,10 @@ export function useWebSocket() {
         if (session?.players) {
           setPlayers(session.players)
         }
-        syncState(payload as Parameters<typeof syncState>[0])
+        const normalizedState = (payload.game_state as Parameters<typeof syncState>[0] | undefined) ?? (payload as Parameters<typeof syncState>[0])
+        syncState(normalizedState)
+        const tGrid = pickTraversalGrid(normalizedState)
+        if (tGrid) setTraversalGrid(tGrid)
         if (!coldOpenFiredRef.current) {
           coldOpenFiredRef.current = true
           setTimeout(
@@ -214,10 +239,14 @@ export function useWebSocket() {
     }
 
     fetchInitialState().catch(() => {})
-  }, [roomCode, playerId, setPlayers, syncState])
+  }, [roomCode, playerId, setPlayers, syncState, addNarrative, renderSessionStartProtocol, speakNarration])
 
   useEffect(() => {
     if (!roomCode || !playerId) return
+    if (shouldUseLocalRuntime()) {
+      setConnected(false)
+      return
+    }
 
     const supabase = getSupabaseClient()
     if (!supabase) {
@@ -496,7 +525,7 @@ export function useWebSocket() {
         setLoading(false)
         break
     }
-  }, [addNarrative, addEntity, addPlayer, removeEntity, renderSessionStartProtocol, setCombat, setLoading, setMap, setOverlay, setOverlay, setPlayers, setPendingRoll, speakNarration, syncState, updateEntity])
+  }, [addNarrative, addEntity, addPlayer, removeEntity, renderSessionStartProtocol, setCombat, setLoading, setMap, setOverlay, setPlayers, setPendingRoll, setTraversalGrid, speakNarration, syncState, updateEntity])
 
   const sendAction = useCallback((content: string) => {
     if (!roomCode || !playerId) {
@@ -553,6 +582,8 @@ export function useWebSocket() {
 
       if (payload.state) {
         syncState(payload.state as Parameters<typeof syncState>[0])
+        const tGrid = pickTraversalGrid(payload.state)
+        if (tGrid) setTraversalGrid(tGrid)
       }
       if (payload.overlay && typeof payload.overlay === 'object') {
         setOverlay(payload.overlay as Overlay)
@@ -568,31 +599,54 @@ export function useWebSocket() {
       const playerName = useSessionStore.getState().players.find((p) => p.id === playerId)?.name ?? 'You'
       addNarrative('player', content, playerName)
 
-      await invokeEdgeFunction<Record<string, unknown>>('dm-action', {
+      const payload = await invokeEdgeFunction<Record<string, unknown>>('dm-action', {
         action: 'player_action',
         room_code: roomCode,
         player_id: playerId,
         content,
         mock_mode: mockMode,
       })
+
+      const dmGeneration = payload.dm_generation as Record<string, unknown> | undefined
+      if (dmGeneration && typeof dmGeneration === 'object') {
+        const provider = typeof dmGeneration.provider === 'string' ? dmGeneration.provider : 'unknown'
+        const model = typeof dmGeneration.model === 'string' ? dmGeneration.model : 'unknown'
+        const fallback = dmGeneration.fallback === true
+        const reason = typeof dmGeneration.reason === 'string' ? dmGeneration.reason : null
+        setDmGenerationStatus({
+          provider,
+          model,
+          fallback,
+          reason,
+          updatedAt: Date.now(),
+        })
+      }
     }
 
-    // Try local backend first, fall back to edge function if local session not found
-    sendViaLocal()
-      .catch((localErr: unknown) => {
-        const localMessage = localErr instanceof Error ? localErr.message : 'Unknown error'
-        console.log(`[sendAction] Local failed (${localMessage}), trying edge function...`)
-        return sendViaEdge()
+    const primarySend = shouldPreferEdgeDmAction() ? sendViaEdge : sendViaLocal
+    const secondarySend = shouldPreferEdgeDmAction() ? sendViaLocal : sendViaEdge
+    const primaryName = shouldPreferEdgeDmAction() ? 'edge function' : 'local backend'
+    const secondaryName = shouldPreferEdgeDmAction() ? 'local backend' : 'edge function'
+
+    primarySend()
+      .catch((primaryErr: unknown) => {
+        const primaryMessage = primaryErr instanceof Error ? primaryErr.message : 'Unknown error'
+        console.log(`[sendAction] ${primaryName} failed (${primaryMessage}), trying ${secondaryName}...`)
+        return secondarySend()
       })
-      .catch((edgeErr: unknown) => {
-        const edgeMessage = edgeErr instanceof Error ? edgeErr.message : 'Unknown error'
-        addNarrative('system', `Unable to send action: ${edgeMessage}`)
+      .catch((finalErr: unknown) => {
+        const finalMessage = finalErr instanceof Error ? finalErr.message : 'Unknown error'
+        if (finalMessage.includes('Supabase is not configured')) {
+          addNarrative('system', 'Unable to send action: Supabase is not configured for edge DM mode. Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY or disable edge-first mode.')
+          return
+        }
+        addNarrative('system', `Unable to send action: ${finalMessage}`)
       })
       .finally(() => {
         narrativeLockRef.current = false
         setLoading(false)
       })
-  }, [addNarrative, handleMessage, mockMode, playerId, roomCode, setLoading, setOverlay, speakNarration, syncState])
+  }, [addNarrative, handleMessage, mockMode, playerId, roomCode, setDmGenerationStatus, setLoading, setOverlay, speakNarration, syncState])
 
   const sendMoveToken = useCallback((characterId: string, x: number, y: number) => {
     const supabase = getSupabaseClient()
@@ -619,6 +673,8 @@ export function useWebSocket() {
         }
         if (payload.state) {
           syncState(payload.state as Parameters<typeof syncState>[0])
+          const tGrid = pickTraversalGrid(payload.state)
+          if (tGrid) setTraversalGrid(tGrid)
         }
       } catch (localErr: unknown) {
         addNarrative('system', `Unable to move token: ${localErr instanceof Error ? localErr.message : 'Unknown error'}`)
@@ -704,21 +760,34 @@ export function useWebSocket() {
     const testLine = 'Voice test check. If you can hear this, your speaker output is working.'
 
     try {
-      const supabase = getSupabaseClient()
-      if (!supabase) {
-        throw new Error('Voice edge function is not configured')
-      }
-
-      const payload = await invokeEdgeFunction<Record<string, unknown>>('voice-tts', {
+      const payloadBody = {
         text: testLine,
         voiceId: 'dm_default',
+        speed: voiceSpeed,
         room_code: roomCode,
         player_id: playerId,
-        mock_mode: true,
-      })
+        mock_mode: mockMode,
+      }
 
-      if (typeof payload.audio === 'string' && payload.audio.trim()) {
+      let payload: Record<string, unknown> | null = null
+      const supabase = getSupabaseClient()
+      if (supabase) {
+        try {
+          payload = await invokeEdgeFunction<Record<string, unknown>>('voice-tts', payloadBody)
+        } catch {
+          payload = await invokeEdgeFunctionWithAnon<Record<string, unknown>>('voice-tts', payloadBody)
+        }
+      } else {
+        payload = await invokeEdgeFunctionWithAnon<Record<string, unknown>>('voice-tts', payloadBody)
+      }
+
+      if (payload && typeof payload.audio === 'string' && payload.audio.trim()) {
         playTTSAudio(payload.audio)
+        setTtsPlaybackStatus({
+          source: 'edge-tts',
+          reason: mockMode ? 'voice_test_mock_mode' : null,
+          updatedAt: Date.now(),
+        })
         addNarrative('system', 'Voice test: success chirp played.')
         return
       }
@@ -727,11 +796,24 @@ export function useWebSocket() {
     } catch (error) {
       reportVoiceIssue('tts', error)
       const usedBrowserFallback = await tryBrowserSpeechFallback(testLine)
+      if (usedBrowserFallback) {
+        setTtsPlaybackStatus({
+          source: 'browser-fallback',
+          reason: 'voice_test_edge_unavailable',
+          updatedAt: Date.now(),
+        })
+      } else {
+        setTtsPlaybackStatus({
+          source: 'none',
+          reason: 'voice_test_failed',
+          updatedAt: Date.now(),
+        })
+      }
       if (!usedBrowserFallback) {
         addNarrative('system', 'Voice test could not play audio. Check speaker output and browser audio permissions.')
       }
     }
-  }, [addNarrative, playerId, reportVoiceIssue, roomCode, tryBrowserSpeechFallback])
+  }, [addNarrative, mockMode, playerId, reportVoiceIssue, roomCode, setTtsPlaybackStatus, tryBrowserSpeechFallback, voiceSpeed])
 
   return { sendAction, sendMoveToken, sendSpellCast, transcribeVoiceInput, runVoiceTest }
 }

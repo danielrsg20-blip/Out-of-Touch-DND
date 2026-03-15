@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { motion } from 'motion/react'
 import { Badge } from '@/components/ui/badge'
 import MapCanvas from './map/MapCanvas'
@@ -35,19 +35,39 @@ export default function GameBoard() {
     usage,
     voiceEnabled,
     ttsEnabled,
+    voiceSpeed,
     transcriptMode,
     setVoiceEnabled,
     setTtsEnabled,
+    setVoiceSpeed,
     setTranscriptMode,
     addNarrative,
   } = useGameStore()
   const [chatDraft, setChatDraft] = useState('')
   const [targetingSpell, setTargetingSpell] = useState<{ name: string; slotLevel: number } | null>(null)
-  const [briefDismissed, setBriefDismissed] = useState(false)
+  const [briefDismissed, setBriefDismissed] = useState(true)
+  const autoBootstrapRef = useRef(false)
 
   const narrative = useGameStore(state => state.narrative)
   // Show brief when no DM has spoken yet and user hasn't dismissed it
   const showBrief = !briefDismissed && narrative.filter(e => e.type === 'dm').length === 0
+
+  // Automatically bootstrap the opening narration once after entering the board.
+  useEffect(() => {
+    if (autoBootstrapRef.current) {
+      return
+    }
+    if (!roomCode || !playerId) {
+      return
+    }
+    const hasDmNarrative = narrative.some((entry) => entry.type === 'dm')
+    if (hasDmNarrative) {
+      return
+    }
+
+    autoBootstrapRef.current = true
+    sendAction('[SESSION_START]')
+  }, [narrative, playerId, roomCode, sendAction])
 
   const handleBeginAdventure = useCallback(() => {
     setBriefDismissed(true)
@@ -140,6 +160,7 @@ export default function GameBoard() {
   const handleVoiceTranscript = useCallback(async (audioBase64: string) => {
     const transcript = await transcribeVoiceInput(audioBase64)
     if (!transcript) {
+      addNarrative('system', 'Voice input captured, but no transcript was returned.')
       return
     }
 
@@ -152,6 +173,23 @@ export default function GameBoard() {
     const ctx = narrationOrchestrator.getInterruptContext()
     sendAction(ctx ? `${ctx} ${transcript}` : transcript)
   }, [addNarrative, sendAction, transcriptMode, transcribeVoiceInput])
+
+  const handleVoiceTranscriptText = useCallback(async (transcript: string) => {
+    const normalized = transcript.trim()
+    if (!normalized) {
+      addNarrative('system', 'Voice input captured, but no speech was detected.')
+      return
+    }
+
+    if (transcriptMode === 'review') {
+      setChatDraft(normalized)
+      addNarrative('system', 'Voice transcript ready. Review and press Send when ready.')
+      return
+    }
+
+    const ctx = narrationOrchestrator.getInterruptContext()
+    sendAction(ctx ? `${ctx} ${normalized}` : normalized)
+  }, [addNarrative, sendAction, transcriptMode])
 
   return (
     <div className="game-board">
@@ -184,12 +222,12 @@ export default function GameBoard() {
             </motion.span>
           ))}
         </div>
-        {usage.estimated_cost_usd > 0 && (
+        {(usage?.estimated_cost_usd ?? 0) > 0 && (
           <Badge
             variant="outline"
             className="font-mono text-[var(--text-secondary)] text-[0.72rem] bg-[rgba(255,255,255,0.04)] border-[var(--border-color)] px-[0.4rem] py-[0.15rem] rounded-[3px]"
           >
-            ${usage.estimated_cost_usd.toFixed(3)}
+            ${(usage?.estimated_cost_usd ?? 0).toFixed(3)}
           </Badge>
         )}
       </header>
@@ -205,11 +243,15 @@ export default function GameBoard() {
             onToggle={setVoiceEnabled}
             ttsEnabled={ttsEnabled}
             onToggleTts={setTtsEnabled}
+            voiceSpeed={voiceSpeed}
+            onVoiceSpeedChange={setVoiceSpeed}
             transcriptMode={transcriptMode}
             onTranscriptModeChange={setTranscriptMode}
             onTranscript={handleVoiceTranscript}
+            onTranscriptText={handleVoiceTranscriptText}
             onVoiceTest={runVoiceTest}
             onPttStart={() => narrationOrchestrator.interrupt()}
+            onPauseNarration={() => narrationOrchestrator.interrupt()}
           />
           <ChatInput onSend={sendAction} draftText={chatDraft} onDraftTextChange={setChatDraft} />
         </div>

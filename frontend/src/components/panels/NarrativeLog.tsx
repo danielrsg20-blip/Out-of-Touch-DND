@@ -22,9 +22,39 @@ function parseDiceResult(content: string): { label: string; result: string } | n
   return null
 }
 
+function friendlyFallbackReason(reason: string | null | undefined): string {
+  const normalized = (reason ?? '').trim().toLowerCase()
+  if (!normalized) {
+    return 'Provider fallback used.'
+  }
+
+  if (normalized === 'missing_openai_key') {
+    return 'OpenAI API key is missing.'
+  }
+  if (normalized === 'missing_groq_key') {
+    return 'Groq API key is missing.'
+  }
+  if (normalized === 'missing_anthropic_key') {
+    return 'Anthropic API key is missing.'
+  }
+  if (normalized === 'request_timeout') {
+    return 'Provider request timed out.'
+  }
+  if (normalized === 'empty_response') {
+    return 'Provider returned an empty response.'
+  }
+  if (normalized.startsWith('unsupported_provider:')) {
+    const provider = normalized.split(':')[1] || 'unknown'
+    return `Unsupported DM provider: ${provider}.`
+  }
+
+  return `Provider fallback reason: ${reason}`
+}
+
 export default function NarrativeLog() {
   const narrative = useGameStore(s => s.narrative)
   const isLoading = useGameStore(s => s.isLoading)
+  const dmGenerationStatus = useGameStore(s => s.dmGenerationStatus)
   const bottomRef = useRef<HTMLDivElement>(null)
   const [showTimestamps, setShowTimestamps] = useState(false)
 
@@ -40,6 +70,18 @@ export default function NarrativeLog() {
       {/* Header */}
       <div className="narrative-log-header">
         <h3 className="panel-title" style={{ marginBottom: 0 }}>Adventure Log</h3>
+        {dmGenerationStatus && (
+          <span
+            className={`dm-provider-indicator ${dmGenerationStatus.fallback ? 'is-fallback' : 'is-provider'}`}
+            title={dmGenerationStatus.fallback
+              ? friendlyFallbackReason(dmGenerationStatus.reason)
+              : `Provider response via ${dmGenerationStatus.provider}/${dmGenerationStatus.model}`}
+          >
+            {dmGenerationStatus.fallback
+              ? `Fallback · ${dmGenerationStatus.provider}`
+              : `AI · ${dmGenerationStatus.provider}`}
+          </span>
+        )}
         <button
           className={`narrative-ts-toggle${showTimestamps ? ' active' : ''}`}
           onClick={() => setShowTimestamps(t => !t)}

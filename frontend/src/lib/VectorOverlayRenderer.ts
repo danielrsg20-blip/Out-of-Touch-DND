@@ -18,7 +18,9 @@ import type {
   NoiseMask,
   GradientDef,
   GradientStop,
+  ColorValidationReport,
 } from '../types'
+import { getColorValidationReport } from './colorUtils'
 
 interface RenderContext {
   ctx: CanvasRenderingContext2D
@@ -519,4 +521,23 @@ export function exportOverlayAsSVG(overlay: Overlay, width: number, height: numb
 
   svg += `</svg>\n`
   return svg
+}
+
+/**
+ * Analyse a rendered overlay's color saturation without modifying it.
+ *
+ * Returns a ColorValidationReport showing:
+ *   - % of elements that had saturation clamped
+ *   - highest observed saturation per layer
+ *   - out-of-bounds color count
+ *
+ * @param overlay   Overlay to analyse.
+ * @param maxSat    Saturation threshold used for "clamped" classification (default 0.65).
+ *
+ * @example
+ *   const report = getOverlayColorReport(myOverlay)
+ *   console.log(`${(report.clamp_ratio * 100).toFixed(1)}% of elements exceeded max saturation`)
+ */
+export function getOverlayColorReport(overlay: Overlay, maxSat = 0.65): ColorValidationReport {
+  return getColorValidationReport(overlay, maxSat)
 }

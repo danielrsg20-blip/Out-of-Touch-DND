@@ -1,4 +1,5 @@
-import type { MapData, Overlay, OverlayElement, OverlayLayer, Point, Region, TextLabel } from '../types'
+import type { Decal, MapData, Overlay, OverlayElement, OverlayLayer, OverlayWorldBounds, Path, Point, Region, TextLabel } from '../types'
+import { applySaturationConstraint } from './colorUtils'
 
 const TILE_SIZE = 32
 
@@ -167,6 +168,155 @@ function roomLabelElement(roomIndex: number, tiles: Array<{ x: number; y: number
   }
 }
 
+function isFiniteNumber(value: unknown): value is number {
+  return typeof value === 'number' && Number.isFinite(value)
+}
+
+function getWorldBounds(overlay: Overlay | null): OverlayWorldBounds | null {
+  const bounds = overlay?.metadata?.world_bounds
+  if (!bounds) {
+    return null
+  }
+
+  if (
+    !isFiniteNumber(bounds.origin_x)
+    || !isFiniteNumber(bounds.origin_y)
+    || !isFiniteNumber(bounds.width_world)
+    || !isFiniteNumber(bounds.height_world)
+    || bounds.width_world <= 0
+    || bounds.height_world <= 0
+  ) {
+    return null
+  }
+
+  return bounds
+}
+
+function scalePointToMapSpace(point: Point, bounds: OverlayWorldBounds, scaleX: number, scaleY: number): Point {
+  return {
+    x: (point.x - bounds.origin_x) * scaleX,
+    y: (point.y - bounds.origin_y) * scaleY,
+  }
+}
+
+function scaleValue(value: number | undefined, factor: number): number | undefined {
+  if (!isFiniteNumber(value)) {
+    return value
+  }
+  return value * factor
+}
+
+function scaleDashArray(dashArray: number[] | undefined, factor: number): number[] | undefined {
+  if (!dashArray) {
+    return dashArray
+  }
+  return dashArray.map((entry) => entry * factor)
+}
+
+function normalizeNarrativeElementToMapSpace(
+  element: OverlayElement,
+  bounds: OverlayWorldBounds,
+  scaleX: number,
+  scaleY: number,
+  scalarScale: number,
+): OverlayElement {
+  switch (element.type) {
+    case 'polygon': {
+      const region = element as Region
+      return {
+        ...region,
+        points: region.points.map((point) => scalePointToMapSpace(point, bounds, scaleX, scaleY)),
+        stroke: region.stroke
+          ? {
+              ...region.stroke,
+              width: region.stroke.width * scalarScale,
+              dash_array: scaleDashArray(region.stroke.dash_array, scalarScale),
+            }
+          : region.stroke,
+        feather: scaleValue(region.feather, scalarScale),
+        noise_mask: region.noise_mask
+          ? {
+              ...region.noise_mask,
+              scale: region.noise_mask.scale * scalarScale,
+            }
+          : region.noise_mask,
+      }
+    }
+    case 'polyline': {
+      const path = element as Path
+      return {
+        ...path,
+        points: path.points.map((point) => scalePointToMapSpace(point, bounds, scaleX, scaleY)),
+        stroke: {
+          ...path.stroke,
+          width: path.stroke.width * scalarScale,
+          dash_array: scaleDashArray(path.stroke.dash_array, scalarScale),
+        },
+      }
+    }
+    case 'decal': {
+      const decal = element as Decal
+      return {
+        ...decal,
+        position: scalePointToMapSpace(decal.position, bounds, scaleX, scaleY),
+        scale: (decal.scale ?? 1) * scalarScale,
+      }
+    }
+    case 'text': {
+      const label = element as TextLabel
+      return {
+        ...label,
+        position: scalePointToMapSpace(label.position, bounds, scaleX, scaleY),
+        offset: label.offset
+          ? {
+              x: label.offset.x * scaleX,
+              y: label.offset.y * scaleY,
+            }
+          : label.offset,
+        font_size: scaleValue(label.font_size, scalarScale),
+        outline_width: scaleValue(label.outline_width, scalarScale),
+        chip_padding: scaleValue(label.chip_padding, scalarScale),
+      }
+    }
+  }
+}
+
+function normalizeNarrativeOverlayToMapSpace(map: MapData, narrativeOverlay: Overlay | null): Overlay | null {
+  const bounds = getWorldBounds(narrativeOverlay)
+  if (!narrativeOverlay || !bounds || narrativeOverlay.metadata?.normalized_to_map_space) {
+    return narrativeOverlay
+  }
+
+  const mapWidthPx = map.width * TILE_SIZE
+  const mapHeightPx = map.height * TILE_SIZE
+  const scaleX = mapWidthPx / bounds.width_world
+  const scaleY = mapHeightPx / bounds.height_world
+  const scalarScale = (scaleX + scaleY) / 2
+
+  const geometryNormalized: Overlay = {
+    ...narrativeOverlay,
+    metadata: {
+      ...(narrativeOverlay.metadata ?? {}),
+      normalized_to_map_space: true,
+    },
+    layers: narrativeOverlay.layers.map((layer) => ({
+      ...layer,
+      clip_region: layer.clip_region?.map((point) => scalePointToMapSpace(point, bounds, scaleX, scaleY)),
+      elements: layer.elements.map((element) =>
+        normalizeNarrativeElementToMapSpace(element, bounds, scaleX, scaleY, scalarScale),
+      ),
+    })),
+  }
+
+  // Clamp saturation on narrative layers coming from external sources (Python backend,
+  // Supabase edge functions) that may not have applied the ts-runtime saturation constraint.
+  const globalMaxSat =
+    (narrativeOverlay.styles['default'] as { max_saturation?: number } | undefined)?.max_saturation
+    ?? 0.65
+  const { result } = applySaturationConstraint(geometryNormalized, globalMaxSat)
+  return result
+}
+
 export function buildVectorBaseOverlayFromMap(
   map: MapData,
   options: LabelOptions,
@@ -312,23 +462,24 @@ export function buildVectorBaseOverlayFromMap(
     },
   ]
 
-  const narrativeLayers = narrativeOverlay?.layers ? [...narrativeOverlay.layers] : []
+  const normalizedNarrativeOverlay = normalizeNarrativeOverlayToMapSpace(map, narrativeOverlay)
+  const narrativeLayers = normalizedNarrativeOverlay?.layers ? [...normalizedNarrativeOverlay.layers] : []
 
   return {
-    id: narrativeOverlay?.id ?? `overlay_vectorized_${map.metadata?.map_id ?? 'map'}`,
-    name: narrativeOverlay?.name ?? 'Vectorized Map Overlay',
-    version: narrativeOverlay?.version ?? '1.0',
-    created_at: narrativeOverlay?.created_at ?? new Date().toISOString(),
-    map_id: narrativeOverlay?.map_id ?? map.metadata?.map_id,
+    id: normalizedNarrativeOverlay?.id ?? `overlay_vectorized_${map.metadata?.map_id ?? 'map'}`,
+    name: normalizedNarrativeOverlay?.name ?? 'Vectorized Map Overlay',
+    version: normalizedNarrativeOverlay?.version ?? '1.0',
+    created_at: normalizedNarrativeOverlay?.created_at ?? new Date().toISOString(),
+    map_id: normalizedNarrativeOverlay?.map_id ?? map.metadata?.map_id,
     metadata: {
-      ...(narrativeOverlay?.metadata ?? {}),
+      ...(normalizedNarrativeOverlay?.metadata ?? {}),
       vectorized_from_map: true,
       label_mode: {
         showLabels: options.showLabels,
         showDmOnlyLabels: options.showDmOnlyLabels,
       },
     },
-    styles: narrativeOverlay?.styles ?? {
+    styles: normalizedNarrativeOverlay?.styles ?? {
       default: {
         id: 'default',
         name: 'Default Style',

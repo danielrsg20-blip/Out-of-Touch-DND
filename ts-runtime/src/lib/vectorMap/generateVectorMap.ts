@@ -7,6 +7,7 @@ import type {
   RegionElement,
 } from './types.js'
 import { canonicalHash, createRng, deterministicId, splitSeed, stableSeed } from './deterministic.js'
+import { applySaturationConstraint } from './colorUtils.js'
 import { rasterizeToGrid } from './rasterize.js'
 import { deriveLegacyEntities, deriveLegacyTiles } from './compatibility.js'
 import { validateOverlayPayload, validateTraversalGrid } from './validation.js'
@@ -174,13 +175,17 @@ function makeOverlay(req: GenerateVectorMapRequest): OverlayPayload {
         palette: {
           primary: '#3a3a3a',
           secondary: '#8b8b8b',
-          accent_1: '#ff6b35',
-          accent_2: '#4ecdc4',
-          accent_3: '#95e1d3',
+          // Muted accent colors — max saturation ~60%, earthy/natural aesthetic.
+          // These are pre-clamped to stay well within the default 0.65 threshold.
+          accent_1: '#c26828',  // warm burnt orange  (HSL ~25°, 63%, 46%)
+          accent_2: '#4a9b8f',  // muted teal         (HSL ~174°, 35%, 44%)
+          accent_3: '#81b5ac',  // soft seafoam       (HSL ~174°, 24%, 61%)
         },
         noise_seed: rootSeed,
         edge_feathering: 3,
         jitter: 0.1,
+        max_saturation: 0.65,
+        allow_magic_glow: false,
         decal_library: {},
       },
     },
@@ -192,7 +197,15 @@ function makeOverlay(req: GenerateVectorMapRequest): OverlayPayload {
 
 export function generateVectorMap(req: GenerateVectorMapRequest): GenerateVectorMapResponse {
   const validationMode = req.validation_mode ?? 'fixup'
-  const overlay = makeOverlay(req)
+  const rawOverlay = makeOverlay(req)
+
+  // Apply saturation clamping. The per-style max_saturation drives the global cap;
+  // individual layers may carry their own stricter cap via layer.max_saturation.
+  const globalMaxSat =
+    req.saturation_constraint?.max_saturation
+    ?? (rawOverlay.styles['default'] as { max_saturation?: number } | undefined)?.max_saturation
+    ?? 0.65
+  const { result: overlay, report: colorValidation } = applySaturationConstraint(rawOverlay, globalMaxSat)
 
   const bounds = {
     minX: req.bounds_world.origin_x,
@@ -227,6 +240,7 @@ export function generateVectorMap(req: GenerateVectorMapRequest): GenerateVector
     reports: {
       payload_validation: payloadValidation,
       grid_validation: gridValidation,
+      color_validation: colorValidation,
     },
     movement_model: {
       metric: 'world_units',

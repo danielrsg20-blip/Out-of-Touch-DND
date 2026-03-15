@@ -52,6 +52,28 @@
   padding-right: 4px;
 }
 
+.dm-provider-indicator {
+  font-size: 0.66rem;
+  letter-spacing: 0.03em;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  padding: 0.12rem 0.45rem;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.dm-provider-indicator.is-provider {
+  color: var(--accent-gold);
+  border-color: rgba(228, 168, 83, 0.4);
+  background: rgba(228, 168, 83, 0.1);
+}
+
+.dm-provider-indicator.is-fallback {
+  color: var(--text-secondary);
+  border-color: rgba(150, 165, 182, 0.45);
+  background: rgba(150, 165, 182, 0.12);
+}
+
 @keyframes typing-bounce {
   0%, 80%, 100% { transform: translateY(0); opacity: 0.35; }
   40%           { transform: translateY(-4px); opacity: 1; }

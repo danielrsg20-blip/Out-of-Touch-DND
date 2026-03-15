@@ -32,3 +32,32 @@ supabase functions deploy backend-proxy
 ```
 
 This scaffold does not replace the current FastAPI backend yet.
+
+## Python-Free Local DM Mode
+
+You can run DM narration without Python by using the `dm-action` edge function with an LLM provider key.
+
+Required secrets:
+
+- `ANTHROPIC_API_KEY`: API key used by `dm-action` for narrative generation
+- Optional `OPENAI_API_KEY`: API key when provider is `openai`
+- Optional `GROQ_API_KEY`: API key when provider is `groq`
+- Optional `OTDND_DM_PROVIDER` (default `anthropic`, supports `anthropic`, `openai`, `groq`)
+- Optional `OTDND_DM_MODEL` (default `claude-sonnet-4-20250514`)
+- Optional `OTDND_DM_MAX_TOKENS` (default `220`)
+- Optional `OTDND_DM_TIMEOUT_MS` (default `12000`)
+
+Example:
+
+```bash
+supabase secrets set ANTHROPIC_API_KEY=<your_key>
+supabase secrets set OTDND_DM_PROVIDER=anthropic
+supabase secrets set OTDND_DM_MODEL=claude-sonnet-4-20250514
+```
+
+Frontend local configuration:
+
+- Set `VITE_DM_ACTION_TARGET=edge` to prefer Supabase `dm-action` before local `/api/action`.
+- Keep `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` configured.
+
+This mode keeps combat/session state in Supabase function flows and does not require a running Python backend for DM action narration.

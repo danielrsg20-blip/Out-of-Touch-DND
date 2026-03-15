@@ -5,6 +5,7 @@ import VoiceControl from './VoiceControl'
 import { useWebSocket } from '../hooks/useWebSocket'
 import { useGameStore } from '../stores/gameStore'
 import { useSessionStore } from '../stores/sessionStore'
+import { narrationOrchestrator } from '../lib/narrationOrchestrator'
 import './TableModeView.css'
 
 export default function TableModeView() {
@@ -14,9 +15,11 @@ export default function TableModeView() {
   const narrative = useGameStore(s => s.narrative)
   const voiceEnabled = useGameStore(s => s.voiceEnabled)
   const ttsEnabled = useGameStore(s => s.ttsEnabled)
+  const voiceSpeed = useGameStore(s => s.voiceSpeed)
   const transcriptMode = useGameStore(s => s.transcriptMode)
   const setVoiceEnabled = useGameStore(s => s.setVoiceEnabled)
   const setTtsEnabled = useGameStore(s => s.setTtsEnabled)
+  const setVoiceSpeed = useGameStore(s => s.setVoiceSpeed)
   const setTranscriptMode = useGameStore(s => s.setTranscriptMode)
   const addNarrative = useGameStore(s => s.addNarrative)
   const recentNarrative = narrative.slice(-5)
@@ -24,6 +27,7 @@ export default function TableModeView() {
   const handleVoiceTranscript = useCallback(async (audioBase64: string) => {
     const transcript = await transcribeVoiceInput(audioBase64)
     if (!transcript) {
+      addNarrative('system', 'Voice input captured, but no transcript was returned.')
       return
     }
 
@@ -35,6 +39,22 @@ export default function TableModeView() {
 
     sendAction(transcript)
   }, [addNarrative, sendAction, transcriptMode, transcribeVoiceInput])
+
+  const handleVoiceTranscriptText = useCallback(async (transcript: string) => {
+    const normalized = transcript.trim()
+    if (!normalized) {
+      addNarrative('system', 'Voice input captured, but no speech was detected.')
+      return
+    }
+
+    if (transcriptMode === 'review') {
+      addNarrative('system', `Voice transcript: ${normalized}`)
+      addNarrative('system', 'Table mode review: switch to player view to edit and send.')
+      return
+    }
+
+    sendAction(normalized)
+  }, [addNarrative, sendAction, transcriptMode])
 
   return (
     <div className="table-mode">
@@ -52,10 +72,14 @@ export default function TableModeView() {
           onToggle={setVoiceEnabled}
           ttsEnabled={ttsEnabled}
           onToggleTts={setTtsEnabled}
+          voiceSpeed={voiceSpeed}
+          onVoiceSpeedChange={setVoiceSpeed}
           transcriptMode={transcriptMode}
           onTranscriptModeChange={setTranscriptMode}
           onTranscript={handleVoiceTranscript}
+          onTranscriptText={handleVoiceTranscriptText}
           onVoiceTest={runVoiceTest}
+          onPauseNarration={() => narrationOrchestrator.interrupt()}
         />
       </div>
 

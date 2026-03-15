@@ -194,6 +194,20 @@ export interface PendingRoll {
   context: string
 }
 
+export interface DmGenerationStatus {
+  provider: string
+  model: string
+  fallback: boolean
+  reason?: string | null
+  updatedAt: number
+}
+
+export interface TtsPlaybackStatus {
+  source: 'edge-tts' | 'browser-fallback' | 'none'
+  reason?: string | null
+  updatedAt: number
+}
+
 export interface CampaignSlot {
   id: string
   name: string
@@ -355,6 +369,15 @@ export interface OverlayLayer {
   elements: OverlayElement[]
   clip_region?: Point[]
   clipped_to_bounds?: boolean
+  /** Per-layer saturation cap (0-1). Overrides global StyleDefinition.max_saturation when set. */
+  max_saturation?: number
+}
+
+export interface OverlayWorldBounds {
+  origin_x: number
+  origin_y: number
+  width_world: number
+  height_world: number
 }
 
 export interface OverlayMetadata {
@@ -362,10 +385,84 @@ export interface OverlayMetadata {
   seed?: number
   story_context?: string
   vectorized_from_map?: boolean
+  world_bounds?: OverlayWorldBounds
+  generator_version?: string
+  rollout_flags?: Record<string, boolean>
+  normalized_to_map_space?: boolean
   label_mode?: {
     showLabels: boolean
     showDmOnlyLabels: boolean
   }
+}
+
+// ============================================================================
+// GRID OVERLAY SYSTEM TYPES
+// ============================================================================
+
+/** Visual mode for the traversal-grid debug overlay. */
+export type GridOverlayMode = 'outlines' | 'blocked' | 'movement_cost' | 'tags'
+
+export interface GridOverlayConfig {
+  visible: boolean
+  mode: GridOverlayMode
+  /** Overall opacity of the grid overlay layer (0-1). */
+  opacity: number
+  /** Whether to draw cell boundary lines in non-outlines modes. */
+  showGridLines: boolean
+  /** CSS color for cell boundary lines. */
+  gridLineColor: string
+  /** Pixel width of cell boundary lines (in map pixel space, before zoom). */
+  gridLineWidth: number
+}
+
+export const DEFAULT_GRID_OVERLAY_CONFIG: GridOverlayConfig = {
+  visible: true,
+  mode: 'outlines',
+  opacity: 0.55,
+  showGridLines: true,
+  gridLineColor: 'rgba(255, 255, 255, 0.18)',
+  gridLineWidth: 0.5,
+}
+
+/** Single cell from a traversal grid. Structurally compatible with GridCellData from ts-runtime. */
+export interface FrontendTraversalCell {
+  /** Column index (0-based). */
+  x: number
+  /** Row index (0-based). */
+  y: number
+  traversable: boolean
+  movement_cost: number
+  movement_blocking_tags: string[]
+  tags: string[]
+}
+
+/**
+ * Frontend representation of a traversal grid returned by /api/tools/generate_vector_map.
+ * Structurally compatible with the ts-runtime TraversalGrid type.
+ */
+export interface FrontendTraversalGrid {
+  width_cells: number
+  height_cells: number
+  /** Size of each cell in world units. */
+  cell_size_world: number
+  world_bounds: OverlayWorldBounds
+  resolution_scale: number
+  cells: FrontendTraversalCell[]
+}
+
+// ============================================================================
+// COLOR VALIDATION REPORT
+// ============================================================================
+
+export interface ColorValidationReport {
+  elements_total: number
+  elements_with_colors_clamped: number
+  /** 0-1 fraction of elements that had at least one color clamped. */
+  clamp_ratio: number
+  /** Highest observed HSL saturation per layer name (pre-clamp). */
+  max_observed_saturation_by_layer: Record<string, number>
+  /** Elements whose color strings were structurally invalid and rejected. */
+  out_of_bounds_rejected: number
 }
 
 export interface Overlay {

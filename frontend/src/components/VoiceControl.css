@@ -7,7 +7,8 @@
 .voice-toggle,
 .voice-tts-toggle,
 .voice-mode-toggle,
-.voice-test-btn {
+.voice-test-btn,
+.voice-pause-btn {
   background: rgba(255, 255, 255, 0.05);
   border: 1px solid var(--border-color);
   color: var(--text-secondary);
@@ -46,6 +47,10 @@
   opacity: 0.6;
   cursor: default;
 }
+.voice-pause-btn:hover {
+  border-color: rgba(228, 168, 83, 0.35);
+  color: var(--accent-gold);
+}
 .voice-record-btn.recording {
   background: rgba(231, 76, 60, 0.2);
   border-color: var(--accent-red);
@@ -61,6 +66,60 @@
 .voice-mode-toggle.review {
   border-color: rgba(228, 168, 83, 0.35);
   color: var(--accent-gold);
+}
+
+.voice-speed-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  padding: 0.15rem;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.voice-speed-btn {
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--text-secondary);
+  padding: 0.2rem 0.35rem;
+  border-radius: 4px;
+  font-size: 0.72rem;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.voice-speed-btn.active {
+  border-color: rgba(228, 168, 83, 0.35);
+  color: var(--accent-gold);
+  background: rgba(228, 168, 83, 0.12);
+}
+
+.voice-tts-source {
+  font-size: 0.72rem;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  padding: 0.2rem 0.45rem;
+  color: var(--text-secondary);
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.voice-tts-source.edge-tts {
+  color: #8be3af;
+  border-color: rgba(46, 204, 113, 0.35);
+  background: rgba(46, 204, 113, 0.12);
+}
+
+.voice-tts-source.browser-fallback {
+  color: var(--accent-gold);
+  border-color: rgba(228, 168, 83, 0.35);
+  background: rgba(228, 168, 83, 0.12);
+}
+
+.voice-tts-source.none {
+  color: #f08a8a;
+  border-color: rgba(231, 76, 60, 0.45);
+  background: rgba(231, 76, 60, 0.12);
 }
 
 @keyframes pulse {

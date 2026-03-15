@@ -270,7 +270,8 @@ export const useSessionStore = create<SessionState>((set) => ({
     try {
       const latestState = await useSessionStore.getState().getSession(data.room_code)
       const { useGameStore } = await import('./gameStore')
-      useGameStore.getState().syncState(latestState as any)
+      const normalizedState = (latestState as Record<string, unknown>)?.game_state as Record<string, unknown> | undefined
+      useGameStore.getState().syncState((normalizedState ?? latestState) as any)
     } catch (error) {
       console.warn('Failed to sync initial game state after session create.', error)
     }
@@ -356,7 +357,8 @@ export const useSessionStore = create<SessionState>((set) => ({
       const normalizedRoomCode = roomCode.toUpperCase()
       const latestState = await useSessionStore.getState().getSession(normalizedRoomCode)
       const { useGameStore } = await import('./gameStore')
-      useGameStore.getState().syncState(latestState as any)
+      const normalizedState = (latestState as Record<string, unknown>)?.game_state as Record<string, unknown> | undefined
+      useGameStore.getState().syncState((normalizedState ?? latestState) as any)
     } catch (error) {
       console.warn('Failed to sync initial game state after session join.', error)
     }

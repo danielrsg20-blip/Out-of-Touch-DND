@@ -82,6 +82,8 @@ export type OverlayLayer = {
   elements: OverlayElement[]
   clip_region?: Point[]
   clipped_to_bounds?: boolean
+  /** Per-layer saturation cap (0-1). Overrides global max_saturation when set. */
+  max_saturation?: number
 }
 
 export type StyleDefinition = {
@@ -91,6 +93,10 @@ export type StyleDefinition = {
   noise_seed: number
   edge_feathering?: number
   jitter?: number
+  /** Global saturation cap for colors in this style (0-1, default 0.65). */
+  max_saturation?: number
+  /** When true, emissive/glow elements may exceed max_saturation. */
+  allow_magic_glow?: boolean
   decal_library: Record<string, unknown>
 }
 
@@ -119,6 +125,24 @@ export type GridConfig = {
   movement_cost_mode?: 'world_units'
 }
 
+export type SaturationConstraint = {
+  /** Maximum allowed HSL saturation (0-1). Default 0.65. */
+  max_saturation?: number
+  /** When true, emissive/glow-tagged elements may exceed max_saturation. */
+  allow_magic_glow?: boolean
+}
+
+export type ColorValidationReport = {
+  elements_total: number
+  elements_with_colors_clamped: number
+  /** 0-1 fraction of elements that had at least one color clamped. */
+  clamp_ratio: number
+  /** Highest observed saturation value per layer name (pre-clamp). */
+  max_observed_saturation_by_layer: Record<string, number>
+  /** Number of elements whose colors were structurally invalid and rejected. */
+  out_of_bounds_rejected: number
+}
+
 export type GenerateVectorMapRequest = {
   request_id?: string
   seed: number
@@ -136,6 +160,7 @@ export type GenerateVectorMapRequest = {
   }
   grid_config?: GridConfig
   validation_mode?: 'strict' | 'fixup'
+  saturation_constraint?: SaturationConstraint
 }
 
 export type GridCellData = {
@@ -200,6 +225,7 @@ export type GenerateVectorMapResponse = {
   reports: {
     payload_validation: PayloadValidationReport
     grid_validation: GridValidationReport
+    color_validation: ColorValidationReport
   }
   movement_model: {
     metric: 'world_units'
