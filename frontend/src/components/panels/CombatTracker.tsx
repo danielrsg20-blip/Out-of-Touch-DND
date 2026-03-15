@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { motion, AnimatePresence } from 'motion/react'
 import { useGameStore } from '../../stores/gameStore'
 import { useSessionStore } from '../../stores/sessionStore'
 import './panels.css'
@@ -9,15 +10,11 @@ export default function CombatTracker() {
   const players = useSessionStore(s => s.players)
   const myCharacterId = players.find(p => p.id === playerId)?.character_id ?? null
   const isMyTurn = !!(combat?.is_active && combat.current_turn === myCharacterId)
-  const [roundPulse, setRoundPulse] = useState(false)
+  const [roundKey, setRoundKey] = useState(0)
 
   useEffect(() => {
-    if (!combat?.is_active) {
-      return
-    }
-    setRoundPulse(true)
-    const timeout = window.setTimeout(() => setRoundPulse(false), 900)
-    return () => window.clearTimeout(timeout)
+    if (!combat?.is_active) return
+    setRoundKey(k => k + 1)
   }, [combat?.is_active, combat?.round])
 
   if (!combat || !combat.is_active) return null
@@ -30,16 +27,47 @@ export default function CombatTracker() {
     <div className="combat-tracker">
       <h3 className="panel-title combat-title-row">
         <span>Combat</span>
-        <span className={`combat-round-badge ${roundPulse ? 'round-transition' : ''}`}>
+        <motion.span
+          key={roundKey}
+          className="combat-round-badge"
+          initial={{ scale: 1.25, opacity: 0.6 }}
+          animate={{ scale: 1, opacity: 1 }}
+          transition={{ type: 'spring', stiffness: 340, damping: 20 }}
+        >
           Round {combat.round}
-        </span>
+        </motion.span>
       </h3>
-      {isMyTurn && (
-        <div className="your-turn-banner">⚔ Your Turn</div>
-      )}
+
+      <AnimatePresence>
+        {isMyTurn && (
+          <motion.div
+            className="your-turn-banner"
+            initial={{ opacity: 0, y: -6 }}
+            animate={{
+              opacity: [1, 0.7, 1],
+              y: 0,
+              boxShadow: [
+                '0 0 8px rgba(228,168,83,0.4)',
+                '0 0 18px rgba(228,168,83,0.75)',
+                '0 0 8px rgba(228,168,83,0.4)',
+              ],
+            }}
+            exit={{ opacity: 0, y: -4 }}
+            transition={{
+              y: { duration: 0.18 },
+              opacity: { duration: 1.4, repeat: Infinity, ease: 'easeInOut' },
+              boxShadow: { duration: 1.4, repeat: Infinity, ease: 'easeInOut' },
+            }}
+          >
+            ⚔ Your Turn
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       <div className="movement-status">
         Movement: {currentUsed}/{currentTotal} ft
       </div>
+
       <div className="initiative-list">
         {combat.initiative_order.map((entry, idx) => {
           const isCurrent = idx === combat.turn_index
@@ -52,7 +80,12 @@ export default function CombatTracker() {
               <span className="init-order">{entry.initiative}</span>
               <span className="init-name">{entry.name}</span>
               <div className="init-hp-bar">
-                <div className="init-hp-fill" style={{ width: `${hpPercent}%` }} />
+                <motion.div
+                  className="init-hp-fill"
+                  initial={false}
+                  animate={{ width: `${hpPercent}%` }}
+                  transition={{ duration: 0.4, ease: 'easeOut' }}
+                />
               </div>
               <span className="init-hp-text">{entry.hp}/{entry.max_hp}</span>
             </div>

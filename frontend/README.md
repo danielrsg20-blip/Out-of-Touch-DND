@@ -1,73 +1,63 @@
-# React + TypeScript + Vite
+# Frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+React 19 + TypeScript + Vite SPA.
 
-Currently, two official plugins are available:
+## Stack
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+| Layer | Package | Notes |
+| --- | --- | --- |
+| UI framework | React 19 + TypeScript | Strict mode — `noUnusedLocals`, `noUnusedParameters` enabled |
+| Build | Vite 7 | Dev server on `http://localhost:5174` |
+| Styling | Tailwind CSS v4 | Configured via `@tailwindcss/vite` plugin — **no `tailwind.config.js`** |
+| Component library | shadcn/ui | Components live in `src/components/ui/`; config at `components.json` |
+| Animations | Framer Motion (`motion` v11+) | React 19 compatible; import from `motion/react`, not `framer-motion` |
 
-## React Compiler
+## Setup
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+npm install
+npm run dev
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+## Key conventions
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+### Tailwind v4
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+Tailwind is configured CSS-first in `src/index.css`:
+
+```css
+@import "tailwindcss";
+
+@theme inline {
+  --color-accent-gold: var(--accent-gold);
+  /* ... maps existing CSS vars to Tailwind color utilities */
+}
 ```
+
+- No `tailwind.config.js` or `postcss.config.js` — the Vite plugin handles everything.
+- Use **v4 canonical class names**: `bg-linear-to-br` (not `bg-gradient-to-br`), `shrink-0` (not `flex-shrink-0`).
+- Theme tokens from `@theme inline` are available as utilities: `text-accent-gold`, `bg-bg-primary`, etc.
+
+### shadcn/ui
+
+- Components are copied into `src/components/ui/` — edit them directly if needed.
+- The `@/` path alias resolves to `src/` (configured in both `vite.config.ts` and `tsconfig.app.json`).
+- The `cn()` helper is in `src/lib/utils.ts`.
+- shadcn CSS variables (`--primary`, `--background`, `--border`, etc.) are mapped to the D&D palette in `:root` inside `src/index.css`.
+
+### Framer Motion
+
+```ts
+// Always import from motion/react (not framer-motion)
+import { motion, AnimatePresence } from 'motion/react'
+```
+
+- Use `motion.div`, `motion.span`, etc. for animated elements.
+- Wrap conditional renders in `<AnimatePresence>` for exit animations.
+- Tailwind v4 canonical gradient syntax inside `animate` strings: `bg-linear-to-br`.
+
+### CSS migration status
+
+Major components have been migrated from vanilla CSS to Tailwind + shadcn. Remaining vanilla CSS files (`panels.css`, `MapCanvas.css`) are still loaded for panel entry-type colors and canvas overlay styles — these are retained intentionally and coexist with Tailwind utilities.
+
+Do **not** delete `panels.css` or `MapCanvas.css` without replacing all their consumers.

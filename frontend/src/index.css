@@ -1,10 +1,4 @@
-*,
-*::before,
-*::after {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
-}
+@import "tailwindcss";
 
 :root {
   --bg-primary: #1a1a2e;
@@ -22,6 +16,52 @@
   --accent-purple: #9b59b6;
   --hp-bar: #e74c3c;
   --hp-bar-bg: #3a1a1a;
+
+  /* shadcn/ui required variables — mapped to the D&D palette */
+  --background:            var(--bg-primary);
+  --foreground:            var(--text-primary);
+  --card:                  var(--bg-secondary);
+  --card-foreground:       var(--text-primary);
+  --primary:               var(--accent-gold);
+  --primary-foreground:    #1a1a2e;
+  --secondary:             var(--bg-panel);
+  --secondary-foreground:  var(--text-primary);
+  --muted:                 var(--bg-secondary);
+  --muted-foreground:      var(--text-secondary);
+  --accent:                var(--bg-panel);
+  --accent-foreground:     var(--accent-gold);
+  --destructive:           var(--accent-red);
+  --border:                var(--border-color);
+  --input:                 var(--bg-input);
+  --ring:                  var(--accent-gold);
+  --radius:                0.375rem;
+}
+
+@theme inline {
+  /* Backgrounds */
+  --color-bg-primary:   var(--bg-primary);
+  --color-bg-secondary: var(--bg-secondary);
+  --color-bg-panel:     var(--bg-panel);
+  --color-bg-input:     var(--bg-input);
+
+  /* Text */
+  --color-text-primary:   var(--text-primary);
+  --color-text-secondary: var(--text-secondary);
+  --color-text-accent:    var(--text-accent);
+
+  /* Accents */
+  --color-accent-gold:   var(--accent-gold);
+  --color-accent-red:    var(--accent-red);
+  --color-accent-green:  var(--accent-green);
+  --color-accent-blue:   var(--accent-blue);
+  --color-accent-purple: var(--accent-purple);
+
+  /* Borders */
+  --color-border: var(--border-color);
+
+  /* HP bars */
+  --color-hp-bar:    var(--hp-bar);
+  --color-hp-bar-bg: var(--hp-bar-bg);
 }
 
 html, body, #root {
