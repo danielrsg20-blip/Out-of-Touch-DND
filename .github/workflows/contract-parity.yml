@@ -11,6 +11,76 @@ on:
   workflow_dispatch:
 
 jobs:
+  vector-map-bridge-contract:
+    name: Python -> TS vector bridge contract
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install Node dependencies
+        run: |
+          npm install
+          npm --prefix ts-runtime install
+
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r backend/requirements.txt
+
+      - name: Build TS runtime
+        run: npm run ts-runtime:build
+
+      - name: Start TS runtime (vector generator)
+        run: |
+          nohup bash -lc 'cd ts-runtime && VECTOR_MAP_GENERATION_TS_ENABLED=true VECTOR_GRID_DERIVATION_ENABLED=true VECTOR_COMPAT_OUTPUTS_ENABLED=true GRID_RESOLUTION_V2_ENABLED=true TS_RUNTIME_PORT=19022 node dist/server.js' > ts-runtime-bridge.log 2>&1 &
+
+      - name: Start Python backend (forwarding enabled)
+        run: |
+          nohup bash -lc 'cd backend && OTDND_TS_VECTOR_MAP_FORWARD_ENABLED=true OTDND_TS_RUNTIME_BASE_URL=http://127.0.0.1:19022 python -m uvicorn app.main:app --host 127.0.0.1 --port 8011' > backend-bridge.log 2>&1 &
+
+      - name: Wait for bridge services
+        run: |
+          for i in {1..60}; do
+            if curl -fsS http://127.0.0.1:19022/api/health > /dev/null; then
+              break
+            fi
+            sleep 1
+          done
+
+          for i in {1..60}; do
+            if curl -fsS http://127.0.0.1:8011/api/health > /dev/null; then
+              break
+            fi
+            sleep 1
+          done
+
+      - name: Run vector-map bridge fixture contract
+        env:
+          PYTHON_BASE_URL: http://127.0.0.1:8011
+          TS_BASE_URL: http://127.0.0.1:19022
+        run: npm run contract:vector-map-bridge
+
+      - name: Upload bridge service logs on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: vector-map-bridge-logs
+          path: |
+            ts-runtime-bridge.log
+            backend-bridge.log
+
   contract-parity:
     name: Python vs TS parity
     runs-on: ubuntu-latest
@@ -41,6 +111,15 @@ jobs:
 
       - name: Build TS runtime
         run: npm run ts-runtime:build
+
+      - name: Run TS runtime safety tests
+        run: npm run ts-runtime:test
+
+      - name: Validate dm-action movement adapter
+        run: npm run validate:dm-action:movement-adapter
+
+      - name: Validate TS-only cutover guardrails
+        run: npm run validate:ts-cutover
 
       - name: Start Python backend
         run: |

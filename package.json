@@ -1,8 +1,13 @@
 {
   "scripts": {
     "contract:parity": "node scripts/parity/contract-parity.mjs",
+    "contract:vector-map-bridge": "node scripts/parity/vector-map-bridge-fixture.mjs",
+    "validate:dm-action:movement-adapter": "node scripts/validate-dm-action-movement-adapter.mjs",
+    "validate:ts-cutover": "node scripts/validate-ts-cutover.mjs",
+    "ci:dm-action": "npm run validate:dm-action:movement-adapter",
     "ts-runtime:dev": "npm --prefix ts-runtime run dev",
-    "ts-runtime:build": "npm --prefix ts-runtime run build"
+    "ts-runtime:build": "npm --prefix ts-runtime run build",
+    "ts-runtime:test": "npm --prefix ts-runtime run test"
   },
   "devDependencies": {
     "supabase": "^2.77.0"

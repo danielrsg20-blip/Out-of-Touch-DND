@@ -9,11 +9,6 @@ import { narrationOrchestrator } from '../lib/narrationOrchestrator'
 import type { RealtimeChannel } from '@supabase/supabase-js'
 import type { Overlay } from '../types'
 
-// True when a local Python backend is reachable at API_BASE.
-// In production on Vercel (no VITE_API_URL set) there is no /api/* backend,
-// so any fallbackToLocal() call would hit Vercel's static catch-all and get 405.
-const HAS_LOCAL_BACKEND = import.meta.env.DEV || Boolean(import.meta.env.VITE_API_URL?.trim())
-
 async function parseJsonBody(res: Response): Promise<Record<string, unknown>> {
   const text = await res.text()
   if (!text.trim()) {
@@ -50,7 +45,6 @@ function canUseBrowserSpeechSynthesis(): boolean {
 
 export function useWebSocket() {
   const channelRef = useRef<RealtimeChannel | null>(null)
-  const activeAudioRef = useRef<HTMLAudioElement | null>(null)
   const coldOpenFiredRef = useRef(false)
   const narrativeLockRef = useRef(false)
   const lastVoiceNoticeRef = useRef<{ stt: string; tts: string; browserTtsShown: boolean }>({ stt: '', tts: '', browserTtsShown: false })
@@ -680,20 +674,6 @@ export function useWebSocket() {
 
     const supabase = getSupabaseClient()
 
-    const fallbackToLocal = async (): Promise<string | null> => {
-      const res = await fetch(`${API_BASE}/api/stt`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ audio: trimmed, filename: 'voice-input.webm' }),
-      })
-      const payload = await parseJsonBody(res)
-      if (!res.ok || typeof payload.error === 'string') {
-        throw new Error(typeof payload.error === 'string' ? payload.error : `STT failed (${res.status})`)
-      }
-      const transcript = typeof payload.transcript === 'string' ? payload.transcript.trim() : ''
-      return transcript || null
-    }
-
     try {
       if (supabase) {
         try {
@@ -709,13 +689,10 @@ export function useWebSocket() {
             return transcript
           }
         } catch {
-          // Fall through to local fallback.
+          // Fall through to graceful null return when edge STT is unavailable.
         }
       }
 
-      if (HAS_LOCAL_BACKEND) {
-        return await fallbackToLocal()
-      }
       return null
     } catch (error) {
       reportVoiceIssue('stt', error)
@@ -726,49 +703,27 @@ export function useWebSocket() {
   const runVoiceTest = useCallback(async () => {
     const testLine = 'Voice test check. If you can hear this, your speaker output is working.'
 
-    if (!HAS_LOCAL_BACKEND) {
-      const usedBrowser = await tryBrowserSpeechFallback(testLine)
-      if (!usedBrowser) {
-        addNarrative('system', 'Voice test is only available when connected to a local backend.')
-      }
-      return
-    }
-
     try {
-      const res = await fetch(`${API_BASE}/api/tts`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text: testLine, voice: 'dm_default', mock_mode: true }),
+      const supabase = getSupabaseClient()
+      if (!supabase) {
+        throw new Error('Voice edge function is not configured')
+      }
+
+      const payload = await invokeEdgeFunction<Record<string, unknown>>('voice-tts', {
+        text: testLine,
+        voiceId: 'dm_default',
+        room_code: roomCode,
+        player_id: playerId,
+        mock_mode: true,
       })
 
-      if (!res.ok) {
-        const payload = await parseJsonBody(res)
-        throw new Error(typeof payload.error === 'string' ? payload.error : `Voice test failed (${res.status})`)
+      if (typeof payload.audio === 'string' && payload.audio.trim()) {
+        playTTSAudio(payload.audio)
+        addNarrative('system', 'Voice test: success chirp played.')
+        return
       }
 
-      const contentType = res.headers.get('content-type') ?? ''
-      if (contentType.includes('application/json')) {
-        const payload = await parseJsonBody(res)
-        throw new Error(typeof payload.error === 'string' ? payload.error : 'Voice test did not return playable audio')
-      }
-
-      const audioBlob = await res.blob()
-      if (activeAudioRef.current) {
-        activeAudioRef.current.pause()
-        activeAudioRef.current = null
-      }
-
-      const url = URL.createObjectURL(audioBlob)
-      const audio = new Audio(url)
-      activeAudioRef.current = audio
-      await audio.play()
-      addNarrative('system', 'Voice test: success chirp played.')
-      audio.onended = () => {
-        URL.revokeObjectURL(url)
-        if (activeAudioRef.current === audio) {
-          activeAudioRef.current = null
-        }
-      }
+      throw new Error('Voice test did not return playable audio')
     } catch (error) {
       reportVoiceIssue('tts', error)
       const usedBrowserFallback = await tryBrowserSpeechFallback(testLine)
@@ -776,7 +731,7 @@ export function useWebSocket() {
         addNarrative('system', 'Voice test could not play audio. Check speaker output and browser audio permissions.')
       }
     }
-  }, [addNarrative, reportVoiceIssue, tryBrowserSpeechFallback])
+  }, [addNarrative, playerId, reportVoiceIssue, roomCode, tryBrowserSpeechFallback])
 
   return { sendAction, sendMoveToken, sendSpellCast, transcribeVoiceInput, runVoiceTest }
 }

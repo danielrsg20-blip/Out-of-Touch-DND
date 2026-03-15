@@ -1,9 +1,7 @@
 import { invokeEdgeFunction, getSupabaseClient } from './supabaseClient'
-import { API_BASE } from '../config/endpoints'
 import { useGameStore } from '../stores/gameStore'
 import { useSessionStore } from '../stores/sessionStore'
 
-const HAS_LOCAL_BACKEND = import.meta.env.DEV || Boolean(import.meta.env.VITE_API_URL?.trim())
 const CHUNK_WORD_LIMIT = 25
 
 function splitIntoChunks(text: string): string[] {
@@ -139,25 +137,7 @@ class NarrationOrchestrator {
           return this.base64ToAudio(payload.audio)
         }
       } catch {
-        // fall through to local
-      }
-    }
-
-    if (HAS_LOCAL_BACKEND) {
-      const res = await fetch(`${API_BASE}/api/tts`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text, voice: 'dm_default', mock_mode: mockMode }),
-      })
-      if (res.ok) {
-        const contentType = res.headers.get('content-type') ?? ''
-        if (!contentType.includes('application/json')) {
-          const blob = await res.blob()
-          const url = URL.createObjectURL(blob)
-          const audio = new Audio(url)
-          audio.onended = () => URL.revokeObjectURL(url)
-          return audio
-        }
+        // fall through to null when edge TTS is unavailable
       }
     }
 

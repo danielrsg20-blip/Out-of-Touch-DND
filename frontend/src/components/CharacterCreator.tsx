@@ -115,21 +115,12 @@ export default function CharacterCreator() {
 
   const loadSpellOptions = async (nextClass: string) => {
     try {
-      let payload: Record<string, unknown> = {}
-      try {
-        payload = await invokeEdgeFunction<Record<string, unknown>>('dm-action', {
-          action: 'get_spell_options',
-          char_class: nextClass,
-          level: 1,
-          mock_mode: mockMode,
-        })
-      } catch {
-        const res = await fetch(`${API_BASE}/api/spells/options/${encodeURIComponent(nextClass)}/1`)
-        payload = await parseJsonBody(res)
-        if (!res.ok) {
-          throw new Error(typeof payload.error === 'string' ? payload.error : 'Unable to load spell options.')
-        }
-      }
+      const payload = await invokeEdgeFunction<Record<string, unknown>>('dm-action', {
+        action: 'get_spell_options',
+        char_class: nextClass,
+        level: 1,
+        mock_mode: mockMode,
+      })
 
       if (typeof payload.error === 'string') {
         throw new Error(payload.error)
@@ -166,7 +157,7 @@ export default function CharacterCreator() {
       setAvailableSpells([])
       setSelectedKnownSpells([])
       setSelectedPreparedSpells([])
-      setError(err instanceof Error ? err.message : 'Unable to load spell options right now.')
+      setError(err instanceof Error ? err.message : 'Unable to load spell options right now. Spell options require the dm-action edge function.')
     }
   }
 
