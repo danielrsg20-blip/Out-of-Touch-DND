@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
+import { motion } from 'motion/react'
+import { Badge } from '@/components/ui/badge'
 import MapCanvas from './map/MapCanvas'
 import InitiativeReveal from './map/InitiativeReveal'
 import NarrativeLog from './panels/NarrativeLog'
@@ -153,24 +155,42 @@ export default function GameBoard() {
 
   return (
     <div className="game-board">
-      <header className="game-header">
-        <span className="game-title">Out of Touch DND</span>
-        <span className="room-code">{roomCode}</span>
-        <div className="header-sep" aria-hidden="true" />
-        <div className="player-list">
+      <header className="flex items-center gap-3 px-4 py-[0.45rem] bg-[var(--bg-secondary)] border-b border-[var(--border-color)] shrink-0 relative">
+        {/* Gold gradient line replacing ::after pseudo-element */}
+        <div className="absolute bottom-0 left-0 right-0 h-px pointer-events-none"
+          style={{ background: 'linear-gradient(90deg, rgba(228,168,83,0.4) 0%, transparent 60%)' }}
+        />
+        <span className="font-bold text-[var(--accent-gold)] text-[0.9rem] tracking-[0.02em] whitespace-nowrap">
+          Out of Touch DND
+        </span>
+        <Badge
+          variant="outline"
+          className="font-mono bg-[rgba(228,168,83,0.12)] text-[var(--accent-gold)] border-[rgba(228,168,83,0.2)] text-[0.78rem] px-2 py-0 rounded-[3px]"
+        >
+          {roomCode}
+        </Badge>
+        <div className="w-px h-4 bg-[var(--border-color)] shrink-0" aria-hidden="true" />
+        <div className="flex items-center gap-[0.3rem] flex-1">
           {players.map((p, i) => (
-            <span
+            <motion.span
               key={p.id}
-              className={`player-avatar${p.id === playerId ? ' me' : ''}`}
+              className={`w-6 h-6 rounded-full flex items-center justify-center text-[0.65rem] font-bold text-white shrink-0 cursor-default${p.id === playerId ? ' ring-2 ring-[var(--accent-gold)]' : ' ring-2 ring-[var(--bg-secondary)]'}`}
               style={{ background: AVATAR_COLORS[i % AVATAR_COLORS.length] }}
               title={p.name}
+              whileHover={{ scale: 1.15, zIndex: 1 }}
+              transition={{ duration: 0.15 }}
             >
               {(p.name[0] ?? '?').toUpperCase()}
-            </span>
+            </motion.span>
           ))}
         </div>
         {usage.estimated_cost_usd > 0 && (
-          <span className="cost-badge">${usage.estimated_cost_usd.toFixed(3)}</span>
+          <Badge
+            variant="outline"
+            className="font-mono text-[var(--text-secondary)] text-[0.72rem] bg-[rgba(255,255,255,0.04)] border-[var(--border-color)] px-[0.4rem] py-[0.15rem] rounded-[3px]"
+          >
+            ${usage.estimated_cost_usd.toFixed(3)}
+          </Badge>
         )}
       </header>
 

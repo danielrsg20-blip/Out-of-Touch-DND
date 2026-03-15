@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { motion, AnimatePresence } from 'motion/react'
 import { useGameStore } from '../../stores/gameStore'
 import './panels.css'
 
@@ -7,7 +8,6 @@ function formatTime(ts: number): string {
   return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
 }
 
-// Extract a numeric result from dice entry content, e.g. "Roll d20: 17 (mod +3 = 20)" → "20"
 function parseDiceResult(content: string): { label: string; result: string } | null {
   const totalMatch = content.match(/=\s*(\d+)\s*$/)
   if (totalMatch) {
@@ -28,9 +28,8 @@ export default function NarrativeLog() {
   const bottomRef = useRef<HTMLDivElement>(null)
   const [showTimestamps, setShowTimestamps] = useState(false)
 
-  const isRoundStartEntry = (entryType: string, content: string) => {
-    return entryType === 'system' && /^Round\s+\d+\s+begins\.?$/i.test(content.trim())
-  }
+  const isRoundStartEntry = (entryType: string, content: string) =>
+    entryType === 'system' && /^Round\s+\d+\s+begins\.?$/i.test(content.trim())
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -38,6 +37,7 @@ export default function NarrativeLog() {
 
   return (
     <div className="narrative-log">
+      {/* Header */}
       <div className="narrative-log-header">
         <h3 className="panel-title" style={{ marginBottom: 0 }}>Adventure Log</h3>
         <button
@@ -48,17 +48,25 @@ export default function NarrativeLog() {
           🕐
         </button>
       </div>
+
       <div className="narrative-entries">
         {narrative.length === 0 && (
           <p className="narrative-empty">The adventure has not yet begun...</p>
         )}
+
+        {/* Each entry animates in */}
         {narrative.map(entry => {
-          const isDice = entry.type === 'dice'
-          const diceData = isDice ? parseDiceResult(entry.content) : null
+          const isDice    = entry.type === 'dice'
+          const diceData  = isDice ? parseDiceResult(entry.content) : null
+          const isRound   = isRoundStartEntry(entry.type, entry.content)
+
           return (
-            <div
+            <motion.div
               key={entry.id}
-              className={`narrative-entry narrative-${entry.type}${isRoundStartEntry(entry.type, entry.content) ? ' narrative-round-start' : ''}`}
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.22 }}
+              className={`narrative-entry narrative-${entry.type}${isRound ? ' narrative-round-start' : ''}`}
             >
               {showTimestamps && (
                 <span className="narrative-timestamp">{formatTime(entry.timestamp)}</span>
@@ -72,17 +80,40 @@ export default function NarrativeLog() {
               ) : (
                 <span className="narrative-content">{entry.content}</span>
               )}
-            </div>
+            </motion.div>
           )
         })}
-        {isLoading && (
-          <div className="dm-typing">
-            <div className="dm-typing-dots">
-              <span /><span /><span />
-            </div>
-            <span>DM is composing…</span>
-          </div>
-        )}
+
+        {/* DM typing indicator */}
+        <AnimatePresence>
+          {isLoading && (
+            <motion.div
+              key="typing"
+              initial={{ opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              className="dm-typing"
+            >
+              <div className="dm-typing-dots">
+                <motion.span
+                  animate={{ y: [0, -4, 0], opacity: [0.35, 1, 0.35] }}
+                  transition={{ duration: 1.2, repeat: Infinity, delay: 0 }}
+                />
+                <motion.span
+                  animate={{ y: [0, -4, 0], opacity: [0.35, 1, 0.35] }}
+                  transition={{ duration: 1.2, repeat: Infinity, delay: 0.18 }}
+                />
+                <motion.span
+                  animate={{ y: [0, -4, 0], opacity: [0.35, 1, 0.35] }}
+                  transition={{ duration: 1.2, repeat: Infinity, delay: 0.36 }}
+                />
+              </div>
+              <span>DM is composing…</span>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
         <div ref={bottomRef} />
       </div>
     </div>

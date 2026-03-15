@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { motion, AnimatePresence } from 'motion/react'
 import { useGameStore } from '../../stores/gameStore'
 import { useSessionStore } from '../../stores/sessionStore'
 import './panels.css'
@@ -20,7 +21,7 @@ export default function DiceRoller({ onSubmitRoll }: DiceRollerProps) {
 
   const [selectedDie, setSelectedDie] = useState<DieSize>(20)
   const [modifier, setModifier] = useState(0)
-  const [lastResult, setLastResult] = useState<{ roll: number; total: number } | null>(null)
+  const [lastResult, setLastResult] = useState<{ roll: number; total: number; key: number } | null>(null)
 
   // Show roll request panel when a roll is pending (even during combat)
   if (pendingRoll) {
@@ -41,7 +42,12 @@ export default function DiceRoller({ onSubmitRoll }: DiceRollerProps) {
     }
 
     return (
-      <div className="dice-roller roll-request-panel">
+      <motion.div
+        className="dice-roller roll-request-panel"
+        initial={{ opacity: 0, scale: 0.96 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ duration: 0.2 }}
+      >
         <div className="roll-request-header">
           <span className="roll-request-badge">🎲 Roll Required</span>
           <span className="roll-request-char">{pendingRoll.characterName}</span>
@@ -57,14 +63,18 @@ export default function DiceRoller({ onSubmitRoll }: DiceRollerProps) {
           )}
         </div>
         <div className="roll-request-actions">
-          <button className="dice-roll-btn roll-request-btn" onClick={rollAndSubmit}>
+          <motion.button
+            className="dice-roll-btn roll-request-btn"
+            onClick={rollAndSubmit}
+            whileTap={{ scale: 0.94 }}
+          >
             Roll {pendingRoll.dice} & Submit
-          </button>
+          </motion.button>
           <button className="roll-request-dismiss" onClick={() => setPendingRoll(null)} title="Dismiss">
             ✕
           </button>
         </div>
-      </div>
+      </motion.div>
     )
   }
 
@@ -74,7 +84,7 @@ export default function DiceRoller({ onSubmitRoll }: DiceRollerProps) {
   const roll = () => {
     const rolled = Math.floor(Math.random() * selectedDie) + 1
     const total = rolled + modifier
-    setLastResult({ roll: rolled, total })
+    setLastResult({ roll: rolled, total, key: Date.now() })
 
     const playerName = players.find(p => p.id === playerId)?.name ?? 'You'
     const modText = modifier !== 0 ? ` ${modifier > 0 ? '+' : ''}${modifier} = ${total}` : ''
@@ -85,22 +95,32 @@ export default function DiceRoller({ onSubmitRoll }: DiceRollerProps) {
     <div className="dice-roller">
       <div className="dice-roller-header">
         <span className="panel-title" style={{ marginBottom: 0, borderBottom: 'none', paddingBottom: 0 }}>Dice Roller</span>
-        {lastResult && (
-          <span className="dice-last-result">
-            {lastResult.roll}{modifier !== 0 ? ` = ${lastResult.total}` : ''}
-          </span>
-        )}
+        <AnimatePresence mode="wait">
+          {lastResult && (
+            <motion.span
+              key={lastResult.key}
+              className="dice-last-result"
+              initial={{ opacity: 0, scale: 1.4, y: -4 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0 }}
+              transition={{ type: 'spring', stiffness: 380, damping: 22 }}
+            >
+              {lastResult.roll}{modifier !== 0 ? ` = ${lastResult.total}` : ''}
+            </motion.span>
+          )}
+        </AnimatePresence>
       </div>
 
       <div className="dice-options">
         {DICE.map(d => (
-          <button
+          <motion.button
             key={d}
             className={`die-btn ${selectedDie === d ? 'die-btn-selected' : ''}`}
             onClick={() => setSelectedDie(d)}
+            whileTap={{ scale: 0.88 }}
           >
             d{d}
-          </button>
+          </motion.button>
         ))}
       </div>
 
@@ -110,11 +130,15 @@ export default function DiceRoller({ onSubmitRoll }: DiceRollerProps) {
           type="number"
           className="dice-mod-input"
           value={modifier}
-          onChange={e => setModifier(Number(e.target.value))}
+          onChange={(e: React.ChangeEvent<HTMLInputElement>) => setModifier(Number(e.target.value))}
         />
-        <button className="dice-roll-btn" onClick={roll}>
+        <motion.button
+          className="dice-roll-btn"
+          onClick={roll}
+          whileTap={{ scale: 0.94 }}
+        >
           Roll d{selectedDie}
-        </button>
+        </motion.button>
       </div>
     </div>
   )

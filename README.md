@@ -198,9 +198,9 @@ Auth note:
 ## Architecture
 
 - **Backend**: Python / FastAPI / WebSockets
-- **Frontend**: React + TypeScript + Vite + HTML5 Canvas
+- **Frontend**: React 19 + TypeScript + Vite + Tailwind CSS v4 + shadcn/ui + Framer Motion
+- **Map**: Top-down 2D grid rendered on HTML5 Canvas with pan/zoom and draggable tokens
 - **LLM**: Anthropic Claude with tool use (dice rolls, map generation, combat)
-- **Map**: Top-down 2D grid rendered on canvas with pan/zoom and draggable tokens
 
 ## Cost
 
