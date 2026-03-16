@@ -667,10 +667,16 @@ async function getSession(roomCodeRaw: string) {
       }
     : null
 
+  // Extract traversal_grid from the map if available
+  const traversalGrid = map && typeof map.traversal_grid === 'object' && map.traversal_grid !== null
+    ? map.traversal_grid
+    : null
+
   return {
     session_id: sessionId,
     characters: (snapshot.characters as Record<string, unknown>) ?? {},
     map: hydratedMap,
+    traversal_grid: traversalGrid,
     combat: (snapshot.combat as Record<string, unknown> | null) ?? null,
     usage: (snapshot.usage as Record<string, unknown>) ?? {
       input_tokens: 0,
