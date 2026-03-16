@@ -3,6 +3,7 @@ import { useSessionStore } from '../stores/sessionStore'
 import { useGameStore } from '../stores/gameStore'
 import { useOverlayStore } from '../stores/overlayStore'
 import { getSupabaseClient, invokeEdgeFunction, invokeEdgeFunctionWithAnon } from '../lib/supabaseClient'
+import { callBackendApi } from '../lib/backendApi'
 import { API_BASE } from '../config/endpoints'
 import { playTTSAudio } from '../components/VoiceControl'
 import { narrationOrchestrator } from '../lib/narrationOrchestrator'
@@ -548,18 +549,17 @@ export function useWebSocket() {
     const outgoingContent = normalizedContent || content
 
     const sendViaLocal = async () => {
-      const res = await fetch(`${API_BASE}/api/action`, {
+      const result = await callBackendApi('/api/action', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+        body: {
           room_code: roomCode,
           player_id: playerId,
           content: outgoingContent,
-        }),
+        },
       })
-      const payload = await parseJsonBody(res)
-      if (!res.ok || typeof payload.error === 'string') {
-        throw new Error(typeof payload.error === 'string' ? payload.error : `Local action failed (${res.status})`)
+      const payload = result.data
+      if (!result.ok || typeof payload.error === 'string') {
+        throw new Error(typeof payload.error === 'string' ? payload.error : `Local action failed (${result.status})`)
       }
 
       const playerName = useSessionStore.getState().players.find((p) => p.id === playerId)?.name ?? 'You'
@@ -658,20 +658,19 @@ export function useWebSocket() {
 
     const fallbackMoveToken = async () => {
       try {
-        const res = await fetch(`${API_BASE}/api/move-token`, {
+        const result = await callBackendApi('/api/move-token', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
+          body: {
             room_code: roomCode,
             player_id: playerId,
             character_id: characterId,
             x,
             y,
-          }),
+          },
         })
-        const payload = await parseJsonBody(res)
-        if (!res.ok || typeof payload.error === 'string') {
-          throw new Error(typeof payload.error === 'string' ? payload.error : `Move failed (${res.status})`)
+        const payload = result.data
+        if (!result.ok || typeof payload.error === 'string') {
+          throw new Error(typeof payload.error === 'string' ? payload.error : `Move failed (${result.status})`)
         }
         if (payload.state) {
           syncState(payload.state as Parameters<typeof syncState>[0])
