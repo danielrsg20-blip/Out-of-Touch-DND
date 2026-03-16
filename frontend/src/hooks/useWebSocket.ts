@@ -542,6 +542,11 @@ export function useWebSocket() {
     narrativeLockRef.current = true
     setLoading(true)
 
+    const normalizedContent = content
+      .replace(/^\[player_interrupted_narration_at:[^\]]+\]\s*/i, '')
+      .trim()
+    const outgoingContent = normalizedContent || content
+
     const sendViaLocal = async () => {
       const res = await fetch(`${API_BASE}/api/action`, {
         method: 'POST',
@@ -549,7 +554,7 @@ export function useWebSocket() {
         body: JSON.stringify({
           room_code: roomCode,
           player_id: playerId,
-          content,
+          content: outgoingContent,
         }),
       })
       const payload = await parseJsonBody(res)
@@ -558,7 +563,7 @@ export function useWebSocket() {
       }
 
       const playerName = useSessionStore.getState().players.find((p) => p.id === playerId)?.name ?? 'You'
-      addNarrative('player', content, playerName)
+      addNarrative('player', outgoingContent, playerName)
 
       if (Array.isArray(payload.narratives)) {
         for (const line of payload.narratives) {
@@ -596,14 +601,11 @@ export function useWebSocket() {
         throw new Error('Supabase is not configured.')
       }
 
-      const playerName = useSessionStore.getState().players.find((p) => p.id === playerId)?.name ?? 'You'
-      addNarrative('player', content, playerName)
-
       const payload = await invokeEdgeFunction<Record<string, unknown>>('dm-action', {
         action: 'player_action',
         room_code: roomCode,
         player_id: playerId,
-        content,
+        content: outgoingContent,
         mock_mode: mockMode,
       })
 
