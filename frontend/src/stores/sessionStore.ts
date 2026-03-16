@@ -153,7 +153,7 @@ export const useSessionStore = create<SessionState>((set) => ({
           const payload = await invokeEdgeFunction<Record<string, unknown>>('session-actions', {
             action: 'get_session',
             room_code: normalizedRoomCode,
-          })
+          }, { authMode: 'anon' })
           const session = payload.session as Record<string, unknown> | undefined
           const sessionId = typeof payload.session_id === 'string'
             ? payload.session_id
@@ -209,7 +209,7 @@ export const useSessionStore = create<SessionState>((set) => ({
             campaign_premise: campaignPremise,
             campaign_tone: campaignTone,
             campaign_title: campaignTitle,
-          })
+          }, { authMode: 'anon' })
         }
       } catch (error) {
         supabaseCreateError = error instanceof Error ? error.message : 'Supabase create_session failed.'
@@ -289,7 +289,7 @@ export const useSessionStore = create<SessionState>((set) => ({
             action: 'join_session',
             room_code: roomCode,
             player_name: playerName,
-          })
+          }, { authMode: 'anon' })
         }
       } catch (error) {
         supabaseJoinError = error instanceof Error ? error.message : 'Supabase join_session failed.'
