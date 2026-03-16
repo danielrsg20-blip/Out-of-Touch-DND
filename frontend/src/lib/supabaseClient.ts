@@ -37,23 +37,41 @@ export async function invokeEdgeFunction<T = Record<string, unknown>>(
   const { data: sessionData } = await supabase.auth.getSession()
   const accessToken = sessionData.session?.access_token
 
-  const headers: HeadersInit = {
+  const baseHeaders: HeadersInit = {
     'Content-Type': 'application/json',
     'apikey': anonKey,
   }
 
-  // Always send a Bearer token — use the user session JWT if available, otherwise
-  // fall back to the anon key (which is itself a valid Supabase JWT for public calls).
-  headers.Authorization = `Bearer ${accessToken ?? anonKey}`
+  async function invokeWithToken(bearerToken: string): Promise<{ response: Response; payload: Record<string, unknown> }> {
+    const headers: HeadersInit = {
+      ...baseHeaders,
+      Authorization: `Bearer ${bearerToken}`,
+    }
 
-  const response = await fetch(`${url}/functions/v1/${functionName}`, {
-    method: 'POST',
-    headers,
-    body: JSON.stringify(body),
-  })
+    const response = await fetch(`${url}/functions/v1/${functionName}`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(body),
+    })
 
-  const text = await response.text()
-  const payload = text.trim() ? JSON.parse(text) as Record<string, unknown> : {}
+    const text = await response.text()
+    const payload = text.trim() ? JSON.parse(text) as Record<string, unknown> : {}
+    return { response, payload }
+  }
+
+  let { response, payload } = await invokeWithToken(accessToken ?? anonKey)
+
+  const message = typeof payload.message === 'string' ? payload.message : ''
+  const code = typeof payload.code === 'number' ? payload.code : null
+  const shouldRetryWithAnon = Boolean(
+    accessToken
+    && response.status === 401
+    && (message.toLowerCase().includes('invalid jwt') || code === 401),
+  )
+
+  if (shouldRetryWithAnon) {
+    ({ response, payload } = await invokeWithToken(anonKey))
+  }
 
   if (!response.ok) {
     const detail = typeof payload.error === 'string'
