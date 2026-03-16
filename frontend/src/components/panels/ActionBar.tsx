@@ -2,21 +2,8 @@ import { useEffect, useMemo, useState } from 'react'
 import { useGameStore } from '../../stores/gameStore'
 import { useSessionStore } from '../../stores/sessionStore'
 import { invokeEdgeFunction } from '../../lib/supabaseClient'
-import { API_BASE } from '../../config/endpoints'
 import type { CastableSpellOption, SpellSlotState } from '../../types'
 import './panels.css'
-
-async function parseJsonBody(res: Response): Promise<Record<string, unknown>> {
-  const text = await res.text()
-  if (!text.trim()) {
-    return {}
-  }
-  try {
-    return JSON.parse(text) as Record<string, unknown>
-  } catch {
-    return {}
-  }
-}
 
 interface ActionBarProps {
   onSend: (message: string) => void
@@ -28,8 +15,6 @@ export default function ActionBar({ onSend, onCastSpell, onInitiateTarget }: Act
   const combat = useGameStore(s => s.combat)
   const characters = useGameStore(s => s.characters)
   const addNarrative = useGameStore(s => s.addNarrative)
-  const syncState = useGameStore(s => s.syncState)
-  const setCombat = useGameStore(s => s.setCombat)
   const playerId = useSessionStore(s => s.playerId)
   const players = useSessionStore(s => s.players)
   const roomCode = useSessionStore(s => s.roomCode)
@@ -89,31 +74,6 @@ export default function ActionBar({ onSend, onCastSpell, onInitiateTarget }: Act
       return
     }
     setAdvancingTurn(true)
-    const fallbackAdvanceTurn = async () => {
-      const res = await fetch(`${API_BASE}/api/combat/next-turn`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          room_code: roomCode,
-          player_id: playerId,
-        }),
-      })
-      const payload = await parseJsonBody(res)
-      if (!res.ok || typeof payload.error === 'string') {
-        throw new Error(typeof payload.error === 'string' ? payload.error : `Unable to advance turn (${res.status})`)
-      }
-
-      if (payload.state) {
-        syncState(payload.state as Parameters<typeof syncState>[0])
-      }
-      if (payload.combat) {
-        setCombat(payload.combat as Parameters<typeof setCombat>[0])
-      }
-      const msg = (payload.data as Record<string, unknown> | undefined)?.message
-      if (typeof msg === 'string' && msg.trim()) {
-        addNarrative('system', msg)
-      }
-    }
 
     try {
       await invokeEdgeFunction<Record<string, unknown>>('dm-action', {
@@ -123,14 +83,8 @@ export default function ActionBar({ onSend, onCastSpell, onInitiateTarget }: Act
         mock_mode: mockMode,
       })
     } catch (error) {
-      try {
-        await fallbackAdvanceTurn()
-        return
-      } catch (fallbackError: unknown) {
-        const edgeMessage = error instanceof Error ? error.message : 'Unknown error'
-        const fallbackMessage = fallbackError instanceof Error ? fallbackError.message : 'Unknown error'
-        addNarrative('system', `Unable to advance turn: ${fallbackMessage} (edge fallback: ${edgeMessage})`)
-      }
+      const edgeMessage = error instanceof Error ? error.message : 'Unknown error'
+      addNarrative('system', `Unable to advance turn: ${edgeMessage}`)
     } finally {
       setAdvancingTurn(false)
     }

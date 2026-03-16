@@ -3,35 +3,10 @@ import { useSessionStore } from '../stores/sessionStore'
 import { useGameStore } from '../stores/gameStore'
 import { useOverlayStore } from '../stores/overlayStore'
 import { getSupabaseClient, invokeEdgeFunction, invokeEdgeFunctionWithAnon } from '../lib/supabaseClient'
-import { callBackendApi } from '../lib/backendApi'
-import { API_BASE } from '../config/endpoints'
 import { playTTSAudio } from '../components/VoiceControl'
 import { narrationOrchestrator } from '../lib/narrationOrchestrator'
 import type { RealtimeChannel } from '@supabase/supabase-js'
-import type { Overlay, FrontendTraversalGrid } from '../types'
-
-const HAS_EXPLICIT_API_URL = Boolean(import.meta.env.VITE_API_URL?.trim())
-const DM_ACTION_TARGET = (import.meta.env.VITE_DM_ACTION_TARGET ?? '').trim().toLowerCase()
-
-function shouldUseLocalRuntime(): boolean {
-  return import.meta.env.DEV && HAS_EXPLICIT_API_URL
-}
-
-function shouldPreferEdgeDmAction(): boolean {
-  return DM_ACTION_TARGET === 'edge' || DM_ACTION_TARGET === 'supabase'
-}
-
-async function parseJsonBody(res: Response): Promise<Record<string, unknown>> {
-  const text = await res.text()
-  if (!text.trim()) {
-    return {}
-  }
-  try {
-    return JSON.parse(text) as Record<string, unknown>
-  } catch {
-    return {}
-  }
-}
+import type { Overlay } from '../types'
 
 function normalizeVoiceErrorMessage(rawError: unknown): string {
   const raw = rawError instanceof Error ? rawError.message : String(rawError ?? 'Unknown voice error')
@@ -55,16 +30,6 @@ function canUseBrowserSpeechSynthesis(): boolean {
   return typeof window !== 'undefined' && 'speechSynthesis' in window && typeof SpeechSynthesisUtterance !== 'undefined'
 }
 
-/** Extract traversal_grid from a runtime state payload (state.map.traversal_grid). */
-function pickTraversalGrid(state: unknown): FrontendTraversalGrid | null {
-  if (!state || typeof state !== 'object') return null
-  const map = (state as Record<string, unknown>).map
-  if (!map || typeof map !== 'object') return null
-  const grid = (map as Record<string, unknown>).traversal_grid
-  if (!grid || typeof grid !== 'object' || Array.isArray(grid)) return null
-  return grid as FrontendTraversalGrid
-}
-
 export function useWebSocket() {
   const channelRef = useRef<RealtimeChannel | null>(null)
   const coldOpenFiredRef = useRef(false)
@@ -73,7 +38,6 @@ export function useWebSocket() {
   const { roomCode, sessionId, playerId, setConnected, addPlayer, setPlayers, getSession, mockMode } = useSessionStore()
   const { setMap, updateEntity, addEntity, removeEntity, setCombat, addNarrative, syncState, setLoading, setPendingRoll, setDmGenerationStatus, setTtsPlaybackStatus, voiceSpeed } = useGameStore()
   const setOverlay = useOverlayStore((s) => s.setOverlay)
-  const setTraversalGrid = useOverlayStore((s) => s.setTraversalGrid)
 
 
 
@@ -186,68 +150,8 @@ export function useWebSocket() {
     }
   }, [addNarrative, speakNarration])
 
-  // Local FastAPI mode: fetch initial game state on mount (no Supabase Realtime)
   useEffect(() => {
     if (!roomCode || !playerId) return
-    if (!shouldUseLocalRuntime()) return
-
-    const fetchInitialState = async () => {
-      try {
-        const res = await fetch(`${API_BASE}/api/session/${roomCode}`)
-        if (!res.ok) return
-        const payload = await parseJsonBody(res)
-        const session = payload.session as { players: Array<{ id: string; name: string; character_id: string | null }> } | undefined
-        if (session?.players) {
-          setPlayers(session.players)
-        }
-        const normalizedState = (payload.game_state as Parameters<typeof syncState>[0] | undefined) ?? (payload as Parameters<typeof syncState>[0])
-        syncState(normalizedState)
-        const tGrid = pickTraversalGrid(normalizedState)
-        if (tGrid) setTraversalGrid(tGrid)
-        if (!coldOpenFiredRef.current) {
-          coldOpenFiredRef.current = true
-          setTimeout(
-            () => renderSessionStartProtocol(payload.session_start as Record<string, unknown> | undefined),
-            Number(import.meta.env.VITE_COLD_OPEN_DELAY_MS) || 2000,
-          )
-        }
-
-        // If the DM has not spoken yet (fresh session), fire a bootstrap narration
-        const dmTurnCount = typeof payload.dm_turn_count === 'number' ? payload.dm_turn_count : 1
-        if (dmTurnCount === 0 && roomCode && playerId) {
-          try {
-            const bootstrapRes = await fetch(`${API_BASE}/api/action`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ room_code: roomCode, player_id: playerId, content: '[SESSION_START]' }),
-            })
-            const bootstrapPayload = await parseJsonBody(bootstrapRes)
-            if (Array.isArray(bootstrapPayload.narratives)) {
-              for (const line of bootstrapPayload.narratives) {
-                if (typeof line === 'string' && line.trim()) {
-                  addNarrative('dm', line, 'DM')
-                  void speakNarration(line)
-                }
-              }
-            }
-          } catch {
-            // non-critical: deterministic session-start text is already visible
-          }
-        }
-      } catch {
-        // non-critical
-      }
-    }
-
-    fetchInitialState().catch(() => {})
-  }, [roomCode, playerId, setPlayers, syncState, addNarrative, renderSessionStartProtocol, speakNarration])
-
-  useEffect(() => {
-    if (!roomCode || !playerId) return
-    if (shouldUseLocalRuntime()) {
-      setConnected(false)
-      return
-    }
 
     const supabase = getSupabaseClient()
     if (!supabase) {
@@ -526,7 +430,7 @@ export function useWebSocket() {
         setLoading(false)
         break
     }
-  }, [addNarrative, addEntity, addPlayer, removeEntity, renderSessionStartProtocol, setCombat, setLoading, setMap, setOverlay, setPlayers, setPendingRoll, setTraversalGrid, speakNarration, syncState, updateEntity])
+  }, [addNarrative, addEntity, addPlayer, removeEntity, renderSessionStartProtocol, setCombat, setLoading, setMap, setOverlay, setPlayers, setPendingRoll, speakNarration, syncState, updateEntity])
 
   const sendAction = useCallback((content: string) => {
     if (!roomCode || !playerId) {
@@ -547,53 +451,6 @@ export function useWebSocket() {
       .replace(/^\[player_interrupted_narration_at:[^\]]+\]\s*/i, '')
       .trim()
     const outgoingContent = normalizedContent || content
-
-    const sendViaLocal = async () => {
-      const result = await callBackendApi('/api/action', {
-        method: 'POST',
-        body: {
-          room_code: roomCode,
-          player_id: playerId,
-          content: outgoingContent,
-        },
-      })
-      const payload = result.data
-      if (!result.ok || typeof payload.error === 'string') {
-        throw new Error(typeof payload.error === 'string' ? payload.error : `Local action failed (${result.status})`)
-      }
-
-      const playerName = useSessionStore.getState().players.find((p) => p.id === playerId)?.name ?? 'You'
-      addNarrative('player', outgoingContent, playerName)
-
-      if (Array.isArray(payload.narratives)) {
-        for (const line of payload.narratives) {
-          if (typeof line === 'string' && line.trim()) {
-            addNarrative('dm', line, 'DM')
-            void speakNarration(line)
-          }
-        }
-      }
-
-      if (Array.isArray(payload.dice_results)) {
-        for (const row of payload.dice_results) {
-          const typed = row as Record<string, unknown>
-          handleMessage({
-            type: 'dice_result',
-            tool: typed.tool,
-            data: typed.data,
-          })
-        }
-      }
-
-      if (payload.state) {
-        syncState(payload.state as Parameters<typeof syncState>[0])
-        const tGrid = pickTraversalGrid(payload.state)
-        if (tGrid) setTraversalGrid(tGrid)
-      }
-      if (payload.overlay && typeof payload.overlay === 'object') {
-        setOverlay(payload.overlay as Overlay)
-      }
-    }
 
     const sendViaEdge = async () => {
       const supabase = getSupabaseClient()
@@ -625,21 +482,11 @@ export function useWebSocket() {
       }
     }
 
-    const primarySend = shouldPreferEdgeDmAction() ? sendViaEdge : sendViaLocal
-    const secondarySend = shouldPreferEdgeDmAction() ? sendViaLocal : sendViaEdge
-    const primaryName = shouldPreferEdgeDmAction() ? 'edge function' : 'local backend'
-    const secondaryName = shouldPreferEdgeDmAction() ? 'local backend' : 'edge function'
-
-    primarySend()
-      .catch((primaryErr: unknown) => {
-        const primaryMessage = primaryErr instanceof Error ? primaryErr.message : 'Unknown error'
-        console.log(`[sendAction] ${primaryName} failed (${primaryMessage}), trying ${secondaryName}...`)
-        return secondarySend()
-      })
+    sendViaEdge()
       .catch((finalErr: unknown) => {
         const finalMessage = finalErr instanceof Error ? finalErr.message : 'Unknown error'
         if (finalMessage.includes('Supabase is not configured')) {
-          addNarrative('system', 'Unable to send action: Supabase is not configured for edge DM mode. Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY or disable edge-first mode.')
+          addNarrative('system', 'Unable to send action: Supabase is not configured. Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY.')
           return
         }
         addNarrative('system', `Unable to send action: ${finalMessage}`)
@@ -648,7 +495,7 @@ export function useWebSocket() {
         narrativeLockRef.current = false
         setLoading(false)
       })
-  }, [addNarrative, handleMessage, mockMode, playerId, roomCode, setDmGenerationStatus, setLoading, setOverlay, speakNarration, syncState])
+  }, [addNarrative, mockMode, playerId, roomCode, setDmGenerationStatus, setLoading])
 
   const sendMoveToken = useCallback((characterId: string, x: number, y: number) => {
     const supabase = getSupabaseClient()
@@ -656,34 +503,8 @@ export function useWebSocket() {
       return
     }
 
-    const fallbackMoveToken = async () => {
-      try {
-        const result = await callBackendApi('/api/move-token', {
-          method: 'POST',
-          body: {
-            room_code: roomCode,
-            player_id: playerId,
-            character_id: characterId,
-            x,
-            y,
-          },
-        })
-        const payload = result.data
-        if (!result.ok || typeof payload.error === 'string') {
-          throw new Error(typeof payload.error === 'string' ? payload.error : `Move failed (${result.status})`)
-        }
-        if (payload.state) {
-          syncState(payload.state as Parameters<typeof syncState>[0])
-          const tGrid = pickTraversalGrid(payload.state)
-          if (tGrid) setTraversalGrid(tGrid)
-        }
-      } catch (localErr: unknown) {
-        addNarrative('system', `Unable to move token: ${localErr instanceof Error ? localErr.message : 'Unknown error'}`)
-      }
-    }
-
     if (!supabase) {
-      fallbackMoveToken().catch(() => {})
+      addNarrative('system', 'Unable to move token: Supabase is not configured.')
       return
     }
 
@@ -695,10 +516,10 @@ export function useWebSocket() {
       x,
       y,
       mock_mode: mockMode,
-    }).catch(() => {
-      fallbackMoveToken().catch(() => {})
+    }).catch((err: unknown) => {
+      addNarrative('system', `Unable to move token: ${err instanceof Error ? err.message : 'Unknown error'}`)
     })
-  }, [addNarrative, mockMode, playerId, roomCode, syncState])
+  }, [addNarrative, mockMode, playerId, roomCode])
 
   const sendSpellCast = useCallback((spellName: string, slotLevel: number, targetId?: string) => {
     const supabase = getSupabaseClient()

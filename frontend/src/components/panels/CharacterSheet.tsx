@@ -12,7 +12,7 @@ import {
 import type { ItemData, SpellOption } from '../../types'
 import './panels.css'
 
-const BACKEND_URL = import.meta.env.VITE_BACKEND_URL ?? 'http://localhost:8000'
+
 
 // ── 5e class → hit die size ───────────────────────────────────────────────────
 const CLASS_HIT_DIE: Record<string, number> = {
@@ -114,12 +114,14 @@ async function playerEquip(
   itemId: string,
   equip: boolean,
 ): Promise<{ error?: string }> {
-  const res = await fetch(`${BACKEND_URL}/api/player-equip`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ room_code: roomCode, player_id: playerId, item_id: itemId, equip }),
+  await invokeEdgeFunction('dm-action', {
+    action: 'equip_item',
+    room_code: roomCode,
+    player_id: playerId,
+    item_id: itemId,
+    equip,
   })
-  return res.json()
+  return {}
 }
 
 // ── ItemRow (features #1, #2, #6, #8) ────────────────────────────────────────

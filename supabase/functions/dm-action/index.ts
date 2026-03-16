@@ -2552,6 +2552,55 @@ async function actionMoveToken(body: Record<string, unknown>) {
   return { ok: true, state: nextSnapshot }
 }
 
+async function actionEquipItem(body: Record<string, unknown>) {
+  const roomCode = typeof body.room_code === 'string' ? body.room_code : ''
+  const playerId = typeof body.player_id === 'string' ? body.player_id : ''
+  const itemId = typeof body.item_id === 'string' ? body.item_id : ''
+  const equip = Boolean(body.equip)
+
+  if (!roomCode || !playerId || !itemId) {
+    throw new Error('room_code, player_id, and item_id are required')
+  }
+
+  const { sessionId } = await resolveSession(roomCode)
+  const member = await resolveMember(sessionId, playerId)
+  if (!member.characterId) {
+    throw new Error('No character selected for this player')
+  }
+
+  const { version, snapshot } = await loadSnapshot(sessionId)
+  const currentChar = snapshot.characters?.[member.characterId]
+  if (!currentChar) {
+    throw new Error('Character not found in session state')
+  }
+
+  const inventory = Array.isArray(currentChar.inventory) ? (currentChar.inventory as InventoryItem[]) : []
+  const itemIndex = inventory.findIndex((i: InventoryItem) => i.id === itemId)
+  if (itemIndex === -1) {
+    throw new Error('Item not found in character inventory')
+  }
+
+  const updatedInventory = inventory.map((item: InventoryItem, idx: number) =>
+    idx === itemIndex ? { ...item, equipped: equip } : item
+  )
+
+  const nextSnapshot: SnapshotState = {
+    ...snapshot,
+    characters: {
+      ...(snapshot.characters ?? {}),
+      [member.characterId]: {
+        ...currentChar,
+        inventory: updatedInventory,
+      },
+    },
+  }
+
+  await saveSnapshot(sessionId, version, nextSnapshot)
+  await publishEvent(sessionId, 'state_sync', { state: nextSnapshot }, playerId)
+
+  return { ok: true, state: nextSnapshot }
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
@@ -2599,6 +2648,10 @@ Deno.serve(async (req) => {
 
     if (action === 'next_combat_turn') {
       return Response.json(await actionNextCombatTurn(body), { headers: corsHeaders })
+    }
+
+    if (action === 'equip_item') {
+      return Response.json(await actionEquipItem(body), { headers: corsHeaders })
     }
 
     return Response.json({ error: `Unsupported action: ${action}` }, { status: 400, headers: corsHeaders })

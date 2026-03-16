@@ -1,6 +1,5 @@
 import { create } from 'zustand'
 import type { CampaignCharacter, CampaignSlot, PlayerData } from '../types'
-import { API_BASE } from '../config/endpoints'
 import { callBackendApi } from '../lib/backendApi'
 import { getSupabaseClient, hasSupabaseConfig, invokeEdgeFunction } from '../lib/supabaseClient'
 import type { RealtimeChannel } from '@supabase/supabase-js'
@@ -9,15 +8,9 @@ const SUPABASE_SESSIONS_FLAG = import.meta.env.VITE_USE_SUPABASE_SESSIONS
 const USE_SUPABASE_SESSIONS = SUPABASE_SESSIONS_FLAG
   ? SUPABASE_SESSIONS_FLAG === 'true'
   : true
-const HAS_EXPLICIT_API_URL = Boolean(import.meta.env.VITE_API_URL?.trim())
 let sessionEventsChannel: RealtimeChannel | null = null
 
 function shouldUseSupabaseSessions(): boolean {
-  // In local/dev runs with an explicit API URL, prefer the FastAPI backend
-  // so session/map behavior matches the actively edited Python pipeline.
-  if (import.meta.env.DEV && HAS_EXPLICIT_API_URL) {
-    return false
-  }
   return USE_SUPABASE_SESSIONS && hasSupabaseConfig()
 }
 
@@ -79,22 +72,6 @@ function startSessionEvents(sessionId: string, roomCode: string) {
   sessionEventsChannel = channel
 }
 
-async function parseJsonBody(res: Response): Promise<Record<string, unknown>> {
-  const text = await res.text()
-  if (!text.trim()) {
-    return {}
-  }
-  try {
-    const parsed = JSON.parse(text)
-    if (parsed && typeof parsed === 'object') {
-      return parsed as Record<string, unknown>
-    }
-    return {}
-  } catch {
-    return {}
-  }
-}
-
 interface SessionState {
   sessionId: string | null
   roomCode: string | null
@@ -146,104 +123,61 @@ export const useSessionStore = create<SessionState>((set) => ({
   getSession: async (roomCode) => {
     const normalizedRoomCode = roomCode.toUpperCase()
 
-    if (shouldUseSupabaseSessions()) {
-      try {
-        const supabase = getSupabaseClient()
-        if (supabase) {
-          const payload = await invokeEdgeFunction<Record<string, unknown>>('session-actions', {
-            action: 'get_session',
-            room_code: normalizedRoomCode,
-          }, { authMode: 'anon' })
-          const session = payload.session as Record<string, unknown> | undefined
-          const sessionId = typeof payload.session_id === 'string'
-            ? payload.session_id
-            : (typeof session?.id === 'string' ? session.id : null)
-          const players = Array.isArray(session?.players) ? (session.players as PlayerData[]) : null
-
-          if (sessionId) {
-            set({ sessionId })
-            startSessionEvents(sessionId, normalizedRoomCode)
-          }
-          if (players) {
-            set({ players })
-          }
-
-          return payload
-        }
-      } catch (error) {
-        console.warn('Supabase get_session failed; falling back to FastAPI endpoint.', error)
-      }
+    if (!shouldUseSupabaseSessions()) {
+      throw new Error('Supabase sessions are disabled or not configured.')
     }
 
-    if (!HAS_EXPLICIT_API_URL) {
-      throw new Error('Supabase get_session failed and no VITE_API_URL fallback is configured.')
+    const supabase = getSupabaseClient()
+    if (!supabase) {
+      throw new Error('Supabase is not configured.')
     }
 
-    const res = await fetch(`${API_BASE}/api/session/${normalizedRoomCode}`)
-    const data = await parseJsonBody(res)
-    if (!res.ok) {
-      throw new Error('Unable to load session.')
-    }
-
-    const session = data.session as Record<string, unknown> | undefined
+    const payload = await invokeEdgeFunction<Record<string, unknown>>('session-actions', {
+      action: 'get_session',
+      room_code: normalizedRoomCode,
+    }, { authMode: 'anon' })
+    const session = payload.session as Record<string, unknown> | undefined
+    const sessionId = typeof payload.session_id === 'string'
+      ? payload.session_id
+      : (typeof session?.id === 'string' ? session.id : null)
     const players = Array.isArray(session?.players) ? (session.players as PlayerData[]) : null
+
+    if (sessionId) {
+      set({ sessionId })
+      startSessionEvents(sessionId, normalizedRoomCode)
+    }
     if (players) {
       set({ players })
     }
 
-    return data
+    return payload
   },
 
   createSession: async (playerName, mockMode = false, campaignPremise = '', campaignTone = '', campaignTitle = '') => {
     let data: Record<string, unknown> = {}
     let supabaseCreateError: string | null = null
 
-    if (shouldUseSupabaseSessions()) {
-      try {
-        const supabase = getSupabaseClient()
-        if (supabase) {
-          data = await invokeEdgeFunction<Record<string, unknown>>('session-actions', {
-            action: 'create_session',
-            player_name: playerName,
-            mock_mode: mockMode,
-            campaign_premise: campaignPremise,
-            campaign_tone: campaignTone,
-            campaign_title: campaignTitle,
-          }, { authMode: 'anon' })
-        }
-      } catch (error) {
-        supabaseCreateError = error instanceof Error ? error.message : 'Supabase create_session failed.'
-        console.warn('Supabase create_session failed; falling back to FastAPI endpoint.', error)
-      }
+    if (!shouldUseSupabaseSessions()) {
+      throw new Error('Supabase sessions are disabled or not configured.')
     }
 
-    if (!data.room_code || !data.player_id) {
-      if (!HAS_EXPLICIT_API_URL) {
-        throw new Error(supabaseCreateError ?? 'Supabase create_session failed and no VITE_API_URL fallback is configured.')
-      }
-      try {
-        const { useAuthStore } = await import('./authStore')
-        const authToken = useAuthStore.getState().token
-        const createHeaders: Record<string, string> = { 'Content-Type': 'application/json' }
-        if (authToken) createHeaders['Authorization'] = `Bearer ${authToken}`
-        const res = await fetch(`${API_BASE}/api/session/create`, {
-          method: 'POST',
-          headers: createHeaders,
-          body: JSON.stringify({ player_name: playerName, campaign_premise: campaignPremise, campaign_tone: campaignTone, campaign_title: campaignTitle }),
-        })
-        data = await parseJsonBody(res)
-        if (!res.ok) {
-          const backendError = typeof data.error === 'string' ? data.error : `FastAPI create failed (${res.status}).`
-          const fallbackDetail = supabaseCreateError ? ` Supabase error: ${supabaseCreateError}` : ''
-          throw new Error(`${backendError}${fallbackDetail}`)
-        }
-      } catch (error) {
-        if (error instanceof Error) {
-          throw error
-        }
-        const fallbackDetail = supabaseCreateError ? ` Supabase error: ${supabaseCreateError}` : ''
-        throw new Error(`Unable to create session.${fallbackDetail}`)
-      }
+    const supabase = getSupabaseClient()
+    if (!supabase) {
+      throw new Error('Supabase is not configured.')
+    }
+
+    try {
+      data = await invokeEdgeFunction<Record<string, unknown>>('session-actions', {
+        action: 'create_session',
+        player_name: playerName,
+        mock_mode: mockMode,
+        campaign_premise: campaignPremise,
+        campaign_tone: campaignTone,
+        campaign_title: campaignTitle,
+      }, { authMode: 'anon' })
+    } catch (error) {
+      supabaseCreateError = error instanceof Error ? error.message : 'Supabase create_session failed.'
+      throw new Error(supabaseCreateError)
     }
 
     if (typeof data.room_code !== 'string' || typeof data.player_id !== 'string') {
@@ -281,49 +215,24 @@ export const useSessionStore = create<SessionState>((set) => ({
     let data: Record<string, unknown> = {}
     let supabaseJoinError: string | null = null
 
-    if (shouldUseSupabaseSessions()) {
-      try {
-        const supabase = getSupabaseClient()
-        if (supabase) {
-          data = await invokeEdgeFunction<Record<string, unknown>>('session-actions', {
-            action: 'join_session',
-            room_code: roomCode,
-            player_name: playerName,
-          }, { authMode: 'anon' })
-        }
-      } catch (error) {
-        supabaseJoinError = error instanceof Error ? error.message : 'Supabase join_session failed.'
-        console.warn('Supabase join_session failed; falling back to FastAPI endpoint.', error)
-      }
+    if (!shouldUseSupabaseSessions()) {
+      throw new Error('Supabase sessions are disabled or not configured.')
     }
 
-    if (!data.player_id || !data.session) {
-      if (!HAS_EXPLICIT_API_URL) {
-        throw new Error(supabaseJoinError ?? 'Supabase join_session failed and no VITE_API_URL fallback is configured.')
-      }
-      try {
-        const { useAuthStore: authStoreForJoin } = await import('./authStore')
-        const joinAuthToken = authStoreForJoin.getState().token
-        const joinHeaders: Record<string, string> = { 'Content-Type': 'application/json' }
-        if (joinAuthToken) joinHeaders['Authorization'] = `Bearer ${joinAuthToken}`
-        const res = await fetch(`${API_BASE}/api/session/join`, {
-          method: 'POST',
-          headers: joinHeaders,
-          body: JSON.stringify({ room_code: roomCode, player_name: playerName }),
-        })
-        data = await parseJsonBody(res)
-        if (!res.ok) {
-          const backendError = typeof data.error === 'string' ? data.error : `FastAPI join failed (${res.status}).`
-          const fallbackDetail = supabaseJoinError ? ` Supabase error: ${supabaseJoinError}` : ''
-          throw new Error(`${backendError}${fallbackDetail}`)
-        }
-      } catch (error) {
-        if (error instanceof Error) {
-          throw error
-        }
-        const fallbackDetail = supabaseJoinError ? ` Supabase error: ${supabaseJoinError}` : ''
-        throw new Error(`Unable to join session.${fallbackDetail}`)
-      }
+    const supabase = getSupabaseClient()
+    if (!supabase) {
+      throw new Error('Supabase is not configured.')
+    }
+
+    try {
+      data = await invokeEdgeFunction<Record<string, unknown>>('session-actions', {
+        action: 'join_session',
+        room_code: roomCode,
+        player_name: playerName,
+      }, { authMode: 'anon' })
+    } catch (error) {
+      supabaseJoinError = error instanceof Error ? error.message : 'Supabase join_session failed.'
+      throw new Error(supabaseJoinError)
     }
 
     const session = data.session as Record<string, unknown> | undefined

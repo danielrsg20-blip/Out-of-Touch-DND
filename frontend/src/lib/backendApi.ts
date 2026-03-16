@@ -1,7 +1,4 @@
 import { API_BASE } from '../config/endpoints'
-import { invokeEdgeFunction } from './supabaseClient'
-
-const HAS_DIRECT_BACKEND = import.meta.env.DEV || Boolean(import.meta.env.VITE_API_URL?.trim())
 
 type JsonMap = Record<string, unknown>
 
@@ -55,37 +52,16 @@ export async function callBackendApi(path: string, init?: BackendApiInit): Promi
   const normalizedPath = path.startsWith('/') ? path : `/${path}`
   const { method, headers, body } = normalizeInit(init)
 
-  if (HAS_DIRECT_BACKEND) {
-    const response = await fetch(`${API_BASE}${normalizedPath}`, {
-      method,
-      headers,
-      body,
-    })
-    const text = await response.text()
-    return {
-      ok: response.ok,
-      status: response.status,
-      data: parseJsonOrEmpty(text),
-      text,
-    }
-  }
-
-  const payload = await invokeEdgeFunction<{
-    status?: number
-    body?: string
-  }>('backend-proxy', {
-    path: normalizedPath,
+  const response = await fetch(`${API_BASE}${normalizedPath}`, {
     method,
     headers,
-    body: body ?? null,
+    body,
   })
-
-  const status = typeof payload.status === 'number' ? payload.status : 500
-  const text = typeof payload.body === 'string' ? payload.body : ''
+  const text = await response.text()
 
   return {
-    ok: status >= 200 && status < 300,
-    status,
+    ok: response.ok,
+    status: response.status,
     data: parseJsonOrEmpty(text),
     text,
   }

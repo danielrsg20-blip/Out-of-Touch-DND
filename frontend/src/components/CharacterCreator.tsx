@@ -2,9 +2,7 @@ import { useEffect, useState } from 'react'
 import { motion, AnimatePresence } from 'motion/react'
 import { useSessionStore } from '../stores/sessionStore'
 import { useGameStore } from '../stores/gameStore'
-import { useAuthStore } from '../stores/authStore'
 import { invokeEdgeFunction } from '../lib/supabaseClient'
-import { API_BASE } from '../config/endpoints'
 import { getCharacterSpriteId } from '../config/characterSprites'
 import type { CharacterData, SpellOption } from '../types'
 import { Card } from '@/components/ui/card'
@@ -90,16 +88,9 @@ function getSpriteOptionsFor(race: string, charClass: string): CharacterSpriteOp
   return filtered.length > 0 ? filtered : CHARACTER_SPRITES
 }
 
-async function parseJsonBody(res: Response): Promise<Record<string, unknown>> {
-  const text = await res.text()
-  if (!text.trim()) return {}
-  try { return JSON.parse(text) as Record<string, unknown> } catch { return {} }
-}
-
 export default function CharacterCreator() {
   const { roomCode, playerId, players, getSession, mockMode } = useSessionStore()
   const setCharacters = useGameStore(s => s.setCharacters)
-  const authToken = useAuthStore(s => s.token)
 
   const [name, setName]           = useState('')
   const [race, setRace]           = useState('Human')
@@ -173,24 +164,6 @@ export default function CharacterCreator() {
     setCreating(true)
     setError('')
     const resolvedSpriteId = getCharacterSpriteId(charClass, race) ?? spriteId
-    const hasExplicitApiUrl = Boolean(import.meta.env.VITE_API_URL?.trim())
-
-    const createViaLocalApi = async (): Promise<Record<string, unknown>> => {
-      const headers: Record<string, string> = { 'Content-Type': 'application/json' }
-      if (authToken) headers['Authorization'] = `Bearer ${authToken}`
-      const res = await fetch(`${API_BASE}/api/character/create`, {
-        method: 'POST', headers,
-        body: JSON.stringify({
-          room_code: roomCode, player_id: playerId, name: name.trim(), race,
-          char_class: charClass, sprite_id: resolvedSpriteId, abilities,
-          known_spells: spellcastingMode === 'known' ? selectedKnownSpells : [],
-          prepared_spells: spellcastingMode === 'prepared' ? selectedPreparedSpells : [],
-        }),
-      })
-      const payload = await parseJsonBody(res)
-      if (!res.ok) throw new Error(typeof payload.error === 'string' ? payload.error : 'Unable to create character right now.')
-      return payload
-    }
 
     const createViaEdge = async (): Promise<Record<string, unknown>> => {
       return await invokeEdgeFunction<Record<string, unknown>>('dm-action', {
@@ -203,20 +176,7 @@ export default function CharacterCreator() {
     }
 
     try {
-      let payload: Record<string, unknown> = {}
-      if (hasExplicitApiUrl) {
-        try {
-          payload = await createViaLocalApi()
-        } catch {
-          payload = await createViaEdge()
-        }
-      } else {
-        try {
-          payload = await createViaEdge()
-        } catch {
-          payload = await createViaLocalApi()
-        }
-      }
+      const payload = await createViaEdge()
 
       if (typeof payload.error === 'string') throw new Error(payload.error)
       const created = payload.character as CharacterData | undefined
