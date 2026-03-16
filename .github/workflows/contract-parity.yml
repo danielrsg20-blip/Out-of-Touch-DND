@@ -132,21 +132,47 @@ jobs:
 
       - name: Wait for services
         run: |
-          for i in {1..60}; do
-            if curl -fsS http://127.0.0.1:8010/api/health > /dev/null; then
-              break
-            fi
-            sleep 1
-          done
+          set -euo pipefail
 
-          for i in {1..60}; do
-            if curl -fsS http://127.0.0.1:19010/api/health > /dev/null; then
-              break
-            fi
-            sleep 1
-          done
+          wait_for_health() {
+            local name="$1"
+            local url="$2"
+            local timeout_seconds="$3"
+
+            for i in $(seq 1 "$timeout_seconds"); do
+              if curl -fsS "$url" > /dev/null; then
+                echo "$name is healthy: $url"
+                return 0
+              fi
+              sleep 1
+            done
+
+            echo "$name failed health check: $url" >&2
+            return 1
+          }
+
+          wait_for_health "python-backend" "http://127.0.0.1:8010/api/health" 60
+          wait_for_health "ts-runtime" "http://127.0.0.1:19010/api/health" 60
+
+      - name: Dump service logs on health-check failure
+        if: failure()
+        run: |
+          echo "--- backend.log (tail) ---"
+          if [ -f backend.log ]; then
+            tail -n 200 backend.log
+          else
+            echo "backend.log not found"
+          fi
+
+          echo "--- ts-runtime.log (tail) ---"
+          if [ -f ts-runtime.log ]; then
+            tail -n 200 ts-runtime.log
+          else
+            echo "ts-runtime.log not found"
+          fi
 
       - name: Run contract parity
+        if: success()
         env:
           PYTHON_BASE_URL: http://127.0.0.1:8010
           TS_BASE_URL: http://127.0.0.1:19010
