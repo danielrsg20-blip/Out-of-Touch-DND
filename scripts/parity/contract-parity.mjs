@@ -128,8 +128,22 @@ function typeOfValue(value) {
   return typeof value
 }
 
-function requiredKeyTypesMatch(py, ts, requiredKeys = []) {
-  return requiredKeys.every((key) => typeOfValue(py[key]) === typeOfValue(ts[key]))
+function requiredKeyTypesMatch(py, ts, requiredKeys = [], assertions = []) {
+  return requiredKeys.every((key) => {
+    const pyType = typeOfValue(py[key])
+    const tsType = typeOfValue(ts[key])
+    if (pyType === tsType) {
+      return true
+    }
+
+    // Allow explicit per-key type divergence when fixture assertions declare oneOfTypes.
+    const matchingAssertions = assertions.filter((assertion) => assertion?.path === key && Array.isArray(assertion.oneOfTypes))
+    if (matchingAssertions.length === 0) {
+      return false
+    }
+
+    return matchingAssertions.some((assertion) => assertion.oneOfTypes.includes(pyType) && assertion.oneOfTypes.includes(tsType))
+  })
 }
 
 function getByPath(obj, dottedPath) {
@@ -260,6 +274,10 @@ function applyCaptures(captures, responseJson, runtimeContext) {
 
 async function call(baseUrl, fixture) {
   const req = fixture.request
+  if (!req || typeof req.path !== 'string' || req.path.length === 0 || typeof req.method !== 'string' || req.method.length === 0) {
+    throw new Error(`Invalid HTTP fixture request shape for ${fixture.name || '<unnamed>'}`)
+  }
+
   const response = await fetch(`${baseUrl}${req.path}`, {
     method: req.method,
     headers: req.headers || {},
@@ -276,6 +294,10 @@ async function call(baseUrl, fixture) {
 }
 
 async function callRaw(baseUrl, requestSpec) {
+  if (!requestSpec || typeof requestSpec.path !== 'string' || requestSpec.path.length === 0 || typeof requestSpec.method !== 'string' || requestSpec.method.length === 0) {
+    throw new Error('Invalid raw request spec: expected non-empty path and method')
+  }
+
   const response = await fetch(`${baseUrl}${requestSpec.path}`, {
     method: requestSpec.method,
     headers: requestSpec.headers || {},
@@ -526,7 +548,7 @@ async function runCampaignScenarioFixture(fixture) {
     const sameStatus = py.status === ts.status
     const pyHasRequired = hasRequiredKeys(pyNorm, requiredKeys)
     const tsHasRequired = hasRequiredKeys(tsNorm, requiredKeys)
-    const typeMatch = requiredKeyTypesMatch(pyNorm, tsNorm, requiredKeys)
+    const typeMatch = requiredKeyTypesMatch(pyNorm, tsNorm, requiredKeys, contract.assertions)
     const pyAssertions = evaluateAssertions(contract.assertions, pyNorm, pyRequestSpec, scenarioContext.py, scenarioContext)
     const tsAssertions = evaluateAssertions(contract.assertions, tsNorm, tsRequestSpec, scenarioContext.ts, scenarioContext)
 
@@ -578,6 +600,11 @@ async function run() {
 
     if (!fixture.request) {
       console.log(`SKIP: ${fixture.name || file} (no request/scenario)`)
+      continue
+    }
+
+    if (typeof fixture.request.path !== 'string' || typeof fixture.request.method !== 'string') {
+      console.log(`SKIP: ${fixture.name || file} (non-http fixture request shape)`)
       continue
     }
 
