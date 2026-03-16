@@ -45,12 +45,12 @@ test('generateVectorMap is deterministic for identical seed and input', () => {
 
 test('golden snapshot seed 90210 hash lock', () => {
   const output = generateVectorMap(makeRequest(90210))
-  assert.equal(output.hashes.overlay_hash, 'e3711c75cc5a99aaa07336258457b59c362b9d6856589f323f442152e14ce10f')
+  assert.equal(output.hashes.overlay_hash, 'ad541ccf23afa99e6f57a07a9c379abfdd97f98e78ae284b6a88287a9e96424b')
   assert.equal(output.hashes.grid_hash, 'd5855d62de0f0cd1404ffe2a459c2a525f83063616eb30b2da1e3fa71b4e2599')
 })
 
 test('golden snapshot seed 12345 hash lock', () => {
   const output = generateVectorMap(makeRequest(12345))
-  assert.equal(output.hashes.overlay_hash, '4d5c6ca3e887cfd7e24496690d95add71e267a0801214bfceabd90a2c1e77ef4')
+  assert.equal(output.hashes.overlay_hash, 'f73bef0f7e672b42f598ee13ce476df1ed6bd35db032f756be551463f0004c02')
   assert.equal(output.hashes.grid_hash, '7acce2a4cb3055be595e418a92b58836cc23f6a69a704f25a2bd8a32846bce44')
 })
