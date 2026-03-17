@@ -11,6 +11,12 @@ const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? Deno.env.get
 
 const supabase = createClient(supabaseUrl, serviceRoleKey)
 
+type SessionMemberRow = {
+  player_id: string | null
+  player_name: string | null
+  character_id: string | null
+}
+
 const WORD_LIST = [
   'GOBLIN', 'DRAGON', 'WIZARD', 'SWORD', 'DUNGEON', 'CASTLE', 'TAVERN',
   'KNIGHT', 'ROGUE', 'DWARF', 'ELF', 'ORC', 'TROLL', 'MAGE', 'CLERIC',
@@ -533,12 +539,11 @@ function hydrateTilesWithSprites(environment: string, tilesRaw: unknown): Array<
   const height = 14
   const environment = 'dungeon'
     const mapId = roomCode || 'supabase_mock_init'
-    const battlemapSnapshot = await generateBattlemapSeedSnapshot(mapId, environment, width, height)
     const fallbackTiles = buildProceduralTiles(environment, width, height)
   return {
     characters: {},
     cold_open_done: false,
-      map: battlemapSnapshot?.map ?? {
+      map: {
         width,
         height,
         tiles: fallbackTiles,
@@ -555,7 +560,7 @@ function hydrateTilesWithSprites(environment: string, tilesRaw: unknown): Array<
         revealed: [],
       },
     combat: null,
-      battlemap_asset: battlemapSnapshot?.battlemapAsset ?? null,
+      battlemap_asset: null,
       overlay: buildFallbackOverlay(mapId),
     usage: {
       input_tokens: 0,
@@ -639,7 +644,7 @@ async function buildSessionPayload(sessionId: string) {
     room_code: sessionRow.room_code as string,
     host_id: sessionRow.host_player_id as string,
     started: Boolean(sessionRow.started),
-    players: (members ?? []).map((m) => ({
+    players: ((members ?? []) as SessionMemberRow[]).map((m) => ({
       id: m.player_id as string,
       name: m.player_name as string,
       character_id: (m.character_id as string | null) ?? null,
@@ -942,7 +947,7 @@ async function getSession(roomCodeRaw: string) {
   }
 }
 
-Deno.serve(async (req) => {
+Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
   }

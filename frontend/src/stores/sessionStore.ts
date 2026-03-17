@@ -212,37 +212,39 @@ export const useSessionStore = create<SessionState>((set) => ({
       startSessionEvents(sessionId, data.room_code)
     }
 
-    try {
-      const latestState = await useSessionStore.getState().getSession(data.room_code)
-      const { useGameStore } = await import('./gameStore')
-      
-      // Validate that we got actual state data with map
-      if (!latestState || typeof latestState !== 'object') {
-        console.error('Invalid session state response:', latestState)
-        throw new Error('Session state response is not an object')
-      }
-      
-      const normalizedState = (latestState as Record<string, unknown>)?.game_state as Record<string, unknown> | undefined
-      const stateToSync = normalizedState ?? latestState
-      
-      if (!stateToSync.map) {
-        console.warn('Session state has no map property:', stateToSync)
-      }
-      
-      useGameStore.getState().syncState(stateToSync as any)
-    } catch (error) {
-      console.error('Failed to sync initial game state after session create:', error instanceof Error ? error.message : error)
-      // Try one more time before giving up
+    const createdRoomCode = data.room_code
+
+    void (async () => {
       try {
-        await new Promise(resolve => setTimeout(resolve, 500))
+        const latestState = await useSessionStore.getState().getSession(createdRoomCode)
         const { useGameStore } = await import('./gameStore')
-        const retryState = await useSessionStore.getState().getSession(data.room_code)
-        useGameStore.getState().syncState(retryState as any)
-        console.log('Successfully synced state on retry')
-      } catch (retryError) {
-        console.error('Retry also failed:', retryError instanceof Error ? retryError.message : retryError)
+
+        if (!latestState || typeof latestState !== 'object') {
+          console.error('Invalid session state response:', latestState)
+          throw new Error('Session state response is not an object')
+        }
+
+        const normalizedState = (latestState as Record<string, unknown>)?.game_state as Record<string, unknown> | undefined
+        const stateToSync = normalizedState ?? latestState
+
+        if (!stateToSync.map) {
+          console.warn('Session state has no map property:', stateToSync)
+        }
+
+        useGameStore.getState().syncState(stateToSync as any)
+      } catch (error) {
+        console.error('Failed to sync initial game state after session create:', error instanceof Error ? error.message : error)
+        try {
+          await new Promise(resolve => setTimeout(resolve, 500))
+          const { useGameStore } = await import('./gameStore')
+          const retryState = await useSessionStore.getState().getSession(createdRoomCode)
+          useGameStore.getState().syncState(retryState as any)
+          console.log('Successfully synced state on retry')
+        } catch (retryError) {
+          console.error('Retry also failed:', retryError instanceof Error ? retryError.message : retryError)
+        }
       }
-    }
+    })()
   },
 
   joinSession: async (roomCode, playerName) => {
@@ -296,37 +298,38 @@ export const useSessionStore = create<SessionState>((set) => ({
       startSessionEvents(sessionId, roomCode.toUpperCase())
     }
 
-    try {
-      const normalizedRoomCode = roomCode.toUpperCase()
-      const latestState = await useSessionStore.getState().getSession(normalizedRoomCode)
-      const { useGameStore } = await import('./gameStore')
-      
-      if (!latestState || typeof latestState !== 'object') {
-        console.error('Invalid session state response:', latestState)
-        throw new Error('Session state response is not an object')
-      }
-      
-      const normalizedState = (latestState as Record<string, unknown>)?.game_state as Record<string, unknown> | undefined
-      const stateToSync = normalizedState ?? latestState
-      
-      if (!stateToSync.map) {
-        console.warn('Session state has no map property:', stateToSync)
-      }
-      
-      useGameStore.getState().syncState(stateToSync as any)
-    } catch (error) {
-      console.error('Failed to sync initial game state after session join:', error instanceof Error ? error.message : error)
-      // Try one more time before giving up
+    void (async () => {
       try {
-        await new Promise(resolve => setTimeout(resolve, 500))
+        const normalizedRoomCode = roomCode.toUpperCase()
+        const latestState = await useSessionStore.getState().getSession(normalizedRoomCode)
         const { useGameStore } = await import('./gameStore')
-        const retryState = await useSessionStore.getState().getSession(roomCode.toUpperCase())
-        useGameStore.getState().syncState(retryState as any)
-        console.log('Successfully synced state on retry')
-      } catch (retryError) {
-        console.error('Retry also failed:', retryError instanceof Error ? retryError.message : retryError)
+
+        if (!latestState || typeof latestState !== 'object') {
+          console.error('Invalid session state response:', latestState)
+          throw new Error('Session state response is not an object')
+        }
+
+        const normalizedState = (latestState as Record<string, unknown>)?.game_state as Record<string, unknown> | undefined
+        const stateToSync = normalizedState ?? latestState
+
+        if (!stateToSync.map) {
+          console.warn('Session state has no map property:', stateToSync)
+        }
+
+        useGameStore.getState().syncState(stateToSync as any)
+      } catch (error) {
+        console.error('Failed to sync initial game state after session join:', error instanceof Error ? error.message : error)
+        try {
+          await new Promise(resolve => setTimeout(resolve, 500))
+          const { useGameStore } = await import('./gameStore')
+          const retryState = await useSessionStore.getState().getSession(roomCode.toUpperCase())
+          useGameStore.getState().syncState(retryState as any)
+          console.log('Successfully synced state on retry')
+        } catch (retryError) {
+          console.error('Retry also failed:', retryError instanceof Error ? retryError.message : retryError)
+        }
       }
-    }
+    })()
   },
 
   setPlayers: (players) => set({ players }),
