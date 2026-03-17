@@ -21,6 +21,7 @@ export interface EntityData {
 
 export interface MapMetadata {
   map_id?: string
+  battlemap_id?: string
   map_source?: 'library' | 'generated' | 'manual' | string
   cache_hit?: boolean
   pack_id?: string
@@ -49,6 +50,7 @@ export interface MapData {
   revealed?: { x: number; y: number }[]
   visible?: { x: number; y: number }[]
   metadata?: MapMetadata
+  traversal_grid?: FrontendTraversalGrid
 }
 
 export interface ItemData {
@@ -432,7 +434,7 @@ export interface FrontendTraversalCell {
   y: number
   traversable: boolean
   movement_cost: number
-  movement_blocking_tags: string[]
+  movement_blocking_tags?: string[]
   tags: string[]
 }
 
@@ -445,8 +447,8 @@ export interface FrontendTraversalGrid {
   height_cells: number
   /** Size of each cell in world units. */
   cell_size_world: number
-  world_bounds: OverlayWorldBounds
-  resolution_scale: number
+  world_bounds?: OverlayWorldBounds
+  resolution_scale?: number
   cells: FrontendTraversalCell[]
 }
 

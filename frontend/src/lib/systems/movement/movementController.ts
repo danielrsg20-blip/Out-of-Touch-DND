@@ -73,7 +73,13 @@ export class MovementController {
     const start: NavNode = { x: entity.x, y: entity.y };
     const goal: NavNode = { x: targetX, y: targetY };
     console.log(`[validateLocalMove] Pathfinding from (${start.x},${start.y}) to (${goal.x},${goal.y})`);
-    const path = AStarPathfinder.findPath(collisionGrid, start, goal, true);
+    const path = AStarPathfinder.findPath(
+      collisionGrid,
+      start,
+      goal,
+      true,
+      (_from, to) => collisionGrid.getMovementCost(to.x, to.y)
+    );
 
     if (!path || path.length === 0) {
       console.log(`[validateLocalMove] FAIL: No path to target`);
@@ -85,7 +91,7 @@ export class MovementController {
     // Check movement pool ONLY during active combat
     const isInCombat = gameState.combat?.is_active || false;
     if (isInCombat) {
-      const pathDistance = AStarPathfinder.pathDistance(path);
+      const pathDistance = AStarPathfinder.pathDistance(path, (node) => collisionGrid.getMovementCost(node.x, node.y));
       const movementRemaining = entity.movement_remaining || 0;
 
       console.log(`[validateLocalMove] In combat - Movement check: have=${movementRemaining}, need=${pathDistance}`);
@@ -134,7 +140,7 @@ export class MovementController {
         if (visited.has(key)) continue;
 
         visited.add(key);
-        const newDistance = distance + 5; // 5 feet per tile
+        const newDistance = distance + (5 * Math.max(1, collisionGrid.getMovementCost(neighbor.x, neighbor.y)));
 
         if (newDistance <= movementRemaining) {
           reachable.add(key);
@@ -160,6 +166,12 @@ export class MovementController {
   ): NavNode[] {
     const start: NavNode = { x: entityX, y: entityY };
     const goal: NavNode = { x: targetX, y: targetY };
-    return AStarPathfinder.findPath(collisionGrid, start, goal, true);
+    return AStarPathfinder.findPath(
+      collisionGrid,
+      start,
+      goal,
+      true,
+      (_from, to) => collisionGrid.getMovementCost(to.x, to.y)
+    );
   }
 }

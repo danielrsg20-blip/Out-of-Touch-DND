@@ -5,6 +5,8 @@ import { registerOverlayGenerateRoute } from './routes/overlayGenerate.js'
 import { registerCampaignRoutes } from './routes/campaign.js'
 import { registerSessionRoutes } from './routes/session.js'
 import { registerVectorMapGenerateRoute } from './routes/vectorMapGenerate.js'
+import { registerBattlemapGenerateRoute } from './routes/battlemapGenerate.js'
+import { registerBattlemapRegenerateRoute } from './routes/battlemapRegenerate.js'
 
 const PORT = Number(process.env.TS_RUNTIME_PORT || 9020)
 const HOST = process.env.TS_RUNTIME_HOST || '0.0.0.0'
@@ -28,6 +30,8 @@ async function buildServer() {
   await registerSessionRoutes(app)
   await registerOverlayGenerateRoute(app)
   await registerVectorMapGenerateRoute(app)
+  await registerBattlemapGenerateRoute(app)
+  await registerBattlemapRegenerateRoute(app)
   await registerCampaignRoutes(app)
 
   return app

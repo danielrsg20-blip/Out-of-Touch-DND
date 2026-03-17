@@ -110,11 +110,26 @@ function renderTraversalGrid(
   mapWidthPx: number,
   mapHeightPx: number,
 ): void {
-  const { world_bounds, cell_size_world, cells } = grid
-  const scaleX = mapWidthPx  / world_bounds.width_world
-  const scaleY = mapHeightPx / world_bounds.height_world
-  const cellW  = cell_size_world * scaleX
-  const cellH  = cell_size_world * scaleY
+  const hasWorldBounds = !!grid.world_bounds
+  const worldBounds = grid.world_bounds
+  const { cell_size_world, cells } = grid
+  const scaleX = hasWorldBounds && worldBounds ? (mapWidthPx / worldBounds.width_world) : (mapWidthPx / Math.max(1, grid.width_cells))
+  const scaleY = hasWorldBounds && worldBounds ? (mapHeightPx / worldBounds.height_world) : (mapHeightPx / Math.max(1, grid.height_cells))
+  const cellW  = hasWorldBounds ? (cell_size_world * scaleX) : scaleX
+  const cellH  = hasWorldBounds ? (cell_size_world * scaleY) : scaleY
+
+  const toPixel = (cellX: number, cellY: number): { px: number; py: number } => {
+    if (hasWorldBounds) {
+      return {
+        px: (cellX * cell_size_world - (worldBounds?.origin_x ?? 0)) * scaleX,
+        py: (cellY * cell_size_world - (worldBounds?.origin_y ?? 0)) * scaleY,
+      }
+    }
+    return {
+      px: cellX * cellW,
+      py: cellY * cellH,
+    }
+  }
 
   const maxMoveCost = cells.reduce(
     (m, c) => (c.traversable ? Math.max(m, c.movement_cost) : m),
@@ -124,8 +139,7 @@ function renderTraversalGrid(
   // --- filled passes (blocked / movement_cost / tags) ---
   if (config.mode !== 'outlines') {
     for (const cell of cells) {
-      const px = (cell.x * cell_size_world - world_bounds.origin_x) * scaleX
-      const py = (cell.y * cell_size_world - world_bounds.origin_y) * scaleY
+      const { px, py } = toPixel(cell.x, cell.y)
 
       let fill: string | null = null
       switch (config.mode) {
@@ -155,8 +169,7 @@ function renderTraversalGrid(
     ctx.strokeStyle = config.gridLineColor
     ctx.lineWidth = config.gridLineWidth
     for (const cell of cells) {
-      const px = (cell.x * cell_size_world - world_bounds.origin_x) * scaleX
-      const py = (cell.y * cell_size_world - world_bounds.origin_y) * scaleY
+      const { px, py } = toPixel(cell.x, cell.y)
       ctx.strokeRect(px, py, cellW, cellH)
     }
   }
@@ -171,8 +184,9 @@ function renderTraversalGrid(
     for (const cell of cells) {
       const allTags = [...(cell.movement_blocking_tags ?? []), ...cell.tags]
       if (allTags.length === 0) continue
-      const px = (cell.x * cell_size_world - world_bounds.origin_x) * scaleX + cellW * 0.5
-      const py = (cell.y * cell_size_world - world_bounds.origin_y) * scaleY + cellH * 0.5
+      const coords = toPixel(cell.x, cell.y)
+      const px = coords.px + cellW * 0.5
+      const py = coords.py + cellH * 0.5
       ctx.fillText(allTags[0].slice(0, 4), px, py)
     }
   }

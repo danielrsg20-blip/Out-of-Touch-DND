@@ -507,8 +507,10 @@ export default function MapCanvas({ onTileClick, onEntityClick, targetingMode = 
     spritePipelineHarness.assertNoLegacyHits('draw-start')
 
     const loadedImage = imageRef.current
-    if (useLegacySpritePipeline && loadedImage && imageUrlRef.current === imageUrl) {
-      spritePipelineHarness.recordLegacyHit('background-image-draw')
+    if (loadedImage && imageUrlRef.current === imageUrl) {
+      if (useLegacySpritePipeline) {
+        spritePipelineHarness.recordLegacyHit('background-image-draw')
+      }
       ctx.save()
       ctx.globalAlpha = imageOpacity
       ctx.imageSmoothingEnabled = false

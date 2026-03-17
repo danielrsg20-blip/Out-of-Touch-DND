@@ -17,7 +17,7 @@ export function drawOverlays(ctx: CanvasRenderingContext2D, map: MapData, combat
 
   // Build collision grid from map data
   const grid = new CollisionGrid(map.width, map.height)
-  grid.buildFromMap(map.tiles, map.width, map.height)
+  grid.buildFromMap(map.tiles, map.width, map.height, map.traversal_grid)
   // Exclude current entity from collision checking for reachability
   const otherEntities = map.entities.filter(e => e.id !== selectedEntityId)
   grid.updateEntityBlocking(otherEntities)

@@ -139,3 +139,92 @@ export function calculateTraversalPathWorldCost(
   }
   return total
 }
+
+export function movementCostMultiplierForMapTileFromTraversalGrid(
+  traversal: TraversalGrid,
+  mapX: number,
+  mapY: number,
+  mapWidth: number,
+  mapHeight: number,
+): number {
+  const cellsByKey = new Map<string, TraversalGrid['cells'][number]>()
+  for (const cell of traversal.cells) {
+    cellsByKey.set(`${cell.x},${cell.y}`, cell)
+  }
+
+  return movementCostMultiplierForMapTileFromTraversalGridWithIndex(
+    traversal,
+    cellsByKey,
+    mapX,
+    mapY,
+    mapWidth,
+    mapHeight,
+  )
+}
+
+function movementCostMultiplierForMapTileFromTraversalGridWithIndex(
+  traversal: TraversalGrid,
+  cellsByKey: Map<string, TraversalGrid['cells'][number]>,
+  mapX: number,
+  mapY: number,
+  mapWidth: number,
+  mapHeight: number,
+): number {
+  const scaleX = traversal.width_cells / Math.max(1, mapWidth)
+  const scaleY = traversal.height_cells / Math.max(1, mapHeight)
+  const sx0 = Math.floor(mapX * scaleX)
+  const sx1 = Math.max(sx0, Math.floor((mapX + 1) * scaleX) - 1)
+  const sy0 = Math.floor(mapY * scaleY)
+  const sy1 = Math.max(sy0, Math.floor((mapY + 1) * scaleY) - 1)
+
+  let maxCost = 1
+  for (let sy = sy0; sy <= sy1; sy += 1) {
+    for (let sx = sx0; sx <= sx1; sx += 1) {
+      const cell = cellsByKey.get(`${sx},${sy}`)
+      if (!cell || !cell.traversable) {
+        continue
+      }
+      const movementCost = Number.isFinite(cell.movement_cost) ? cell.movement_cost : 1
+      maxCost = Math.max(maxCost, movementCost)
+    }
+  }
+
+  return maxCost
+}
+
+export function calculateTraversalPathWorldCostFromMapPath(
+  traversal: TraversalGrid,
+  path: Array<{ x: number; y: number }>,
+  mapWidth: number,
+  mapHeight: number,
+): number {
+  if (path.length <= 1) {
+    return 0
+  }
+
+  const baseFeetPerStep = movementFeetPerStepFromTraversalGrid(traversal, mapWidth, mapHeight)
+  let total = 0
+
+  const cellsByKey = new Map<string, TraversalGrid['cells'][number]>()
+  for (const cell of traversal.cells) {
+    cellsByKey.set(`${cell.x},${cell.y}`, cell)
+  }
+
+  for (let i = 1; i < path.length; i += 1) {
+    const prev = path[i - 1]!
+    const current = path[i]!
+    const diagonal = prev.x !== current.x && prev.y !== current.y
+    const stepFeet = baseFeetPerStep * (diagonal ? Math.SQRT2 : 1)
+    const multiplier = movementCostMultiplierForMapTileFromTraversalGridWithIndex(
+      traversal,
+      cellsByKey,
+      current.x,
+      current.y,
+      mapWidth,
+      mapHeight,
+    )
+    total += stepFeet * Math.max(1, multiplier)
+  }
+
+  return total
+}

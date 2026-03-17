@@ -1343,6 +1343,67 @@
   pointer-events: none;
 }
 
+.battlemap-actions-panel {
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.045), rgba(255, 255, 255, 0.015));
+  padding: 0.5rem;
+  margin-bottom: 0.55rem;
+}
+
+.battlemap-actions-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 0.4rem;
+  color: var(--text-primary);
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.battlemap-actions-header small {
+  font-size: 0.62rem;
+  color: var(--text-secondary);
+}
+
+.battlemap-actions-row {
+  display: flex;
+  gap: 0.3rem;
+}
+
+.battlemap-actions-row + .battlemap-actions-row {
+  margin-top: 0.3rem;
+}
+
+.battlemap-actions-row--split {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.battlemap-action-btn {
+  width: 100%;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text-primary);
+  padding: 0.38rem 0.4rem;
+  font-size: 0.68rem;
+  line-height: 1.2;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.battlemap-action-btn:hover:not(:disabled) {
+  border-color: var(--accent-gold);
+  background: rgba(228, 168, 83, 0.14);
+}
+
+.battlemap-action-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 /* Dice Roller */
 @keyframes dice-result-pop {
   0%   { transform: scale(1.5); opacity: 0.6; }

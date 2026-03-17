@@ -1,8 +1,8 @@
-import { getVectorMapFeatureFlags } from './vectorMap/featureFlags.js'
 import {
   buildWalkableMatrixFromTraversalGrid,
+  calculateTraversalPathWorldCostFromMapPath,
   getTraversalGridFromMap,
-  movementFeetPerStepFromTraversalGrid,
+  movementCostMultiplierForMapTileFromTraversalGrid,
 } from './vectorMap/runtime.js'
 
 type JsonRecord = Record<string, unknown>
@@ -215,7 +215,13 @@ export class CollisionGrid {
 }
 
 export class AStarPathfinder {
-  static findPath(collisionGrid: CollisionGrid, start: NavNode, goal: NavNode, allowDiagonal = true): NavNode[] {
+  static findPath(
+    collisionGrid: CollisionGrid,
+    start: NavNode,
+    goal: NavNode,
+    allowDiagonal = true,
+    movementCostForStep?: (from: NavNode, to: NavNode) => number,
+  ): NavNode[] {
     if (start.x === goal.x && start.y === goal.y) {
       return [start]
     }
@@ -246,7 +252,8 @@ export class AStarPathfinder {
       for (const neighbor of neighbors) {
         const currentKey = keyOf(current)
         const neighborKey = keyOf(neighbor)
-        const tentativeG = (gScore.get(currentKey) ?? Number.POSITIVE_INFINITY) + 1
+        const stepCost = movementCostForStep ? movementCostForStep(current, neighbor) : 1
+        const tentativeG = (gScore.get(currentKey) ?? Number.POSITIVE_INFINITY) + Math.max(1, stepCost)
 
         if (tentativeG < (gScore.get(neighborKey) ?? Number.POSITIVE_INFINITY)) {
           cameFrom.set(neighborKey, current)
@@ -315,10 +322,7 @@ export function validateMoveRequest(params: {
   }
 
   const grid = new CollisionGrid(dimensions.width, dimensions.height)
-  const flags = getVectorMapFeatureFlags()
-  const traversalGrid = flags.vector_grid_authoritative_enabled && flags.vector_grid_derivation_enabled
-    ? getTraversalGridFromMap(params.map)
-    : null
+  const traversalGrid = getTraversalGridFromMap(params.map)
 
   if (traversalGrid) {
     grid.walkable = buildWalkableMatrixFromTraversalGrid(traversalGrid, dimensions.width, dimensions.height)
@@ -332,14 +336,28 @@ export function validateMoveRequest(params: {
 
   const start = { x: entity.x, y: entity.y }
   const goal = { x: targetX, y: targetY }
-  const path = AStarPathfinder.findPath(grid, start, goal, true)
+  const path = AStarPathfinder.findPath(
+    grid,
+    start,
+    goal,
+    true,
+    traversalGrid
+      ? (_from, to) => movementCostMultiplierForMapTileFromTraversalGrid(
+        traversalGrid,
+        to.x,
+        to.y,
+        dimensions.width,
+        dimensions.height,
+      )
+      : undefined,
+  )
 
   if (path.length === 0) {
     return { valid: false, error: 'No path to target', path: null, distance_feet: null }
   }
 
   const distanceFeet = traversalGrid
-    ? Math.round((path.length <= 1 ? 0 : (path.length - 1) * movementFeetPerStepFromTraversalGrid(traversalGrid, dimensions.width, dimensions.height)))
+    ? Math.round(calculateTraversalPathWorldCostFromMapPath(traversalGrid, path, dimensions.width, dimensions.height))
     : AStarPathfinder.pathDistance(path)
   return {
     valid: true,

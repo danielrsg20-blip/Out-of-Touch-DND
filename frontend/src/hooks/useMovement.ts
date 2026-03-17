@@ -30,7 +30,7 @@ export function useMovement(sendMoveToken?: (characterId: string, x: number, y: 
     if (!mapData) return null;
 
     const grid = new CollisionGrid(mapData.width, mapData.height);
-    grid.buildFromMap(mapData.tiles, mapData.width, mapData.height);
+    grid.buildFromMap(mapData.tiles, mapData.width, mapData.height, mapData.traversal_grid);
 
     // Add entity blocking
     if (mapData.entities) {

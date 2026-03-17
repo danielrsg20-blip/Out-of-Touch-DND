@@ -3,6 +3,7 @@ import { useSessionStore } from '../stores/sessionStore'
 import { useGameStore } from '../stores/gameStore'
 import { useOverlayStore } from '../stores/overlayStore'
 import { getSupabaseClient, invokeEdgeFunction, invokeEdgeFunctionWithAnon } from '../lib/supabaseClient'
+import { extractTraversalGridFromPayload, mergeBattlemapAssetIntoMap } from '../lib/battlemapState'
 import { playTTSAudio } from '../components/VoiceControl'
 import { narrationOrchestrator } from '../lib/narrationOrchestrator'
 import type { RealtimeChannel } from '@supabase/supabase-js'
@@ -204,15 +205,19 @@ export function useWebSocket() {
             getSession(roomCode)
               .then((payload) => {
                 syncState(payload as Parameters<typeof syncState>[0])
+                if (payload.battlemap_asset) {
+                  const currentMap = useGameStore.getState().map
+                  const mergedMap = mergeBattlemapAssetIntoMap(currentMap, payload.battlemap_asset)
+                  if (mergedMap) {
+                    setMap(mergedMap)
+                  }
+                }
                 if (payload.overlay && typeof payload.overlay === 'object') {
                   setOverlay(payload.overlay as Overlay)
                 }
-                const traversalGrid = (payload.traversal_grid as Record<string, unknown> | null | undefined)
-                  ?? ((payload.map && typeof payload.map === 'object')
-                    ? ((payload.map as Record<string, unknown>).traversal_grid as Record<string, unknown> | null | undefined)
-                    : null)
-                if (traversalGrid && typeof traversalGrid === 'object') {
-                  setTraversalGrid(traversalGrid as any)
+                const traversalGrid = extractTraversalGridFromPayload(payload)
+                if (traversalGrid) {
+                  setTraversalGrid(traversalGrid)
                 }
               })
               .catch(() => {})
@@ -426,15 +431,19 @@ export function useWebSocket() {
         if (msg.state) {
           syncState(msg.state as Parameters<typeof syncState>[0])
           const state = msg.state as Record<string, unknown>
+          if (state.battlemap_asset) {
+            const currentMap = useGameStore.getState().map
+            const mergedMap = mergeBattlemapAssetIntoMap(currentMap, state.battlemap_asset)
+            if (mergedMap) {
+              setMap(mergedMap)
+            }
+          }
           if (state.overlay && typeof state.overlay === 'object') {
             setOverlay(state.overlay as Overlay)
           }
-          const traversalGrid = (state.traversal_grid as Record<string, unknown> | null | undefined)
-            ?? ((state.map && typeof state.map === 'object')
-              ? ((state.map as Record<string, unknown>).traversal_grid as Record<string, unknown> | null | undefined)
-              : null)
-          if (traversalGrid && typeof traversalGrid === 'object') {
-            setTraversalGrid(traversalGrid as any)
+          const traversalGrid = extractTraversalGridFromPayload(state)
+          if (traversalGrid) {
+            setTraversalGrid(traversalGrid)
           }
         }
         break

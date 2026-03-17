@@ -8,6 +8,7 @@ import ChatInput from './panels/ChatInput'
 import CombatTracker from './panels/CombatTracker'
 import CharacterSheet from './panels/CharacterSheet'
 import ActionBar from './panels/ActionBar'
+import BattlemapActions from './panels/BattlemapActions'
 import DiceRoller from './panels/DiceRoller'
 import VoiceControl from './VoiceControl'
 import VectorOverlayTester from './VectorOverlayTester'
@@ -96,7 +97,7 @@ export default function GameBoard() {
     }
 
     const grid = new CollisionGrid(map.width, map.height)
-    grid.buildFromMap(map.tiles, map.width, map.height)
+    grid.buildFromMap(map.tiles, map.width, map.height, map.traversal_grid)
     grid.updateEntityBlocking(map.entities.filter(e => e.id !== player.character_id))
 
     // Create a state object with entities for validation
@@ -306,6 +307,7 @@ export default function GameBoard() {
             <CharacterSheet />
           </div>
           <div className="sidebar-bottom">
+            <BattlemapActions />
             <ActionBar
               onSend={sendAction}
               onCastSpell={sendSpellCast}

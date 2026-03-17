@@ -19,7 +19,7 @@ Write-Host "Starting TS runtime on http://127.0.0.1:9020 ..."
 Start-Process powershell -ArgumentList @(
   '-NoExit',
   '-Command',
-  "Set-Location '$root/ts-runtime'; `$env:TS_RUNTIME_PORT='9020'; npm run dev"
+  "Set-Location '$root/ts-runtime'; `$env:TS_RUNTIME_PORT='9020'; `$env:VECTOR_MAP_GENERATION_TS_ENABLED='false'; `$env:VECTOR_GRID_DERIVATION_ENABLED='false'; npm run dev"
 )
 
 Write-Host "Starting frontend on http://127.0.0.1:5174 ..."

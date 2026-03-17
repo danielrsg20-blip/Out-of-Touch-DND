@@ -2,6 +2,7 @@ import { create } from 'zustand'
 import type { CampaignCharacter, CampaignSlot, PlayerData } from '../types'
 import { callBackendApi } from '../lib/backendApi'
 import { getSupabaseClient, hasSupabaseConfig, invokeEdgeFunction } from '../lib/supabaseClient'
+import { extractTraversalGridFromPayload } from '../lib/battlemapState'
 import type { RealtimeChannel } from '@supabase/supabase-js'
 import { useOverlayStore } from './overlayStore'
 
@@ -155,12 +156,9 @@ export const useSessionStore = create<SessionState>((set) => ({
       useOverlayStore.getState().setOverlay(payload.overlay as any)
     }
 
-    const traversalGrid = payload.traversal_grid
-      ?? ((payload.map && typeof payload.map === 'object')
-        ? (payload.map as Record<string, unknown>).traversal_grid
-        : null)
-    if (traversalGrid && typeof traversalGrid === 'object') {
-      useOverlayStore.getState().setTraversalGrid(traversalGrid as any)
+    const traversalGrid = extractTraversalGridFromPayload(payload)
+    if (traversalGrid) {
+      useOverlayStore.getState().setTraversalGrid(traversalGrid)
     }
 
     return payload

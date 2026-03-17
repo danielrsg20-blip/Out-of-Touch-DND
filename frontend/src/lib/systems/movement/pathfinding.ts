@@ -22,7 +22,8 @@ export class AStarPathfinder {
     collisionGrid: CollisionGrid,
     start: NavNode,
     goal: NavNode,
-    allowDiagonal: boolean = true
+    allowDiagonal: boolean = true,
+    movementCostForStep?: (from: NavNode, to: NavNode) => number
   ): NavNode[] {
     if (start.x === goal.x && start.y === goal.y) {
       return [start];
@@ -70,7 +71,8 @@ export class AStarPathfinder {
 
       for (const neighbor of neighbors) {
         const neighborKey = key(neighbor);
-        const tentativeG = (gScore.get(currentKey) || 0) + 1;
+        const stepCost = movementCostForStep ? movementCostForStep(current, neighbor) : 1
+        const tentativeG = (gScore.get(currentKey) || 0) + Math.max(1, stepCost);
 
         if (!gScore.has(neighborKey) || tentativeG < gScore.get(neighborKey)!) {
           cameFrom.set(neighborKey, current);
@@ -109,11 +111,20 @@ export class AStarPathfinder {
    * Each tile costs 5 feet (standard D&D grid).
    * distance = (path.length - 1) * 5
    */
-  static pathDistance(path: NavNode[]): number {
+  static pathDistance(path: NavNode[], costForTile?: (node: NavNode) => number): number {
     if (path.length <= 1) {
       return 0;
     }
-    return (path.length - 1) * 5;
+    if (!costForTile) {
+      return (path.length - 1) * 5
+    }
+
+    let total = 0
+    for (let i = 1; i < path.length; i++) {
+      const node = path[i]!
+      total += 5 * Math.max(1, costForTile(node))
+    }
+    return total
   }
 
   /**

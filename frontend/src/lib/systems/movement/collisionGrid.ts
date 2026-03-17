@@ -14,6 +14,7 @@ export class CollisionGrid {
   width: number;
   height: number;
   walkable: boolean[][];
+  movementCost: number[][];
   version: number = 0;
 
   constructor(width: number, height: number) {
@@ -23,6 +24,9 @@ export class CollisionGrid {
     this.walkable = Array(height)
       .fill(null)
       .map(() => Array(width).fill(true));
+    this.movementCost = Array(height)
+      .fill(null)
+      .map(() => Array(width).fill(1));
   }
 
   /**
@@ -32,11 +36,52 @@ export class CollisionGrid {
    * - tile.blocks_movement == true (or derived from type/state)
    * - tile is wall, pit, pillar, rubble, or closed door
    */
-  buildFromMap(tiles: any[], width: number, height: number): void {
+  buildFromMap(tiles: any[], width: number, height: number, traversalGrid?: any | null): void {
     // Reset to all walkable
     this.walkable = Array(height)
       .fill(null)
       .map(() => Array(width).fill(true));
+    this.movementCost = Array(height)
+      .fill(null)
+      .map(() => Array(width).fill(1));
+
+    if (traversalGrid && Array.isArray(traversalGrid.cells) && traversalGrid.width_cells && traversalGrid.height_cells) {
+      const scaleX = Number(traversalGrid.width_cells) / Math.max(1, width)
+      const scaleY = Number(traversalGrid.height_cells) / Math.max(1, height)
+      const cellsByKey = new Map<string, any>()
+      for (const cell of traversalGrid.cells) {
+        cellsByKey.set(`${cell.x},${cell.y}`, cell)
+      }
+
+      for (let y = 0; y < height; y++) {
+        for (let x = 0; x < width; x++) {
+          const sx0 = Math.floor(x * scaleX)
+          const sx1 = Math.max(sx0, Math.floor((x + 1) * scaleX) - 1)
+          const sy0 = Math.floor(y * scaleY)
+          const sy1 = Math.max(sy0, Math.floor((y + 1) * scaleY) - 1)
+          let anyTraversable = false
+          let maxCost = 1
+
+          for (let sy = sy0; sy <= sy1; sy++) {
+            for (let sx = sx0; sx <= sx1; sx++) {
+              const cell = cellsByKey.get(`${sx},${sy}`)
+              if (!cell) continue
+              if (cell.traversable) {
+                anyTraversable = true
+                const candidate = Number.isFinite(cell.movement_cost) ? Number(cell.movement_cost) : 1
+                maxCost = Math.max(maxCost, candidate)
+              }
+            }
+          }
+
+          this.walkable[y][x] = anyTraversable
+          this.movementCost[y][x] = Math.max(1, maxCost)
+        }
+      }
+
+      this.version++
+      return
+    }
 
     // Mark blocking tiles
     let blockedCount = 0;
@@ -44,6 +89,7 @@ export class CollisionGrid {
       if (!this.isTileWalkable(tile)) {
         if (tile.x >= 0 && tile.x < width && tile.y >= 0 && tile.y < height) {
           this.walkable[tile.y][tile.x] = false;
+          this.movementCost[tile.y][tile.x] = Number.POSITIVE_INFINITY;
           blockedCount++;
         }
       }
@@ -78,6 +124,13 @@ export class CollisionGrid {
       return false;
     }
     return this.walkable[y][x];
+  }
+
+  getMovementCost(x: number, y: number): number {
+    if (!(x >= 0 && x < this.width && y >= 0 && y < this.height)) {
+      return Number.POSITIVE_INFINITY
+    }
+    return this.movementCost[y][x]
   }
 
   /**

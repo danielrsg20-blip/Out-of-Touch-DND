@@ -426,12 +426,12 @@ function hydrateTilesWithSprites(environment: string, tilesRaw: unknown): Array<
     }
   }
 
-  async function generateVectorSeedSnapshot(
+  async function generateBattlemapSeedSnapshot(
     roomCode: string,
     environment: string,
     width: number,
     height: number,
-  ): Promise<{ map: Record<string, unknown>; overlay: Record<string, unknown> } | null> {
+  ): Promise<{ map: Record<string, unknown>; battlemapAsset: Record<string, unknown> } | null> {
     const tsRuntimeBase = (
       Deno.env.get('TS_RUNTIME_BASE_URL')
       ?? Deno.env.get('OTDND_TS_RUNTIME_BASE_URL')
@@ -443,35 +443,32 @@ function hydrateTilesWithSprites(environment: string, tilesRaw: unknown): Array<
     }
 
     const seed = stableSeedFromText(`${roomCode}:${environment}:${width}x${height}`)
-    const response = await fetch(`${tsRuntimeBase}/api/tools/generate_vector_map`, {
+    const location = ['forest', 'swamp', 'dungeon', 'city_alley', 'tavern', 'ruins', 'mountain', 'coastal'].includes(environment)
+      ? environment
+      : 'dungeon'
+    const biome = location === 'dungeon' || location === 'ruins'
+      ? 'underground'
+      : (location === 'city_alley' || location === 'tavern' ? 'urban' : 'temperate')
+
+    const response = await fetch(`${tsRuntimeBase}/api/tools/generate_battlemap`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
+        campaign_id: roomCode,
         seed,
-        map_id: roomCode,
-        name: `Room ${roomCode}`,
-        biome: environment,
-        story_prompt: `Generate a ${environment} encounter map`,
-        style_preset: 'default',
-        bounds_world: {
-          origin_x: 0,
-          origin_y: 0,
-          width_world: width * 5,
-          height_world: height * 5,
+        scene_spec: {
+          location,
+          biome,
+          encounter_type: 'exploration',
+          notable_features: ['clear paths', 'line of sight blockers', 'cover objects'],
+          mood_style: 'high-fantasy',
+          map_width_feet: width * 5,
+          map_height_feet: height * 5,
+          campaign_tone: 'adventurous',
         },
-        generation_params: {
-          room_count: 7,
-          corridor_width_cells: 2,
-          obstacle_density: 0.1,
-          hazard_density: 0.08,
+        grid_settings: {
+          cell_size_world: 5,
         },
-        grid_config: {
-          base_cell_size_world: 5,
-          resolution_scale: 1,
-          diagonal_policy: 'allow',
-          movement_cost_mode: 'world_units',
-        },
-        validation_mode: 'fixup',
       }),
     })
 
@@ -480,19 +477,12 @@ function hydrateTilesWithSprites(environment: string, tilesRaw: unknown): Array<
     }
 
     const payload = parseJsonObjectSafe(await response.text())
-    const compatibility = payload.compatibility as Record<string, unknown> | undefined
-    const legacyTilesPayload = compatibility?.legacy_tiles as Record<string, unknown> | undefined
-    const legacyEntitiesPayload = compatibility?.legacy_entities as Record<string, unknown> | undefined
-    const traversalGrid = payload.traversal_grid
-    const overlay = payload.overlay as Record<string, unknown> | undefined
+    const battlemapAsset = payload.battlemap_asset as Record<string, unknown> | undefined
+    const traversalGrid = payload.traversal_grid as Record<string, unknown> | undefined
+    const mapPatch = payload.map_patch as Record<string, unknown> | undefined
+    const patchMetadata = (mapPatch?.metadata as Record<string, unknown> | undefined) ?? {}
 
-    const legacyTiles = Array.isArray(legacyTilesPayload?.tiles)
-      ? (legacyTilesPayload?.tiles as Array<Record<string, unknown>>)
-      : []
-    const vectorWidth = Number(legacyTilesPayload?.width ?? width)
-    const vectorHeight = Number(legacyTilesPayload?.height ?? height)
-
-    if (!overlay || typeof overlay !== 'object' || legacyTiles.length === 0) {
+    if (!battlemapAsset || typeof battlemapAsset !== 'object') {
       return null
     }
 
@@ -502,45 +492,39 @@ function hydrateTilesWithSprites(environment: string, tilesRaw: unknown): Array<
     const dominantWall = sampleFrom(envBases.wall, envBases.wall[0])
     const dominantWater = sampleFrom(envBases.water, envBases.water[0])
 
-    const tiles = legacyTiles.map((tile) => {
+    const tiles = buildProceduralTiles(environment, width, height).map((tile) => {
       const x = Number(tile.x ?? 0)
       const y = Number(tile.y ?? 0)
       const type = String(tile.type ?? 'floor')
       const visual = buildTileVisual(environment, type, mapSeed, x, y, dominantFloor, dominantWall, dominantWater)
       return {
-        x,
-        y,
-        type,
-        blocks_movement: Boolean(tile.blocks_movement),
-        blocks_sight: Boolean(tile.blocks_sight),
+        ...tile,
         ...visual,
       }
     })
 
-    const entities = Array.isArray(legacyEntitiesPayload?.entities)
-      ? (legacyEntitiesPayload?.entities as Array<Record<string, unknown>>)
-      : []
-
     return {
       map: {
-        width: vectorWidth,
-        height: vectorHeight,
+        width,
+        height,
         tiles,
-        entities,
+        entities: [],
         traversal_grid: traversalGrid ?? null,
         metadata: {
-          map_source: 'ts_vector_generated',
+          map_source: 'generated',
           map_id: roomCode,
+          battlemap_id: String(battlemapAsset.id ?? ''),
           cache_hit: false,
           environment,
           grid_size: 5,
           grid_units: 'ft',
-          vector_runtime: 'ts',
+          image_url: String(patchMetadata.image_url ?? battlemapAsset.image_url ?? ''),
+          image_opacity: Number(patchMetadata.image_opacity ?? 1),
         },
         visible: [],
         revealed: [],
       },
-      overlay,
+      battlemapAsset,
     }
   }
 
@@ -549,12 +533,12 @@ function hydrateTilesWithSprites(environment: string, tilesRaw: unknown): Array<
   const height = 14
   const environment = 'dungeon'
     const mapId = roomCode || 'supabase_mock_init'
-    const vectorSnapshot = await generateVectorSeedSnapshot(mapId, environment, width, height)
+    const battlemapSnapshot = await generateBattlemapSeedSnapshot(mapId, environment, width, height)
     const fallbackTiles = buildProceduralTiles(environment, width, height)
   return {
     characters: {},
     cold_open_done: false,
-      map: vectorSnapshot?.map ?? {
+      map: battlemapSnapshot?.map ?? {
         width,
         height,
         tiles: fallbackTiles,
@@ -571,7 +555,8 @@ function hydrateTilesWithSprites(environment: string, tilesRaw: unknown): Array<
         revealed: [],
       },
     combat: null,
-      overlay: vectorSnapshot?.overlay ?? buildFallbackOverlay(mapId),
+      battlemap_asset: battlemapSnapshot?.battlemapAsset ?? null,
+      overlay: buildFallbackOverlay(mapId),
     usage: {
       input_tokens: 0,
       output_tokens: 0,
@@ -677,6 +662,93 @@ async function getLatestSnapshot(sessionId: string): Promise<Record<string, unkn
   }
 
   return (snapshotRow?.snapshot as Record<string, unknown> | undefined) ?? null
+}
+
+async function appendSnapshotVersion(sessionId: string, snapshot: Record<string, unknown>): Promise<void> {
+  const { data: latestRow, error: latestError } = await supabase
+    .from('session_snapshots')
+    .select('version')
+    .eq('session_id', sessionId)
+    .order('version', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+
+  if (latestError) {
+    throw new Error(`Unable to read latest snapshot version: ${latestError.message}`)
+  }
+
+  const latestVersion = Number(latestRow?.version ?? 0)
+  const nextVersion = Number.isFinite(latestVersion) ? latestVersion + 1 : 1
+
+  const { error: insertError } = await supabase
+    .from('session_snapshots')
+    .insert({
+      session_id: sessionId,
+      version: nextVersion,
+      snapshot,
+    })
+
+  if (insertError) {
+    throw new Error(`Unable to append healed snapshot: ${insertError.message}`)
+  }
+}
+
+async function healSnapshotBattlemapIfMissingImage(
+  sessionId: string,
+  roomCode: string,
+  snapshot: Record<string, unknown>,
+): Promise<Record<string, unknown>> {
+  const map = (snapshot.map as Record<string, unknown> | null) ?? null
+  if (!map || typeof map !== 'object') {
+    return snapshot
+  }
+
+  const metadata = (map.metadata && typeof map.metadata === 'object')
+    ? (map.metadata as Record<string, unknown>)
+    : {}
+  const existingImageUrl = typeof metadata.image_url === 'string' ? metadata.image_url.trim() : ''
+  if (existingImageUrl.length > 0) {
+    return snapshot
+  }
+
+  const width = Number(map.width ?? 20)
+  const height = Number(map.height ?? 14)
+  const environment = typeof metadata.environment === 'string' ? metadata.environment : 'dungeon'
+  const regenerated = await generateBattlemapSeedSnapshot(roomCode, environment, width, height)
+  if (!regenerated) {
+    return snapshot
+  }
+
+  const generatedMap = regenerated.map
+  const generatedMetadata = (generatedMap.metadata && typeof generatedMap.metadata === 'object')
+    ? (generatedMap.metadata as Record<string, unknown>)
+    : {}
+
+  const healedMap: Record<string, unknown> = {
+    ...map,
+    metadata: {
+      ...metadata,
+      ...generatedMetadata,
+      map_source: 'generated',
+      cache_hit: false,
+      environment,
+    },
+    traversal_grid: generatedMap.traversal_grid ?? map.traversal_grid ?? null,
+  }
+
+  const healedSnapshot: Record<string, unknown> = {
+    ...snapshot,
+    map: healedMap,
+    battlemap_asset: regenerated.battlemapAsset,
+  }
+
+  try {
+    await appendSnapshotVersion(sessionId, healedSnapshot)
+  } catch {
+    // Failing to persist a healed snapshot should not block read access.
+  }
+
+  return healedSnapshot
 }
 
 async function ensureSessionSnapshot(sessionId: string, roomCodeHint = sessionId): Promise<Record<string, unknown>> {
@@ -829,7 +901,8 @@ async function getSession(roomCodeRaw: string) {
   const session = await buildSessionPayload(sessionRow.id as string)
 
   const sessionId = sessionRow.id as string
-  const snapshot = await ensureSessionSnapshot(sessionId, roomCode)
+  const rawSnapshot = await ensureSessionSnapshot(sessionId, roomCode)
+  const snapshot = await healSnapshotBattlemapIfMissingImage(sessionId, roomCode, rawSnapshot)
   const map = (snapshot.map as Record<string, unknown> | null) ?? null
   const metadata = map && typeof map.metadata === 'object' && map.metadata !== null
     ? (map.metadata as Record<string, unknown>)
