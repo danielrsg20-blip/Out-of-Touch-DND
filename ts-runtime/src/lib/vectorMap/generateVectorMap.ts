@@ -11,6 +11,8 @@ import { applySaturationConstraint } from './colorUtils.js'
 import { rasterizeToGrid } from './rasterize.js'
 import { deriveLegacyEntities, deriveLegacyTiles } from './compatibility.js'
 import { validateOverlayPayload, validateTraversalGrid } from './validation.js'
+import { getVectorMapPresetById } from './presetCatalog.js'
+import { makeDungeonOverlay } from './dungeonGenerator.js'
 
 function clamp(v: number, min: number, max: number): number {
   return Math.max(min, Math.min(max, v))
@@ -198,7 +200,15 @@ function makeOverlay(req: GenerateVectorMapRequest): OverlayPayload {
 
 export function generateVectorMap(req: GenerateVectorMapRequest): GenerateVectorMapResponse {
   const validationMode = req.validation_mode ?? 'fixup'
-  const rawOverlay = makeOverlay(req)
+
+  // Route dungeon/interior/ruin presets to the guide-compliant dungeon generator.
+  // All classic wilderness and remaining urban presets stay on the blob generator.
+  const preset = getVectorMapPresetById(req.preset_id)
+  const isDungeon = preset.groupId === 'dungeon_interior' || preset.biome === 'crypt'
+  const isCave = preset.biome === 'cavern'
+  const rawOverlay = (isDungeon || isCave)
+    ? makeDungeonOverlay(req, { organic: isCave })
+    : makeOverlay(req)
 
   // Apply saturation clamping. The per-style max_saturation drives the global cap;
   // individual layers may carry their own stricter cap via layer.max_saturation.
