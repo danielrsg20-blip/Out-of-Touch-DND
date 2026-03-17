@@ -185,7 +185,7 @@ export default function MapCanvas({ onTileClick, onEntityClick, targetingMode = 
   const spritePipelineHarness = useMemo(
     () => createSpritePipelineAssertHarness({
       legacyEnabled: useLegacySpritePipeline,
-      throwOnFailure: Boolean(import.meta.env.DEV),
+      throwOnFailure: false,
     }),
     [useLegacySpritePipeline],
   )

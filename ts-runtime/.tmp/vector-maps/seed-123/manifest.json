@@ -1,0 +1,45 @@
+{
+  "seed": 123,
+  "biome": "dungeon",
+  "preset": "default",
+  "prompt": "",
+  "width": 512,
+  "height": 384,
+  "cellSize": 5,
+  "resolution": 2,
+  "diagonal": "allow",
+  "validation": "fixup",
+  "generatedAt": "1991-12-15T21:43:49.000Z",
+  "hashes": {
+    "overlay_hash": "92a29a6b4d8e803aca73cc1650ea09f8032adb3da7d336a77a5e2f74a5469959",
+    "grid_hash": "d12ef91e0a646a68706efe891be29c3709b68af44cca3ce830cae341dbe55211",
+    "compatibility_hash": "90172a407e5a67666ae320eb572fbb02ae55d90b1dedba8b9c8e347c39dd2650"
+  },
+  "elementCounts": {
+    "layers": 4,
+    "totalElements": 27,
+    "byType": {
+      "polygon": 11,
+      "polyline": 7,
+      "decal": 1,
+      "text": 8
+    }
+  },
+  "gridStats": {
+    "widthCells": 204,
+    "heightCells": 153,
+    "totalCells": 31212,
+    "blockedCells": 349,
+    "blockedPercent": 1.1181596821735231,
+    "avgMoveCost": 0.9843631532902998,
+    "maxMoveCost": 2
+  },
+  "validationSummary": {
+    "hasErrors": false,
+    "hasWarnings": true,
+    "fixedGeometries": 13,
+    "rejectedElements": 0,
+    "colorClampedCount": 0
+  },
+  "outputDir": ".tmp\\vector-maps\\seed-123"
+}

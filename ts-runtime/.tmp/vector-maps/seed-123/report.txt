@@ -1,0 +1,82 @@
+Vector Map Generation Report
+────────────────────────────────────────────────────────────
+Seed:           123
+Biome:          dungeon
+Preset:         default
+Prompt:         (none)
+Map size:       512 × 384 world units
+Grid cell size: 5 world units  (resolution ×2)
+Validation:     fixup
+Generated at:   1991-12-15T21:43:49.000Z
+
+────────────────────────────────────────────────────────────
+OVERLAY
+────────────────────────────────────────────────────────────
+Layers:         4
+Total elements: 27
+
+  [10] BaseBiomeOverlay         9 elements  (polygon×9)
+  [20] DetailOverlay            7 elements  (polyline×7)
+  [30] HazardOverlay            3 elements  (polygon×2, decal×1)
+  [40] LabelOverlay             8 elements  (text×8)
+
+────────────────────────────────────────────────────────────
+VALIDATION
+────────────────────────────────────────────────────────────
+Fixed geometries:       13
+Rejected elements:      0
+Duplicate IDs:          0
+Out-of-bounds clamped:  3
+
+────────────────────────────────────────────────────────────
+TRAVERSAL GRID
+────────────────────────────────────────────────────────────
+Grid size:      204 × 153 (31212 cells)
+Cell size:      2.5 world units  (resolution_scale=2)
+Blocked cells:  349 / 31212 (1.1%)
+Traversable movement cost — avg: 0.98  max: 2.00
+Blocked-tag mismatch:  0
+
+Tag histogram:
+  terrain              31212
+  floor                31212
+  room                 5221
+  trail                2510
+  road                 2510
+  blocking             349
+  wall                 349
+  deep_mud             19
+  hazard               19
+  difficult            19
+
+────────────────────────────────────────────────────────────
+COLOR / SATURATION
+────────────────────────────────────────────────────────────
+Elements with clamped colors:  0 / 27  (0.0%)
+Rejected (invalid colors):     0
+Global max observed saturation: 0.295
+
+Max observed saturation by layer:
+  BaseBiomeOverlay             0.295
+  DetailOverlay                0.266
+  HazardOverlay                0.039
+  LabelOverlay                 0.000
+
+────────────────────────────────────────────────────────────
+MOVEMENT MODEL
+────────────────────────────────────────────────────────────
+Metric:                    world_units
+Cell size (world):         2.5
+Default speed (world/turn): 30
+Cells per turn:            12
+
+────────────────────────────────────────────────────────────
+HASHES
+────────────────────────────────────────────────────────────
+overlay_hash:       92a29a6b4d8e803aca73cc1650ea09f8032adb3da7d336a77a5e2f74a5469959
+grid_hash:          d12ef91e0a646a68706efe891be29c3709b68af44cca3ce830cae341dbe55211
+compat_hash:        90172a407e5a67666ae320eb572fbb02ae55d90b1dedba8b9c8e347c39dd2650
+
+════════════════════════════════════════════════════════════
+STATUS: [ WARNINGS ]
+════════════════════════════════════════════════════════════

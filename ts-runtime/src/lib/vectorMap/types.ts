@@ -146,11 +146,17 @@ export type ColorValidationReport = {
 export type GenerateVectorMapRequest = {
   request_id?: string
   seed: number
+  preset_id?: string
   map_id?: string
   name?: string
   biome?: 'dungeon' | 'cavern' | 'forest' | 'village' | 'crypt' | 'mine' | 'custom'
   story_prompt?: string
   style_preset?: string
+  style_options?: {
+    style_preset?: string
+    max_saturation?: number
+    allow_magic_glow?: boolean
+  }
   bounds_world: MapBoundsWorld
   generation_params?: {
     room_count?: number

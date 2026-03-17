@@ -38,6 +38,7 @@ export function useWebSocket() {
   const { roomCode, sessionId, playerId, setConnected, addPlayer, setPlayers, getSession, mockMode } = useSessionStore()
   const { setMap, updateEntity, addEntity, removeEntity, setCombat, addNarrative, syncState, setLoading, setPendingRoll, setDmGenerationStatus, setTtsPlaybackStatus, voiceSpeed } = useGameStore()
   const setOverlay = useOverlayStore((s) => s.setOverlay)
+  const setTraversalGrid = useOverlayStore((s) => s.setTraversalGrid)
 
 
 
@@ -203,6 +204,16 @@ export function useWebSocket() {
             getSession(roomCode)
               .then((payload) => {
                 syncState(payload as Parameters<typeof syncState>[0])
+                if (payload.overlay && typeof payload.overlay === 'object') {
+                  setOverlay(payload.overlay as Overlay)
+                }
+                const traversalGrid = (payload.traversal_grid as Record<string, unknown> | null | undefined)
+                  ?? ((payload.map && typeof payload.map === 'object')
+                    ? ((payload.map as Record<string, unknown>).traversal_grid as Record<string, unknown> | null | undefined)
+                    : null)
+                if (traversalGrid && typeof traversalGrid === 'object') {
+                  setTraversalGrid(traversalGrid as any)
+                }
               })
               .catch(() => {})
           }
@@ -225,7 +236,7 @@ export function useWebSocket() {
       }
       channelRef.current = null
     }
-  }, [roomCode, sessionId, playerId, setConnected, addNarrative, setLoading, getSession])
+  }, [roomCode, sessionId, playerId, setConnected, addNarrative, setLoading, getSession, setOverlay, setTraversalGrid])
 
   const handleMessage = useCallback((msg: Record<string, unknown>) => {
     const type = msg.type as string
@@ -418,6 +429,13 @@ export function useWebSocket() {
           if (state.overlay && typeof state.overlay === 'object') {
             setOverlay(state.overlay as Overlay)
           }
+          const traversalGrid = (state.traversal_grid as Record<string, unknown> | null | undefined)
+            ?? ((state.map && typeof state.map === 'object')
+              ? ((state.map as Record<string, unknown>).traversal_grid as Record<string, unknown> | null | undefined)
+              : null)
+          if (traversalGrid && typeof traversalGrid === 'object') {
+            setTraversalGrid(traversalGrid as any)
+          }
         }
         break
 
@@ -430,7 +448,7 @@ export function useWebSocket() {
         setLoading(false)
         break
     }
-  }, [addNarrative, addEntity, addPlayer, removeEntity, renderSessionStartProtocol, setCombat, setLoading, setMap, setOverlay, setPlayers, setPendingRoll, speakNarration, syncState, updateEntity])
+  }, [addNarrative, addEntity, addPlayer, removeEntity, renderSessionStartProtocol, setCombat, setLoading, setMap, setOverlay, setPlayers, setPendingRoll, setTraversalGrid, speakNarration, syncState, updateEntity])
 
   const sendAction = useCallback((content: string) => {
     if (!roomCode || !playerId) {
@@ -464,7 +482,7 @@ export function useWebSocket() {
         player_id: playerId,
         content: outgoingContent,
         mock_mode: mockMode,
-      })
+      }, { authMode: 'anon' })
 
       const dmGeneration = payload.dm_generation as Record<string, unknown> | undefined
       if (dmGeneration && typeof dmGeneration === 'object') {
@@ -516,7 +534,7 @@ export function useWebSocket() {
       x,
       y,
       mock_mode: mockMode,
-    }).catch((err: unknown) => {
+    }, { authMode: 'anon' }).catch((err: unknown) => {
       addNarrative('system', `Unable to move token: ${err instanceof Error ? err.message : 'Unknown error'}`)
     })
   }, [addNarrative, mockMode, playerId, roomCode])
@@ -538,7 +556,7 @@ export function useWebSocket() {
       slot_level: slotLevel,
       target_id: targetId,
       mock_mode: mockMode,
-    }).catch((err: unknown) => {
+    }, { authMode: 'anon' }).catch((err: unknown) => {
       addNarrative('system', `Unable to cast spell: ${err instanceof Error ? err.message : 'Unknown error'}`)
       setLoading(false)
     })
@@ -561,7 +579,7 @@ export function useWebSocket() {
             room_code: roomCode,
             player_id: playerId,
             mock_mode: mockMode,
-          })
+          }, { authMode: 'anon' })
           const transcript = typeof payload.transcript === 'string' ? payload.transcript.trim() : ''
           if (transcript) {
             return transcript
@@ -595,7 +613,7 @@ export function useWebSocket() {
       const supabase = getSupabaseClient()
       if (supabase) {
         try {
-          payload = await invokeEdgeFunction<Record<string, unknown>>('voice-tts', payloadBody)
+          payload = await invokeEdgeFunction<Record<string, unknown>>('voice-tts', payloadBody, { authMode: 'anon' })
         } catch {
           payload = await invokeEdgeFunctionWithAnon<Record<string, unknown>>('voice-tts', payloadBody)
         }

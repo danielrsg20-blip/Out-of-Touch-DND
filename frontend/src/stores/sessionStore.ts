@@ -3,6 +3,7 @@ import type { CampaignCharacter, CampaignSlot, PlayerData } from '../types'
 import { callBackendApi } from '../lib/backendApi'
 import { getSupabaseClient, hasSupabaseConfig, invokeEdgeFunction } from '../lib/supabaseClient'
 import type { RealtimeChannel } from '@supabase/supabase-js'
+import { useOverlayStore } from './overlayStore'
 
 const SUPABASE_SESSIONS_FLAG = import.meta.env.VITE_USE_SUPABASE_SESSIONS
 const USE_SUPABASE_SESSIONS = SUPABASE_SESSIONS_FLAG
@@ -150,6 +151,18 @@ export const useSessionStore = create<SessionState>((set) => ({
       set({ players })
     }
 
+    if (payload.overlay && typeof payload.overlay === 'object') {
+      useOverlayStore.getState().setOverlay(payload.overlay as any)
+    }
+
+    const traversalGrid = payload.traversal_grid
+      ?? ((payload.map && typeof payload.map === 'object')
+        ? (payload.map as Record<string, unknown>).traversal_grid
+        : null)
+    if (traversalGrid && typeof traversalGrid === 'object') {
+      useOverlayStore.getState().setTraversalGrid(traversalGrid as any)
+    }
+
     return payload
   },
 
@@ -204,10 +217,33 @@ export const useSessionStore = create<SessionState>((set) => ({
     try {
       const latestState = await useSessionStore.getState().getSession(data.room_code)
       const { useGameStore } = await import('./gameStore')
+      
+      // Validate that we got actual state data with map
+      if (!latestState || typeof latestState !== 'object') {
+        console.error('Invalid session state response:', latestState)
+        throw new Error('Session state response is not an object')
+      }
+      
       const normalizedState = (latestState as Record<string, unknown>)?.game_state as Record<string, unknown> | undefined
-      useGameStore.getState().syncState((normalizedState ?? latestState) as any)
+      const stateToSync = normalizedState ?? latestState
+      
+      if (!stateToSync.map) {
+        console.warn('Session state has no map property:', stateToSync)
+      }
+      
+      useGameStore.getState().syncState(stateToSync as any)
     } catch (error) {
-      console.warn('Failed to sync initial game state after session create.', error)
+      console.error('Failed to sync initial game state after session create:', error instanceof Error ? error.message : error)
+      // Try one more time before giving up
+      try {
+        await new Promise(resolve => setTimeout(resolve, 500))
+        const { useGameStore } = await import('./gameStore')
+        const retryState = await useSessionStore.getState().getSession(data.room_code)
+        useGameStore.getState().syncState(retryState as any)
+        console.log('Successfully synced state on retry')
+      } catch (retryError) {
+        console.error('Retry also failed:', retryError instanceof Error ? retryError.message : retryError)
+      }
     }
   },
 
@@ -266,10 +302,32 @@ export const useSessionStore = create<SessionState>((set) => ({
       const normalizedRoomCode = roomCode.toUpperCase()
       const latestState = await useSessionStore.getState().getSession(normalizedRoomCode)
       const { useGameStore } = await import('./gameStore')
+      
+      if (!latestState || typeof latestState !== 'object') {
+        console.error('Invalid session state response:', latestState)
+        throw new Error('Session state response is not an object')
+      }
+      
       const normalizedState = (latestState as Record<string, unknown>)?.game_state as Record<string, unknown> | undefined
-      useGameStore.getState().syncState((normalizedState ?? latestState) as any)
+      const stateToSync = normalizedState ?? latestState
+      
+      if (!stateToSync.map) {
+        console.warn('Session state has no map property:', stateToSync)
+      }
+      
+      useGameStore.getState().syncState(stateToSync as any)
     } catch (error) {
-      console.warn('Failed to sync initial game state after session join.', error)
+      console.error('Failed to sync initial game state after session join:', error instanceof Error ? error.message : error)
+      // Try one more time before giving up
+      try {
+        await new Promise(resolve => setTimeout(resolve, 500))
+        const { useGameStore } = await import('./gameStore')
+        const retryState = await useSessionStore.getState().getSession(roomCode.toUpperCase())
+        useGameStore.getState().syncState(retryState as any)
+        console.log('Successfully synced state on retry')
+      } catch (retryError) {
+        console.error('Retry also failed:', retryError instanceof Error ? retryError.message : retryError)
+      }
     }
   },
 

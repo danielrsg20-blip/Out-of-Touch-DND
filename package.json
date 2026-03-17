@@ -8,7 +8,9 @@
     "test:dm-action:narrative": "npm --prefix ts-runtime exec tsx ./scripts/validate-dm-action-narrative.ts",
     "ts-runtime:dev": "npm --prefix ts-runtime run dev",
     "ts-runtime:build": "npm --prefix ts-runtime run build",
-    "ts-runtime:test": "npm --prefix ts-runtime run test"
+    "ts-runtime:test": "npm --prefix ts-runtime run test",
+    "generate:vector-map": "npm --prefix ts-runtime run generate:vector-map --",
+    "viewer:vector-map": "npm --prefix tools/vector-map-viewer run dev"
   },
   "devDependencies": {
     "supabase": "^2.77.0"

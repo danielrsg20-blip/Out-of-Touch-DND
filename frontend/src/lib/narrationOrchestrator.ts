@@ -216,7 +216,7 @@ class NarrationOrchestrator {
 
     if (supabase) {
       try {
-        const payload = await invokeEdgeFunction<Record<string, unknown>>('voice-tts', payloadBody)
+        const payload = await invokeEdgeFunction<Record<string, unknown>>('voice-tts', payloadBody, { authMode: 'anon' })
         if (typeof payload.audio === 'string' && payload.audio.trim()) {
           return this.base64ToAudio(payload.audio)
         }

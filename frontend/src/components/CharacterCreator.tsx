@@ -121,7 +121,7 @@ export default function CharacterCreator() {
         char_class: nextClass,
         level: 1,
         mock_mode: mockMode,
-      })
+      }, { authMode: 'anon' })
 
       if (typeof payload.error === 'string') {
         throw new Error(payload.error)
@@ -172,7 +172,7 @@ export default function CharacterCreator() {
         known_spells: spellcastingMode === 'known' ? selectedKnownSpells : undefined,
         prepared_spells: spellcastingMode === 'prepared' ? selectedPreparedSpells : undefined,
         mock_mode: mockMode,
-      })
+      }, { authMode: 'anon' })
     }
 
     try {

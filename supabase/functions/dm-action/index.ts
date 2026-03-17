@@ -1551,12 +1551,14 @@ function buildMockEncounter(snapshot: SnapshotState, content: string): { nextSna
     ...snapshot,
     map: {
       ...map,
-      tiles: buildProceduralTiles(environment, width, height),
+      tiles: Array.isArray(map.tiles) && map.tiles.length > 0
+        ? (map.tiles as Array<Record<string, unknown>>)
+        : buildProceduralTiles(environment, width, height),
       entities: [...baseEntities, ...propEntities, ...enemyEntities],
       metadata: {
         ...metadata,
-        map_source: 'generated',
-        map_id: 'supabase_mock_encounter',
+        map_source: String(metadata.map_source ?? 'generated'),
+        map_id: String(metadata.map_id ?? 'supabase_mock_encounter'),
         cache_hit: false,
         environment,
         encounter_type: 'ambush',

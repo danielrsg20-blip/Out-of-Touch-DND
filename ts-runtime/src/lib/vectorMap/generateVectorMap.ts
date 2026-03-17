@@ -162,6 +162,7 @@ function makeOverlay(req: GenerateVectorMapRequest): OverlayPayload {
     map_id: req.map_id,
     metadata: {
       seed: req.seed,
+      ...(req.preset_id ? { preset_id: req.preset_id } : {}),
       story_context: req.story_prompt ?? '',
       narrative_tags: req.story_prompt ? req.story_prompt.toLowerCase().split(/\W+/).filter(Boolean).slice(0, 12) : [],
       world_bounds: bounds,
@@ -170,8 +171,8 @@ function makeOverlay(req: GenerateVectorMapRequest): OverlayPayload {
     },
     styles: {
       default: {
-        id: req.style_preset ?? 'default',
-        name: req.style_preset ?? 'Default Style',
+        id: req.style_options?.style_preset ?? req.style_preset ?? 'default',
+        name: req.style_options?.style_preset ?? req.style_preset ?? 'Default Style',
         palette: {
           primary: '#3a3a3a',
           secondary: '#8b8b8b',
@@ -184,8 +185,8 @@ function makeOverlay(req: GenerateVectorMapRequest): OverlayPayload {
         noise_seed: rootSeed,
         edge_feathering: 3,
         jitter: 0.1,
-        max_saturation: 0.65,
-        allow_magic_glow: false,
+        max_saturation: req.style_options?.max_saturation ?? 0.65,
+        allow_magic_glow: req.style_options?.allow_magic_glow ?? false,
         decal_library: {},
       },
     },
@@ -203,6 +204,7 @@ export function generateVectorMap(req: GenerateVectorMapRequest): GenerateVector
   // individual layers may carry their own stricter cap via layer.max_saturation.
   const globalMaxSat =
     req.saturation_constraint?.max_saturation
+    ?? req.style_options?.max_saturation
     ?? (rawOverlay.styles['default'] as { max_saturation?: number } | undefined)?.max_saturation
     ?? 0.65
   const { result: overlay, report: colorValidation } = applySaturationConstraint(rawOverlay, globalMaxSat)

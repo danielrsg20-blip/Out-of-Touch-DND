@@ -26,7 +26,7 @@ Write-Host "Starting frontend on http://127.0.0.1:5174 ..."
 Start-Process powershell -ArgumentList @(
   '-NoExit',
   '-Command',
-  "`$env:VITE_API_URL='http://127.0.0.1:9020'; Set-Location '$root/frontend'; npm run dev -- --host 127.0.0.1"
+  "`$env:VITE_API_URL='http://127.0.0.1:9020'; `$env:VITE_ENABLE_LEGACY_SPRITES='true'; Set-Location '$root/frontend'; npm run dev -- --host 127.0.0.1"
 )
 
 Write-Host "Done. Frontend: http://127.0.0.1:5174  TS runtime: http://127.0.0.1:9020"

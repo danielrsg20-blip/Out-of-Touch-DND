@@ -366,31 +366,212 @@ function hydrateTilesWithSprites(environment: string, tilesRaw: unknown): Array<
     })
 }
 
-function buildInitialSnapshot(): Record<string, unknown> {
+  function stableSeedFromText(text: string): number {
+    let seed = 2166136261
+    for (let i = 0; i < text.length; i += 1) {
+      seed ^= text.charCodeAt(i)
+      seed = Math.imul(seed, 16777619)
+    }
+    return Math.abs(seed >>> 0) || 1
+  }
+
+  function parseJsonObjectSafe(text: string): Record<string, unknown> {
+    if (!text.trim()) {
+      return {}
+    }
+    try {
+      const parsed = JSON.parse(text)
+      return parsed && typeof parsed === 'object' && !Array.isArray(parsed)
+        ? parsed as Record<string, unknown>
+        : {}
+    } catch {
+      return {}
+    }
+  }
+
+  function buildFallbackOverlay(mapId: string): Record<string, unknown> {
+    return {
+      id: `overlay-${randomId()}`,
+      name: 'Initial Overlay',
+      version: '1.0',
+      created_at: new Date().toISOString(),
+      metadata: {
+        map_id: mapId,
+        source: 'fallback',
+      },
+      styles: {
+        default: {
+          id: 'default',
+          name: 'Default Style',
+          palette: {
+            primary: '#3a3a3a',
+            accent_1: '#ff6b35',
+            accent_2: '#4ecdc4',
+          },
+        },
+      },
+      layers: [
+        {
+          id: `layer-${randomId()}`,
+          name: 'Annotations',
+          z_index: 0,
+          visible: true,
+          blend_mode: 'normal',
+          opacity: 1,
+          elements: [],
+          clip_region: null,
+          clipped_to_bounds: false,
+        },
+      ],
+    }
+  }
+
+  async function generateVectorSeedSnapshot(
+    roomCode: string,
+    environment: string,
+    width: number,
+    height: number,
+  ): Promise<{ map: Record<string, unknown>; overlay: Record<string, unknown> } | null> {
+    const tsRuntimeBase = (
+      Deno.env.get('TS_RUNTIME_BASE_URL')
+      ?? Deno.env.get('OTDND_TS_RUNTIME_BASE_URL')
+      ?? ''
+    ).trim().replace(/\/$/, '')
+
+    if (!tsRuntimeBase) {
+      return null
+    }
+
+    const seed = stableSeedFromText(`${roomCode}:${environment}:${width}x${height}`)
+    const response = await fetch(`${tsRuntimeBase}/api/tools/generate_vector_map`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        seed,
+        map_id: roomCode,
+        name: `Room ${roomCode}`,
+        biome: environment,
+        story_prompt: `Generate a ${environment} encounter map`,
+        style_preset: 'default',
+        bounds_world: {
+          origin_x: 0,
+          origin_y: 0,
+          width_world: width * 5,
+          height_world: height * 5,
+        },
+        generation_params: {
+          room_count: 7,
+          corridor_width_cells: 2,
+          obstacle_density: 0.1,
+          hazard_density: 0.08,
+        },
+        grid_config: {
+          base_cell_size_world: 5,
+          resolution_scale: 1,
+          diagonal_policy: 'allow',
+          movement_cost_mode: 'world_units',
+        },
+        validation_mode: 'fixup',
+      }),
+    })
+
+    if (!response.ok) {
+      return null
+    }
+
+    const payload = parseJsonObjectSafe(await response.text())
+    const compatibility = payload.compatibility as Record<string, unknown> | undefined
+    const legacyTilesPayload = compatibility?.legacy_tiles as Record<string, unknown> | undefined
+    const legacyEntitiesPayload = compatibility?.legacy_entities as Record<string, unknown> | undefined
+    const traversalGrid = payload.traversal_grid
+    const overlay = payload.overlay as Record<string, unknown> | undefined
+
+    const legacyTiles = Array.isArray(legacyTilesPayload?.tiles)
+      ? (legacyTilesPayload?.tiles as Array<Record<string, unknown>>)
+      : []
+    const vectorWidth = Number(legacyTilesPayload?.width ?? width)
+    const vectorHeight = Number(legacyTilesPayload?.height ?? height)
+
+    if (!overlay || typeof overlay !== 'object' || legacyTiles.length === 0) {
+      return null
+    }
+
+    const mapSeed = stableSeedFromText(roomCode)
+    const envBases = TILE_BASES_BY_ENV[environment] ?? TILE_BASES_BY_ENV.dungeon
+    const dominantFloor = sampleFrom(envBases.floor, envBases.floor[0])
+    const dominantWall = sampleFrom(envBases.wall, envBases.wall[0])
+    const dominantWater = sampleFrom(envBases.water, envBases.water[0])
+
+    const tiles = legacyTiles.map((tile) => {
+      const x = Number(tile.x ?? 0)
+      const y = Number(tile.y ?? 0)
+      const type = String(tile.type ?? 'floor')
+      const visual = buildTileVisual(environment, type, mapSeed, x, y, dominantFloor, dominantWall, dominantWater)
+      return {
+        x,
+        y,
+        type,
+        blocks_movement: Boolean(tile.blocks_movement),
+        blocks_sight: Boolean(tile.blocks_sight),
+        ...visual,
+      }
+    })
+
+    const entities = Array.isArray(legacyEntitiesPayload?.entities)
+      ? (legacyEntitiesPayload?.entities as Array<Record<string, unknown>>)
+      : []
+
+    return {
+      map: {
+        width: vectorWidth,
+        height: vectorHeight,
+        tiles,
+        entities,
+        traversal_grid: traversalGrid ?? null,
+        metadata: {
+          map_source: 'ts_vector_generated',
+          map_id: roomCode,
+          cache_hit: false,
+          environment,
+          grid_size: 5,
+          grid_units: 'ft',
+          vector_runtime: 'ts',
+        },
+        visible: [],
+        revealed: [],
+      },
+      overlay,
+    }
+  }
+
+  async function buildInitialSnapshot(roomCode: string): Promise<Record<string, unknown>> {
   const width = 20
   const height = 14
   const environment = 'dungeon'
-  const tiles = buildProceduralTiles(environment, width, height)
+    const mapId = roomCode || 'supabase_mock_init'
+    const vectorSnapshot = await generateVectorSeedSnapshot(mapId, environment, width, height)
+    const fallbackTiles = buildProceduralTiles(environment, width, height)
   return {
     characters: {},
     cold_open_done: false,
-    map: {
-      width,
-      height,
-      tiles,
-      entities: [],
-      metadata: {
-        map_source: 'generated',
-        map_id: 'supabase_mock_init',
-        cache_hit: false,
-        environment,
-        grid_size: 5,
-        grid_units: 'ft',
+      map: vectorSnapshot?.map ?? {
+        width,
+        height,
+        tiles: fallbackTiles,
+        entities: [],
+        metadata: {
+          map_source: 'generated',
+          map_id: mapId,
+          cache_hit: false,
+          environment,
+          grid_size: 5,
+          grid_units: 'ft',
+        },
+        visible: [],
+        revealed: [],
       },
-      visible: [],
-      revealed: [],
-    },
     combat: null,
+      overlay: vectorSnapshot?.overlay ?? buildFallbackOverlay(mapId),
     usage: {
       input_tokens: 0,
       output_tokens: 0,
@@ -498,13 +679,13 @@ async function getLatestSnapshot(sessionId: string): Promise<Record<string, unkn
   return (snapshotRow?.snapshot as Record<string, unknown> | undefined) ?? null
 }
 
-async function ensureSessionSnapshot(sessionId: string): Promise<Record<string, unknown>> {
+async function ensureSessionSnapshot(sessionId: string, roomCodeHint = sessionId): Promise<Record<string, unknown>> {
   const existing = await getLatestSnapshot(sessionId)
   if (existing) {
     return existing
   }
 
-  const starter = buildInitialSnapshot()
+  const starter = await buildInitialSnapshot(roomCodeHint)
   const { error: snapshotError } = await supabase
     .from('session_snapshots')
     .insert({
@@ -558,7 +739,7 @@ async function createSession(playerName: string) {
     .insert({
       session_id: sessionId,
       version: 1,
-      snapshot: buildInitialSnapshot(),
+      snapshot: await buildInitialSnapshot(roomCode),
     })
 
   if (snapshotError) {
@@ -614,7 +795,7 @@ async function joinSession(roomCodeRaw: string, playerName: string) {
   }
 
   const session = await buildSessionPayload(sessionId)
-  await ensureSessionSnapshot(sessionId)
+  await ensureSessionSnapshot(sessionId, roomCode)
 
   await publishEvent(sessionId, 'player_joined', {
     room_code: roomCode,
@@ -648,7 +829,7 @@ async function getSession(roomCodeRaw: string) {
   const session = await buildSessionPayload(sessionRow.id as string)
 
   const sessionId = sessionRow.id as string
-  const snapshot = await ensureSessionSnapshot(sessionId)
+  const snapshot = await ensureSessionSnapshot(sessionId, roomCode)
   const map = (snapshot.map as Record<string, unknown> | null) ?? null
   const metadata = map && typeof map.metadata === 'object' && map.metadata !== null
     ? (map.metadata as Record<string, unknown>)
@@ -677,6 +858,7 @@ async function getSession(roomCodeRaw: string) {
     characters: (snapshot.characters as Record<string, unknown>) ?? {},
     map: hydratedMap,
     traversal_grid: traversalGrid,
+    overlay: (snapshot.overlay as Record<string, unknown> | null) ?? null,
     combat: (snapshot.combat as Record<string, unknown> | null) ?? null,
     usage: (snapshot.usage as Record<string, unknown>) ?? {
       input_tokens: 0,

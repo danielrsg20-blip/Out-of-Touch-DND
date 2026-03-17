@@ -120,7 +120,7 @@ async function playerEquip(
     player_id: playerId,
     item_id: itemId,
     equip,
-  })
+  }, { authMode: 'anon' })
   return {}
 }
 

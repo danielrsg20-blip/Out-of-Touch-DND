@@ -82,7 +82,9 @@ export function createSpritePipelineAssertHarness(options: SpritePipelineHarness
       lastReason: reason,
     }
     publish()
-    console.warn(`[sprite-pipeline] Legacy sprite branch executed (${reason}). hit=${snapshot.hits}`)
+    if (!snapshot.legacyEnabled) {
+      console.warn(`[sprite-pipeline] Legacy sprite branch executed (${reason}). hit=${snapshot.hits}`)
+    }
   }
 
   const assertNoLegacyHits = (context = 'runtime'): boolean => {

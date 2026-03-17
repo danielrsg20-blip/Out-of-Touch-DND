@@ -41,7 +41,7 @@ export default function ActionBar({ onSend, onCastSpell, onInitiateTarget }: Act
           player_id: playerId,
           in_combat: true,
           mock_mode: mockMode,
-        })
+        }, { authMode: 'anon' })
         if (!payload.error) {
           setCastableSpells((payload.castable_spells as CastableSpellOption[]) || [])
           setSlotStates((payload.slot_states as SpellSlotState[]) || [])
@@ -81,7 +81,7 @@ export default function ActionBar({ onSend, onCastSpell, onInitiateTarget }: Act
         room_code: roomCode,
         player_id: playerId,
         mock_mode: mockMode,
-      })
+      }, { authMode: 'anon' })
     } catch (error) {
       const edgeMessage = error instanceof Error ? error.message : 'Unknown error'
       addNarrative('system', `Unable to advance turn: ${edgeMessage}`)
