@@ -499,7 +499,9 @@ export default function CharacterSheet() {
   const [equipPending, setEquipPending] = useState(false)
 
   const player = players.find(p => p.id === playerId)
+  const fallbackCharId = playerId ? `pc_${playerId}` : null
   const charId = player?.character_id
+    ?? (fallbackCharId && characters[fallbackCharId] ? fallbackCharId : null)
   const char = charId ? characters[charId] : null
 
   const isInCombat = !!combat?.is_active

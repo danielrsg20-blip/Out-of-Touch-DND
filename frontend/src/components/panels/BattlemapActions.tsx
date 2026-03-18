@@ -53,10 +53,14 @@ export default function BattlemapActions() {
   const setTraversalGrid = useOverlayStore((s) => s.setTraversalGrid)
   const roomCode = useSessionStore((s) => s.roomCode)
   const campaignTone = useSessionStore((s) => s.campaignTone)
+  const qualityMode = useSessionStore((s) => s.battlemapQualityMode)
+  const setQualityMode = useSessionStore((s) => s.setBattlemapQualityMode)
 
   const [busyMode, setBusyMode] = useState<BusyMode>(null)
+  const [downloadStatus, setDownloadStatus] = useState<'idle' | 'downloading' | 'done' | 'failed'>('idle')
 
   const battlemapId = useMemo(() => resolveBattlemapId(map), [map])
+  const mapImageUrl = typeof map?.metadata?.image_url === 'string' ? map.metadata.image_url.trim() : ''
 
   const sceneSpec = useMemo(() => {
     const location = sanitizeLocation(map?.metadata?.environment)
@@ -91,9 +95,15 @@ export default function BattlemapActions() {
     }
 
     const timing = payload.generation_timing as Record<string, unknown> | undefined
+    const audit = payload.battlemap_asset && typeof payload.battlemap_asset === 'object'
+      ? (payload.battlemap_asset as Record<string, unknown>).generation_audit
+      : undefined
+    const resolvedQualityMode = audit && typeof audit === 'object' && typeof (audit as Record<string, unknown>).quality_mode === 'string'
+      ? (audit as Record<string, unknown>).quality_mode
+      : qualityMode
     const totalMs = typeof timing?.total_ms === 'number' ? timing.total_ms : null
     const timingText = totalMs !== null ? ` (${Math.round(totalMs)}ms)` : ''
-    addNarrative('system', `${verb} and applied immediately.${timingText}`)
+    addNarrative('system', `${verb} [${resolvedQualityMode}] and applied immediately.${timingText}`)
   }
 
   async function handleGenerate(): Promise<void> {
@@ -105,10 +115,8 @@ export default function BattlemapActions() {
         method: 'POST',
         body: {
           campaign_id: roomCode,
+          quality_mode: qualityMode,
           scene_spec: sceneSpec,
-          grid_settings: {
-            cell_size_world: 5,
-          },
         },
       })
 
@@ -138,6 +146,7 @@ export default function BattlemapActions() {
         body: {
           battlemap_id: battlemapId,
           mode,
+          quality_mode: qualityMode,
         },
       })
 
@@ -158,11 +167,81 @@ export default function BattlemapActions() {
     }
   }
 
+  async function handleDownloadMap(): Promise<void> {
+    if (!mapImageUrl || downloadStatus === 'downloading') {
+      return
+    }
+
+    const slugify = (value: string): string => value
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '')
+
+    const roomPart = roomCode ? slugify(roomCode) : 'session'
+    const envPart = slugify(typeof map?.metadata?.environment === 'string' ? map.metadata.environment : 'map') || 'map'
+    const filename = `battlemap-${roomPart}-${envPart}.png`
+
+    const triggerDownload = (href: string) => {
+      const anchor = document.createElement('a')
+      anchor.href = href
+      anchor.download = filename
+      anchor.rel = 'noopener noreferrer'
+      document.body.appendChild(anchor)
+      anchor.click()
+      document.body.removeChild(anchor)
+    }
+
+    setDownloadStatus('downloading')
+
+    try {
+      const response = await fetch(mapImageUrl, { mode: 'cors' })
+      if (!response.ok) {
+        throw new Error(`download failed with status ${response.status}`)
+      }
+
+      const blob = await response.blob()
+      const objectUrl = URL.createObjectURL(blob)
+      triggerDownload(objectUrl)
+      window.setTimeout(() => URL.revokeObjectURL(objectUrl), 1500)
+      setDownloadStatus('done')
+    } catch {
+      // Fallback for storage endpoints that do not allow cross-origin blob reads.
+      window.open(mapImageUrl, '_blank', 'noopener,noreferrer')
+      setDownloadStatus('failed')
+    }
+
+    window.setTimeout(() => {
+      setDownloadStatus('idle')
+    }, 1600)
+  }
+
   return (
     <div className="battlemap-actions-panel">
       <div className="battlemap-actions-header">
         <span>Battlemap Tools</span>
         <small>{battlemapId ? 'linked' : 'not generated'}</small>
+      </div>
+      <div className="battlemap-actions-row">
+        <div className="battlemap-quality-group" role="group" aria-label="Battlemap quality mode">
+          <button
+            type="button"
+            className={`battlemap-quality-btn ${qualityMode === 'fast' ? 'is-active' : ''}`}
+            onClick={() => setQualityMode('fast')}
+            disabled={!!busyMode}
+            title="Faster generation with lower detail"
+          >
+            Fast
+          </button>
+          <button
+            type="button"
+            className={`battlemap-quality-btn ${qualityMode === 'final' ? 'is-active' : ''}`}
+            onClick={() => setQualityMode('final')}
+            disabled={!!busyMode}
+            title="Higher detail and larger map output"
+          >
+            Final
+          </button>
+        </div>
       </div>
       <div className="battlemap-actions-row">
         <button
@@ -173,6 +252,23 @@ export default function BattlemapActions() {
           title="Generate a new image battlemap and apply map_patch immediately"
         >
           {busyMode === 'generate' ? 'Generating...' : 'Generate Battlemap'}
+        </button>
+      </div>
+      <div className="battlemap-actions-row">
+        <button
+          type="button"
+          className="battlemap-action-btn"
+          onClick={() => void handleDownloadMap()}
+          disabled={!mapImageUrl || downloadStatus === 'downloading'}
+          title="Download current generated battlemap image"
+        >
+          {downloadStatus === 'downloading'
+            ? 'Downloading...'
+            : downloadStatus === 'done'
+              ? 'Downloaded'
+              : downloadStatus === 'failed'
+                ? 'Opened in new tab'
+                : 'Download Map'}
         </button>
       </div>
       <div className="battlemap-actions-row battlemap-actions-row--split">

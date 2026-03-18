@@ -2,6 +2,7 @@ export type SnapshotForNarrative = {
   characters: Record<string, Record<string, unknown>>
   map: Record<string, unknown> | null
   combat: Record<string, unknown> | null
+  narrative_history?: Array<Record<string, unknown>>
 }
 
 export type DmGenerationResult = {
@@ -98,6 +99,33 @@ function summarizeSnapshotForPrompt(snapshot: SnapshotForNarrative): string {
   ].join('\n')
 }
 
+function summarizeRecentNarrativeForPrompt(snapshot: SnapshotForNarrative): string {
+  const history = Array.isArray(snapshot.narrative_history)
+    ? snapshot.narrative_history.slice(-12)
+    : []
+
+  const lines: string[] = []
+  for (const entry of history) {
+    if (!entry || typeof entry !== 'object') continue
+    const roleRaw = (entry as Record<string, unknown>).role
+    const contentRaw = (entry as Record<string, unknown>).content
+    const role = typeof roleRaw === 'string' ? roleRaw.trim().toLowerCase() : ''
+    const content = typeof contentRaw === 'string' ? contentRaw.trim() : ''
+    if (!content) continue
+    if (role === 'player') {
+      lines.push(`Player: ${content}`)
+      continue
+    }
+    if (role === 'dm') {
+      lines.push(`DM: ${content}`)
+      continue
+    }
+    lines.push(content)
+  }
+
+  return lines.length > 0 ? lines.join('\n') : 'None yet.'
+}
+
 export function buildFallbackNarrative(playerName: string, content: string): string {
   return `${playerName}, the world reacts to "${content}". Describe your immediate next move.`
 }
@@ -167,6 +195,8 @@ export async function generateDmNarrative(input: {
     `Player action: ${content}`,
     'State summary:',
     summarizeSnapshotForPrompt(snapshot),
+    'Recent conversation (newest last):',
+    summarizeRecentNarrativeForPrompt(snapshot),
   ].join('\n')
 
   const startedAt = Date.now()

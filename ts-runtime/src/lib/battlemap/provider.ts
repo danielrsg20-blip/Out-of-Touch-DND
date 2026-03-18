@@ -1,4 +1,5 @@
 import type {
+  BattlemapQualityMode,
   BattlemapStyleConfig,
   SceneSpec,
   TraversalGrid,
@@ -7,6 +8,7 @@ import type {
 export type ImageGenerationPayload = {
   prompt: string
   seed?: string | number
+  qualityMode: BattlemapQualityMode
   style?: BattlemapStyleConfig
 }
 

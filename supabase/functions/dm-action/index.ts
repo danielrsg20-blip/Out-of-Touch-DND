@@ -61,6 +61,7 @@ type SnapshotState = {
   characters: Record<string, Record<string, unknown>>
   map: Record<string, unknown> | null
   combat: Record<string, unknown> | null
+  narrative_history?: Array<Record<string, unknown>>
   usage: { input_tokens: number; output_tokens: number; estimated_cost_usd: number }
 }
 
@@ -1151,6 +1152,23 @@ function getTraversalGridFromMap(map: Record<string, unknown>): TraversalGridPay
   }
 }
 
+function resolveMapModeForMovement(map: Record<string, unknown>): 'ai_generated_image' {
+  const metadata = map.metadata && typeof map.metadata === 'object'
+    ? (map.metadata as Record<string, unknown>)
+    : null
+  const explicit = typeof metadata?.map_mode === 'string' ? metadata.map_mode.trim().toLowerCase() : ''
+  if (explicit === 'ai_generated_image') {
+    return 'ai_generated_image'
+  }
+
+  const imageUrl = typeof metadata?.image_url === 'string' ? metadata.image_url.trim() : ''
+  const source = typeof metadata?.map_source === 'string' ? metadata.map_source.trim().toLowerCase() : ''
+  if (imageUrl.length > 0 || source.includes('vector')) {
+    return 'ai_generated_image'
+  }
+  return 'ai_generated_image'
+}
+
 function hydrateCollisionGridFromTraversalGrid(
   grid: CollisionGrid,
   traversal: TraversalGridPayload,
@@ -1585,6 +1603,7 @@ function defaultSnapshot(): SnapshotState {
     characters: {},
     map: null,
     combat: null,
+    narrative_history: [],
     usage: {
       input_tokens: 0,
       output_tokens: 0,
@@ -2212,6 +2231,7 @@ async function actionPlayerAction(body: Record<string, unknown>) {
   const { sessionId } = await resolveSession(roomCode)
   const member = await resolveMember(sessionId, playerId)
   const { version, snapshot } = await loadSnapshot(sessionId)
+  let currentVersion = version
 
   const mockModeEnabled = isMockModeEnabled(body)
   const startCombat = mockModeEnabled && shouldStartCombat(content, snapshot)
@@ -2246,7 +2266,7 @@ async function actionPlayerAction(body: Record<string, unknown>) {
       inputTokens: 0,
       outputTokens: 0,
     }
-    await saveSnapshot(sessionId, version, nextSnapshot)
+    currentVersion = await saveSnapshot(sessionId, currentVersion, nextSnapshot)
   } else if (/\bend\s*(my\s*)?turn\b/i.test(content) && snapshot.combat) {
     const advanced = advanceCombatState(snapshot, member.characterId, true)
     nextSnapshot = advanced.nextSnapshot
@@ -2254,7 +2274,7 @@ async function actionPlayerAction(body: Record<string, unknown>) {
     combatAdvanceMessage = advanced.ended
       ? (advanced.endReason ?? 'Combat ends.')
       : (advanced.messages.join(' ') || `${advanced.combat?.initiative_order[advanced.combat?.turn_index ?? 0]?.name ?? 'Next combatant'} takes the next turn.`)
-    await saveSnapshot(sessionId, version, nextSnapshot)
+    currentVersion = await saveSnapshot(sessionId, currentVersion, nextSnapshot)
 
     dmGeneration = await generateDmNarrative({
       playerName: member.playerName,
@@ -2274,6 +2294,29 @@ async function actionPlayerAction(body: Record<string, unknown>) {
     })
     narrative = dmGeneration.narrative
   }
+
+  const history = Array.isArray(nextSnapshot.narrative_history)
+    ? [...nextSnapshot.narrative_history]
+    : []
+  history.push(
+    {
+      role: 'player',
+      player_id: playerId,
+      player_name: member.playerName,
+      content,
+      ts: new Date().toISOString(),
+    },
+    {
+      role: 'dm',
+      content: narrative,
+      ts: new Date().toISOString(),
+    },
+  )
+  nextSnapshot = {
+    ...nextSnapshot,
+    narrative_history: history.slice(-120),
+  }
+  currentVersion = await saveSnapshot(sessionId, currentVersion, nextSnapshot)
 
   console.info(JSON.stringify({
     event: 'dm_action_generation',
@@ -2421,6 +2464,15 @@ async function actionMoveToken(body: Record<string, unknown>) {
   if (!mover) {
     throw new Error('Your token is not currently on the map.')
   }
+  const destinationOccupied = entities.some((entity) => {
+    if (String(entity.id ?? '') === characterId) {
+      return false
+    }
+    return Number(entity.x) === x && Number(entity.y) === y
+  })
+  if (destinationOccupied) {
+    throw new Error('Destination tile is occupied by another entity.')
+  }
 
   // 3. Turn check (combat)
   const combat = normalizeCombat(snapshot.combat)
@@ -2430,16 +2482,28 @@ async function actionMoveToken(body: Record<string, unknown>) {
 
   // 4. Build collision grid and find path
   const grid = new CollisionGrid(width, height)
-  const tiles = Array.isArray(map.tiles) ? (map.tiles as Array<Record<string, unknown>>) : []
+  const mapMode = resolveMapModeForMovement(map)
 
-  const traversalGrid = FEATURE_FLAGS.vector_grid_authoritative_enabled && FEATURE_FLAGS.vector_grid_derivation_enabled
+  const traversalGrid = FEATURE_FLAGS.vector_grid_authoritative_enabled
+    && FEATURE_FLAGS.vector_grid_derivation_enabled
     ? getTraversalGridFromMap(map)
     : null
 
+  console.info('[dm-action.move-token] movement grid selection', {
+    map_mode: mapMode,
+    traversal_grid_present: Boolean(traversalGrid),
+    traversal_grid_derivation_enabled: FEATURE_FLAGS.vector_grid_derivation_enabled,
+    vector_grid_authoritative_enabled: FEATURE_FLAGS.vector_grid_authoritative_enabled,
+    map_width: width,
+    map_height: height,
+  })
+
+  if (!traversalGrid) {
+    throw new Error('Traversal grid is required for AI-generated maps and is not available yet.')
+  }
+
   if (traversalGrid) {
     hydrateCollisionGridFromTraversalGrid(grid, traversalGrid, width, height)
-  } else {
-    grid.buildFromMap(tiles)
   }
 
   grid.updateEntityBlocking(entities.filter((e) => String(e.id ?? '') !== characterId))

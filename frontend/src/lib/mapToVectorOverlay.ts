@@ -1,7 +1,6 @@
 import type { Decal, MapData, Overlay, OverlayElement, OverlayLayer, OverlayWorldBounds, Path, Point, Region, TextLabel } from '../types'
 import { applySaturationConstraint } from './colorUtils'
-
-const TILE_SIZE = 32
+import { createMapGridTransform } from './mapGridTransform'
 
 type LabelOptions = {
   showLabels: boolean
@@ -28,14 +27,14 @@ const TILE_STROKE: Record<string, string> = {
   pit: '#07080c',
 }
 
-function tilePolygonPoints(x: number, y: number): Point[] {
-  const px = x * TILE_SIZE
-  const py = y * TILE_SIZE
+function tilePolygonPoints(x: number, y: number, cellWidth: number, cellHeight: number): Point[] {
+  const px = x * cellWidth
+  const py = y * cellHeight
   return [
     { x: px, y: py },
-    { x: px + TILE_SIZE, y: py },
-    { x: px + TILE_SIZE, y: py + TILE_SIZE },
-    { x: px, y: py + TILE_SIZE },
+    { x: px + cellWidth, y: py },
+    { x: px + cellWidth, y: py + cellHeight },
+    { x: px, y: py + cellHeight },
   ]
 }
 
@@ -137,12 +136,19 @@ function avoidOverlap(position: Point, occupied: Array<{ x: number; y: number; w
   return fallback
 }
 
-function roomLabelElement(roomIndex: number, tiles: Array<{ x: number; y: number }>, options: LabelOptions, occupied: Array<{ x: number; y: number; w: number; h: number }>): TextLabel {
+function roomLabelElement(
+  roomIndex: number,
+  tiles: Array<{ x: number; y: number }>,
+  options: LabelOptions,
+  occupied: Array<{ x: number; y: number; w: number; h: number }>,
+  cellWidth: number,
+  cellHeight: number,
+): TextLabel {
   const avgX = tiles.reduce((sum, t) => sum + t.x, 0) / tiles.length
   const avgY = tiles.reduce((sum, t) => sum + t.y, 0) / tiles.length
   const basePosition = {
-    x: avgX * TILE_SIZE + TILE_SIZE * 0.5,
-    y: avgY * TILE_SIZE + TILE_SIZE * 0.5,
+    x: avgX * cellWidth + cellWidth * 0.5,
+    y: avgY * cellHeight + cellHeight * 0.5,
   }
   const placed = avoidOverlap(basePosition, occupied)
 
@@ -287,8 +293,9 @@ function normalizeNarrativeOverlayToMapSpace(map: MapData, narrativeOverlay: Ove
     return narrativeOverlay
   }
 
-  const mapWidthPx = map.width * TILE_SIZE
-  const mapHeightPx = map.height * TILE_SIZE
+  const gridTransform = createMapGridTransform(map)
+  const mapWidthPx = gridTransform.mapWidthPx
+  const mapHeightPx = gridTransform.mapHeightPx
   const scaleX = mapWidthPx / bounds.width_world
   const scaleY = mapHeightPx / bounds.height_world
   const scalarScale = (scaleX + scaleY) / 2
@@ -322,6 +329,9 @@ export function buildVectorBaseOverlayFromMap(
   options: LabelOptions,
   narrativeOverlay: Overlay | null,
 ): Overlay {
+  const gridTransform = createMapGridTransform(map)
+  const cellWidth = gridTransform.cellWidthPx
+  const cellHeight = gridTransform.cellHeightPx
   const baseTileElements: OverlayElement[] = []
   const tokenElements: OverlayElement[] = []
   const labelElements: OverlayElement[] = []
@@ -332,7 +342,7 @@ export function buildVectorBaseOverlayFromMap(
       type: 'polygon',
       id: `tile_${tile.x}_${tile.y}`,
       name: `${tile.type}_${tile.x}_${tile.y}`,
-      points: tilePolygonPoints(tile.x, tile.y),
+      points: tilePolygonPoints(tile.x, tile.y, cellWidth, cellHeight),
       fill: { color: TILE_FILL[tile.type] ?? '#2f3548' },
       fill_opacity: tile.type === 'floor' ? 0.9 : 1,
       stroke: {
@@ -355,7 +365,7 @@ export function buildVectorBaseOverlayFromMap(
         name: `${text} label`,
         parent_object_id: region.id,
         text,
-        position: { x: tile.x * TILE_SIZE + TILE_SIZE * 0.5, y: tile.y * TILE_SIZE + TILE_SIZE * 0.52 },
+        position: { x: tile.x * cellWidth + cellWidth * 0.5, y: tile.y * cellHeight + cellHeight * 0.52 },
         color: '#f4f6fb',
         font_size: 10,
         outline_color: 'rgba(8, 10, 16, 0.82)',
@@ -373,14 +383,14 @@ export function buildVectorBaseOverlayFromMap(
   }
 
   for (const entity of map.entities) {
-    const cx = entity.x * TILE_SIZE + TILE_SIZE * 0.5
-    const cy = entity.y * TILE_SIZE + TILE_SIZE * 0.5
+    const cx = entity.x * cellWidth + cellWidth * 0.5
+    const cy = entity.y * cellHeight + cellHeight * 0.5
 
     const token: Region = {
       type: 'polygon',
       id: `entity_${entity.id}`,
       name: entity.name,
-      points: circlePolygonPoints(cx, cy, TILE_SIZE * 0.33),
+      points: circlePolygonPoints(cx, cy, Math.min(cellWidth, cellHeight) * 0.33),
       fill: {
         color:
           entity.type === 'pc'
@@ -407,7 +417,7 @@ export function buildVectorBaseOverlayFromMap(
         name: `${entity.name} label`,
         parent_object_id: token.id,
         text: isSecretDoor ? 'Secret Door' : 'Trap',
-        position: { x: cx, y: cy - TILE_SIZE * 0.62 },
+        position: { x: cx, y: cy - Math.min(cellWidth, cellHeight) * 0.62 },
         color: '#ffd9d9',
         font_size: 10,
         outline_color: 'rgba(20, 6, 6, 0.9)',
@@ -426,7 +436,7 @@ export function buildVectorBaseOverlayFromMap(
 
   const rooms = roomComponents(map)
   rooms.forEach((component, idx) => {
-    labelElements.push(roomLabelElement(idx + 1, component, options, occupiedLabelBoxes))
+    labelElements.push(roomLabelElement(idx + 1, component, options, occupiedLabelBoxes, cellWidth, cellHeight))
   })
 
   const baseLayers: OverlayLayer[] = [

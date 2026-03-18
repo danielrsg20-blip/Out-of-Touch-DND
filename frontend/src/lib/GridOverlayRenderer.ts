@@ -11,6 +11,7 @@
  */
 
 import type { GridOverlayConfig, GridOverlayMode, FrontendTraversalGrid } from '../types'
+import type { MapGridTransform } from './mapGridTransform'
 
 const TILE_SIZE = 32   // must stay in sync with MapCanvas
 
@@ -74,6 +75,8 @@ function renderTileGridLines(
   ctx: CanvasRenderingContext2D,
   mapWidth: number,
   mapHeight: number,
+  cellWidthPx: number,
+  cellHeightPx: number,
   lineColor: string,
   lineWidth: number,
 ): void {
@@ -83,15 +86,15 @@ function renderTileGridLines(
   // Vertical lines
   for (let x = 0; x <= mapWidth; x++) {
     ctx.beginPath()
-    ctx.moveTo(x * TILE_SIZE, 0)
-    ctx.lineTo(x * TILE_SIZE, mapHeight * TILE_SIZE)
+    ctx.moveTo(x * cellWidthPx, 0)
+    ctx.lineTo(x * cellWidthPx, mapHeight * cellHeightPx)
     ctx.stroke()
   }
   // Horizontal lines
   for (let y = 0; y <= mapHeight; y++) {
     ctx.beginPath()
-    ctx.moveTo(0, y * TILE_SIZE)
-    ctx.lineTo(mapWidth * TILE_SIZE, y * TILE_SIZE)
+    ctx.moveTo(0, y * cellHeightPx)
+    ctx.lineTo(mapWidth * cellWidthPx, y * cellHeightPx)
     ctx.stroke()
   }
 }
@@ -211,11 +214,14 @@ export function renderGridOverlay(
   config: GridOverlayConfig,
   map: { width: number; height: number } | null,
   traversalGrid: FrontendTraversalGrid | null,
+  gridTransform?: MapGridTransform,
 ): void {
   if (!config.visible || !map) return
 
-  const mapWidthPx  = map.width  * TILE_SIZE
-  const mapHeightPx = map.height * TILE_SIZE
+  const mapWidthPx  = gridTransform?.mapWidthPx ?? (map.width * TILE_SIZE)
+  const mapHeightPx = gridTransform?.mapHeightPx ?? (map.height * TILE_SIZE)
+  const cellWidthPx = gridTransform?.cellWidthPx ?? TILE_SIZE
+  const cellHeightPx = gridTransform?.cellHeightPx ?? TILE_SIZE
 
   ctx.save()
   ctx.globalAlpha = Math.max(0, Math.min(1, config.opacity))
@@ -225,7 +231,15 @@ export function renderGridOverlay(
   } else {
     // Fallback: plain tile-grid line overlay (outlines and blocked are both
     // useful without traversal data; movement_cost and tags are no-ops here).
-    renderTileGridLines(ctx, map.width, map.height, config.gridLineColor, config.gridLineWidth)
+    renderTileGridLines(
+      ctx,
+      map.width,
+      map.height,
+      cellWidthPx,
+      cellHeightPx,
+      config.gridLineColor,
+      config.gridLineWidth,
+    )
   }
 
   ctx.restore()

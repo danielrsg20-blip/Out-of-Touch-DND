@@ -2,17 +2,33 @@ import { useState, useCallback, useRef } from 'react'
 
 const TILE_SIZE = 32
 
+type GridScreenTransformOptions = {
+  cellWidthPx?: number
+  cellHeightPx?: number
+}
+
 interface MapInteraction {
   offsetX: number
   offsetY: number
   zoom: number
   isPanning: boolean
-  fitToView: (mapWidthTiles: number, mapHeightTiles: number, viewportWidth: number, viewportHeight: number) => void
+  fitToView: (
+    mapWidthTiles: number,
+    mapHeightTiles: number,
+    viewportWidth: number,
+    viewportHeight: number,
+    options?: GridScreenTransformOptions,
+  ) => void
   handleWheel: (e: WheelEvent) => void
   handlePointerDown: (e: React.PointerEvent) => void
   handlePointerMove: (e: React.PointerEvent) => void
   handlePointerUp: () => void
-  screenToGrid: (screenX: number, screenY: number, canvasRect: DOMRect) => { gx: number; gy: number }
+  screenToGrid: (
+    screenX: number,
+    screenY: number,
+    canvasRect: DOMRect,
+    options?: GridScreenTransformOptions,
+  ) => { gx: number; gy: number }
 }
 
 export function useMapInteraction(): MapInteraction {
@@ -22,9 +38,17 @@ export function useMapInteraction(): MapInteraction {
   const [isPanning, setIsPanning] = useState(false)
   const lastPos = useRef({ x: 0, y: 0 })
 
-  const fitToView = useCallback((mapWidthTiles: number, mapHeightTiles: number, viewportWidth: number, viewportHeight: number) => {
-    const mapWidthPx = Math.max(1, mapWidthTiles * TILE_SIZE)
-    const mapHeightPx = Math.max(1, mapHeightTiles * TILE_SIZE)
+  const fitToView = useCallback((
+    mapWidthTiles: number,
+    mapHeightTiles: number,
+    viewportWidth: number,
+    viewportHeight: number,
+    options?: GridScreenTransformOptions,
+  ) => {
+    const cellWidthPx = Number(options?.cellWidthPx) > 0 ? Number(options?.cellWidthPx) : TILE_SIZE
+    const cellHeightPx = Number(options?.cellHeightPx) > 0 ? Number(options?.cellHeightPx) : TILE_SIZE
+    const mapWidthPx = Math.max(1, mapWidthTiles * cellWidthPx)
+    const mapHeightPx = Math.max(1, mapHeightTiles * cellHeightPx)
 
     const fitScale = Math.min(viewportWidth / mapWidthPx, viewportHeight / mapHeightPx)
     const targetZoom = Math.max(0.25, Math.min(4, fitScale * 0.98))
@@ -65,14 +89,21 @@ export function useMapInteraction(): MapInteraction {
     setIsPanning(false)
   }, [])
 
-  const screenToGrid = useCallback((screenX: number, screenY: number, canvasRect: DOMRect) => {
+  const screenToGrid = useCallback((
+    screenX: number,
+    screenY: number,
+    canvasRect: DOMRect,
+    options?: GridScreenTransformOptions,
+  ) => {
+    const cellWidthPx = Number(options?.cellWidthPx) > 0 ? Number(options?.cellWidthPx) : TILE_SIZE
+    const cellHeightPx = Number(options?.cellHeightPx) > 0 ? Number(options?.cellHeightPx) : TILE_SIZE
     const canvasX = screenX - canvasRect.left
     const canvasY = screenY - canvasRect.top
     const worldX = (canvasX - offsetX) / zoom
     const worldY = (canvasY - offsetY) / zoom
     return {
-      gx: Math.floor(worldX / TILE_SIZE),
-      gy: Math.floor(worldY / TILE_SIZE),
+      gx: Math.floor(worldX / cellWidthPx),
+      gy: Math.floor(worldY / cellHeightPx),
     }
   }, [offsetX, offsetY, zoom])
 

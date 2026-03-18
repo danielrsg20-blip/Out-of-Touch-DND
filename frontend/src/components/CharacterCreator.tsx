@@ -185,6 +185,10 @@ export default function CharacterCreator() {
         const sessionState = useSessionStore.getState()
         sessionState.setPlayers(sessionState.players.map(p => p.id === playerId ? { ...p, character_id: created.id as string } : p))
       }
+      // Sync the full state returned by create_character so map.entities (with the placed PC token) is loaded
+      if (payload.state && typeof payload.state === 'object') {
+        useGameStore.getState().syncState(payload.state as any)
+      }
       useSessionStore.getState().setPhase('playing')
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Unable to create character right now.')

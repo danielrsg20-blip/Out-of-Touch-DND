@@ -1,5 +1,6 @@
 import { buildBattlemapPrompt } from './promptFactory.js'
 import { createBattlemapProvider } from './providerFactory.js'
+import { defaultGridCellSizeWorldForQuality, resolveBattlemapQualityMode } from './qualityPolicy.js'
 import type {
   BattlemapAsset,
   BattlemapGenerationRequest,
@@ -23,9 +24,9 @@ function ensureFinitePositiveInt(value: number, name: string): number {
   return Math.floor(value)
 }
 
-function mergeGridConfig(input: Partial<GridOverlayConfig> | undefined): GridOverlayConfig {
+function mergeGridConfig(input: Partial<GridOverlayConfig> | undefined, qualityMode: 'fast' | 'final'): GridOverlayConfig {
   const merged: GridOverlayConfig = {
-    cell_size_world: input?.cell_size_world ?? DEFAULT_GRID_OVERLAY_CONFIG.cell_size_world,
+    cell_size_world: input?.cell_size_world ?? defaultGridCellSizeWorldForQuality(qualityMode),
     line_thickness: input?.line_thickness ?? DEFAULT_GRID_OVERLAY_CONFIG.line_thickness,
     line_opacity: input?.line_opacity ?? DEFAULT_GRID_OVERLAY_CONFIG.line_opacity,
     line_color: input?.line_color ?? DEFAULT_GRID_OVERLAY_CONFIG.line_color,
@@ -56,8 +57,9 @@ export async function generateBattlemap(request: BattlemapGenerationRequest): Pr
   }
   validateSceneSpec(request.scene_spec)
 
+  const qualityMode = resolveBattlemapQualityMode(request.quality_mode)
   const startedAt = Date.now()
-  const grid = mergeGridConfig(request.grid_settings)
+  const grid = mergeGridConfig(request.grid_settings, qualityMode)
   const prompt = buildBattlemapPrompt(request.scene_spec, request.style_config)
 
   const provider = createBattlemapProvider('openai')
@@ -66,6 +68,7 @@ export async function generateBattlemap(request: BattlemapGenerationRequest): Pr
   const image = await provider.generateBattlemapImage({
     prompt,
     seed: request.seed,
+    qualityMode,
     style: request.style_config,
   })
   const imageMs = Date.now() - imageStarted
@@ -108,6 +111,7 @@ export async function generateBattlemap(request: BattlemapGenerationRequest): Pr
       provider: 'openai',
       model: image.model,
       model_version: image.modelVersion,
+      quality_mode: qualityMode,
       prompt,
       prompt_revision: image.revisedPrompt,
       generated_at: nowIso,
@@ -147,10 +151,18 @@ export async function regenerateBattlemap(request: BattlemapRegenerationRequest)
   const provider = createBattlemapProvider('openai')
   const nowIso = new Date().toISOString()
 
+  const existingQualityMode = resolveBattlemapQualityMode(existing.generation_audit.quality_mode)
+  const qualityMode = resolveBattlemapQualityMode(request.quality_mode, existingQualityMode)
+  const baseGridConfig: Partial<GridOverlayConfig> = {
+    ...existing.grid_overlay_config,
+    cell_size_world: request.quality_mode ? undefined : existing.grid_overlay_config.cell_size_world,
+  }
+  const gridConfig = mergeGridConfig(baseGridConfig, qualityMode)
+
   const mapWidthFeet = ensureFinitePositiveInt(existing.scene_spec.map_width_feet, 'scene_spec.map_width_feet')
   const mapHeightFeet = ensureFinitePositiveInt(existing.scene_spec.map_height_feet, 'scene_spec.map_height_feet')
-  const gridWidthCells = ensureFinitePositiveInt(mapWidthFeet / existing.grid_overlay_config.cell_size_world, 'grid width')
-  const gridHeightCells = ensureFinitePositiveInt(mapHeightFeet / existing.grid_overlay_config.cell_size_world, 'grid height')
+  const gridWidthCells = ensureFinitePositiveInt(mapWidthFeet / gridConfig.cell_size_world, 'grid width')
+  const gridHeightCells = ensureFinitePositiveInt(mapHeightFeet / gridConfig.cell_size_world, 'grid height')
 
   let imageMs = 0
   let traversalMs = 0
@@ -173,6 +185,7 @@ export async function regenerateBattlemap(request: BattlemapRegenerationRequest)
     const image = await provider.generateBattlemapImage({
       prompt: existing.generation_audit.prompt,
       seed: nextSeed,
+      qualityMode,
     })
     imageMs = Date.now() - imageStarted
 
@@ -191,7 +204,7 @@ export async function regenerateBattlemap(request: BattlemapRegenerationRequest)
     sceneSpec: existing.scene_spec,
     gridWidthCells,
     gridHeightCells,
-    cellSizeWorld: existing.grid_overlay_config.cell_size_world,
+    cellSizeWorld: gridConfig.cell_size_world,
   })
   traversalMs = Date.now() - traversalStarted
 
@@ -203,11 +216,13 @@ export async function regenerateBattlemap(request: BattlemapRegenerationRequest)
     image_url: imageUrl,
     image_width_px: imageWidthPx,
     image_height_px: imageHeightPx,
+    grid_overlay_config: gridConfig,
     traversal_grid: traversalGrid,
     generation_audit: {
       ...existing.generation_audit,
       model,
       model_version: modelVersion,
+      quality_mode: qualityMode,
       prompt_revision: revisedPrompt,
       generated_at: nowIso,
       seed: nextSeed,

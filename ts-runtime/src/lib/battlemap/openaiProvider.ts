@@ -4,7 +4,7 @@ import {
   type TraversalCell,
   type TraversalGrid,
 } from './types.js'
-import { inferImageSize } from './promptFactory.js'
+import { resolveImageQualityForMode, resolveImageSizeForQuality } from './qualityPolicy.js'
 import type {
   BattlemapProvider,
   GeneratedBattlemapImage,
@@ -118,6 +118,12 @@ function decodeBase64ToBytes(base64: string): Uint8Array {
   return new Uint8Array(buffer)
 }
 
+function resolveImageQuality(qualityMode: ImageGenerationPayload['qualityMode']): 'standard' | 'hd' {
+  const allowHd = String(process.env.BATTLEMAP_FINAL_HD_ENABLED ?? '').trim().toLowerCase()
+  const hdEnabled = allowHd === '1' || allowHd === 'true' || allowHd === 'yes' || allowHd === 'on'
+  return resolveImageQualityForMode(qualityMode, hdEnabled)
+}
+
 export class OpenAiBattlemapProvider implements BattlemapProvider {
   readonly providerId = 'openai' as const
   private readonly apiKey: string
@@ -135,15 +141,17 @@ export class OpenAiBattlemapProvider implements BattlemapProvider {
       created?: number
     }
 
-    const size = inferImageSize(payload.style)
+    const size = resolveImageSizeForQuality(payload.qualityMode, payload.style)
+    const quality = resolveImageQuality(payload.qualityMode)
+    const model = String(process.env.BATTLEMAP_IMAGE_MODEL ?? 'dall-e-3').trim() || 'dall-e-3'
 
     const response = await fetchOpenAiJson<OpenAiImageResponse>(
       this.apiKey,
       'https://api.openai.com/v1/images/generations',
       {
-        model: 'dall-e-3',
+        model,
         prompt: payload.prompt,
-        quality: 'standard',
+        quality,
         size,
         response_format: 'b64_json',
       },
@@ -165,7 +173,7 @@ export class OpenAiBattlemapProvider implements BattlemapProvider {
       mimeType: 'image/png',
       widthPx: width,
       heightPx: height,
-      model: 'dall-e-3',
+      model,
       modelVersion: '2023-11-06',
       revisedPrompt: typeof first?.revised_prompt === 'string' ? first.revised_prompt : undefined,
       seedSupported: false,
@@ -193,11 +201,13 @@ export class OpenAiBattlemapProvider implements BattlemapProvider {
       `Notable features: ${payload.sceneSpec.notable_features.join(', ') || 'none'}.`,
     ].join('\n')
 
+    const traversalModel = String(process.env.BATTLEMAP_TRAVERSAL_MODEL ?? 'gpt-4o-mini').trim() || 'gpt-4o-mini'
+
     const response = await fetchOpenAiJson<OpenAiChatResponse>(
       this.apiKey,
       'https://api.openai.com/v1/chat/completions',
       {
-        model: 'gpt-4o-mini',
+        model: traversalModel,
         temperature: 0,
         response_format: { type: 'json_object' },
         messages: [

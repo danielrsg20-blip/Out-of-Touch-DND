@@ -5,12 +5,48 @@ import { getSupabaseClient, hasSupabaseConfig, invokeEdgeFunction } from '../lib
 import { extractTraversalGridFromPayload } from '../lib/battlemapState'
 import type { RealtimeChannel } from '@supabase/supabase-js'
 import { useOverlayStore } from './overlayStore'
+import { useGameStore } from './gameStore'
+import { useAuthStore } from './authStore'
 
 const SUPABASE_SESSIONS_FLAG = import.meta.env.VITE_USE_SUPABASE_SESSIONS
 const USE_SUPABASE_SESSIONS = SUPABASE_SESSIONS_FLAG
   ? SUPABASE_SESSIONS_FLAG === 'true'
   : true
 let sessionEventsChannel: RealtimeChannel | null = null
+type BattlemapQualityMode = 'fast' | 'final'
+
+const BATTLEMAP_QUALITY_MODE_KEY_PREFIX = 'otdnd.battlemapQualityMode'
+
+function isBattlemapQualityMode(value: unknown): value is BattlemapQualityMode {
+  return value === 'fast' || value === 'final'
+}
+
+function battlemapQualityModeStorageKey(roomCode: string): string {
+  return `${BATTLEMAP_QUALITY_MODE_KEY_PREFIX}.${roomCode.toUpperCase()}`
+}
+
+function readBattlemapQualityMode(roomCode: string | null | undefined): BattlemapQualityMode {
+  if (!roomCode) {
+    return 'fast'
+  }
+  try {
+    const raw = window.localStorage.getItem(battlemapQualityModeStorageKey(roomCode))
+    return isBattlemapQualityMode(raw) ? raw : 'fast'
+  } catch {
+    return 'fast'
+  }
+}
+
+function writeBattlemapQualityMode(roomCode: string | null | undefined, mode: BattlemapQualityMode): void {
+  if (!roomCode) {
+    return
+  }
+  try {
+    window.localStorage.setItem(battlemapQualityModeStorageKey(roomCode), mode)
+  } catch {
+    // Keep in-memory behavior even if localStorage is unavailable.
+  }
+}
 
 function shouldUseSupabaseSessions(): boolean {
   return USE_SUPABASE_SESSIONS && hasSupabaseConfig()
@@ -74,6 +110,49 @@ function startSessionEvents(sessionId: string, roomCode: string) {
   sessionEventsChannel = channel
 }
 
+function normalizeGameState(payload: Record<string, unknown>): Record<string, unknown> {
+  const wrapped = payload.game_state as Record<string, unknown> | undefined
+  return wrapped ?? payload
+}
+
+function isBattlemapPending(state: Record<string, unknown>): boolean {
+  const map = state.map as Record<string, unknown> | undefined
+  const metadata = map?.metadata as Record<string, unknown> | undefined
+  const generationStatus = typeof metadata?.generation_status === 'string'
+    ? metadata.generation_status
+    : ''
+  const imageUrl = typeof metadata?.image_url === 'string' ? metadata.image_url.trim() : ''
+  return generationStatus === 'pending' && imageUrl.length === 0
+}
+
+async function syncStateWithPendingPolling(roomCode: string, source: 'create' | 'join'): Promise<void> {
+  const maxAttempts = 30
+
+  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+    const latestState = await useSessionStore.getState().getSession(roomCode)
+
+    if (!latestState || typeof latestState !== 'object') {
+      throw new Error('Session state response is not an object')
+    }
+
+    const stateToSync = normalizeGameState(latestState)
+    useGameStore.getState().syncState(stateToSync as any)
+
+    if (!isBattlemapPending(stateToSync)) {
+      if (attempt > 1) {
+        console.info(`Battlemap became ready after ${attempt} ${source} sync attempts.`)
+      }
+      return
+    }
+
+    if (attempt < maxAttempts) {
+      await new Promise((resolve) => setTimeout(resolve, 3000))
+    }
+  }
+
+  console.warn('Battlemap is still pending after polling window. It will update on the next session sync.')
+}
+
 interface SessionState {
   sessionId: string | null
   roomCode: string | null
@@ -89,6 +168,7 @@ interface SessionState {
   campaignPremise: string | null
   campaignTone: string | null
   campaignTitle: string | null
+  battlemapQualityMode: BattlemapQualityMode
 
   setPhase: (phase: SessionState['phase']) => void
   createSession: (playerName: string, mockMode?: boolean, campaignPremise?: string, campaignTone?: string, campaignTitle?: string) => Promise<void>
@@ -96,6 +176,7 @@ interface SessionState {
   getSession: (roomCode: string) => Promise<Record<string, unknown>>
   setPlayers: (players: PlayerData[]) => void
   setConnected: (connected: boolean) => void
+  setBattlemapQualityMode: (mode: BattlemapQualityMode) => void
   addPlayer: (player: PlayerData) => void
   removePlayer: (playerId: string) => void
   listCampaigns: () => Promise<void>
@@ -119,6 +200,7 @@ export const useSessionStore = create<SessionState>((set) => ({
   campaignPremise: null,
   campaignTone: null,
   campaignTitle: null,
+  battlemapQualityMode: 'fast',
 
   setPhase: (phase) => set({ phase }),
 
@@ -206,6 +288,7 @@ export const useSessionStore = create<SessionState>((set) => ({
       campaignPremise: campaignPremise || null,
       campaignTone: campaignTone || null,
       campaignTitle: campaignTitle || null,
+      battlemapQualityMode: readBattlemapQualityMode(data.room_code),
     })
 
     if (sessionId) {
@@ -216,33 +299,9 @@ export const useSessionStore = create<SessionState>((set) => ({
 
     void (async () => {
       try {
-        const latestState = await useSessionStore.getState().getSession(createdRoomCode)
-        const { useGameStore } = await import('./gameStore')
-
-        if (!latestState || typeof latestState !== 'object') {
-          console.error('Invalid session state response:', latestState)
-          throw new Error('Session state response is not an object')
-        }
-
-        const normalizedState = (latestState as Record<string, unknown>)?.game_state as Record<string, unknown> | undefined
-        const stateToSync = normalizedState ?? latestState
-
-        if (!stateToSync.map) {
-          console.warn('Session state has no map property:', stateToSync)
-        }
-
-        useGameStore.getState().syncState(stateToSync as any)
+        await syncStateWithPendingPolling(createdRoomCode, 'create')
       } catch (error) {
         console.error('Failed to sync initial game state after session create:', error instanceof Error ? error.message : error)
-        try {
-          await new Promise(resolve => setTimeout(resolve, 500))
-          const { useGameStore } = await import('./gameStore')
-          const retryState = await useSessionStore.getState().getSession(createdRoomCode)
-          useGameStore.getState().syncState(retryState as any)
-          console.log('Successfully synced state on retry')
-        } catch (retryError) {
-          console.error('Retry also failed:', retryError instanceof Error ? retryError.message : retryError)
-        }
       }
     })()
   },
@@ -292,6 +351,7 @@ export const useSessionStore = create<SessionState>((set) => ({
       mockMode: false,
       isHost: false,
       players,
+      battlemapQualityMode: readBattlemapQualityMode(roomCode),
     })
 
     if (sessionId) {
@@ -300,37 +360,17 @@ export const useSessionStore = create<SessionState>((set) => ({
 
     void (async () => {
       try {
-        const normalizedRoomCode = roomCode.toUpperCase()
-        const latestState = await useSessionStore.getState().getSession(normalizedRoomCode)
-        const { useGameStore } = await import('./gameStore')
-
-        if (!latestState || typeof latestState !== 'object') {
-          console.error('Invalid session state response:', latestState)
-          throw new Error('Session state response is not an object')
-        }
-
-        const normalizedState = (latestState as Record<string, unknown>)?.game_state as Record<string, unknown> | undefined
-        const stateToSync = normalizedState ?? latestState
-
-        if (!stateToSync.map) {
-          console.warn('Session state has no map property:', stateToSync)
-        }
-
-        useGameStore.getState().syncState(stateToSync as any)
+        await syncStateWithPendingPolling(roomCode.toUpperCase(), 'join')
       } catch (error) {
         console.error('Failed to sync initial game state after session join:', error instanceof Error ? error.message : error)
-        try {
-          await new Promise(resolve => setTimeout(resolve, 500))
-          const { useGameStore } = await import('./gameStore')
-          const retryState = await useSessionStore.getState().getSession(roomCode.toUpperCase())
-          useGameStore.getState().syncState(retryState as any)
-          console.log('Successfully synced state on retry')
-        } catch (retryError) {
-          console.error('Retry also failed:', retryError instanceof Error ? retryError.message : retryError)
-        }
       }
     })()
   },
+
+  setBattlemapQualityMode: (mode) => set((state) => {
+    writeBattlemapQualityMode(state.roomCode, mode)
+    return { battlemapQualityMode: mode }
+  }),
 
   setPlayers: (players) => set({ players }),
   setConnected: (connected) => set({ connected }),
@@ -338,7 +378,6 @@ export const useSessionStore = create<SessionState>((set) => ({
   removePlayer: (playerId) => set((s) => ({ players: s.players.filter(p => p.id !== playerId) })),
 
   listCampaigns: async () => {
-    const { useAuthStore } = await import('./authStore')
     const token = useAuthStore.getState().token
     if (!token) return
     set({ campaignsLoading: true })
@@ -359,7 +398,6 @@ export const useSessionStore = create<SessionState>((set) => ({
   },
 
   fetchCampaignCharacters: async (campaignId) => {
-    const { useAuthStore } = await import('./authStore')
     const token = useAuthStore.getState().token
     if (!token) return []
     try {
@@ -375,7 +413,6 @@ export const useSessionStore = create<SessionState>((set) => ({
   },
 
   resumeCampaign: async (campaignId, playerName, characterId?) => {
-    const { useAuthStore } = await import('./authStore')
     const token = useAuthStore.getState().token
     if (!token) {
       throw new Error('Authentication required to resume a campaign.')
@@ -423,6 +460,7 @@ export const useSessionStore = create<SessionState>((set) => ({
       campaignPremise: null,
       campaignTone: null,
       campaignTitle: null,
+      battlemapQualityMode: 'fast',
     })
   },
 }))

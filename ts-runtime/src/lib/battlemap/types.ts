@@ -16,6 +16,7 @@ export const ENCOUNTER_TYPES = ['ambush', 'siege', 'chase', 'investigation', 'di
 export const MOOD_STYLES = ['hand-drawn', 'painterly', 'parchment', 'gritty', 'high-fantasy', 'realistic'] as const
 
 export const SATURATION_PRESETS = ['muted', 'balanced', 'vibrant'] as const
+export const BATTLEMAP_QUALITY_MODES = ['fast', 'final'] as const
 
 export const TRAVERSAL_TAG_WHITELIST = [
   'open_ground',
@@ -42,6 +43,7 @@ export type SceneBiome = (typeof SCENE_BIOMES)[number]
 export type EncounterType = (typeof ENCOUNTER_TYPES)[number]
 export type MoodStyle = (typeof MOOD_STYLES)[number]
 export type SaturationPreset = (typeof SATURATION_PRESETS)[number]
+export type BattlemapQualityMode = (typeof BATTLEMAP_QUALITY_MODES)[number]
 export type TraversalTag = (typeof TRAVERSAL_TAG_WHITELIST)[number]
 
 export type SceneSpec = {
@@ -64,6 +66,7 @@ export type BattlemapStyleConfig = {
 export type BattlemapGenerationRequest = {
   campaign_id: string
   scene_spec: SceneSpec
+  quality_mode?: BattlemapQualityMode
   seed?: string | number
   style_config?: BattlemapStyleConfig
   grid_settings?: Partial<GridOverlayConfig>
@@ -99,6 +102,7 @@ export type BattlemapGenerationAudit = {
   provider: 'openai'
   model: string
   model_version: string
+  quality_mode?: BattlemapQualityMode
   prompt: string
   prompt_revision?: string
   generated_at: string
@@ -139,6 +143,7 @@ export type BattlemapRegenerationMode = 'same_settings' | 'new_seed' | 'traversa
 export type BattlemapRegenerationRequest = {
   battlemap_id: string
   mode: BattlemapRegenerationMode
+  quality_mode?: BattlemapQualityMode
   seed?: string | number
 }
 

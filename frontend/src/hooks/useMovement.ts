@@ -10,6 +10,8 @@ import { useGameStore } from "../stores/gameStore";
 import { MovementController } from "../lib/systems/movement/movementController";
 import { CollisionGrid } from "../lib/systems/movement/collisionGrid";
 import type { NavNode } from "../lib/systems/movement/collisionGrid";
+import { resolveMapMode } from "../lib/battlemapState";
+import { createMapGridTransform } from "../lib/mapGridTransform";
 
 export interface UseMovementReturn {
   isMoving: boolean;
@@ -17,6 +19,7 @@ export interface UseMovementReturn {
   executeMove: (entityId: string, targetX: number, targetY: number) => Promise<boolean>;
   calculateReachable: (entityId: string) => Set<string>;
   getPathPreview: (entityId: string, targetX: number, targetY: number) => NavNode[];
+  getPathPreviewWorld: (entityId: string, targetX: number, targetY: number) => Array<{ x: number; y: number }>;
 }
 
 export function useMovement(sendMoveToken?: (characterId: string, x: number, y: number) => void): UseMovementReturn {
@@ -30,7 +33,13 @@ export function useMovement(sendMoveToken?: (characterId: string, x: number, y: 
     if (!mapData) return null;
 
     const grid = new CollisionGrid(mapData.width, mapData.height);
-    grid.buildFromMap(mapData.tiles, mapData.width, mapData.height, mapData.traversal_grid);
+    grid.buildFromMap(
+      mapData.tiles,
+      mapData.width,
+      mapData.height,
+      mapData.traversal_grid,
+      { mapMode: resolveMapMode(mapData) },
+    );
 
     // Add entity blocking
     if (mapData.entities) {
@@ -130,11 +139,24 @@ export function useMovement(sendMoveToken?: (characterId: string, x: number, y: 
     [gameStore.map, collisionGrid]
   );
 
+  // Get path preview projected to world-space pixels via shared map-grid transform.
+  const getPathPreviewWorld = useCallback(
+    (entityId: string, targetX: number, targetY: number): Array<{ x: number; y: number }> => {
+      const mapData = gameStore.map;
+      if (!mapData) return [];
+      const path = getPathPreview(entityId, targetX, targetY);
+      const gridTransform = createMapGridTransform(mapData);
+      return path.map((node) => gridTransform.cellToPixelCenter(node.x, node.y));
+    },
+    [gameStore.map, getPathPreview]
+  );
+
   return {
     isMoving,
     error,
     executeMove,
     calculateReachable,
     getPathPreview,
+    getPathPreviewWorld,
   };
 }

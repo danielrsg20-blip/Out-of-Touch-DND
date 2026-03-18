@@ -3,16 +3,12 @@ import { useGameStore } from '../../stores/gameStore'
 import { useSessionStore } from '../../stores/sessionStore'
 import { useMapInteraction } from '../../hooks/useMapInteraction'
 import { drawOverlays } from './OverlayLayer'
-import type { TileData, GridOverlayMode } from '../../types'
+import type { GridOverlayMode } from '../../types'
 import { renderOverlayLayers } from '../../lib/VectorOverlayRenderer'
 import { renderGridOverlay } from '../../lib/GridOverlayRenderer'
 import { useOverlayStore } from '../../stores/overlayStore'
 import { resolveSpriteUrl } from '../../data/spriteManifest'
-import {
-  ENVIRONMENT_SPRITESHEET_URL,
-  loadEnvironmentSpriteLookup,
-  resolveEnvironmentSpriteRect,
-} from '../../data/environmentSpriteAtlas'
+import { MAP_MODE_AI, mergeBattlemapAssetIntoMap, resolveMapMode } from '../../lib/battlemapState'
 import {
   MONSTER_SPRITESHEET_URL,
   getMonsterFrameKeysForBaseLabel,
@@ -28,39 +24,11 @@ import {
 } from '../../config/characterSprites'
 import { getMonsterSpriteCandidates } from '../../config/monsterSprites'
 import { buildVectorBaseOverlayFromMap } from '../../lib/mapToVectorOverlay'
-import { createSpritePipelineAssertHarness, type SpritePipelineHarnessSnapshot } from '../../lib/spritePipelineAssert'
+import { createMapGridTransform } from '../../lib/mapGridTransform'
 import './MapCanvas.css'
 
-const TILE_SIZE = 32
-const BASE_TOKEN_SPRITE_SIZE = TILE_SIZE * 0.86
 const CHARACTER_SPRITE_SCALE = 1.5
 const ANIM_FRAME_MS = 350  // ms per frame (~3fps idle animation)
-
-const TILE_COLORS: Record<string, string> = {
-  floor: '#3a3a4a',
-  wall: '#1a1a2a',
-  door: '#8B7355',
-  water: '#2a5a8a',
-  pit: '#0a0a0a',
-  pillar: '#5a5a6a',
-  stairs_up: '#4a6a4a',
-  stairs_down: '#6a4a4a',
-  chest: '#3a3a4a',
-  rubble: '#4a4a3a',
-}
-
-const TILE_TYPE_ATLAS_FALLBACK: Record<string, string> = {
-  floor: 'env:dirt_floor',
-  wall: 'env:stone_wall',
-  door: 'env:stone_bricks',
-  water: 'env:deep water',
-  pit: 'env:lava_wall',
-  pillar: 'env:stone_wall_dark',
-  stairs_up: 'env:stone_floor',
-  stairs_down: 'env:stone_floor',
-  chest: 'env:stone_bricks',
-  rubble: 'env:cracked_stone',
-}
 
 const ENTITY_COLORS: Record<string, string> = {
   pc: '#3498db',
@@ -132,18 +100,6 @@ function inferPropSpriteIdByName(name: string): string {
   return 'prop_stone'
 }
 
-function resolveEnvironmentLabel(spriteKey: string | undefined): string | null {
-  if (!spriteKey) {
-    return null
-  }
-  const normalized = spriteKey
-    .replace(/^env(ironment)?:/i, '')
-    .trim()
-    .toLowerCase()
-    .replace(/[\s_]+/g, ' ')
-  return normalized || null
-}
-
 export default function MapCanvas({ onTileClick, onEntityClick, targetingMode = false }: MapCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
@@ -151,7 +107,6 @@ export default function MapCanvas({ onTileClick, onEntityClick, targetingMode = 
   const imageRef = useRef<HTMLImageElement | null>(null)
   const imageUrlRef = useRef<string | null>(null)
   const characterSheetCacheRef = useRef<Map<string, HTMLImageElement | 'loading' | null>>(new Map())
-  const environmentSheetCacheRef = useRef<Map<string, HTMLImageElement | 'loading' | null>>(new Map())
   const monsterSheetCacheRef = useRef<Map<string, HTMLImageElement | 'loading' | null>>(new Map())
   const spriteCacheRef = useRef<Map<string, HTMLImageElement | 'loading' | null>>(new Map())
   const enemyMonsterVariantByEntityIdRef = useRef<Map<string, string>>(new Map())
@@ -165,46 +120,20 @@ export default function MapCanvas({ onTileClick, onEntityClick, targetingMode = 
   const combat = useGameStore(s => s.combat)
   const characters = useGameStore(s => s.characters)
   const selectedEntityId = useGameStore(s => s.selectedEntityId)
+  const syncState = useGameStore(s => s.syncState)
   const playerId = useSessionStore(s => s.playerId)
   const players = useSessionStore(s => s.players)
+  const roomCode = useSessionStore(s => s.roomCode)
+  const getSession = useSessionStore(s => s.getSession)
   const interaction = useMapInteraction()
-  const [showAtlasLabels, setShowAtlasLabels] = useState(false)
-  const [showPaletteDebug, setShowPaletteDebug] = useState(false)
   const [showVectorLabels, setShowVectorLabels] = useState(true)
   const [showDmOnlyLabels, setShowDmOnlyLabels] = useState(false)
   const [scaleLabelsWithZoom, setScaleLabelsWithZoom] = useState(true)
+  const [transformCopyStatus, setTransformCopyStatus] = useState<'idle' | 'copied' | 'failed'>('idle')
   const overlay = useOverlayStore((s) => s.overlay)
   const traversalGrid = useOverlayStore((s) => s.traversalGrid)
   const gridOverlayConfig = useOverlayStore((s) => s.gridOverlayConfig)
   const setGridOverlayConfig = useOverlayStore((s) => s.setGridOverlayConfig)
-  const useLegacySpritePipeline = useMemo(() => {
-    const configured = String(import.meta.env.VITE_ENABLE_LEGACY_SPRITES ?? '0').trim().toLowerCase()
-    return configured === '1' || configured === 'true' || configured === 'yes' || configured === 'on'
-  }, [])
-
-  const spritePipelineHarness = useMemo(
-    () => createSpritePipelineAssertHarness({
-      legacyEnabled: useLegacySpritePipeline,
-      throwOnFailure: false,
-    }),
-    [useLegacySpritePipeline],
-  )
-  const [spritePipelineSnapshot, setSpritePipelineSnapshot] = useState<SpritePipelineHarnessSnapshot>(
-    () => spritePipelineHarness.getSnapshot(),
-  )
-
-  useEffect(() => {
-    spritePipelineHarness.bootstrap()
-    setSpritePipelineSnapshot(spritePipelineHarness.getSnapshot())
-  }, [spritePipelineHarness])
-
-  useEffect(() => {
-    const sync = () => {
-      setSpritePipelineSnapshot(spritePipelineHarness.getSnapshot())
-    }
-    const id = window.setInterval(sync, 250)
-    return () => window.clearInterval(id)
-  }, [spritePipelineHarness])
 
   const runtimeOverlay = useMemo(() => {
     if (!map) {
@@ -221,7 +150,14 @@ export default function MapCanvas({ onTileClick, onEntityClick, targetingMode = 
     )
   }, [map, overlay, showVectorLabels, showDmOnlyLabels, scaleLabelsWithZoom])
 
-  const myCharacterId = players.find(p => p.id === playerId)?.character_id ?? null
+  const myCharacterId = useMemo(() => {
+    const fromPlayer = players.find((p) => p.id === playerId)?.character_id
+    if (fromPlayer) {
+      return fromPlayer
+    }
+    const fallback = playerId ? `pc_${playerId}` : null
+    return fallback && characters[fallback] ? fallback : null
+  }, [players, playerId, characters])
 
   const resolveCharacterForEntity = useCallback((entityId: string, entityName: string) => {
     const direct = characters[entityId]
@@ -251,8 +187,50 @@ export default function MapCanvas({ onTileClick, onEntityClick, targetingMode = 
   }, [characters, players])
 
   const mapMetadata = map?.metadata
+  const mapMode = resolveMapMode(map)
+  const mapGridTransform = useMemo(() => createMapGridTransform(map), [map])
   const imageUrl = mapMetadata?.image_url
-  const imageOpacity = Math.min(1, Math.max(0, mapMetadata?.image_opacity ?? 0.85))
+  const imageOpacity = Math.min(1, Math.max(0, mapMetadata?.image_opacity ?? 1))
+  const renderCellWidth = mapGridTransform.cellWidthPx
+  const renderCellHeight = mapGridTransform.cellHeightPx
+  const tokenBaseSizePx = Math.max(12, Math.min(renderCellWidth, renderCellHeight) * 0.86)
+
+  useEffect(() => {
+    if (!map) {
+      return
+    }
+    const traversal = map.traversal_grid as any
+    const widthCells = Number(traversal?.width_cells ?? 0)
+    const heightCells = Number(traversal?.height_cells ?? 0)
+    const cellSizeWorld = Number(traversal?.cell_size_world ?? 0)
+    const fallbackPlayerTokenId = playerId ? `pc_${playerId}` : null
+    const localTokenId = myCharacterId ?? fallbackPlayerTokenId
+    const localTokenEntity = localTokenId
+      ? map.entities.find((entity) => entity.id === localTokenId)
+      : null
+    console.info('[MapCanvas] map diagnostics', {
+      mapMode,
+      active_renderer: 'ai_battlemap_image',
+      active_traversal_provider: 'ai_traversal_grid',
+      image_url: mapMetadata?.image_url ?? null,
+      image_width_px: mapMetadata?.image_width_px ?? null,
+      image_height_px: mapMetadata?.image_height_px ?? null,
+      map_width_tiles: map.width,
+      map_height_tiles: map.height,
+      traversal_width_cells: Number.isFinite(widthCells) ? widthCells : null,
+      traversal_height_cells: Number.isFinite(heightCells) ? heightCells : null,
+      traversal_cell_size_world: Number.isFinite(cellSizeWorld) ? cellSizeWorld : null,
+      render_cell_width_px: renderCellWidth,
+      render_cell_height_px: renderCellHeight,
+      token_base_size_px: tokenBaseSizePx,
+      local_token_id: localTokenId,
+      local_token_present: Boolean(localTokenEntity),
+      local_token_position: localTokenEntity ? { x: localTokenEntity.x, y: localTokenEntity.y } : null,
+      local_token_visible: localTokenEntity
+        ? (Array.isArray(map.visible) ? map.visible.some((v) => v.x === localTokenEntity.x && v.y === localTokenEntity.y) : null)
+        : null,
+    })
+  }, [map, mapMetadata?.image_url, mapMetadata?.image_width_px, mapMetadata?.image_height_px, mapMode, renderCellWidth, renderCellHeight, tokenBaseSizePx, myCharacterId, playerId])
 
   useEffect(() => {
     if (!imageUrl) {
@@ -279,20 +257,56 @@ export default function MapCanvas({ onTileClick, onEntityClick, targetingMode = 
   }, [imageUrl])
 
   useEffect(() => {
-    if (!useLegacySpritePipeline) {
+    if (map || !roomCode) {
       return
     }
 
-    spritePipelineHarness.recordLegacyHit('atlas-bootstrap')
+    let cancelled = false
 
-    void loadEnvironmentSpriteLookup().catch(() => {
-      // Keep fallback token rendering if the optional environment atlas fails to load.
-    })
+    const recoverMissingMap = async () => {
+      for (let attempt = 0; attempt < 8; attempt += 1) {
+        if (cancelled || useGameStore.getState().map) {
+          return
+        }
 
+        try {
+          const payload = await getSession(roomCode)
+          const stateToSync = (payload?.game_state as Record<string, unknown> | undefined) ?? payload
+          if (stateToSync && typeof stateToSync === 'object') {
+            syncState(stateToSync as any)
+          }
+
+          const currentMap = useGameStore.getState().map
+          if (!currentMap && payload?.battlemap_asset) {
+            const merged = mergeBattlemapAssetIntoMap(currentMap, payload.battlemap_asset)
+            if (merged) {
+              useGameStore.getState().setMap(merged)
+            }
+          }
+        } catch {
+          // Keep retrying briefly while session state catches up.
+        }
+
+        if (useGameStore.getState().map) {
+          return
+        }
+
+        await new Promise((resolve) => setTimeout(resolve, 1500))
+      }
+    }
+
+    void recoverMissingMap()
+
+    return () => {
+      cancelled = true
+    }
+  }, [map, roomCode, getSession, syncState])
+
+  useEffect(() => {
     void loadMonsterSpriteLookup().catch(() => {
       // Keep fallback token rendering if the optional monster atlas fails to load.
     })
-  }, [useLegacySpritePipeline, spritePipelineHarness])
+  }, [])
 
   useEffect(() => {
     if (!map) {
@@ -329,10 +343,11 @@ export default function MapCanvas({ onTileClick, onEntityClick, targetingMode = 
         const delta = hp - prevHp
         const entity = map?.entities.find(e => e.id === entityId)
         if (entity) {
+          const center = mapGridTransform.cellToPixelCenter(entity.x, entity.y)
           popups.push({
             id: ++dmgPopupCounter,
-            worldX: entity.x * TILE_SIZE + TILE_SIZE / 2 + (Math.random() - 0.5) * 8,
-            worldY: entity.y * TILE_SIZE + TILE_SIZE / 2,
+            worldX: center.x + (Math.random() - 0.5) * 8,
+            worldY: center.y,
             text: delta > 0 ? `+${delta}` : `${delta}`,
             color: delta > 0 ? '#2ecc71' : '#e74c3c',
             startTime: now,
@@ -351,7 +366,7 @@ export default function MapCanvas({ onTileClick, onEntityClick, targetingMode = 
         if (!characters[entry.id]) spawnPopup(entry.id, entry.hp)
       }
     }
-  }, [characters, combat, map])
+  }, [characters, combat, map, mapGridTransform])
 
   useEffect(() => {
     if (!map) return
@@ -447,9 +462,15 @@ export default function MapCanvas({ onTileClick, onEntityClick, targetingMode = 
     const rect = container.getBoundingClientRect()
     if (rect.width <= 0 || rect.height <= 0) return
 
-    interaction.fitToView(map.width, map.height, rect.width, rect.height)
+    interaction.fitToView(
+      map.width,
+      map.height,
+      rect.width,
+      rect.height,
+      { cellWidthPx: mapGridTransform.cellWidthPx, cellHeightPx: mapGridTransform.cellHeightPx },
+    )
     fittedMapKeyRef.current = mapKey
-  }, [map, interaction])
+  }, [map, interaction, mapGridTransform.cellWidthPx, mapGridTransform.cellHeightPx])
 
   useEffect(() => {
     if (!map) return
@@ -459,7 +480,13 @@ export default function MapCanvas({ onTileClick, onEntityClick, targetingMode = 
     const fit = () => {
       const rect = container.getBoundingClientRect()
       if (rect.width <= 0 || rect.height <= 0) return
-      interaction.fitToView(map.width, map.height, rect.width, rect.height)
+      interaction.fitToView(
+        map.width,
+        map.height,
+        rect.width,
+        rect.height,
+        { cellWidthPx: mapGridTransform.cellWidthPx, cellHeightPx: mapGridTransform.cellHeightPx },
+      )
     }
 
     let frameId = 0
@@ -486,7 +513,7 @@ export default function MapCanvas({ onTileClick, onEntityClick, targetingMode = 
         cancelAnimationFrame(frameId)
       }
     }
-  }, [map?.width, map?.height, interaction])
+  }, [map?.width, map?.height, interaction, mapGridTransform.cellWidthPx, mapGridTransform.cellHeightPx])
 
   const draw = useCallback(() => {
     const canvas = canvasRef.current
@@ -504,163 +531,56 @@ export default function MapCanvas({ onTileClick, onEntityClick, targetingMode = 
     ctx.translate(interaction.offsetX, interaction.offsetY)
     ctx.scale(interaction.zoom, interaction.zoom)
 
-    spritePipelineHarness.assertNoLegacyHits('draw-start')
-
     const loadedImage = imageRef.current
-    if (loadedImage && imageUrlRef.current === imageUrl) {
-      if (useLegacySpritePipeline) {
-        spritePipelineHarness.recordLegacyHit('background-image-draw')
-      }
+    if (mapMode === MAP_MODE_AI && loadedImage && imageUrlRef.current === imageUrl) {
       ctx.save()
       ctx.globalAlpha = imageOpacity
       ctx.imageSmoothingEnabled = false
-      ctx.drawImage(loadedImage, 0, 0, map.width * TILE_SIZE, map.height * TILE_SIZE)
+      ctx.drawImage(loadedImage, 0, 0, mapGridTransform.mapWidthPx, mapGridTransform.mapHeightPx)
       ctx.restore()
     }
 
     const visibleSet = new Set(
       (map.visible || []).map(v => `${v.x},${v.y}`)
     )
-    const revealedSet = new Set(
-      (map.revealed || []).map(v => `${v.x},${v.y}`)
-    )
     const hasVisibility = visibleSet.size > 0
 
-    const tileMap = new Map<string, TileData>()
-    for (const t of map.tiles) {
-      tileMap.set(`${t.x},${t.y}`, t)
+    if (mapMode !== MAP_MODE_AI) {
+      console.error('[MapCanvas] Non-AI map mode reached gameplay renderer', { mapMode })
+      ctx.restore()
+      return
     }
 
-    const blockedTileSet = new Set(
-      map.tiles
-        .filter((t) => t.type === 'wall' || t.type === 'pit' || t.type === 'pillar' || t.type === 'rubble' || (t.type === 'door' && t.state === 'closed'))
-        .map((t) => `${t.x},${t.y}`),
-    )
-    const blockingEntitySet = new Set(
-      map.entities
-        .filter((e) => e.blocks_movement !== false)
-        .map((e) => `${e.x},${e.y}`),
-    )
+    // Layer 1: optional traversal-grid debug overlay.
+    renderGridOverlay(ctx, gridOverlayConfig, map, traversalGrid, mapGridTransform)
 
-    if (useLegacySpritePipeline) {
-      spritePipelineHarness.recordLegacyHit('tile-entity-draw-loop')
-      for (let y = 0; y < map.height; y++) {
-      for (let x = 0; x < map.width; x++) {
-        const key = `${x},${y}`
-        const tile = tileMap.get(key)
-        const px = x * TILE_SIZE
-        const py = y * TILE_SIZE
-
-        if (hasVisibility && !visibleSet.has(key) && !revealedSet.has(key)) {
-          ctx.fillStyle = '#0a0a0a'
-          ctx.fillRect(px, py, TILE_SIZE, TILE_SIZE)
-          continue
-        }
-
-        const tileSpriteKey = (() => {
-          if (!tile) {
-            return null
-          }
-          
-          if (typeof tile?.sprite === 'string' && tile.sprite.trim()) {
-            // If tile has a variant, try the variant-suffixed label first
-            if (tile.variant) {
-              // Strip "env:" prefix if present to inject variant before suffix
-              const baseSpriteLabel = tile.sprite.replace(/^env(ironment)?:\s*/i, '').trim()
-              if (baseSpriteLabel) {
-                // Try "{base}_{variant}" format first
-                // e.g., if sprite is "stone floor" and variant is "cracked", try "stone floor_cracked"
-                return `env:${baseSpriteLabel}_${tile.variant}`
-              }
-            }
-            return tile.sprite
-          }
-          
-          return TILE_TYPE_ATLAS_FALLBACK[tile.type] ?? null
-        })()
-
-        const tileRect = tileSpriteKey ? resolveEnvironmentSpriteRect(tileSpriteKey) : null
-        const environmentSheetImageForTile = tileRect
-          ? environmentSheetCacheRef.current.get(ENVIRONMENT_SPRITESHEET_URL)
-          : null
-
-        if (tileRect && environmentSheetImageForTile && environmentSheetImageForTile !== 'loading') {
-          ctx.imageSmoothingEnabled = false
-          ctx.drawImage(
-            environmentSheetImageForTile,
-            tileRect.x,
-            tileRect.y,
-            tileRect.w,
-            tileRect.h,
-            px,
-            py,
-            TILE_SIZE,
-            TILE_SIZE,
-          )
-        } else {
-          const color = tile ? (TILE_COLORS[tile.type] || '#3a3a4a') : '#0a0a0a'
-          const hasBackgroundImage = !!loadedImage
-          const lowOpacityTile = tile?.type === 'floor' || tile?.type === 'water'
-          ctx.globalAlpha = hasBackgroundImage && lowOpacityTile ? 0.35 : 1
-          ctx.fillStyle = color
-          ctx.fillRect(px, py, TILE_SIZE, TILE_SIZE)
-          ctx.globalAlpha = 1
-
-          if (tileRect && environmentSheetImageForTile === undefined) {
-            environmentSheetCacheRef.current.set(ENVIRONMENT_SPRITESHEET_URL, 'loading')
-            const img = new Image()
-            img.decoding = 'async'
-            img.onload = () => {
-              environmentSheetCacheRef.current.set(ENVIRONMENT_SPRITESHEET_URL, img)
-            }
-            img.onerror = () => {
-              environmentSheetCacheRef.current.set(ENVIRONMENT_SPRITESHEET_URL, null)
-            }
-            img.src = ENVIRONMENT_SPRITESHEET_URL
-          }
-        }
-
-        if (hasVisibility && revealedSet.has(key) && !visibleSet.has(key)) {
-          ctx.fillStyle = 'rgba(0, 0, 0, 0.5)'
-          ctx.fillRect(px, py, TILE_SIZE, TILE_SIZE)
-        }
-
-        if (tile?.type === 'door') {
-          ctx.fillStyle = tile.state === 'closed' ? '#6B5335' : '#A08860'
-          ctx.fillRect(px + 8, py + 2, TILE_SIZE - 16, TILE_SIZE - 4)
-        }
-
-        if (tile?.type === 'chest') {
-          ctx.fillStyle = '#DAA520'
-          ctx.fillRect(px + 10, py + 12, TILE_SIZE - 20, TILE_SIZE - 20)
-        }
-
-        ctx.strokeStyle = 'rgba(255, 255, 255, 0.06)'
-        ctx.strokeRect(px, py, TILE_SIZE, TILE_SIZE)
-
-        const isBlockedForTraversal = blockedTileSet.has(key) || blockingEntitySet.has(key)
-        if (showAtlasLabels && (tileSpriteKey || isBlockedForTraversal)) {
-          const label = resolveEnvironmentLabel(tileSpriteKey ?? undefined)
-          if (label || isBlockedForTraversal) {
-            const baseText = label || 'tile'
-            const fullText = isBlockedForTraversal ? `no ${baseText}` : baseText
-            const short = fullText.length > 14 ? `${fullText.slice(0, 13)}.` : fullText
-            ctx.fillStyle = 'rgba(0, 0, 0, 0.66)'
-            ctx.fillRect(px + 1, py + TILE_SIZE - 11, TILE_SIZE - 2, 10)
-            ctx.fillStyle = isBlockedForTraversal ? 'rgba(255, 136, 136, 0.98)' : 'rgba(255, 240, 184, 0.98)'
-            ctx.font = '7px monospace'
-            ctx.textAlign = 'left'
-            ctx.textBaseline = 'bottom'
-            ctx.fillText(short, px + 2, py + TILE_SIZE - 2)
-          }
-        }
-      }
+    // Layer 2: vector props/objects overlay.
+    if (runtimeOverlay) {
+      renderOverlayLayers(runtimeOverlay, {
+        ctx,
+        mapBounds: { x: 0, y: 0, width: mapGridTransform.mapWidthPx, height: mapGridTransform.mapHeightPx },
+        zoom: interaction.zoom,
+        panX: interaction.offsetX,
+        panY: interaction.offsetY,
+      }, undefined, {
+        labels: {
+          show: showVectorLabels,
+          showDmOnly: showDmOnlyLabels,
+        },
+      })
     }
 
-      let entityIndex = -1
-      for (const entity of map.entities) {
+    // Layer 2 then Layer 3: props/objects first, then units/characters.
+    const layer2Props = map.entities.filter((entity) => entity.type === 'object')
+    const layer3Units = map.entities.filter((entity) => entity.type !== 'object')
+    const renderEntities = [...layer2Props, ...layer3Units]
+
+    let entityIndex = -1
+    for (const entity of renderEntities) {
       entityIndex++
-      if (hasVisibility && !visibleSet.has(`${entity.x},${entity.y}`)) continue
+      const entityKey = `${entity.x},${entity.y}`
+      const isLocalPlayerToken = entity.id === myCharacterId || (playerId ? entity.id === `pc_${playerId}` : false)
+      if (hasVisibility && !visibleSet.has(entityKey) && !isLocalPlayerToken) continue
 
       const isDefeatedEnemy = entity.type === 'enemy' && (characters[entity.id]?.hp ?? 1) <= 0
 
@@ -674,9 +594,9 @@ export default function MapCanvas({ onTileClick, onEntityClick, targetingMode = 
         drawGY = anim.fromY + (anim.toY - anim.fromY) * ease
         if (t >= 1) tokenAnimationsRef.current.delete(entity.id)
       }
-      const px = drawGX * TILE_SIZE + TILE_SIZE / 2
-      const py = drawGY * TILE_SIZE + TILE_SIZE / 2
-      const radius = TILE_SIZE * 0.35
+      const px = drawGX * renderCellWidth + renderCellWidth / 2
+      const py = drawGY * renderCellHeight + renderCellHeight / 2
+      const radius = Math.min(renderCellWidth, renderCellHeight) * 0.35
       const color = ENTITY_COLORS[entity.type] || '#fff'
       const spriteKey = entity.sprite?.trim()
       const inferredSpriteKey = (() => {
@@ -712,17 +632,6 @@ export default function MapCanvas({ onTileClick, onEntityClick, targetingMode = 
         .map((candidate) => resolveSpriteUrl(candidate))
         .find((candidate) => typeof candidate === 'string' && candidate.length > 0) ?? null
 
-      const environmentFrameKey = [
-        spriteKey,
-        entity.type === 'object' ? `env:${entity.name}` : null,
-      ]
-        .filter((candidate): candidate is string => typeof candidate === 'string' && candidate.trim().length > 0)
-        .find((candidate) => Boolean(resolveEnvironmentSpriteRect(candidate)))
-      const environmentRect = environmentFrameKey ? resolveEnvironmentSpriteRect(environmentFrameKey) : null
-      const environmentSheetImage = environmentRect
-        ? environmentSheetCacheRef.current.get(ENVIRONMENT_SPRITESHEET_URL)
-        : null
-
       const monsterFrameKey = entity.type === 'enemy'
         ? getMonsterFrameKeyForEnemy(entity.id, entity.name, spriteKey)
         : null
@@ -743,21 +652,17 @@ export default function MapCanvas({ onTileClick, onEntityClick, targetingMode = 
       const characterSheetUrl = characterFrameKey ? getCharacterSpritesheetUrl(characterFrameKey) : null
       const characterSheetImage = characterSheetUrl ? characterSheetCacheRef.current.get(characterSheetUrl) : null
       const isCharacterSheetSprite = Boolean(characterCell && characterSheetImage && characterSheetImage !== 'loading')
-      let spriteDrawWidth = BASE_TOKEN_SPRITE_SIZE
-      let spriteDrawHeight = BASE_TOKEN_SPRITE_SIZE
+      let spriteDrawWidth = tokenBaseSizePx
+      let spriteDrawHeight = tokenBaseSizePx
       if (isCharacterSheetSprite) {
         const loadedSheet = characterSheetImage as HTMLImageElement
         const sourceW = loadedSheet.naturalWidth / CHARACTER_SPRITESHEET_COLUMNS
         const sourceH = loadedSheet.naturalHeight / CHARACTER_SPRITESHEET_ROWS
-        const scaledHeight = BASE_TOKEN_SPRITE_SIZE * CHARACTER_SPRITE_SCALE
+        const scaledHeight = tokenBaseSizePx * CHARACTER_SPRITE_SCALE
         spriteDrawHeight = scaledHeight
         spriteDrawWidth = scaledHeight * (sourceW / sourceH)
-      } else if (environmentRect) {
-        const scaledHeight = BASE_TOKEN_SPRITE_SIZE
-        spriteDrawHeight = scaledHeight
-        spriteDrawWidth = scaledHeight * (environmentRect.w / environmentRect.h)
       } else if (monsterRect) {
-        const scaledHeight = BASE_TOKEN_SPRITE_SIZE
+        const scaledHeight = tokenBaseSizePx
         spriteDrawHeight = scaledHeight
         spriteDrawWidth = scaledHeight * (monsterRect.w / monsterRect.h)
       }
@@ -776,6 +681,7 @@ export default function MapCanvas({ onTileClick, onEntityClick, targetingMode = 
       ) => {
         ctx.save()
         ctx.translate(px, py + yOffset)
+        ctx.globalCompositeOperation = 'source-over'
         if (shouldRotateDefeated) {
           ctx.rotate(Math.PI / 2)
           ctx.globalAlpha = 0.72
@@ -783,52 +689,6 @@ export default function MapCanvas({ onTileClick, onEntityClick, targetingMode = 
           ctx.globalAlpha = fallbackOpacity
         }
         drawFn()
-        ctx.restore()
-      }
-
-      if (entity.id === selectedEntityId) {
-        ctx.beginPath()
-        ctx.arc(px, py, Math.max(radius + 4, spriteVisualRadius + 2), 0, Math.PI * 2)
-        ctx.strokeStyle = '#fff'
-        ctx.lineWidth = 2
-        ctx.stroke()
-      }
-
-      // Spell targeting ring
-      if (targetingMode && (entity.type === 'enemy' || entity.type === 'npc')) {
-        const pulse = Math.sin(performance.now() / 220) * 0.5 + 0.5
-        const ringR = Math.max(radius + 6, spriteVisualRadius + 4)
-        ctx.save()
-        ctx.beginPath()
-        ctx.arc(px, py, ringR, 0, Math.PI * 2)
-        ctx.strokeStyle = `rgba(231, 76, 60, ${0.45 + pulse * 0.55})`
-        ctx.lineWidth = 2
-        ctx.setLineDash([4, 3])
-        ctx.stroke()
-        ctx.setLineDash([])
-        ctx.restore()
-      }
-
-      // Active turn: pulsing ring
-      if (combat?.is_active && combat.current_turn === entity.id) {
-        const isMyTurn = entity.id === myCharacterId
-        const pulse = Math.sin(performance.now() / 300) * 0.5 + 0.5
-        const ringR = Math.max(radius + 5, spriteVisualRadius + 3)
-        ctx.save()
-        // Outer glow
-        ctx.beginPath()
-        ctx.arc(px, py, ringR + 4, 0, Math.PI * 2)
-        ctx.strokeStyle = isMyTurn
-          ? `rgba(228, 168, 83, ${0.25 + pulse * 0.45})`
-          : `rgba(231, 76, 60, ${0.2 + pulse * 0.35})`
-        ctx.lineWidth = 7
-        ctx.stroke()
-        // Sharp inner ring
-        ctx.beginPath()
-        ctx.arc(px, py, ringR, 0, Math.PI * 2)
-        ctx.strokeStyle = isMyTurn ? '#e4a853' : '#e74c3c'
-        ctx.lineWidth = 2
-        ctx.stroke()
         ctx.restore()
       }
 
@@ -864,33 +724,6 @@ export default function MapCanvas({ onTileClick, onEntityClick, targetingMode = 
           characterSheetCacheRef.current.set(characterSheetUrl, null)
         }
         img.src = characterSheetUrl
-      } else if (environmentRect && environmentSheetImage && environmentSheetImage !== 'loading') {
-        ctx.imageSmoothingEnabled = false
-        drawEntitySprite(() => {
-          ctx.drawImage(
-            environmentSheetImage,
-            environmentRect.x,
-            environmentRect.y,
-            environmentRect.w,
-            environmentRect.h,
-            -spriteDrawWidth / 2,
-            -spriteDrawHeight / 2,
-            spriteDrawWidth,
-            spriteDrawHeight,
-          )
-        })
-        drewSprite = true
-      } else if (environmentRect && environmentSheetImage === undefined) {
-        environmentSheetCacheRef.current.set(ENVIRONMENT_SPRITESHEET_URL, 'loading')
-        const img = new Image()
-        img.decoding = 'async'
-        img.onload = () => {
-          environmentSheetCacheRef.current.set(ENVIRONMENT_SPRITESHEET_URL, img)
-        }
-        img.onerror = () => {
-          environmentSheetCacheRef.current.set(ENVIRONMENT_SPRITESHEET_URL, null)
-        }
-        img.src = ENVIRONMENT_SPRITESHEET_URL
       } else if (monsterRect && monsterSheetImage && monsterSheetImage !== 'loading') {
         ctx.imageSmoothingEnabled = false
         drawEntitySprite(() => {
@@ -1012,47 +845,78 @@ export default function MapCanvas({ onTileClick, onEntityClick, targetingMode = 
       ctx.fillStyle = 'rgba(255,255,255,0.85)'
       ctx.font = `${Math.max(8, 10 * interaction.zoom) / interaction.zoom}px sans-serif`
       ctx.fillText(entity.name, px, py + bobY + (drewSprite ? spriteVisualRadius : radius) + 10)
+    }
 
-      if (showAtlasLabels && entity.type === 'object') {
-        const category = entity.prop_category?.trim() || 'uncategorized'
-        const blocks = entity.blocks_movement === true ? 'block' : 'pass'
-        const debugText = `${category} | ${blocks}`
-        const debugY = py - (drewSprite ? spriteVisualRadius : radius) - 4
+    // Layer 4: selection / targeting / active-turn indicators above sprites.
+    for (const entity of renderEntities) {
+      const entityKey = `${entity.x},${entity.y}`
+      const isLocalPlayerToken = entity.id === myCharacterId || (playerId ? entity.id === `pc_${playerId}` : false)
+      if (hasVisibility && !visibleSet.has(entityKey) && !isLocalPlayerToken) continue
+      const anim = tokenAnimationsRef.current.get(entity.id)
+      let drawGX = entity.x
+      let drawGY = entity.y
+      if (anim) {
+        const t = Math.min(1, (performance.now() - anim.startTime) / anim.duration)
+        const ease = 1 - Math.pow(1 - t, 3)
+        drawGX = anim.fromX + (anim.toX - anim.fromX) * ease
+        drawGY = anim.fromY + (anim.toY - anim.fromY) * ease
+      }
 
+      const px = drawGX * renderCellWidth + renderCellWidth / 2
+      const py = drawGY * renderCellHeight + renderCellHeight / 2
+      const radius = Math.min(renderCellWidth, renderCellHeight) * 0.35
+      const ringR = Math.max(radius + 5, tokenBaseSizePx * 0.58)
+
+      if (entity.id === selectedEntityId) {
         ctx.save()
-        ctx.font = `${Math.max(7, 8 * interaction.zoom) / interaction.zoom}px monospace`
-        const textWidth = ctx.measureText(debugText).width
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.7)'
-        ctx.fillRect(px - textWidth / 2 - 3, debugY - 8, textWidth + 6, 10)
-        ctx.fillStyle = 'rgba(180, 232, 255, 0.96)'
-        ctx.textAlign = 'center'
-        ctx.textBaseline = 'bottom'
-        ctx.fillText(debugText, px, debugY)
+        ctx.globalAlpha = 1
+        ctx.globalCompositeOperation = 'source-over'
+        ctx.beginPath()
+        ctx.arc(px, py, ringR, 0, Math.PI * 2)
+        ctx.strokeStyle = '#4da3ff'
+        ctx.lineWidth = 2
+        ctx.stroke()
         ctx.restore()
       }
+
+      if (targetingMode && (entity.type === 'enemy' || entity.type === 'npc')) {
+        const pulse = Math.sin(performance.now() / 220) * 0.5 + 0.5
+        ctx.save()
+        ctx.globalAlpha = 1
+        ctx.globalCompositeOperation = 'source-over'
+        ctx.beginPath()
+        ctx.arc(px, py, ringR + 1, 0, Math.PI * 2)
+        ctx.strokeStyle = `rgba(231, 76, 60, ${0.45 + pulse * 0.55})`
+        ctx.lineWidth = 2
+        ctx.setLineDash([4, 3])
+        ctx.stroke()
+        ctx.setLineDash([])
+        ctx.restore()
+      }
+
+      if (combat?.is_active && combat.current_turn === entity.id) {
+        const isMyTurn = entity.id === myCharacterId
+        const pulse = Math.sin(performance.now() / 300) * 0.5 + 0.5
+        ctx.save()
+        ctx.globalAlpha = 1
+        ctx.globalCompositeOperation = 'source-over'
+        ctx.beginPath()
+        ctx.arc(px, py, ringR + 4, 0, Math.PI * 2)
+        ctx.strokeStyle = isMyTurn
+          ? `rgba(228, 168, 83, ${0.25 + pulse * 0.45})`
+          : `rgba(231, 76, 60, ${0.2 + pulse * 0.35})`
+        ctx.lineWidth = 7
+        ctx.stroke()
+        ctx.beginPath()
+        ctx.arc(px, py, ringR, 0, Math.PI * 2)
+        ctx.strokeStyle = isMyTurn ? '#e4a853' : '#e74c3c'
+        ctx.lineWidth = 2
+        ctx.stroke()
+        ctx.restore()
       }
     }
 
-    // Render vector overlay layers (before movement/FOW overlays)
-    if (runtimeOverlay) {
-      renderOverlayLayers(runtimeOverlay, {
-        ctx,
-        mapBounds: { x: 0, y: 0, width: map.width * TILE_SIZE, height: map.height * TILE_SIZE },
-        zoom: interaction.zoom,
-        panX: interaction.offsetX,
-        panY: interaction.offsetY,
-      }, undefined, {
-        labels: {
-          show: showVectorLabels,
-          showDmOnly: showDmOnlyLabels,
-        },
-      })
-    }
-
-    // Render traversal-grid debug overlay (always runs; no-ops when visible=false)
-    renderGridOverlay(ctx, gridOverlayConfig, map, traversalGrid)
-
-    drawOverlays(ctx, map, combat, selectedEntityId, myCharacterId)
+    drawOverlays(ctx, map, combat, selectedEntityId, myCharacterId, mapGridTransform)
 
     // Floating damage / heal popups
     const nowMs = performance.now()
@@ -1076,7 +940,7 @@ export default function MapCanvas({ onTileClick, onEntityClick, targetingMode = 
     })
 
     ctx.restore()
-  }, [map, combat, characters, interaction.offsetX, interaction.offsetY, interaction.zoom, selectedEntityId, myCharacterId, imageUrl, imageOpacity, resolveCharacterForEntity, showAtlasLabels, getMonsterFrameKeyForEnemy, targetingMode, runtimeOverlay, showVectorLabels, showDmOnlyLabels, useLegacySpritePipeline, spritePipelineHarness, gridOverlayConfig, traversalGrid])
+  }, [map, combat, characters, interaction.offsetX, interaction.offsetY, interaction.zoom, selectedEntityId, myCharacterId, imageUrl, imageOpacity, resolveCharacterForEntity, getMonsterFrameKeyForEnemy, targetingMode, runtimeOverlay, showVectorLabels, showDmOnlyLabels, gridOverlayConfig, traversalGrid, mapGridTransform])
 
   useEffect(() => {
     let frameId: number
@@ -1101,7 +965,12 @@ export default function MapCanvas({ onTileClick, onEntityClick, targetingMode = 
     const canvas = canvasRef.current
     if (!canvas) return
     const rect = canvas.getBoundingClientRect()
-    const { gx, gy } = interaction.screenToGrid(e.clientX, e.clientY, rect)
+    const { gx, gy } = interaction.screenToGrid(
+      e.clientX,
+      e.clientY,
+      rect,
+      { cellWidthPx: mapGridTransform.cellWidthPx, cellHeightPx: mapGridTransform.cellHeightPx },
+    )
 
     const clickedEntity = map.entities.find(ent => ent.x === gx && ent.y === gy)
     if (clickedEntity) {
@@ -1110,7 +979,7 @@ export default function MapCanvas({ onTileClick, onEntityClick, targetingMode = 
     }
 
     onTileClick?.(gx, gy)
-  }, [map, interaction, onTileClick, onEntityClick])
+  }, [map, interaction, onTileClick, onEntityClick, mapGridTransform.cellWidthPx, mapGridTransform.cellHeightPx])
 
   const handleRecenter = useCallback(() => {
     if (!map) return
@@ -1118,10 +987,69 @@ export default function MapCanvas({ onTileClick, onEntityClick, targetingMode = 
     if (!container) return
     const rect = container.getBoundingClientRect()
     if (rect.width <= 0 || rect.height <= 0) return
-    interaction.fitToView(map.width, map.height, rect.width, rect.height)
-  }, [map, interaction])
+    interaction.fitToView(
+      map.width,
+      map.height,
+      rect.width,
+      rect.height,
+      { cellWidthPx: mapGridTransform.cellWidthPx, cellHeightPx: mapGridTransform.cellHeightPx },
+    )
+  }, [map, interaction, mapGridTransform.cellWidthPx, mapGridTransform.cellHeightPx])
+
+  const handleCopyTransformJson = useCallback(async () => {
+    const snapshot = {
+      mode: mapMode,
+      mapWidthPx: Number(mapGridTransform.mapWidthPx.toFixed(3)),
+      mapHeightPx: Number(mapGridTransform.mapHeightPx.toFixed(3)),
+      cellWidthPx: Number(mapGridTransform.cellWidthPx.toFixed(3)),
+      cellHeightPx: Number(mapGridTransform.cellHeightPx.toFixed(3)),
+    }
+    const payload = JSON.stringify(snapshot, null, 2)
+
+    try {
+      if (typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(payload)
+      } else {
+        const textarea = document.createElement('textarea')
+        textarea.value = payload
+        textarea.setAttribute('readonly', 'true')
+        textarea.style.position = 'fixed'
+        textarea.style.opacity = '0'
+        textarea.style.pointerEvents = 'none'
+        document.body.appendChild(textarea)
+        textarea.select()
+        const ok = document.execCommand('copy')
+        document.body.removeChild(textarea)
+        if (!ok) {
+          throw new Error('copy command failed')
+        }
+      }
+      setTransformCopyStatus('copied')
+    } catch {
+      setTransformCopyStatus('failed')
+    }
+
+    window.setTimeout(() => {
+      setTransformCopyStatus('idle')
+    }, 1400)
+  }, [mapMode, mapGridTransform.cellHeightPx, mapGridTransform.cellWidthPx, mapGridTransform.mapHeightPx, mapGridTransform.mapWidthPx])
+
+  const generationStatus = typeof mapMetadata?.generation_status === 'string'
+    ? mapMetadata.generation_status
+    : null
 
   if (!map) {
+    if (roomCode) {
+      return (
+        <div className="map-placeholder">
+          <div className="map-placeholder-content">
+            <div className="map-placeholder-spinner"></div>
+            <p className="map-placeholder-text">Syncing map state...</p>
+          </div>
+        </div>
+      )
+    }
+
     return (
       <div className="map-placeholder">
         <p>No map loaded. The DM will generate one when the adventure begins.</p>
@@ -1129,16 +1057,39 @@ export default function MapCanvas({ onTileClick, onEntityClick, targetingMode = 
     )
   }
 
+  const hasBattlemapImage = typeof mapMetadata?.image_url === 'string' && mapMetadata.image_url.trim().length > 0
+  const isBattlemapPending = generationStatus === 'pending' && !hasBattlemapImage
+
+  if (isBattlemapPending) {
+    return (
+      <div className="map-placeholder">
+        <div className="map-placeholder-content">
+          <div className="map-placeholder-spinner"></div>
+          <p className="map-placeholder-text">Generating AI battlemap...</p>
+          <p style={{ fontSize: '0.85rem', margin: 0, opacity: 0.7 }}>Requesting from OpenAI API</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (mapMode !== MAP_MODE_AI) {
+    return (
+      <div className="map-placeholder">
+        <div className="map-placeholder-content">
+          <p className="map-placeholder-text">Waiting for AI battlemap scene initialization...</p>
+          <p style={{ fontSize: '0.85rem', margin: 0, opacity: 0.7 }}>Legacy terrain mode is disabled in gameplay scenes.</p>
+        </div>
+      </div>
+    )
+  }
+
   const sourceLabel = (() => {
-    if (!useLegacySpritePipeline) {
-      return 'Vector Draw'
-    }
     const src = mapMetadata?.map_source
-    if (src === 'library') return 'Library Map'
     if (src === 'generated') return 'AI Generated'
+    if (src === 'library') return 'Library Map'
     if (src === 'manual') return 'Manual Map'
     if (src) return src
-    return 'Map'
+    return 'AI Map'
   })()
 
   const statusLabel = mapMetadata?.cache_hit ? 'Cached' : 'Fresh'
@@ -1148,49 +1099,6 @@ export default function MapCanvas({ onTileClick, onEntityClick, targetingMode = 
     ? (mapMetadata?.attribution_text?.trim() || `Map art by ${mapMetadata?.author || 'Unknown source'}`)
     : ''
   const hasAttributionPanel = !!(mapMetadata?.author || mapMetadata?.license_spdx || mapMetadata?.source_url || attributionLine)
-
-  const environmentTilePalette = (() => {
-    const byType = new Map<string, Set<string>>()
-    for (const tile of map.tiles) {
-      const spriteKey = typeof tile.sprite === 'string' ? tile.sprite.trim() : ''
-      if (!spriteKey) {
-        continue
-      }
-
-      const normalizedLabel = resolveEnvironmentLabel(spriteKey)
-      if (!normalizedLabel) {
-        continue
-      }
-
-      const variant = typeof tile.variant === 'string' ? tile.variant.trim().toLowerCase() : ''
-      const effectiveLabel = variant ? `${normalizedLabel}_${variant}` : normalizedLabel
-      const bucket = byType.get(tile.type) ?? new Set<string>()
-      bucket.add(effectiveLabel)
-      byType.set(tile.type, bucket)
-    }
-
-    const entries = Array.from(byType.entries())
-      .sort(([a], [b]) => a.localeCompare(b))
-      .map(([tileType, labels]) => ({
-        tileType,
-        labels: Array.from(labels).sort((a, b) => a.localeCompare(b)),
-      }))
-    return entries
-  })()
-
-  const spriteStatusClass = spritePipelineSnapshot.failures > 0
-    ? 'is-failed'
-    : spritePipelineSnapshot.legacyEnabled
-      ? 'is-legacy'
-      : 'is-clean'
-  const spriteStatusText = spritePipelineSnapshot.failures > 0
-    ? `Sprite assert fail (${spritePipelineSnapshot.failures})`
-    : spritePipelineSnapshot.legacyEnabled
-      ? `Legacy sprites on (${spritePipelineSnapshot.hits})`
-      : `Sprite hits: ${spritePipelineSnapshot.hits}`
-  const spriteStatusTitle = spritePipelineSnapshot.lastReason
-    ? `Last sprite branch: ${spritePipelineSnapshot.lastReason}`
-    : 'No legacy sprite branch recorded'
 
   return (
     <div
@@ -1220,22 +1128,42 @@ export default function MapCanvas({ onTileClick, onEntityClick, targetingMode = 
       >
         Recenter map
       </button>
-      <button
-        type="button"
-        className={`map-debug-toggle-btn ${showAtlasLabels ? 'is-active' : ''}`}
-        onClick={() => setShowAtlasLabels((v) => !v)}
-        title="Toggle atlas tile labels for QA"
-      >
-        {showAtlasLabels ? 'Hide atlas labels' : 'Show atlas labels'}
-      </button>
-      <button
-        type="button"
-        className={`map-palette-toggle-btn ${showPaletteDebug ? 'is-active' : ''}`}
-        onClick={() => setShowPaletteDebug((v) => !v)}
-        title="Toggle active environment tile palette debug"
-      >
-        {showPaletteDebug ? 'Hide tile palette debug' : 'Show tile palette debug'}
-      </button>
+      <div className="map-transform-debug-panel" aria-live="polite">
+        <div className="map-transform-debug-title">Transform</div>
+        <div className="map-transform-debug-row">
+          <span className="map-transform-debug-key">mode</span>
+          <span className="map-transform-debug-value">{mapMode}</span>
+        </div>
+        <div className="map-transform-debug-row">
+          <span className="map-transform-debug-key">mapWidthPx</span>
+          <span className="map-transform-debug-value">{Math.round(mapGridTransform.mapWidthPx)}</span>
+        </div>
+        <div className="map-transform-debug-row">
+          <span className="map-transform-debug-key">mapHeightPx</span>
+          <span className="map-transform-debug-value">{Math.round(mapGridTransform.mapHeightPx)}</span>
+        </div>
+        <div className="map-transform-debug-row">
+          <span className="map-transform-debug-key">cellWidthPx</span>
+          <span className="map-transform-debug-value">{Number(mapGridTransform.cellWidthPx.toFixed(3))}</span>
+        </div>
+        <div className="map-transform-debug-row">
+          <span className="map-transform-debug-key">cellHeightPx</span>
+          <span className="map-transform-debug-value">{Number(mapGridTransform.cellHeightPx.toFixed(3))}</span>
+        </div>
+        <div className="map-transform-debug-actions">
+          <button
+            type="button"
+            className="map-transform-debug-copy-btn"
+            onClick={handleCopyTransformJson}
+            title="Copy transform snapshot JSON"
+          >
+            Copy JSON
+          </button>
+          <span className={`map-transform-debug-copy-status ${transformCopyStatus !== 'idle' ? 'is-visible' : ''}`}>
+            {transformCopyStatus === 'copied' ? 'Copied' : transformCopyStatus === 'failed' ? 'Copy failed' : ''}
+          </span>
+        </div>
+      </div>
       <button
         type="button"
         className={`map-label-toggle-btn ${showVectorLabels ? 'is-active' : ''}`}
@@ -1288,30 +1216,6 @@ export default function MapCanvas({ onTileClick, onEntityClick, targetingMode = 
                 ? 'Grid: heat'
                 : 'Grid: tags'}
       </button>
-      <div
-        className={`map-sprite-status-pill ${spriteStatusClass}`}
-        aria-live="polite"
-        title={spriteStatusTitle}
-      >
-        {spriteStatusText}
-      </div>
-      {showPaletteDebug && (
-        <div className="map-palette-debug-panel" aria-live="polite">
-          <div className="map-palette-debug-title">Tile Palette Debug</div>
-          <div className="map-palette-debug-meta">Environment: {environmentLabel}</div>
-          <div className="map-palette-debug-meta">Source: {sourceLabel} ({statusLabel})</div>
-          {environmentTilePalette.length === 0 ? (
-            <div className="map-palette-debug-empty">No tile sprite labels detected on current map.</div>
-          ) : (
-            environmentTilePalette.map((entry) => (
-              <div className="map-palette-debug-group" key={entry.tileType}>
-                <div className="map-palette-debug-group-title">{entry.tileType} ({entry.labels.length})</div>
-                <div className="map-palette-debug-list">{entry.labels.join(', ')}</div>
-              </div>
-            ))
-          )}
-        </div>
-      )}
       {hasAttributionPanel && (
         <div className="map-attribution-panel">
           {mapMetadata?.author && <div>Art: {mapMetadata.author}</div>}

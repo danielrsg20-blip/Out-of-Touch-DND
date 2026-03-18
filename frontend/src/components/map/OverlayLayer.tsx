@@ -1,10 +1,17 @@
 import type { MapData, CombatData } from '../../types'
 import { CollisionGrid } from '../../lib/systems/movement/collisionGrid'
 import { MovementController } from '../../lib/systems/movement/movementController'
+import { resolveMapMode } from '../../lib/battlemapState'
+import type { MapGridTransform } from '../../lib/mapGridTransform'
 
-const TILE_SIZE = 32
-
-export function drawOverlays(ctx: CanvasRenderingContext2D, map: MapData, combat: CombatData | null, selectedEntityId: string | null, myCharacterId: string | null) {
+export function drawOverlays(
+  ctx: CanvasRenderingContext2D,
+  map: MapData,
+  combat: CombatData | null,
+  selectedEntityId: string | null,
+  myCharacterId: string | null,
+  gridTransform: MapGridTransform,
+) {
   if (!combat?.is_active || !selectedEntityId || !myCharacterId) return
   if (selectedEntityId !== myCharacterId) return
   if (combat.current_turn !== myCharacterId) return
@@ -17,7 +24,13 @@ export function drawOverlays(ctx: CanvasRenderingContext2D, map: MapData, combat
 
   // Build collision grid from map data
   const grid = new CollisionGrid(map.width, map.height)
-  grid.buildFromMap(map.tiles, map.width, map.height, map.traversal_grid)
+  grid.buildFromMap(
+    map.tiles,
+    map.width,
+    map.height,
+    map.traversal_grid,
+    { mapMode: resolveMapMode(map) },
+  )
   // Exclude current entity from collision checking for reachability
   const otherEntities = map.entities.filter(e => e.id !== selectedEntityId)
   grid.updateEntityBlocking(otherEntities)
@@ -35,19 +48,22 @@ export function drawOverlays(ctx: CanvasRenderingContext2D, map: MapData, combat
   ctx.save()
   for (const key of reachable) {
     const [x, y] = key.split(',').map(Number)
-    const px = x * TILE_SIZE
-    const py = y * TILE_SIZE
+    const rect = gridTransform.cellToPixelRect(x, y, 1, 1)
+    const px = rect.x
+    const py = rect.y
+    const cellW = rect.width
+    const cellH = rect.height
 
     if (entitySet.has(key)) {
       ctx.fillStyle = 'rgba(231, 76, 60, 0.25)'
     } else {
       ctx.fillStyle = 'rgba(52, 152, 219, 0.2)'
     }
-    ctx.fillRect(px + 1, py + 1, TILE_SIZE - 2, TILE_SIZE - 2)
+    ctx.fillRect(px + 1, py + 1, Math.max(0, cellW - 2), Math.max(0, cellH - 2))
 
     ctx.strokeStyle = entitySet.has(key) ? 'rgba(231, 76, 60, 0.5)' : 'rgba(52, 152, 219, 0.4)'
     ctx.lineWidth = 1
-    ctx.strokeRect(px + 1, py + 1, TILE_SIZE - 2, TILE_SIZE - 2)
+    ctx.strokeRect(px + 1, py + 1, Math.max(0, cellW - 2), Math.max(0, cellH - 2))
   }
   ctx.restore()
 }

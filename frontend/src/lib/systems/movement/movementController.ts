@@ -61,6 +61,17 @@ export class MovementController {
       return { valid: false, error: "Target out of bounds" };
     }
 
+    // Stricter occupancy: prevent moving into any occupied tile except your current tile.
+    const entities = Array.isArray(gameState.entities) ? gameState.entities : [];
+    const occupiedByOtherEntity = entities.some((candidate: any) => {
+      if (!candidate || candidate.id === entityId) return false;
+      return candidate.x === targetX && candidate.y === targetY;
+    });
+    if (occupiedByOtherEntity) {
+      console.log(`[validateLocalMove] FAIL: Destination occupied by another entity`);
+      return { valid: false, error: "Destination tile is occupied" };
+    }
+
     // Check walkable
     const isWalkable = collisionGrid.isWalkable(targetX, targetY);
     console.log(`[validateLocalMove] Walkability check: (${targetX},${targetY}) = ${isWalkable}`);

@@ -20,3 +20,12 @@
 {"level":"info","time":"2026-03-16T22:43:12Z","message":"ICMP proxy will use 2001:569:bd97:cf00:d7a4:d9a8:bc7c:5628 in zone Ethernet as source for IPv6"}
 {"level":"info","time":"2026-03-16T22:43:12Z","message":"Starting metrics server on 127.0.0.1:20241/metrics"}
 {"level":"info","event":0,"connection":"294c1066-80e0-4e0d-a7db-20fe3a7e7778","connIndex":0,"location":"sea08","ip":"198.41.200.53","protocol":"quic","time":"2026-03-16T22:43:12Z","message":"Registered tunnel connection"}
+{"level":"info","time":"2026-03-17T06:53:23Z","message":"Initiating graceful shutdown due to signal terminated ..."}
+{"level":"error","event":0,"ip":"198.41.200.53","connIndex":0,"error":"context canceled","time":"2026-03-17T06:53:23Z","message":"failed to run the datagram handler"}
+{"level":"error","event":0,"ip":"198.41.200.53","connIndex":0,"error":"accept stream listener encountered a failure while serving","time":"2026-03-17T06:53:23Z","message":"failed to serve tunnel connection"}
+{"level":"error","event":0,"ip":"198.41.200.53","connIndex":0,"error":"accept stream listener encountered a failure while serving","time":"2026-03-17T06:53:23Z","message":"Serve tunnel error"}
+{"level":"info","event":0,"ip":"198.41.200.53","connIndex":0,"time":"2026-03-17T06:53:23Z","message":"Retrying connection in up to 1s"}
+{"level":"error","connIndex":0,"time":"2026-03-17T06:53:23Z","message":"Connection terminated"}
+{"level":"error","time":"2026-03-17T06:53:23Z","message":"no more connections active and exiting"}
+{"level":"info","time":"2026-03-17T06:53:23Z","message":"Tunnel server stopped"}
+{"level":"info","time":"2026-03-17T06:53:23Z","message":"Metrics server stopped"}

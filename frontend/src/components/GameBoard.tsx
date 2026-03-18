@@ -18,6 +18,7 @@ import { useGameStore } from '../stores/gameStore'
 import { useSessionStore } from '../stores/sessionStore'
 import { CollisionGrid } from '../lib/systems/movement/collisionGrid'
 import { MovementController } from '../lib/systems/movement/movementController'
+import { resolveMapMode } from '../lib/battlemapState'
 import { narrationOrchestrator } from '../lib/narrationOrchestrator'
 import './GameBoard.css'
 
@@ -97,7 +98,13 @@ export default function GameBoard() {
     }
 
     const grid = new CollisionGrid(map.width, map.height)
-    grid.buildFromMap(map.tiles, map.width, map.height, map.traversal_grid)
+    grid.buildFromMap(
+      map.tiles,
+      map.width,
+      map.height,
+      map.traversal_grid,
+      { mapMode: resolveMapMode(map) },
+    )
     grid.updateEntityBlocking(map.entities.filter(e => e.id !== player.character_id))
 
     // Create a state object with entities for validation

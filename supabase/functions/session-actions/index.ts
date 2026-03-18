@@ -438,15 +438,26 @@ function hydrateTilesWithSprites(environment: string, tilesRaw: unknown): Array<
     width: number,
     height: number,
   ): Promise<{ map: Record<string, unknown>; battlemapAsset: Record<string, unknown> } | null> {
-    const tsRuntimeBase = (
+      const configuredBase = (
       Deno.env.get('TS_RUNTIME_BASE_URL')
       ?? Deno.env.get('OTDND_TS_RUNTIME_BASE_URL')
       ?? ''
     ).trim().replace(/\/$/, '')
 
-    if (!tsRuntimeBase) {
-      return null
-    }
+      const candidates: string[] = []
+      if (configuredBase) {
+        candidates.push(configuredBase)
+      }
+      // Supabase local edge runtime is containerized, so localhost/127.0.0.1 must be translated to host.docker.internal.
+      if (configuredBase.includes('://127.0.0.1') || configuredBase.includes('://localhost')) {
+        candidates.push(
+          configuredBase
+            .replace('://127.0.0.1', '://host.docker.internal')
+            .replace('://localhost', '://host.docker.internal'),
+        )
+      }
+      // Always include local dev defaults to tolerate missing env propagation.
+      candidates.push('http://host.docker.internal:9020', 'http://127.0.0.1:9020')
 
     const seed = stableSeedFromText(`${roomCode}:${environment}:${width}x${height}`)
     const location = ['forest', 'swamp', 'dungeon', 'city_alley', 'tavern', 'ruins', 'mountain', 'coastal'].includes(environment)
@@ -456,33 +467,45 @@ function hydrateTilesWithSprites(environment: string, tilesRaw: unknown): Array<
       ? 'underground'
       : (location === 'city_alley' || location === 'tavern' ? 'urban' : 'temperate')
 
-    const response = await fetch(`${tsRuntimeBase}/api/tools/generate_battlemap`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        campaign_id: roomCode,
-        seed,
-        scene_spec: {
-          location,
-          biome,
-          encounter_type: 'exploration',
-          notable_features: ['clear paths', 'line of sight blockers', 'cover objects'],
-          mood_style: 'high-fantasy',
-          map_width_feet: width * 5,
-          map_height_feet: height * 5,
-          campaign_tone: 'adventurous',
-        },
-        grid_settings: {
-          cell_size_world: 5,
-        },
-      }),
-    })
+    let payload: Record<string, unknown> | null = null
+    for (const baseUrl of [...new Set(candidates)]) {
+      try {
+        const response = await fetch(`${baseUrl}/api/tools/generate_battlemap`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            campaign_id: roomCode,
+            seed,
+            scene_spec: {
+              location,
+              biome,
+              encounter_type: 'exploration',
+              notable_features: ['clear paths', 'line of sight blockers', 'cover objects'],
+              mood_style: 'high-fantasy',
+              map_width_feet: width * 5,
+              map_height_feet: height * 5,
+              campaign_tone: 'adventurous',
+            },
+            grid_settings: {
+              cell_size_world: 5,
+            },
+          }),
+        })
 
-    if (!response.ok) {
-      return null
+        if (!response.ok) {
+          continue
+        }
+
+        payload = parseJsonObjectSafe(await response.text())
+        break
+      } catch {
+        continue
+      }
     }
 
-    const payload = parseJsonObjectSafe(await response.text())
+    if (!payload) {
+      return null
+    }
     const battlemapAsset = payload.battlemap_asset as Record<string, unknown> | undefined
     const traversalGrid = payload.traversal_grid as Record<string, unknown> | undefined
     const mapPatch = payload.map_patch as Record<string, unknown> | undefined
@@ -535,19 +558,20 @@ function hydrateTilesWithSprites(environment: string, tilesRaw: unknown): Array<
   }
 
   async function buildInitialSnapshot(roomCode: string): Promise<Record<string, unknown>> {
-  const width = 20
-  const height = 14
-  const environment = 'dungeon'
-    const mapId = roomCode || 'supabase_mock_init'
-    const fallbackTiles = buildProceduralTiles(environment, width, height)
-  return {
-    characters: {},
-    cold_open_done: false,
+    const width = 20
+    const height = 14
+    const environment = 'dungeon'
+    const mapId = roomCode || 'supabase_init'
+
+    return {
+      characters: {},
+      cold_open_done: false,
       map: {
         width,
         height,
-        tiles: fallbackTiles,
+        tiles: [],
         entities: [],
+        traversal_grid: null,
         metadata: {
           map_source: 'generated',
           map_id: mapId,
@@ -555,20 +579,22 @@ function hydrateTilesWithSprites(environment: string, tilesRaw: unknown): Array<
           environment,
           grid_size: 5,
           grid_units: 'ft',
+          image_url: '',
+          generation_status: 'pending',
         },
         visible: [],
         revealed: [],
       },
-    combat: null,
+      combat: null,
       battlemap_asset: null,
       overlay: buildFallbackOverlay(mapId),
-    usage: {
-      input_tokens: 0,
-      output_tokens: 0,
-      estimated_cost_usd: 0,
-    },
+      usage: {
+        input_tokens: 0,
+        output_tokens: 0,
+        estimated_cost_usd: 0,
+      },
+    }
   }
-}
 
 function randomId(length = 8): string {
   return crypto.randomUUID().replace(/-/g, '').slice(0, length)
@@ -737,6 +763,7 @@ async function healSnapshotBattlemapIfMissingImage(
       map_source: 'generated',
       cache_hit: false,
       environment,
+      generation_status: 'ready',
     },
     traversal_grid: generatedMap.traversal_grid ?? map.traversal_grid ?? null,
   }

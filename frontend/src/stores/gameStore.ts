@@ -293,10 +293,19 @@ export const useGameStore = create<GameState>((set) => ({
     set({ transcriptMode: mode })
   },
 
-  syncState: (state) => set((current) => ({
-    characters: state.characters ? normalizeCharacters(state.characters) : current.characters,
-    map: state.map ?? current.map ?? null,
-    combat: state.combat ?? current.combat,
-    usage: state.usage ?? current.usage ?? DEFAULT_USAGE,
-  })),
+  syncState: (state) => set((current) => {
+    const normalizedIncomingCharacters = state.characters
+      ? normalizeCharacters(state.characters)
+      : null
+    const shouldReplaceCharacters = normalizedIncomingCharacters
+      ? (Object.keys(normalizedIncomingCharacters).length > 0 || Object.keys(current.characters).length === 0)
+      : false
+
+    return {
+      characters: shouldReplaceCharacters ? normalizedIncomingCharacters! : current.characters,
+      map: state.map ?? current.map ?? null,
+      combat: state.combat ?? current.combat,
+      usage: state.usage ?? current.usage ?? DEFAULT_USAGE,
+    }
+  }),
 }))

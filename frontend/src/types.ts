@@ -20,6 +20,7 @@ export interface EntityData {
 }
 
 export interface MapMetadata {
+  map_mode?: MapMode | string
   map_id?: string
   battlemap_id?: string
   map_source?: 'library' | 'generated' | 'manual' | string
@@ -38,9 +39,18 @@ export interface MapMetadata {
   attribution_text?: string
   grid_size?: number
   grid_units?: string
+  grid_width_cells?: number
+  grid_height_cells?: number
+  grid_cell_size_px?: number
+  image_width_px?: number
+  image_height_px?: number
   image_url?: string
   image_opacity?: number
+  generation_quality_mode?: 'fast' | 'final' | string
+  generation_status?: 'pending' | 'ready' | string
 }
+
+export type MapMode = 'ai_generated_image'
 
 export interface MapData {
   width: number
@@ -418,7 +428,7 @@ export interface GridOverlayConfig {
 }
 
 export const DEFAULT_GRID_OVERLAY_CONFIG: GridOverlayConfig = {
-  visible: true,
+  visible: false,
   mode: 'outlines',
   opacity: 0.55,
   showGridLines: true,

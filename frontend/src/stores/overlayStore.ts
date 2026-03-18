@@ -60,3 +60,18 @@ export function showGridOverlay(mode: GridOverlayMode, opacity = 0.55): void {
 export function hideGridOverlay(): void {
   useOverlayStore.getState().setGridOverlayConfig({ visible: false })
 }
+
+/** Show grid cell boundaries only. */
+export function showGridBoundaries(opacity = 0.55): void {
+  showGridOverlay('outlines', opacity)
+}
+
+/** Show blocked/non-traversable cells. */
+export function showBlockedCells(opacity = 0.55): void {
+  showGridOverlay('blocked', opacity)
+}
+
+/** Show movement cost heatmap. */
+export function showMovementCosts(opacity = 0.55): void {
+  showGridOverlay('movement_cost', opacity)
+}

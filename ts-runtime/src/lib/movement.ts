@@ -26,8 +26,6 @@ type MapLike = {
   entities?: unknown
 }
 
-const BLOCKING_TILE_TYPES = new Set(['wall', 'pit', 'pillar', 'rubble', 'door_closed'])
-
 function keyOf(node: NavNode): string {
   return `${node.x},${node.y}`
 }
@@ -44,44 +42,22 @@ function normalizeMapDimensions(map: JsonRecord | null): { width: number; height
   return { width, height }
 }
 
-function normalizeTile(tile: unknown): { x: number; y: number; type: string; state: string | null; blocksMovement: boolean | null } | null {
-  if (!tile || typeof tile !== 'object' || Array.isArray(tile)) {
-    return null
+function resolveMapModeForMovement(map: JsonRecord | null): 'ai_generated_image' {
+  const metadata = map?.metadata
+  if (!metadata || typeof metadata !== 'object' || Array.isArray(metadata)) {
+    return 'ai_generated_image'
   }
-  const t = tile as JsonRecord
-  const x = typeof t.x === 'number' && Number.isFinite(t.x) ? Math.trunc(t.x) : null
-  const y = typeof t.y === 'number' && Number.isFinite(t.y) ? Math.trunc(t.y) : null
-  if (x === null || y === null) {
-    return null
+  const m = metadata as JsonRecord
+  const explicit = typeof m.map_mode === 'string' ? m.map_mode.trim().toLowerCase() : ''
+  if (explicit === 'ai_generated_image') {
+    return 'ai_generated_image'
   }
-
-  const typeRaw = typeof t.tile_type === 'string' ? t.tile_type : typeof t.type === 'string' ? t.type : 'floor'
-  const state = typeof t.state === 'string' ? t.state : null
-  const blocksMovement = typeof t.blocks_movement === 'boolean'
-    ? t.blocks_movement
-    : typeof t.blocksMovement === 'boolean'
-      ? t.blocksMovement
-      : null
-
-  return {
-    x,
-    y,
-    type: typeRaw,
-    state,
-    blocksMovement,
+  const imageUrl = typeof m.image_url === 'string' ? m.image_url.trim() : ''
+  const source = typeof m.map_source === 'string' ? m.map_source.trim().toLowerCase() : ''
+  if (imageUrl.length > 0 || source.includes('vector')) {
+    return 'ai_generated_image'
   }
-}
-
-function isTileWalkable(tile: { type: string; state: string | null; blocksMovement: boolean | null }): boolean {
-  if (tile.type === 'door') {
-    return tile.state !== 'closed'
-  }
-
-  if (tile.blocksMovement !== null) {
-    return !tile.blocksMovement
-  }
-
-  return !BLOCKING_TILE_TYPES.has(tile.type)
+  return 'ai_generated_image'
 }
 
 function normalizeMapEntities(map: JsonRecord | null): Array<{ id: string; x: number; y: number; blocksMovement: boolean }> {
@@ -144,32 +120,6 @@ export class CollisionGrid {
     this.width = width
     this.height = height
     this.walkable = Array.from({ length: height }, () => Array.from({ length: width }, () => true))
-  }
-
-  buildFromMap(map: JsonRecord | null): void {
-    this.walkable = Array.from({ length: this.height }, () => Array.from({ length: this.width }, () => true))
-
-    if (!map) {
-      return
-    }
-
-    const tilesRaw = map.tiles
-    if (!Array.isArray(tilesRaw)) {
-      return
-    }
-
-    for (const tileRaw of tilesRaw) {
-      const tile = normalizeTile(tileRaw)
-      if (!tile) {
-        continue
-      }
-      if (tile.x < 0 || tile.y < 0 || tile.x >= this.width || tile.y >= this.height) {
-        continue
-      }
-      if (!isTileWalkable(tile)) {
-        this.walkable[tile.y]![tile.x] = false
-      }
-    }
   }
 
   isWalkable(x: number, y: number): boolean {
@@ -321,14 +271,32 @@ export function validateMoveRequest(params: {
     return { valid: false, error: 'Target out of bounds', path: null, distance_feet: null }
   }
 
+  const destinationOccupied = entities.some((entry) => {
+    if (entry.id === params.entityId) {
+      return false
+    }
+    return entry.x === targetX && entry.y === targetY
+  })
+  if (destinationOccupied) {
+    return { valid: false, error: 'Destination tile is occupied', path: null, distance_feet: null }
+  }
+
   const grid = new CollisionGrid(dimensions.width, dimensions.height)
+  const mapMode = resolveMapModeForMovement(params.map)
   const traversalGrid = getTraversalGridFromMap(params.map)
 
-  if (traversalGrid) {
-    grid.walkable = buildWalkableMatrixFromTraversalGrid(traversalGrid, dimensions.width, dimensions.height)
-  } else {
-    grid.buildFromMap(params.map)
+  if (!traversalGrid) {
+    return {
+      valid: false,
+      error: mapMode === 'ai_generated_image'
+        ? 'Traversal grid is required for AI-generated maps and is not available yet'
+        : 'Traversal grid is required for gameplay maps and is not available yet',
+      path: null,
+      distance_feet: null,
+    }
   }
+
+  grid.walkable = buildWalkableMatrixFromTraversalGrid(traversalGrid, dimensions.width, dimensions.height)
 
   if (!grid.isWalkable(targetX, targetY)) {
     return { valid: false, error: 'Target tile is not walkable', path: null, distance_feet: null }
@@ -341,24 +309,20 @@ export function validateMoveRequest(params: {
     start,
     goal,
     true,
-    traversalGrid
-      ? (_from, to) => movementCostMultiplierForMapTileFromTraversalGrid(
-        traversalGrid,
-        to.x,
-        to.y,
-        dimensions.width,
-        dimensions.height,
-      )
-      : undefined,
+    (_from, to) => movementCostMultiplierForMapTileFromTraversalGrid(
+      traversalGrid,
+      to.x,
+      to.y,
+      dimensions.width,
+      dimensions.height,
+    ),
   )
 
   if (path.length === 0) {
     return { valid: false, error: 'No path to target', path: null, distance_feet: null }
   }
 
-  const distanceFeet = traversalGrid
-    ? Math.round(calculateTraversalPathWorldCostFromMapPath(traversalGrid, path, dimensions.width, dimensions.height))
-    : AStarPathfinder.pathDistance(path)
+  const distanceFeet = Math.round(calculateTraversalPathWorldCostFromMapPath(traversalGrid, path, dimensions.width, dimensions.height))
   return {
     valid: true,
     error: null,

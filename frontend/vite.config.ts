@@ -11,6 +11,31 @@ export default defineConfig({
       '@': path.resolve(__dirname, './src'),
     },
   },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (!id.includes('node_modules')) {
+            return undefined
+          }
+
+          if (id.includes('node_modules/@pixi/') || id.includes('node_modules/pixi.js/')) {
+            return 'vendor-pixi'
+          }
+
+          if (id.includes('node_modules/@radix-ui/')) {
+            return 'vendor-radix'
+          }
+
+          if (id.includes('node_modules/@supabase/')) {
+            return 'vendor-supabase'
+          }
+
+          return 'vendor'
+        },
+      },
+    },
+  },
   server: {
     port: 5174,
     strictPort: true,
