@@ -35,7 +35,7 @@ test('generate-vector-map writes expected files for a single seed', () => {
   try {
     const result = runHarness(['--seed', '123', '--allow-warnings', '--out', outDir], cwd)
 
-    assert.equal(result.status, 0, result.stderr || result.stdout)
+    assert.equal(result.status, 0, result.stderr ? String(result.stderr) : String(result.stdout))
     assert.equal(existsSync(join(outDir, 'seed-123', 'overlay.json')), true)
     assert.equal(existsSync(join(outDir, 'seed-123', 'traversal_grid.json')), true)
     assert.equal(existsSync(join(outDir, 'seed-123', 'compatibility.json')), true)
@@ -55,8 +55,8 @@ test('generate-vector-map is deterministic across repeated subprocess runs', () 
     const first = runHarness(['--seed', '90210', '--allow-warnings', '--out', firstOutDir], cwd)
     const second = runHarness(['--seed', '90210', '--allow-warnings', '--out', secondOutDir], cwd)
 
-    assert.equal(first.status, 0, first.stderr || first.stdout)
-    assert.equal(second.status, 0, second.stderr || second.stdout)
+    assert.equal(first.status, 0, first.stderr ? String(first.stderr) : String(first.stdout))
+    assert.equal(second.status, 0, second.stderr ? String(second.stderr) : String(second.stdout))
 
     const firstManifest = readManifest(firstOutDir, 90210)
     const secondManifest = readManifest(secondOutDir, 90210)
@@ -79,7 +79,7 @@ test('generate-vector-map writes gallery outputs in multi-seed mode', () => {
       cwd,
     )
 
-    assert.equal(result.status, 0, result.stderr || result.stdout)
+    assert.equal(result.status, 0, result.stderr ? String(result.stderr) : String(result.stdout))
     assert.equal(existsSync(join(outDir, 'gallery.json')), true)
     assert.equal(existsSync(join(outDir, 'index.html')), true)
     assert.equal(existsSync(join(outDir, 'seed-200', 'manifest.json')), true)
