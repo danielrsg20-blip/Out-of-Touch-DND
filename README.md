@@ -115,6 +115,15 @@ Or use the root helper script to start both services:
 ./start-dev.ps1
 ```
 
+By default, the script also starts local Supabase Edge Functions at `http://127.0.0.1:54321` when Docker is available.
+
+To explicitly disable local edge functions for a run:
+
+```powershell
+$env:OTDND_START_LOCAL_EDGE_FUNCTIONS='false'
+./start-dev.ps1
+```
+
 Frontend: `http://127.0.0.1:5174`  Backend docs: `http://127.0.0.1:8010/docs`
 
 ## Deployment (Vercel + Railway + Supabase)

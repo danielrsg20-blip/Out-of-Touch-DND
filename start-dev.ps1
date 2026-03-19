@@ -2,7 +2,9 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
 $root = Split-Path -Parent $MyInvocation.MyCommand.Path
-$startLocalEdgeFunctions = $env:OTDND_START_LOCAL_EDGE_FUNCTIONS -eq 'true'
+$startLocalEdgeFunctionsRaw = [string]$env:OTDND_START_LOCAL_EDGE_FUNCTIONS
+$startLocalEdgeFunctionsRaw = $startLocalEdgeFunctionsRaw.Trim().ToLowerInvariant()
+$startLocalEdgeFunctions = $startLocalEdgeFunctionsRaw -ne 'false'
 $dockerAvailable = $false
 if ($null -ne (Get-Command docker -ErrorAction SilentlyContinue)) {
   try {
@@ -44,7 +46,7 @@ if ($startLocalEdgeFunctions -and $dockerAvailable) {
 } elseif ($startLocalEdgeFunctions) {
   Write-Host "Skipping local Supabase Edge Functions because Docker is unavailable."
 } else {
-  Write-Host "Skipping local Supabase Edge Functions (set OTDND_START_LOCAL_EDGE_FUNCTIONS=true to enable)."
+  Write-Host "Skipping local Supabase Edge Functions (set OTDND_START_LOCAL_EDGE_FUNCTIONS=false to keep disabled)."
 }
 
 Write-Host "Starting frontend on http://127.0.0.1:5174 ..."
