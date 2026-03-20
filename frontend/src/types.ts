@@ -436,6 +436,17 @@ export const DEFAULT_GRID_OVERLAY_CONFIG: GridOverlayConfig = {
   gridLineWidth: 0.5,
 }
 
+// ============================================================================
+// MAP CORRECTION EDITOR TYPES
+// ============================================================================
+
+export type MapCorrectionTool = 'inspect' | 'paint_blocked' | 'paint_walkable' | 'paint_cost' | 'mark_door'
+
+export interface MapCorrectionPreviewArtifacts {
+  collision_mask_png_base64?: string
+  cost_map_png_base64?: string
+}
+
 /** Single cell from a traversal grid. Structurally compatible with GridCellData from ts-runtime. */
 export interface FrontendTraversalCell {
   /** Column index (0-based). */

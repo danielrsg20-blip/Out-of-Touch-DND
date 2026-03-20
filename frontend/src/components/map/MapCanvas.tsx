@@ -3,10 +3,12 @@ import { useGameStore } from '../../stores/gameStore'
 import { useSessionStore } from '../../stores/sessionStore'
 import { useMapInteraction } from '../../hooks/useMapInteraction'
 import { drawOverlays } from './OverlayLayer'
-import type { GridOverlayMode } from '../../types'
+import type { FrontendTraversalGrid, GridOverlayMode, MapCorrectionTool, MapData } from '../../types'
 import { renderOverlayLayers } from '../../lib/VectorOverlayRenderer'
 import { renderGridOverlay } from '../../lib/GridOverlayRenderer'
 import { useOverlayStore } from '../../stores/overlayStore'
+import { useMapEditorStore } from '../../stores/mapEditorStore'
+import { callBackendApi } from '../../lib/backendApi'
 import { resolveSpriteUrl } from '../../data/spriteManifest'
 import { MAP_MODE_AI, mergeBattlemapAssetIntoMap, resolveMapMode } from '../../lib/battlemapState'
 import {
@@ -70,6 +72,44 @@ const CONDITION_INFO: Record<string, { abbr: string; color: string }> = {
   restrained:    { abbr: 'RST', color: '#e67e22' },
 }
 
+const CORRECTION_TOOL_LABELS: Record<MapCorrectionTool, string> = {
+  inspect: 'Inspect',
+  paint_blocked: 'Paint blocked',
+  paint_walkable: 'Paint walkable',
+  paint_cost: 'Paint cost',
+  mark_door: 'Mark door',
+}
+
+const SCENE_LOCATIONS = new Set(['forest', 'swamp', 'dungeon', 'city_alley', 'tavern', 'ruins', 'mountain', 'coastal'])
+const SCENE_BIOMES = new Set(['temperate', 'tropical', 'arctic', 'underground', 'urban', 'magical'])
+const ENCOUNTER_TYPES = new Set(['ambush', 'siege', 'chase', 'investigation', 'diplomacy', 'exploration'])
+
+function sanitizeLocation(value: unknown): string {
+  const location = typeof value === 'string' ? value.trim().toLowerCase() : ''
+  return SCENE_LOCATIONS.has(location) ? location : 'forest'
+}
+
+function inferBiome(location: string): string {
+  if (location === 'dungeon' || location === 'ruins') return 'underground'
+  if (location === 'city_alley' || location === 'tavern') return 'urban'
+  if (location === 'coastal') return 'temperate'
+  if (location === 'mountain') return 'arctic'
+  return 'temperate'
+}
+
+function sanitizeEncounterType(value: unknown): string {
+  const encounterType = typeof value === 'string' ? value.trim().toLowerCase() : ''
+  return ENCOUNTER_TYPES.has(encounterType) ? encounterType : 'exploration'
+}
+
+function clamp(value: number, min: number, max: number): number {
+  return Math.max(min, Math.min(max, value))
+}
+
+function uniqueStrings(values: string[]): string[] {
+  return Array.from(new Set(values.filter((v) => typeof v === 'string' && v.trim().length > 0)))
+}
+
 interface MapCanvasProps {
   onTileClick?: (gx: number, gy: number) => void
   onEntityClick?: (entityId: string) => void
@@ -111,12 +151,21 @@ export default function MapCanvas({ onTileClick, onEntityClick, targetingMode = 
   const spriteCacheRef = useRef<Map<string, HTMLImageElement | 'loading' | null>>(new Map())
   const enemyMonsterVariantByEntityIdRef = useRef<Map<string, string>>(new Map())
   const enemyFrameKeysRef = useRef<Map<string, string[]>>(new Map())
+  const artifactImageRef = useRef<{ collisionMask: HTMLImageElement | null; costMap: HTMLImageElement | null }>({
+    collisionMask: null,
+    costMap: null,
+  })
+  const hoverCellRef = useRef<{ tx: number; ty: number } | null>(null)
+  const lastPaintCellKeyRef = useRef<string | null>(null)
+  const isPaintingRef = useRef(false)
 
   const tokenAnimationsRef = useRef<Map<string, TokenAnim>>(new Map())
   const prevEntityPositionsRef = useRef<Map<string, { x: number; y: number }>>(new Map())
   const dmgPopupsRef = useRef<DamagePopup[]>([])
   const prevHpRef = useRef<Map<string, number>>(new Map())
   const map = useGameStore(s => s.map)
+  const setMap = useGameStore(s => s.setMap)
+  const addNarrative = useGameStore(s => s.addNarrative)
   const combat = useGameStore(s => s.combat)
   const characters = useGameStore(s => s.characters)
   const selectedEntityId = useGameStore(s => s.selectedEntityId)
@@ -130,10 +179,36 @@ export default function MapCanvas({ onTileClick, onEntityClick, targetingMode = 
   const [showDmOnlyLabels, setShowDmOnlyLabels] = useState(false)
   const [scaleLabelsWithZoom, setScaleLabelsWithZoom] = useState(true)
   const [transformCopyStatus, setTransformCopyStatus] = useState<'idle' | 'copied' | 'failed'>('idle')
+  const [editorGridCellSizeWorld, setEditorGridCellSizeWorld] = useState(5)
+  const [editorGridWidthCells, setEditorGridWidthCells] = useState(0)
+  const [editorGridHeightCells, setEditorGridHeightCells] = useState(0)
   const overlay = useOverlayStore((s) => s.overlay)
   const traversalGrid = useOverlayStore((s) => s.traversalGrid)
   const gridOverlayConfig = useOverlayStore((s) => s.gridOverlayConfig)
   const setGridOverlayConfig = useOverlayStore((s) => s.setGridOverlayConfig)
+  const correctionModeEnabled = useMapEditorStore((s) => s.correctionModeEnabled)
+  const setCorrectionModeEnabled = useMapEditorStore((s) => s.setCorrectionModeEnabled)
+  const activeTool = useMapEditorStore((s) => s.activeTool)
+  const cycleTool = useMapEditorStore((s) => s.cycleTool)
+  const brushSizeCells = useMapEditorStore((s) => s.brushSizeCells)
+  const cycleBrushSize = useMapEditorStore((s) => s.cycleBrushSize)
+  const brushMovementCost = useMapEditorStore((s) => s.brushMovementCost)
+  const setBrushMovementCost = useMapEditorStore((s) => s.setBrushMovementCost)
+  const hasUnsavedChanges = useMapEditorStore((s) => s.hasUnsavedChanges)
+  const markDirty = useMapEditorStore((s) => s.markDirty)
+  const clearDirty = useMapEditorStore((s) => s.clearDirty)
+  const previewBusy = useMapEditorStore((s) => s.previewBusy)
+  const setPreviewBusy = useMapEditorStore((s) => s.setPreviewBusy)
+  const applyBusy = useMapEditorStore((s) => s.applyBusy)
+  const setApplyBusy = useMapEditorStore((s) => s.setApplyBusy)
+  const showCollisionMaskLayer = useMapEditorStore((s) => s.showCollisionMaskLayer)
+  const showCostMapLayer = useMapEditorStore((s) => s.showCostMapLayer)
+  const toggleCollisionMaskLayer = useMapEditorStore((s) => s.toggleCollisionMaskLayer)
+  const toggleCostMapLayer = useMapEditorStore((s) => s.toggleCostMapLayer)
+  const artifactLayerOpacity = useMapEditorStore((s) => s.artifactLayerOpacity)
+  const setArtifactLayerOpacity = useMapEditorStore((s) => s.setArtifactLayerOpacity)
+  const setPreviewArtifacts = useMapEditorStore((s) => s.setPreviewArtifacts)
+  const previewArtifacts = useMapEditorStore((s) => s.previewArtifacts)
 
   const runtimeOverlay = useMemo(() => {
     if (!map) {
@@ -149,6 +224,20 @@ export default function MapCanvas({ onTileClick, onEntityClick, targetingMode = 
       overlay,
     )
   }, [map, overlay, showVectorLabels, showDmOnlyLabels, scaleLabelsWithZoom])
+
+  useEffect(() => {
+    if (!correctionModeEnabled || !map) {
+      return
+    }
+
+    const inferredWidth = Math.max(1, Math.round(Number(traversalGrid?.width_cells ?? map.width ?? 1)))
+    const inferredHeight = Math.max(1, Math.round(Number(traversalGrid?.height_cells ?? map.height ?? 1)))
+    const inferredCellSize = Math.max(0.25, Number(traversalGrid?.cell_size_world ?? map.traversal_grid?.cell_size_world ?? 5))
+
+    setEditorGridWidthCells(inferredWidth)
+    setEditorGridHeightCells(inferredHeight)
+    setEditorGridCellSizeWorld(Number(inferredCellSize.toFixed(3)))
+  }, [correctionModeEnabled, map, traversalGrid])
 
   const myCharacterId = useMemo(() => {
     const fromPlayer = players.find((p) => p.id === playerId)?.character_id
@@ -194,6 +283,330 @@ export default function MapCanvas({ onTileClick, onEntityClick, targetingMode = 
   const renderCellWidth = mapGridTransform.cellWidthPx
   const renderCellHeight = mapGridTransform.cellHeightPx
   const tokenBaseSizePx = Math.max(12, Math.min(renderCellWidth, renderCellHeight) * 0.86)
+
+  const applyTraversalGridToState = useCallback((nextGrid: FrontendTraversalGrid) => {
+    useOverlayStore.getState().setTraversalGrid(nextGrid)
+    if (!map) {
+      return
+    }
+    const nextMap = {
+      ...map,
+      traversal_grid: nextGrid,
+    } as MapData
+    setMap(nextMap)
+  }, [map, setMap])
+
+  const applyCorrectionBrushAtCell = useCallback((centerX: number, centerY: number) => {
+    if (!correctionModeEnabled || activeTool === 'inspect' || !map || !traversalGrid) {
+      return
+    }
+
+    const width = Math.max(1, Number(traversalGrid.width_cells))
+    const height = Math.max(1, Number(traversalGrid.height_cells))
+    const tx = clamp(Math.floor(centerX), 0, width - 1)
+    const ty = clamp(Math.floor(centerY), 0, height - 1)
+    const paintKey = `${tx},${ty},${activeTool},${brushSizeCells},${brushMovementCost}`
+    if (lastPaintCellKeyRef.current === paintKey) {
+      return
+    }
+    lastPaintCellKeyRef.current = paintKey
+
+    const nextCells = traversalGrid.cells.map((cell) => ({
+      ...cell,
+      movement_blocking_tags: Array.isArray(cell.movement_blocking_tags) ? [...cell.movement_blocking_tags] : [],
+      tags: Array.isArray(cell.tags) ? [...cell.tags] : [],
+    }))
+    const cellIndexByCoord = new Map<string, number>()
+    nextCells.forEach((cell, index) => {
+      cellIndexByCoord.set(`${cell.x},${cell.y}`, index)
+    })
+
+    const brushSpan = Math.max(1, Math.round(brushSizeCells))
+    const startX = tx - Math.floor(brushSpan / 2)
+    const startY = ty - Math.floor(brushSpan / 2)
+
+    for (let oy = 0; oy < brushSpan; oy += 1) {
+      for (let ox = 0; ox < brushSpan; ox += 1) {
+        const cx = startX + ox
+        const cy = startY + oy
+        if (cx < 0 || cy < 0 || cx >= width || cy >= height) {
+          continue
+        }
+        const idx = cellIndexByCoord.get(`${cx},${cy}`)
+        if (idx === undefined) {
+          continue
+        }
+        const cell = nextCells[idx]
+
+        if (activeTool === 'paint_blocked') {
+          cell.traversable = false
+          cell.movement_cost = Math.max(2, Number(cell.movement_cost) || 2)
+          cell.movement_blocking_tags = uniqueStrings(['blocked', 'wall', ...cell.movement_blocking_tags])
+          cell.tags = uniqueStrings(['blocked', 'wall', ...cell.tags])
+        } else if (activeTool === 'paint_walkable') {
+          cell.traversable = true
+          cell.movement_cost = 1
+          cell.movement_blocking_tags = []
+          cell.tags = uniqueStrings(cell.tags.filter((tag) => tag !== 'blocked' && tag !== 'wall').concat(['open_ground']))
+        } else if (activeTool === 'paint_cost') {
+          const nextCost = clamp(Number(brushMovementCost) || 1, 0.5, 6)
+          cell.traversable = true
+          cell.movement_cost = nextCost
+          cell.movement_blocking_tags = []
+          const filteredTags = cell.tags.filter((tag) => tag !== 'blocked' && tag !== 'wall' && tag !== 'open_ground' && tag !== 'difficult')
+          const terrainTag = nextCost > 1.25 ? 'difficult' : 'open_ground'
+          cell.tags = uniqueStrings([terrainTag, ...filteredTags])
+        } else if (activeTool === 'mark_door') {
+          cell.traversable = true
+          cell.movement_cost = Math.max(1, Number(cell.movement_cost) || 1)
+          cell.movement_blocking_tags = []
+          const filteredTags = cell.tags.filter((tag) => tag !== 'blocked' && tag !== 'wall')
+          cell.tags = uniqueStrings(['door', ...filteredTags])
+        }
+      }
+    }
+
+    applyTraversalGridToState({
+      ...traversalGrid,
+      cells: nextCells,
+    })
+    markDirty()
+  }, [activeTool, applyTraversalGridToState, brushMovementCost, brushSizeCells, correctionModeEnabled, map, markDirty, traversalGrid])
+
+  const getBrushTraversalCellsAtTraversalCell = useCallback((centerX: number, centerY: number): Array<{ tx: number; ty: number }> => {
+    if (!traversalGrid) {
+      return []
+    }
+
+    const width = Math.max(1, Number(traversalGrid.width_cells))
+    const height = Math.max(1, Number(traversalGrid.height_cells))
+    const tx = clamp(Math.floor(centerX), 0, width - 1)
+    const ty = clamp(Math.floor(centerY), 0, height - 1)
+
+    const brushSpan = Math.max(1, Math.round(brushSizeCells))
+    const startX = tx - Math.floor(brushSpan / 2)
+    const startY = ty - Math.floor(brushSpan / 2)
+
+    const out: Array<{ tx: number; ty: number }> = []
+    for (let oy = 0; oy < brushSpan; oy += 1) {
+      for (let ox = 0; ox < brushSpan; ox += 1) {
+        const cx = startX + ox
+        const cy = startY + oy
+        if (cx < 0 || cy < 0 || cx >= width || cy >= height) {
+          continue
+        }
+        out.push({ tx: cx, ty: cy })
+      }
+    }
+    return out
+  }, [brushSizeCells, traversalGrid])
+
+  const traversalCellAtPointer = useCallback((clientX: number, clientY: number): { tx: number; ty: number } | null => {
+    if (!canvasRef.current || !map || !traversalGrid) {
+      return null
+    }
+
+    const width = Math.max(1, Number(traversalGrid.width_cells))
+    const height = Math.max(1, Number(traversalGrid.height_cells))
+    const rect = canvasRef.current.getBoundingClientRect()
+    const { gx, gy } = interaction.screenToGrid(
+      clientX,
+      clientY,
+      rect,
+      {
+        cellWidthPx: mapGridTransform.mapWidthPx / width,
+        cellHeightPx: mapGridTransform.mapHeightPx / height,
+      },
+    )
+
+    if (gx < 0 || gy < 0 || gx >= width || gy >= height) {
+      return null
+    }
+
+    return { tx: gx, ty: gy }
+  }, [interaction, map, mapGridTransform.mapHeightPx, mapGridTransform.mapWidthPx, traversalGrid])
+
+  const paintAtPointerPosition = useCallback((clientX: number, clientY: number) => {
+    const cell = traversalCellAtPointer(clientX, clientY)
+    if (!cell) {
+      return
+    }
+    applyCorrectionBrushAtCell(cell.tx, cell.ty)
+  }, [applyCorrectionBrushAtCell, traversalCellAtPointer])
+
+  const updateHoverCellFromPointer = useCallback((clientX: number, clientY: number) => {
+    if (!correctionModeEnabled) {
+      hoverCellRef.current = null
+      return null
+    }
+    const cell = traversalCellAtPointer(clientX, clientY)
+    if (!cell) {
+      hoverCellRef.current = null
+      return null
+    }
+    hoverCellRef.current = cell
+    return hoverCellRef.current
+  }, [correctionModeEnabled, traversalCellAtPointer])
+
+  const handleFetchPreviewArtifacts = useCallback(async () => {
+    if (!map || !map.metadata?.image_url || !roomCode) {
+      addNarrative('system', 'Cannot preview traversal artifacts without a map image and active room.')
+      return
+    }
+
+    const location = sanitizeLocation(map.metadata.environment)
+    const inferredBiome = inferBiome(location)
+    const mapBiome = typeof map.metadata.environment === 'string' ? map.metadata.environment.trim().toLowerCase() : ''
+    const biome = SCENE_BIOMES.has(mapBiome) ? mapBiome : inferredBiome
+    const previewCellSizeWorld = Number.isFinite(editorGridCellSizeWorld)
+      ? Math.max(0.25, Number(editorGridCellSizeWorld.toFixed(3)))
+      : Math.max(0.25, Number(traversalGrid?.cell_size_world ?? map.traversal_grid?.cell_size_world ?? 5))
+    const preferredGridWidthCells = Number.isFinite(editorGridWidthCells)
+      ? Math.max(1, Math.round(editorGridWidthCells))
+      : Math.max(1, Math.round(Number(traversalGrid?.width_cells ?? map.width ?? 1)))
+    const preferredGridHeightCells = Number.isFinite(editorGridHeightCells)
+      ? Math.max(1, Math.round(editorGridHeightCells))
+      : Math.max(1, Math.round(Number(traversalGrid?.height_cells ?? map.height ?? 1)))
+    const widthFeet = Math.max(20, Math.round(preferredGridWidthCells * previewCellSizeWorld))
+    const heightFeet = Math.max(20, Math.round(preferredGridHeightCells * previewCellSizeWorld))
+
+    setPreviewBusy(true)
+    try {
+      const response = await callBackendApi('/api/tools/import_battlemap_preview', {
+        method: 'POST',
+        body: {
+          image_url: map.metadata.image_url,
+          quality_mode: 'final',
+          include_preview_artifacts: true,
+          scene_spec: {
+            location,
+            biome,
+            encounter_type: sanitizeEncounterType(map.metadata.encounter_type),
+            notable_features: Array.isArray(map.metadata.tactical_tags) ? map.metadata.tactical_tags.slice(0, 6) : [],
+            mood_style: 'high-fantasy',
+            map_width_feet: widthFeet,
+            map_height_feet: heightFeet,
+          },
+          grid_settings: {
+            cell_size_world: previewCellSizeWorld,
+          },
+          grid_width_cells: preferredGridWidthCells,
+          grid_height_cells: preferredGridHeightCells,
+        },
+      })
+
+      if (!response.ok) {
+        const message = typeof response.data?.error === 'string'
+          ? response.data.error
+          : `Import preview failed (${response.status})`
+        throw new Error(message)
+      }
+
+      const returnedGrid = response.data?.traversal_grid as FrontendTraversalGrid | undefined
+      if (returnedGrid && Array.isArray(returnedGrid.cells) && returnedGrid.cells.length > 0) {
+        applyTraversalGridToState(returnedGrid)
+      }
+
+      const diagnostics = response.data?.diagnostics as Record<string, unknown> | undefined
+      const artifacts = diagnostics?.preview_artifacts as Record<string, unknown> | undefined
+      setPreviewArtifacts({
+        collision_mask_png_base64: typeof artifacts?.collision_mask_png_base64 === 'string' ? artifacts.collision_mask_png_base64 : undefined,
+        cost_map_png_base64: typeof artifacts?.cost_map_png_base64 === 'string' ? artifacts.cost_map_png_base64 : undefined,
+      })
+
+      addNarrative('system', 'Loaded traversal preview artifacts for correction mode.')
+      clearDirty()
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unable to refresh preview artifacts.'
+      addNarrative('system', `Traversal preview failed: ${message}`)
+    } finally {
+      setPreviewBusy(false)
+    }
+  }, [addNarrative, applyTraversalGridToState, clearDirty, editorGridCellSizeWorld, editorGridHeightCells, editorGridWidthCells, map, roomCode, setPreviewArtifacts, setPreviewBusy, traversalGrid])
+
+  const handleApplyCorrections = useCallback(async () => {
+    if (!map || !traversalGrid || !roomCode) {
+      addNarrative('system', 'Cannot apply corrections without an active room, map, and traversal grid.')
+      return
+    }
+
+    const mapPatch = {
+      ...map,
+      traversal_grid: traversalGrid,
+      metadata: {
+        ...map.metadata,
+        traversal_edited_locally: true,
+        traversal_edited_at: new Date().toISOString(),
+      },
+    }
+
+    setApplyBusy(true)
+    try {
+      const response = await callBackendApi('/api/session/mutate', {
+        method: 'POST',
+        body: {
+          room_code: roomCode,
+          map: mapPatch,
+        },
+      })
+
+      if (!response.ok || response.data?.error) {
+        const message = typeof response.data?.error === 'string'
+          ? response.data.error
+          : `Apply corrections failed (${response.status})`
+        throw new Error(message)
+      }
+
+      const gameState = response.data?.game_state as Record<string, unknown> | undefined
+      const updatedMap = (gameState?.map ?? mapPatch) as MapData
+      setMap(updatedMap)
+
+      const updatedTraversal = (updatedMap?.traversal_grid ?? traversalGrid) as FrontendTraversalGrid
+      if (updatedTraversal?.cells?.length) {
+        useOverlayStore.getState().setTraversalGrid(updatedTraversal)
+      }
+
+      clearDirty()
+      addNarrative('system', 'Applied traversal corrections to runtime session state.')
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unable to apply traversal corrections.'
+      addNarrative('system', `Apply corrections failed: ${message}`)
+    } finally {
+      setApplyBusy(false)
+    }
+  }, [addNarrative, clearDirty, map, roomCode, setApplyBusy, setMap, traversalGrid])
+
+  useEffect(() => {
+    const nextCollision = previewArtifacts.collisionMaskPngBase64?.trim()
+    if (!nextCollision) {
+      artifactImageRef.current.collisionMask = null
+    } else {
+      const img = new Image()
+      img.decoding = 'async'
+      img.src = `data:image/png;base64,${nextCollision}`
+      img.onload = () => {
+        artifactImageRef.current.collisionMask = img
+      }
+      img.onerror = () => {
+        artifactImageRef.current.collisionMask = null
+      }
+    }
+
+    const nextCost = previewArtifacts.costMapPngBase64?.trim()
+    if (!nextCost) {
+      artifactImageRef.current.costMap = null
+    } else {
+      const img = new Image()
+      img.decoding = 'async'
+      img.src = `data:image/png;base64,${nextCost}`
+      img.onload = () => {
+        artifactImageRef.current.costMap = img
+      }
+      img.onerror = () => {
+        artifactImageRef.current.costMap = null
+      }
+    }
+  }, [previewArtifacts.collisionMaskPngBase64, previewArtifacts.costMapPngBase64])
 
   useEffect(() => {
     if (!map) {
@@ -538,6 +951,68 @@ export default function MapCanvas({ onTileClick, onEntityClick, targetingMode = 
       ctx.imageSmoothingEnabled = false
       ctx.drawImage(loadedImage, 0, 0, mapGridTransform.mapWidthPx, mapGridTransform.mapHeightPx)
       ctx.restore()
+    }
+
+    if (correctionModeEnabled) {
+      const collisionMaskImage = artifactImageRef.current.collisionMask
+      if (showCollisionMaskLayer && collisionMaskImage) {
+        ctx.save()
+        ctx.globalAlpha = clamp(artifactLayerOpacity, 0, 1)
+        ctx.imageSmoothingEnabled = false
+        ctx.drawImage(collisionMaskImage, 0, 0, mapGridTransform.mapWidthPx, mapGridTransform.mapHeightPx)
+        ctx.restore()
+      }
+
+      const costMapImage = artifactImageRef.current.costMap
+      if (showCostMapLayer && costMapImage) {
+        ctx.save()
+        ctx.globalAlpha = clamp(artifactLayerOpacity, 0, 1)
+        ctx.imageSmoothingEnabled = false
+        ctx.drawImage(costMapImage, 0, 0, mapGridTransform.mapWidthPx, mapGridTransform.mapHeightPx)
+        ctx.restore()
+      }
+
+      const hoverCell = hoverCellRef.current
+      if (hoverCell) {
+        const previewColor = activeTool === 'paint_blocked'
+          ? 'rgba(231, 76, 60, 0.95)'
+          : activeTool === 'paint_walkable'
+            ? 'rgba(46, 204, 113, 0.95)'
+            : activeTool === 'paint_cost'
+              ? 'rgba(230, 126, 34, 0.95)'
+              : activeTool === 'mark_door'
+                ? 'rgba(52, 152, 219, 0.95)'
+                : 'rgba(241, 196, 15, 0.95)'
+        const fillAlpha = isPaintingRef.current ? 0.3 : 0.16
+
+        if (traversalGrid) {
+          const traversalCellWidthPx = mapGridTransform.mapWidthPx / Math.max(1, traversalGrid.width_cells)
+          const traversalCellHeightPx = mapGridTransform.mapHeightPx / Math.max(1, traversalGrid.height_cells)
+          const footprint = getBrushTraversalCellsAtTraversalCell(hoverCell.tx, hoverCell.ty)
+
+          ctx.save()
+          for (const cell of footprint) {
+            const x = cell.tx * traversalCellWidthPx
+            const y = cell.ty * traversalCellHeightPx
+            ctx.fillStyle = previewColor.replace('0.95', String(fillAlpha))
+            ctx.fillRect(x, y, traversalCellWidthPx, traversalCellHeightPx)
+
+            ctx.strokeStyle = previewColor
+            ctx.lineWidth = 1
+            ctx.strokeRect(x + 0.5, y + 0.5, Math.max(1, traversalCellWidthPx - 1), Math.max(1, traversalCellHeightPx - 1))
+          }
+          ctx.restore()
+        } else {
+          const rect = mapGridTransform.cellToPixelRect(hoverCell.tx, hoverCell.ty)
+          ctx.save()
+          ctx.fillStyle = previewColor.replace('0.95', String(fillAlpha))
+          ctx.fillRect(rect.x, rect.y, rect.width, rect.height)
+          ctx.strokeStyle = previewColor
+          ctx.lineWidth = 1
+          ctx.strokeRect(rect.x + 0.5, rect.y + 0.5, Math.max(1, rect.width - 1), Math.max(1, rect.height - 1))
+          ctx.restore()
+        }
+      }
     }
 
     const visibleSet = new Set(
@@ -940,7 +1415,7 @@ export default function MapCanvas({ onTileClick, onEntityClick, targetingMode = 
     })
 
     ctx.restore()
-  }, [map, combat, characters, interaction.offsetX, interaction.offsetY, interaction.zoom, selectedEntityId, myCharacterId, imageUrl, imageOpacity, resolveCharacterForEntity, getMonsterFrameKeyForEnemy, targetingMode, runtimeOverlay, showVectorLabels, showDmOnlyLabels, gridOverlayConfig, traversalGrid, mapGridTransform])
+  }, [map, combat, characters, interaction.offsetX, interaction.offsetY, interaction.zoom, selectedEntityId, myCharacterId, imageUrl, imageOpacity, resolveCharacterForEntity, getMonsterFrameKeyForEnemy, targetingMode, runtimeOverlay, showVectorLabels, showDmOnlyLabels, gridOverlayConfig, traversalGrid, mapGridTransform, correctionModeEnabled, showCollisionMaskLayer, showCostMapLayer, artifactLayerOpacity, activeTool, getBrushTraversalCellsAtTraversalCell])
 
   useEffect(() => {
     let frameId: number
@@ -960,8 +1435,38 @@ export default function MapCanvas({ onTileClick, onEntityClick, targetingMode = 
     return () => container.removeEventListener('wheel', handler)
   }, [interaction.handleWheel])
 
+  const handleCanvasPointerDown = useCallback((e: React.PointerEvent<HTMLCanvasElement>) => {
+    updateHoverCellFromPointer(e.clientX, e.clientY)
+    if (!correctionModeEnabled || activeTool === 'inspect' || e.button !== 0 || e.shiftKey) {
+      return
+    }
+    isPaintingRef.current = true
+    lastPaintCellKeyRef.current = null
+    paintAtPointerPosition(e.clientX, e.clientY)
+  }, [activeTool, correctionModeEnabled, paintAtPointerPosition, updateHoverCellFromPointer])
+
+  const handleCanvasPointerMove = useCallback((e: React.PointerEvent<HTMLCanvasElement>) => {
+    updateHoverCellFromPointer(e.clientX, e.clientY)
+    if (!isPaintingRef.current || !correctionModeEnabled || activeTool === 'inspect') {
+      return
+    }
+    paintAtPointerPosition(e.clientX, e.clientY)
+  }, [activeTool, correctionModeEnabled, paintAtPointerPosition, updateHoverCellFromPointer])
+
+  const stopPainting = useCallback(() => {
+    isPaintingRef.current = false
+    lastPaintCellKeyRef.current = null
+  }, [])
+
+  const clearHoverCell = useCallback(() => {
+    hoverCellRef.current = null
+  }, [])
+
   const handleClick = useCallback((e: React.MouseEvent) => {
     if (interaction.isPanning || !map) return
+    if (correctionModeEnabled) {
+      return
+    }
     const canvas = canvasRef.current
     if (!canvas) return
     const rect = canvas.getBoundingClientRect()
@@ -979,7 +1484,7 @@ export default function MapCanvas({ onTileClick, onEntityClick, targetingMode = 
     }
 
     onTileClick?.(gx, gy)
-  }, [map, interaction, onTileClick, onEntityClick, mapGridTransform.cellWidthPx, mapGridTransform.cellHeightPx])
+  }, [map, interaction, onTileClick, onEntityClick, mapGridTransform.cellWidthPx, mapGridTransform.cellHeightPx, correctionModeEnabled])
 
   const handleRecenter = useCallback(() => {
     if (!map) return
@@ -1106,7 +1611,10 @@ export default function MapCanvas({ onTileClick, onEntityClick, targetingMode = 
       className={`map-container${targetingMode ? ' targeting-mode' : ''}`}
       onPointerDown={interaction.handlePointerDown}
       onPointerMove={interaction.handlePointerMove}
-      onPointerUp={interaction.handlePointerUp}
+      onPointerUp={() => {
+        interaction.handlePointerUp()
+        stopPainting()
+      }}
     >
       <div className="map-metadata-badge" aria-live="polite">
         <div className="map-badge-main">
@@ -1216,6 +1724,152 @@ export default function MapCanvas({ onTileClick, onEntityClick, targetingMode = 
                 ? 'Grid: heat'
                 : 'Grid: tags'}
       </button>
+      <button
+        type="button"
+        className={`map-correction-toggle-btn ${correctionModeEnabled ? 'is-active' : ''}`}
+        onClick={() => setCorrectionModeEnabled(!correctionModeEnabled)}
+        title="Toggle battlemap correction mode"
+      >
+        {correctionModeEnabled ? 'Correction: on' : 'Correction: off'}
+      </button>
+      {correctionModeEnabled && (
+        <div className="map-correction-panel" aria-live="polite">
+          <button
+            type="button"
+            className="map-correction-tool-btn"
+            onClick={cycleTool}
+            title="Cycle correction tool"
+          >
+            Tool: {CORRECTION_TOOL_LABELS[activeTool]}
+          </button>
+          <button
+            type="button"
+            className="map-correction-brush-btn"
+            onClick={cycleBrushSize}
+            title="Cycle correction brush size"
+          >
+            Brush: {brushSizeCells} cell{brushSizeCells > 1 ? 's' : ''}
+          </button>
+          <label className="map-correction-cost-field" title="Set movement-cost paint value">
+            Movement value
+            <input
+              type="number"
+              min={0.5}
+              max={6}
+              step={0.5}
+              value={brushMovementCost}
+              onChange={(event) => setBrushMovementCost(Number(event.target.value))}
+            />
+          </label>
+          <label className="map-correction-cost-field" title="Traversal cell size in world units (feet)">
+            Grid cell ft
+            <input
+              type="number"
+              min={0.25}
+              max={20}
+              step={0.25}
+              value={editorGridCellSizeWorld}
+              onChange={(event) => {
+                const next = Number(event.target.value)
+                if (Number.isFinite(next)) {
+                  setEditorGridCellSizeWorld(next)
+                }
+              }}
+            />
+          </label>
+          <div className="map-correction-grid-count-row">
+            <label className="map-correction-cost-field" title="Traversal grid width (cells)">
+              Grid W
+              <input
+                type="number"
+                min={1}
+                max={1024}
+                step={1}
+                value={editorGridWidthCells}
+                onChange={(event) => {
+                  const next = Number(event.target.value)
+                  if (Number.isFinite(next)) {
+                    setEditorGridWidthCells(next)
+                  }
+                }}
+              />
+            </label>
+            <label className="map-correction-cost-field" title="Traversal grid height (cells)">
+              Grid H
+              <input
+                type="number"
+                min={1}
+                max={1024}
+                step={1}
+                value={editorGridHeightCells}
+                onChange={(event) => {
+                  const next = Number(event.target.value)
+                  if (Number.isFinite(next)) {
+                    setEditorGridHeightCells(next)
+                  }
+                }}
+              />
+            </label>
+          </div>
+          {activeTool !== 'paint_cost' && (
+            <div className="map-correction-tool-hint">Movement value applies to Paint cost.</div>
+          )}
+          <div className={`map-correction-dirty ${hasUnsavedChanges ? 'is-dirty' : ''}`}>
+            {hasUnsavedChanges ? 'Unsaved changes' : 'No edits yet'}
+          </div>
+          <div className="map-correction-artifact-row">
+            <button
+              type="button"
+              className={`map-correction-artifact-btn ${showCollisionMaskLayer ? 'is-active' : ''}`}
+              onClick={toggleCollisionMaskLayer}
+              disabled={!previewArtifacts.collisionMaskPngBase64}
+              title="Toggle collision mask preview layer"
+            >
+              Collision mask
+            </button>
+            <button
+              type="button"
+              className={`map-correction-artifact-btn ${showCostMapLayer ? 'is-active' : ''}`}
+              onClick={toggleCostMapLayer}
+              disabled={!previewArtifacts.costMapPngBase64}
+              title="Toggle movement-cost preview layer"
+            >
+              Cost map
+            </button>
+          </div>
+          <label className="map-correction-opacity-field" title="Adjust preview artifact opacity">
+            Artifact opacity
+            <input
+              type="range"
+              min={0.1}
+              max={1}
+              step={0.05}
+              value={artifactLayerOpacity}
+              onChange={(event) => setArtifactLayerOpacity(Number(event.target.value))}
+            />
+          </label>
+          <div className="map-correction-actions-row">
+            <button
+              type="button"
+              className="map-correction-refresh-btn"
+              onClick={() => void handleFetchPreviewArtifacts()}
+              disabled={previewBusy}
+              title="Fetch fresh CV preview and artifact layers"
+            >
+              {previewBusy ? 'Refreshing...' : 'Refresh preview'}
+            </button>
+            <button
+              type="button"
+              className="map-correction-apply-btn"
+              onClick={() => void handleApplyCorrections()}
+              disabled={applyBusy || !hasUnsavedChanges}
+              title="Persist corrected traversal grid into runtime session state"
+            >
+              {applyBusy ? 'Applying...' : 'Save/Apply'}
+            </button>
+          </div>
+        </div>
+      )}
       {hasAttributionPanel && (
         <div className="map-attribution-panel">
           {mapMetadata?.author && <div>Art: {mapMetadata.author}</div>}
@@ -1235,6 +1889,13 @@ export default function MapCanvas({ onTileClick, onEntityClick, targetingMode = 
       <canvas
         ref={canvasRef}
         className="map-canvas"
+        onPointerDown={handleCanvasPointerDown}
+        onPointerMove={handleCanvasPointerMove}
+        onPointerUp={stopPainting}
+        onPointerLeave={() => {
+          stopPainting()
+          clearHoverCell()
+        }}
         onClick={handleClick}
       />
     </div>

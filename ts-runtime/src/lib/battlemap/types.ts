@@ -80,6 +80,60 @@ export type GridOverlayConfig = {
   show_coordinates: boolean
 }
 
+export type BattlemapImportPreviewRequest = {
+  image_url: string
+  scene_spec: SceneSpec
+  quality_mode?: BattlemapQualityMode
+  include_preview_artifacts?: boolean
+  grid_settings?: Partial<GridOverlayConfig>
+  grid_width_cells?: number
+  grid_height_cells?: number
+}
+
+export type TraversalQualitySummary = {
+  total_cells: number
+  blocked_cells: number
+  blocked_ratio: number
+  avg_movement_cost: number
+  high_cost_cells: number
+  high_cost_ratio: number
+}
+
+export type ExtractionStageStatus = 'implemented' | 'placeholder'
+
+export type ExtractionStageReport = {
+  name: string
+  status: ExtractionStageStatus
+  detail: string
+}
+
+export type BattlemapImportPreviewResult = {
+  traversal_grid: TraversalGrid
+  diagnostics: {
+    source: 'cv' | 'vision_fallback'
+    quality_summary: TraversalQualitySummary
+    grid_width_cells: number
+    grid_height_cells: number
+    cell_size_world: number
+    grid_detection_confidence?: number
+    image_width_px?: number
+    image_height_px?: number
+    cell_size_px_x?: number
+    cell_size_px_y?: number
+    detected_cell_size_px_x?: number
+    detected_cell_size_px_y?: number
+    preview_artifacts?: {
+      collision_mask_png_base64: string
+      cost_map_png_base64: string
+    }
+  }
+  extraction_pipeline: {
+    mode: 'cv_baseline' | 'vision_baseline'
+    version: string
+    stages: ExtractionStageReport[]
+  }
+}
+
 export type TraversalCell = {
   x: number
   y: number
