@@ -4,9 +4,6 @@ from __future__ import annotations
 
 import logging
 import os
-import json
-from urllib import error as urllib_error
-from urllib import request as urllib_request
 from typing import Any
 
 from .map_catalog import build_automated_map, assign_terrain_atlas_sprites
@@ -49,97 +46,6 @@ def _parse_env_flag(name: str, default: bool) -> bool:
 _LEGACY_SPRITE_PIPELINE_ENABLED = str(os.getenv("OTDND_ENABLE_LEGACY_SPRITES", "0")).strip().lower() in {
     "1", "true", "yes", "on",
 }
-_TS_VECTOR_MAP_FORWARD_ENABLED = _parse_env_flag("OTDND_TS_VECTOR_MAP_FORWARD_ENABLED", _parse_env_flag("TS_VECTOR_MAP_FORWARD_ENABLED", False))
-_TS_RUNTIME_BASE_URL = (os.getenv("OTDND_TS_RUNTIME_BASE_URL") or os.getenv("TS_RUNTIME_BASE_URL") or "http://127.0.0.1:9010").rstrip("/")
-_TS_RUNTIME_TIMEOUT_SECONDS = float(os.getenv("OTDND_TS_RUNTIME_TIMEOUT_SECONDS", "20"))
-
-_BIOME_BY_ENVIRONMENT = {
-    "dungeon": "dungeon",
-    "forest": "forest",
-    "woods": "forest",
-    "village": "village",
-    "town": "village",
-    "crypt": "crypt",
-    "tomb": "crypt",
-    "mine": "mine",
-    "cave": "cavern",
-    "cavern": "cavern",
-}
-
-
-def is_vector_map_forwarding_enabled() -> bool:
-    return _TS_VECTOR_MAP_FORWARD_ENABLED
-
-
-def _biome_from_generate_map_input(inp: dict[str, Any]) -> str:
-    environment = str(inp.get("environment", "")).strip().lower()
-    return _BIOME_BY_ENVIRONMENT.get(environment, "dungeon")
-
-
-def _vector_request_from_generate_map_input(inp: dict[str, Any]) -> dict[str, Any]:
-    width = max(5, int(inp.get("width", 20)))
-    height = max(5, int(inp.get("height", 15)))
-    scale = 2 if _parse_env_flag("GRID_RESOLUTION_V2_ENABLED", True) else 1
-    encounter_scale = str(inp.get("encounter_scale", "medium")).strip().lower()
-    room_count = {
-        "small": 5,
-        "medium": 7,
-        "large": 10,
-    }.get(encounter_scale, 7)
-
-    return {
-        "seed": int(inp.get("seed")) if inp.get("seed") is not None else 1,
-        "map_id": str(inp.get("map_id", "python_forwarded_map")),
-        "name": str(inp.get("description", "Generated Vector Map"))[:80] or "Generated Vector Map",
-        "biome": _biome_from_generate_map_input(inp),
-        "story_prompt": str(inp.get("description", "")),
-        "style_preset": "default",
-        "bounds_world": {
-            "origin_x": 0,
-            "origin_y": 0,
-            "width_world": width * 5,
-            "height_world": height * 5,
-        },
-        "generation_params": {
-            "room_count": room_count,
-            "corridor_width_cells": 2,
-            "obstacle_density": 0.12,
-            "hazard_density": 0.08,
-        },
-        "grid_config": {
-            "base_cell_size_world": 5,
-            "resolution_scale": scale,
-            "diagonal_policy": "allow",
-            "movement_cost_mode": "world_units",
-        },
-        "validation_mode": "fixup",
-    }
-
-
-def forward_generate_vector_map_request(inp: dict[str, Any]) -> dict[str, Any]:
-    if not _TS_VECTOR_MAP_FORWARD_ENABLED:
-        raise RuntimeError("TypeScript vector-map forwarding is disabled")
-
-    if isinstance(inp.get("bounds_world"), dict):
-        payload = dict(inp)
-    else:
-        payload = _vector_request_from_generate_map_input(inp)
-    request = urllib_request.Request(
-        f"{_TS_RUNTIME_BASE_URL}/api/tools/generate_vector_map",
-        data=json.dumps(payload).encode("utf-8"),
-        headers={"Content-Type": "application/json"},
-        method="POST",
-    )
-
-    try:
-        with urllib_request.urlopen(request, timeout=_TS_RUNTIME_TIMEOUT_SECONDS) as response:
-            body = response.read().decode("utf-8")
-            return json.loads(body)
-    except urllib_error.HTTPError as exc:
-        body = exc.read().decode("utf-8", errors="replace")
-        raise RuntimeError(f"TS vector-map forward failed with HTTP {exc.code}: {body}") from exc
-    except urllib_error.URLError as exc:
-        raise RuntimeError(f"TS vector-map forward failed: {exc.reason}") from exc
 
 
 def _map_data_from_vector_payload(payload: dict[str, Any], description: str, override_entities: list[dict[str, Any]] | None = None) -> dict[str, Any]:
@@ -836,13 +742,6 @@ class ToolDispatcher:
                     "cache_hit": False,
                 },
             }
-        elif _TS_VECTOR_MAP_FORWARD_ENABLED:
-            payload = forward_generate_vector_map_request(inp)
-            map_data = _map_data_from_vector_payload(
-                payload,
-                str(inp.get("description", "")),
-                inp.get("entities") if isinstance(inp.get("entities"), list) else None,
-            )
         else:
             map_data = build_automated_map({
                 "description": str(inp.get("description", "")),

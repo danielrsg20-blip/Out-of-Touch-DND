@@ -23,7 +23,7 @@ from .session_start_protocol import build_session_start_protocol
 from .voice import speech_to_text, text_to_speech, dm_speak, mock_tts_audio
 from .models.database import init_db, async_session
 from .models.campaign import SavedCampaign
-from .tools import ToolDispatcher, forward_generate_vector_map_request, is_vector_map_forwarding_enabled
+from .tools import ToolDispatcher
 from .movement import CollisionGrid, AStarPathfinder, MovementValidator, NavNode
 from .rules.spells import (
     get_castable_spell_options,
@@ -64,9 +64,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-TS_RUNTIME_BASE_URL = (os.getenv("OTDND_TS_RUNTIME_BASE_URL") or os.getenv("TS_RUNTIME_BASE_URL") or "http://127.0.0.1:9010").rstrip("/")
-
 
 # --- REST Endpoints ---
 
@@ -263,29 +260,6 @@ async def list_items(category: str | None = None):
 @app.get("/api/health")
 async def health():
     return {"status": "ok", "sessions": len(session_manager.sessions)}
-
-
-@app.post("/api/tools/generate_vector_map")
-async def forward_generate_vector_map(request: Request):
-    if not is_vector_map_forwarding_enabled():
-        return JSONResponse(
-            status_code=503,
-            content={
-                "error": "TypeScript vector-map forwarding is disabled",
-                "ts_runtime_base_url": TS_RUNTIME_BASE_URL,
-            },
-        )
-
-    body = await request.json()
-    if not isinstance(body, dict):
-        return JSONResponse(status_code=400, content={"error": "Request body must be a JSON object"})
-
-    try:
-        payload = forward_generate_vector_map_request(body)
-    except RuntimeError as exc:
-        return JSONResponse(status_code=502, content={"error": str(exc), "ts_runtime_base_url": TS_RUNTIME_BASE_URL})
-
-    return JSONResponse(status_code=200, content=payload)
 
 
 @app.get("/api/health/atlas")
