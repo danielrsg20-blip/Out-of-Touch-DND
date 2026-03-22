@@ -47,12 +47,19 @@ function orientationToSize(style: BattlemapStyleConfig | undefined): '1024x1024'
   return '1792x1024'
 }
 
+/** Cap scene description to avoid exceeding provider prompt limits. */
+const MAX_DESCRIPTION_CHARS = 500
+
 export function buildBattlemapPrompt(scene: SceneSpec, style?: BattlemapStyleConfig): string {
   const features = scene.notable_features.length > 0 ? scene.notable_features.join(', ') : 'none specified'
   const tone = scene.campaign_tone?.trim() || 'neutral fantasy tension'
+  const descriptionLine = scene.description?.trim()
+    ? `Scene narrative: ${scene.description.trim().slice(0, MAX_DESCRIPTION_CHARS)}.`
+    : null
 
   return [
     'Create a top-down Dungeons & Dragons tactical battlemap image.',
+    ...(descriptionLine ? [descriptionLine] : []),
     `Location: ${LOCATION_DESCRIPTIONS[scene.location]}.`,
     `Biome: ${scene.biome}.`,
     `Encounter intent: ${ENCOUNTER_GUIDANCE[scene.encounter_type]}.`,
@@ -63,10 +70,28 @@ export function buildBattlemapPrompt(scene: SceneSpec, style?: BattlemapStyleCon
     `World footprint: ${scene.map_width_feet} feet by ${scene.map_height_feet} feet.`,
     'Must be overhead orthographic composition suitable for square-grid turn-based combat.',
     'Ensure high readability of obstacles: buildings, walls, cliffs, dense trees, and water edges must have strong silhouettes.',
-    'Do not include text, lettering, numbers, labels, logos, UI, borders, or watermarks.',
+    'ABSOLUTE RULE — NO TEXT OF ANY KIND:',
+    'No text, no labels, no legend, no watermark, no signature, no numbers, no runes with readable glyphs, no signage, no UI elements.',
+    'No title, no compass rose text, no cardinal direction letters, no coordinate markers, no scale bar text, no credits.',
+    'No decorative borders, no frames, no cartouches, no banners with writing.',
+    'Pure top-down battlemap only; show environment features only — terrain, structures, water, vegetation.',
+    'This image must be VTT-ready: clean, unlabeled, token-free tactical map.',
     'Do not include character tokens, miniatures, or portraits.',
     'Keep traversal regions visually separable: walkable ground, blocked zones, difficult terrain, and doorways.',
   ].join(' ')
+}
+
+/**
+ * Build an escalated prompt for text-validation retry attempts.
+ * Each retry adds stronger negative constraints to suppress text artifacts.
+ */
+export function buildRetryPrompt(basePrompt: string, attempt: number): string {
+  const escalations = [
+    'CRITICAL: The previous generation contained text or labels. REMOVE ALL TEXT. TEXT IS STRICTLY FORBIDDEN. Generate a clean battlemap with zero readable characters anywhere in the image.',
+    'FAILURE: Text was detected again. Produce ONLY terrain and environment features. Absolutely no text, legends, labels, titles, compass directions, watermarks, frames, borders, or any glyph that could be read as a letter or number. Simplify the composition to reduce text artifacts.',
+  ]
+  const suffix = escalations[Math.min(attempt - 1, escalations.length - 1)]
+  return `${basePrompt} ${suffix}`
 }
 
 export function inferImageSize(style?: BattlemapStyleConfig): '1024x1024' | '1792x1024' | '1024x1792' {

@@ -265,21 +265,48 @@ TOOL_DEFINITIONS: list[dict[str, Any]] = [
         "input_schema": {
             "type": "object",
             "properties": {
-                "description": {"type": "string", "description": "Narrative description of the area for the players"},
-                "environment": {"type": "string", "description": "Optional environment hint (dungeon/forest/tavern/cave/city)"},
+                "description": {
+                    "type": "string",
+                    "description": "Vivid narrative description of the scene the players see. This text is used to generate the battlemap image, so it MUST match the narration you just delivered. Include key visual elements: terrain, lighting, weather, structures, and atmosphere.",
+                },
+                "location": {
+                    "type": "string",
+                    "enum": ["forest", "swamp", "dungeon", "city_alley", "tavern", "ruins", "mountain", "coastal"],
+                    "description": "Map location type that best matches the scene.",
+                },
+                "biome": {
+                    "type": "string",
+                    "enum": ["temperate", "tropical", "arctic", "underground", "urban", "magical"],
+                    "description": "Climate/biome of the scene.",
+                },
+                "mood_style": {
+                    "type": "string",
+                    "enum": ["hand-drawn", "painterly", "parchment", "gritty", "high-fantasy", "realistic"],
+                    "description": "Visual art style for the generated battlemap image.",
+                },
+                "notable_features": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": "Key visual landmarks to depict on the map (e.g. 'fallen stone columns', 'glowing runes on the floor', 'a frozen lake'). Max 6 items.",
+                },
+                "encounter_type": {
+                    "type": "string",
+                    "enum": ["ambush", "siege", "chase", "investigation", "diplomacy", "exploration"],
+                    "description": "Tactical encounter type that shapes the map layout.",
+                },
+                "environment": {"type": "string", "description": "Deprecated; use location instead. Environment hint (dungeon/forest/tavern/cave/city)"},
                 "terrain_theme": {
                     "type": "string",
                     "description": "Optional terrain style hint (e.g. ruined/overgrown/ancient/volcanic/frozen/flooded/arcane)",
                 },
-                "encounter_type": {"type": "string", "description": "Optional encounter type hint (combat/exploration/social)"},
                 "encounter_scale": {"type": "string", "description": "Optional scale hint (small/medium/large)"},
                 "tactical_tags": {
                     "type": "array",
-                    "description": "Optional tactical tags (cover/chokepoints/line_of_sight/flanking)",
+                    "description": "Optional tactical tags for grid layout (cover/chokepoints/line_of_sight/flanking)",
                     "items": {"type": "string"},
                 },
-                "width": {"type": "integer", "description": "Map width in tiles (5-40)", "default": 20},
-                "height": {"type": "integer", "description": "Map height in tiles (5-30)", "default": 15},
+                "width": {"type": "integer", "description": "Map width in tiles (5-40)", "default": 30},
+                "height": {"type": "integer", "description": "Map height in tiles (5-30)", "default": 21},
                 "tiles": {
                     "type": "array",
                     "description": "Array of tile objects with x, y, type (wall/floor/door/water/pit/pillar/stairs_up/stairs_down/rubble), and optional state",
@@ -721,16 +748,16 @@ class ToolDispatcher:
                         "encounter_type": str(inp.get("encounter_type", "")).strip().lower(),
                         "encounter_scale": str(inp.get("encounter_scale", "")).strip().lower(),
                         "tactical_tags": [str(t) for t in inp.get("tactical_tags", [])],
-                        "width": int(inp.get("width", 20)),
-                        "height": int(inp.get("height", 15)),
+                        "width": int(inp.get("width", 30)),
+                        "height": int(inp.get("height", 21)),
                         "seed": int(inp.get("seed")) if inp.get("seed") is not None else None,
                     },
                     tiles,
                 )
 
             map_data = {
-                "width": inp.get("width", 20),
-                "height": inp.get("height", 15),
+                "width": inp.get("width", 30),
+                "height": inp.get("height", 21),
                 "tiles": tiles,
                 "entities": inp.get("entities", []),
                 "metadata": {
@@ -750,8 +777,8 @@ class ToolDispatcher:
                 "encounter_type": str(inp.get("encounter_type", "")).strip().lower(),
                 "encounter_scale": str(inp.get("encounter_scale", "")).strip().lower(),
                 "tactical_tags": [str(t) for t in inp.get("tactical_tags", [])],
-                "width": int(inp.get("width", 20)),
-                "height": int(inp.get("height", 15)),
+                "width": int(inp.get("width", 30)),
+                "height": int(inp.get("height", 21)),
                 "seed": int(inp.get("seed")) if inp.get("seed") is not None else None,
             })
 
@@ -759,6 +786,50 @@ class ToolDispatcher:
                 map_data["entities"] = inp.get("entities", [])
 
         map_metadata = map_data.setdefault("metadata", {})
+
+        # Persist SceneSpec-compatible fields in metadata for the frontend battlemap pipeline.
+        # Normalize environment → location if Claude used the deprecated field.
+        _ENV_TO_LOCATION = {
+            "cave": "dungeon",
+            "city": "city_alley",
+            "forest": "forest",
+            "dungeon": "dungeon",
+            "tavern": "tavern",
+        }
+        _THEME_TO_BIOME = {
+            "frozen": "arctic",
+            "volcanic": "underground",
+            "arcane": "magical",
+            "overgrown": "tropical",
+            "flooded": "temperate",
+            "ancient": "underground",
+            "ruined": "temperate",
+        }
+        raw_location = str(inp.get("location", "")).strip().lower()
+        raw_env = str(inp.get("environment", "")).strip().lower()
+        resolved_location = raw_location if raw_location else _ENV_TO_LOCATION.get(raw_env, "ruins")
+        map_metadata["location"] = resolved_location
+        map_metadata["description"] = str(inp.get("description", ""))
+
+        raw_biome = str(inp.get("biome", "")).strip().lower()
+        if not raw_biome:
+            raw_theme = str(inp.get("terrain_theme", "")).strip().lower()
+            raw_biome = _THEME_TO_BIOME.get(raw_theme, "")
+        if raw_biome:
+            map_metadata["biome"] = raw_biome
+
+        raw_mood = str(inp.get("mood_style", "")).strip().lower()
+        if raw_mood:
+            map_metadata["mood_style"] = raw_mood
+
+        raw_features = inp.get("notable_features")
+        if isinstance(raw_features, list) and raw_features:
+            map_metadata["notable_features"] = [str(f) for f in raw_features[:6]]
+
+        raw_terrain_theme = str(inp.get("terrain_theme", "")).strip().lower()
+        if raw_terrain_theme:
+            map_metadata["terrain_theme"] = raw_terrain_theme
+
         if _LEGACY_SPRITE_PIPELINE_ENABLED:
             map_metadata["sprite_pipeline_enabled"] = True
             map_metadata["sprite_render_verification"] = "legacy_enabled"

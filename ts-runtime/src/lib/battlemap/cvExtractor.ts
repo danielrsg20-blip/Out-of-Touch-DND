@@ -72,11 +72,15 @@ function histogramEqualize(gray: Uint8Array): Uint8Array {
     return gray.slice()
   }
 
+  const lut = new Uint8Array(256)
+  for (let i = 0; i < 256; i += 1) {
+    const normalized = ((cdf[i] - cdfMin) / (total - cdfMin)) * 255
+    lut[i] = clamp(Math.round(normalized), 0, 255)
+  }
+
   const out = new Uint8Array(total)
   for (let i = 0; i < total; i += 1) {
-    const value = gray[i]
-    const normalized = ((cdf[value] - cdfMin) / (total - cdfMin)) * 255
-    out[i] = clamp(Math.round(normalized), 0, 255)
+    out[i] = lut[gray[i]]
   }
   return out
 }
@@ -228,18 +232,24 @@ function markOutsideWalkable(blocked: Uint8Array, width: number, height: number)
     const y = queueY[head]
     head += 1
 
-    const neighbors: Array<[number, number]> = [
-      [x + 1, y],
-      [x - 1, y],
-      [x, y + 1],
-      [x, y - 1],
-    ]
+    const rightX = x + 1
+    if (rightX < width) {
+      enqueueIfWalkable(rightX, y)
+    }
 
-    for (const [nx, ny] of neighbors) {
-      if (nx < 0 || nx >= width || ny < 0 || ny >= height) {
-        continue
-      }
-      enqueueIfWalkable(nx, ny)
+    const leftX = x - 1
+    if (leftX >= 0) {
+      enqueueIfWalkable(leftX, y)
+    }
+
+    const downY = y + 1
+    if (downY < height) {
+      enqueueIfWalkable(x, downY)
+    }
+
+    const upY = y - 1
+    if (upY >= 0) {
+      enqueueIfWalkable(x, upY)
     }
   }
 
@@ -266,20 +276,20 @@ function buildAxisProjection(mask: Uint8Array, width: number, height: number, ax
   const out = new Float32Array(length)
 
   if (axis === 'x') {
-    for (let x = 0; x < width; x += 1) {
-      let sum = 0
-      for (let y = 0; y < height; y += 1) {
-        sum += mask[pixelIndex(x, y, width)]
+    for (let y = 0; y < height; y += 1) {
+      const rowBase = y * width
+      for (let x = 0; x < width; x += 1) {
+        out[x] += mask[rowBase + x]
       }
-      out[x] = sum
     }
     return out
   }
 
   for (let y = 0; y < height; y += 1) {
+    const rowBase = y * width
     let sum = 0
     for (let x = 0; x < width; x += 1) {
-      sum += mask[pixelIndex(x, y, width)]
+      sum += mask[rowBase + x]
     }
     out[y] = sum
   }
@@ -346,22 +356,41 @@ function buildTraversalGrid(
   const cellWidthPx = width / gridWidthCells
   const cellHeightPx = height / gridHeightCells
 
+  const xStarts = new Int32Array(gridWidthCells)
+  const xEnds = new Int32Array(gridWidthCells)
+  for (let x = 0; x < gridWidthCells; x += 1) {
+    const x0 = Math.floor(x * cellWidthPx)
+    const x1 = Math.max(x0 + 1, Math.ceil((x + 1) * cellWidthPx))
+    const clampedX0 = clamp(x0, 0, width - 1)
+    xStarts[x] = clampedX0
+    xEnds[x] = clamp(x1, clampedX0 + 1, width)
+  }
+
+  const yStarts = new Int32Array(gridHeightCells)
+  const yEnds = new Int32Array(gridHeightCells)
   for (let y = 0; y < gridHeightCells; y += 1) {
+    const y0 = Math.floor(y * cellHeightPx)
+    const y1 = Math.max(y0 + 1, Math.ceil((y + 1) * cellHeightPx))
+    const clampedY0 = clamp(y0, 0, height - 1)
+    yStarts[y] = clampedY0
+    yEnds[y] = clamp(y1, clampedY0 + 1, height)
+  }
+
+  for (let y = 0; y < gridHeightCells; y += 1) {
+    const clampedY0 = yStarts[y]
+    const clampedY1 = yEnds[y]
     for (let x = 0; x < gridWidthCells; x += 1) {
-      const x0 = Math.floor(x * cellWidthPx)
-      const x1 = Math.max(x0 + 1, Math.ceil((x + 1) * cellWidthPx))
-      const y0 = Math.floor(y * cellHeightPx)
-      const y1 = Math.max(y0 + 1, Math.ceil((y + 1) * cellHeightPx))
+      const clampedX0 = xStarts[x]
+      const clampedX1 = xEnds[x]
 
       let total = 0
       let blocked = 0
       let costSum = 0
 
-      for (let py = y0; py < y1; py += 1) {
-        const cy = clamp(py, 0, height - 1)
-        for (let px = x0; px < x1; px += 1) {
-          const cx = clamp(px, 0, width - 1)
-          const idx = pixelIndex(cx, cy, width)
+      for (let py = clampedY0; py < clampedY1; py += 1) {
+        const rowBase = py * width
+        for (let px = clampedX0; px < clampedX1; px += 1) {
+          const idx = rowBase + px
           total += 1
           if (blockedMask[idx] === 1) {
             blocked += 1

@@ -66,6 +66,8 @@ function parseRequest(body: JsonRecord): BattlemapGenerationRequest {
 
   const gridRaw = asRecord(body.grid_settings)
 
+  const rawDescription = asString(sceneSpecRaw.description)?.trim() || undefined
+
   return {
     campaign_id: campaignId,
     quality_mode: parseGenerateQualityMode(body.quality_mode),
@@ -78,6 +80,7 @@ function parseRequest(body: JsonRecord): BattlemapGenerationRequest {
       map_width_feet: mapWidthFeet,
       map_height_feet: mapHeightFeet,
       campaign_tone: asString(sceneSpecRaw.campaign_tone) ?? undefined,
+      ...(rawDescription ? { description: rawDescription } : {}),
     },
     seed: typeof body.seed === 'string' || typeof body.seed === 'number' ? body.seed : undefined,
     style_config: styleConfigRaw
