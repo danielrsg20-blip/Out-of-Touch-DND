@@ -16,6 +16,7 @@ let sessionEventsChannel: RealtimeChannel | null = null
 type BattlemapQualityMode = 'fast' | 'final'
 
 const BATTLEMAP_QUALITY_MODE_KEY_PREFIX = 'otdnd.battlemapQualityMode'
+const DEFAULT_BATTLEMAP_QUALITY_MODE: BattlemapQualityMode = 'final'
 
 function isBattlemapQualityMode(value: unknown): value is BattlemapQualityMode {
   return value === 'fast' || value === 'final'
@@ -27,13 +28,13 @@ function battlemapQualityModeStorageKey(roomCode: string): string {
 
 function readBattlemapQualityMode(roomCode: string | null | undefined): BattlemapQualityMode {
   if (!roomCode) {
-    return 'final'
+    return DEFAULT_BATTLEMAP_QUALITY_MODE
   }
   try {
     const raw = window.localStorage.getItem(battlemapQualityModeStorageKey(roomCode))
-    return isBattlemapQualityMode(raw) ? raw : 'final'
+    return isBattlemapQualityMode(raw) ? raw : DEFAULT_BATTLEMAP_QUALITY_MODE
   } catch {
-    return 'final'
+    return DEFAULT_BATTLEMAP_QUALITY_MODE
   }
 }
 
@@ -200,7 +201,7 @@ export const useSessionStore = create<SessionState>((set) => ({
   campaignPremise: null,
   campaignTone: null,
   campaignTitle: null,
-  battlemapQualityMode: 'fast',
+  battlemapQualityMode: DEFAULT_BATTLEMAP_QUALITY_MODE,
 
   setPhase: (phase) => set({ phase }),
 
@@ -460,7 +461,7 @@ export const useSessionStore = create<SessionState>((set) => ({
       campaignPremise: null,
       campaignTone: null,
       campaignTitle: null,
-      battlemapQualityMode: 'fast',
+      battlemapQualityMode: DEFAULT_BATTLEMAP_QUALITY_MODE,
     })
   },
 }))
