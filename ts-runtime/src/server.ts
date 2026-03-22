@@ -36,6 +36,8 @@ async function buildServer() {
   await registerBattlemapImportPreviewRoute(app)
   await registerCampaignRoutes(app)
 
+  app.get('/health', async () => ({ status: 'ok' }))
+
   return app
 }
 

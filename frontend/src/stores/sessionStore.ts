@@ -27,13 +27,13 @@ function battlemapQualityModeStorageKey(roomCode: string): string {
 
 function readBattlemapQualityMode(roomCode: string | null | undefined): BattlemapQualityMode {
   if (!roomCode) {
-    return 'fast'
+    return 'final'
   }
   try {
     const raw = window.localStorage.getItem(battlemapQualityModeStorageKey(roomCode))
-    return isBattlemapQualityMode(raw) ? raw : 'fast'
+    return isBattlemapQualityMode(raw) ? raw : 'final'
   } catch {
-    return 'fast'
+    return 'final'
   }
 }
 

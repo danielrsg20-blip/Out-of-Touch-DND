@@ -395,6 +395,18 @@ function hydrateTilesWithSprites(environment: string, tilesRaw: unknown): Array<
     }
   }
 
+  function parsePositiveIntEnv(name: string, fallback: number): number {
+    const raw = Deno.env.get(name)
+    if (!raw) {
+      return fallback
+    }
+    const parsed = Number.parseInt(raw, 10)
+    if (!Number.isFinite(parsed) || parsed <= 0) {
+      return fallback
+    }
+    return parsed
+  }
+
   function buildFallbackOverlay(mapId: string): Record<string, unknown> {
     return {
       id: `overlay-${randomId()}`,
@@ -438,26 +450,34 @@ function hydrateTilesWithSprites(environment: string, tilesRaw: unknown): Array<
     width: number,
     height: number,
   ): Promise<{ map: Record<string, unknown>; battlemapAsset: Record<string, unknown> } | null> {
-      const configuredBase = (
+    const requestTimeoutMs = parsePositiveIntEnv('OTDND_BATTLEMAP_PROBE_TIMEOUT_MS', 90000)
+    const connectTimeoutMs = Math.min(requestTimeoutMs, 5000) // fast-fail unreachable candidates
+    const probeStartedAt = Date.now()
+    const configuredBase = (
       Deno.env.get('TS_RUNTIME_BASE_URL')
       ?? Deno.env.get('OTDND_TS_RUNTIME_BASE_URL')
       ?? ''
     ).trim().replace(/\/$/, '')
 
-      const candidates: string[] = []
-      if (configuredBase) {
-        candidates.push(configuredBase)
-      }
-      // Supabase local edge runtime is containerized, so localhost/127.0.0.1 must be translated to host.docker.internal.
-      if (configuredBase.includes('://127.0.0.1') || configuredBase.includes('://localhost')) {
-        candidates.push(
-          configuredBase
-            .replace('://127.0.0.1', '://host.docker.internal')
-            .replace('://localhost', '://host.docker.internal'),
-        )
-      }
-      // Always include local dev defaults to tolerate missing env propagation.
-      candidates.push('http://host.docker.internal:9020', 'http://127.0.0.1:9020')
+    const candidates: string[] = []
+    if (configuredBase) {
+      candidates.push(configuredBase)
+    }
+    // Supabase local edge runtime is containerized, so localhost/127.0.0.1 must be translated to host.docker.internal.
+    if (configuredBase.includes('://127.0.0.1') || configuredBase.includes('://localhost')) {
+      candidates.push(
+        configuredBase
+          .replace('://127.0.0.1', '://host.docker.internal')
+          .replace('://localhost', '://host.docker.internal'),
+      )
+    }
+    // Always include local dev default for containerized edge runtime.
+    candidates.push('http://host.docker.internal:9020')
+    // Some Docker setups (e.g. Docker Engine without Desktop on Windows/Linux)
+    // don't resolve host.docker.internal; fall back to common bridge-gateway IPs.
+    candidates.push('http://172.17.0.1:9020')   // default bridge
+    candidates.push('http://172.19.0.1:9020')   // supabase-managed network
+    const uniqueCandidates = [...new Set(candidates.map((candidate) => candidate.trim().replace(/\/$/, '')).filter(Boolean))]
 
     const seed = stableSeedFromText(`${roomCode}:${environment}:${width}x${height}`)
     const location = ['forest', 'swamp', 'dungeon', 'city_alley', 'tavern', 'ruins', 'mountain', 'coastal'].includes(environment)
@@ -468,29 +488,54 @@ function hydrateTilesWithSprites(environment: string, tilesRaw: unknown): Array<
       : (location === 'city_alley' || location === 'tavern' ? 'urban' : 'temperate')
 
     let payload: Record<string, unknown> | null = null
-    for (const baseUrl of [...new Set(candidates)]) {
+    for (const baseUrl of uniqueCandidates) {
+      const candidateStartedAt = Date.now()
       try {
-        const response = await fetch(`${baseUrl}/api/tools/generate_battlemap`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            campaign_id: roomCode,
-            seed,
-            scene_spec: {
-              location,
-              biome,
-              encounter_type: 'exploration',
-              notable_features: ['clear paths', 'line of sight blockers', 'cover objects'],
-              mood_style: 'high-fantasy',
-              map_width_feet: width * 5,
-              map_height_feet: height * 5,
-              campaign_tone: 'adventurous',
-            },
-            grid_settings: {
-              cell_size_world: 5,
-            },
-          }),
-        })
+        // Quick health pre-check so unreachable hosts fail fast (5s max).
+        const healthCtrl = new AbortController()
+        const healthTimeout = setTimeout(() => healthCtrl.abort(), connectTimeoutMs)
+        try {
+          const healthRes = await fetch(`${baseUrl}/health`, { signal: healthCtrl.signal })
+          if (!healthRes.ok) {
+            console.info(`[session-actions] battlemap probe ${baseUrl} health check failed (status=${healthRes.status}) in ${Date.now() - candidateStartedAt}ms`)
+            continue
+          }
+        } catch {
+          console.info(`[session-actions] battlemap probe ${baseUrl} unreachable after ${Date.now() - candidateStartedAt}ms`)
+          continue
+        } finally {
+          clearTimeout(healthTimeout)
+        }
+
+        const controller = new AbortController()
+        const timeoutHandle = setTimeout(() => controller.abort(), requestTimeoutMs)
+        const response = await (async () => {
+          try {
+            return await fetch(`${baseUrl}/api/tools/generate_battlemap`, {
+              method: 'POST',
+              signal: controller.signal,
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                campaign_id: roomCode,
+                quality_mode: 'fast',
+                seed,
+                scene_spec: {
+                  location,
+                  biome,
+                  encounter_type: 'exploration',
+                  notable_features: ['clear paths', 'line of sight blockers', 'cover objects'],
+                  mood_style: 'high-fantasy',
+                  map_width_feet: width * 5,
+                  map_height_feet: height * 5,
+                  campaign_tone: 'adventurous',
+                },
+              }),
+            })
+          } finally {
+            clearTimeout(timeoutHandle)
+          }
+        })()
+        console.info(`[session-actions] battlemap probe ${baseUrl} finished in ${Date.now() - candidateStartedAt}ms (status=${response.status})`)
 
         if (!response.ok) {
           continue
@@ -499,9 +544,12 @@ function hydrateTilesWithSprites(environment: string, tilesRaw: unknown): Array<
         payload = parseJsonObjectSafe(await response.text())
         break
       } catch {
+        console.info(`[session-actions] battlemap probe ${baseUrl} failed after ${Date.now() - candidateStartedAt}ms`)
         continue
       }
     }
+
+    console.info(`[session-actions] battlemap probe total ${Date.now() - probeStartedAt}ms over ${uniqueCandidates.length} candidate(s)`)
 
     if (!payload) {
       return null
@@ -724,6 +772,32 @@ async function appendSnapshotVersion(sessionId: string, snapshot: Record<string,
   }
 }
 
+function snapshotHasReadyBattlemap(snapshot: Record<string, unknown> | null): boolean {
+  if (!snapshot || typeof snapshot !== 'object') {
+    return false
+  }
+
+  const map = (snapshot.map as Record<string, unknown> | null) ?? null
+  if (!map || typeof map !== 'object') {
+    return false
+  }
+
+  const metadata = (map.metadata && typeof map.metadata === 'object')
+    ? (map.metadata as Record<string, unknown>)
+    : {}
+  const traversal = (map.traversal_grid && typeof map.traversal_grid === 'object')
+    ? (map.traversal_grid as Record<string, unknown>)
+    : null
+
+  const traversalWidth = traversal ? Number(traversal.width_cells ?? 0) : 0
+  const traversalHeight = traversal ? Number(traversal.height_cells ?? 0) : 0
+  const traversalCells = traversal && Array.isArray(traversal.cells) ? traversal.cells.length : 0
+  const hasValidTraversal = traversalWidth > 0 && traversalHeight > 0 && traversalCells >= traversalWidth * traversalHeight
+
+  const existingImageUrl = typeof metadata.image_url === 'string' ? metadata.image_url.trim() : ''
+  return existingImageUrl.length > 0 && hasValidTraversal
+}
+
 async function healSnapshotBattlemapIfMissingImage(
   sessionId: string,
   roomCode: string,
@@ -734,13 +808,13 @@ async function healSnapshotBattlemapIfMissingImage(
     return snapshot
   }
 
+  if (snapshotHasReadyBattlemap(snapshot)) {
+    return snapshot
+  }
+
   const metadata = (map.metadata && typeof map.metadata === 'object')
     ? (map.metadata as Record<string, unknown>)
     : {}
-  const existingImageUrl = typeof metadata.image_url === 'string' ? metadata.image_url.trim() : ''
-  if (existingImageUrl.length > 0) {
-    return snapshot
-  }
 
   const width = Number(map.width ?? 20)
   const height = Number(map.height ?? 14)
@@ -772,6 +846,11 @@ async function healSnapshotBattlemapIfMissingImage(
     ...snapshot,
     map: healedMap,
     battlemap_asset: regenerated.battlemapAsset,
+  }
+
+  const latestSnapshot = await getLatestSnapshot(sessionId)
+  if (snapshotHasReadyBattlemap(latestSnapshot)) {
+    return latestSnapshot as Record<string, unknown>
   }
 
   try {

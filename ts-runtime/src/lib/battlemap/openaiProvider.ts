@@ -15,6 +15,18 @@ import type {
 
 type JsonRecord = Record<string, unknown>
 
+function parsePositiveIntEnv(name: string, fallback: number): number {
+  const raw = String(process.env[name] ?? '').trim()
+  if (!raw) {
+    return fallback
+  }
+  const parsed = Number.parseInt(raw, 10)
+  if (!Number.isFinite(parsed) || parsed <= 0) {
+    return fallback
+  }
+  return parsed
+}
+
 function asRecord(value: unknown): JsonRecord | null {
   return value && typeof value === 'object' && !Array.isArray(value) ? (value as JsonRecord) : null
 }
@@ -96,14 +108,30 @@ function parseTraversalGrid(data: JsonRecord, input: TraversalGenerationInput): 
 }
 
 async function fetchOpenAiJson<T>(apiKey: string, endpoint: string, payload: unknown): Promise<T> {
-  const res = await fetch(endpoint, {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(payload),
-  })
+  const timeoutMs = parsePositiveIntEnv('BATTLEMAP_PROVIDER_TIMEOUT_MS', 60000)
+  const controller = new AbortController()
+  const timeoutHandle = setTimeout(() => controller.abort(), timeoutMs)
+
+  const res = await (async () => {
+    try {
+      return await fetch(endpoint, {
+        method: 'POST',
+        signal: controller.signal,
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
+      })
+    } catch (error) {
+      if (error instanceof Error && error.name === 'AbortError') {
+        throw new Error(`OpenAI request timed out after ${timeoutMs}ms (${endpoint})`)
+      }
+      throw error
+    } finally {
+      clearTimeout(timeoutHandle)
+    }
+  })()
 
   if (!res.ok) {
     const text = await res.text().catch(() => '')
@@ -122,6 +150,21 @@ function resolveImageQuality(qualityMode: ImageGenerationPayload['qualityMode'])
   const allowHd = String(process.env.BATTLEMAP_FINAL_HD_ENABLED ?? '').trim().toLowerCase()
   const hdEnabled = allowHd === '1' || allowHd === 'true' || allowHd === 'yes' || allowHd === 'on'
   return resolveImageQualityForMode(qualityMode, hdEnabled)
+}
+
+function resolveImageModelForQuality(qualityMode: ImageGenerationPayload['qualityMode']): string {
+  const defaultModel = String(process.env.BATTLEMAP_IMAGE_MODEL ?? 'dall-e-3').trim() || 'dall-e-3'
+  if (qualityMode !== 'fast') {
+    return defaultModel
+  }
+
+  const fastOverride = String(process.env.BATTLEMAP_FAST_IMAGE_MODEL ?? '').trim()
+  if (fastOverride) {
+    return fastOverride
+  }
+
+  // Balanced default: keep the same model family unless explicitly overridden.
+  return defaultModel
 }
 
 export class OpenAiBattlemapProvider implements BattlemapProvider {
@@ -143,18 +186,23 @@ export class OpenAiBattlemapProvider implements BattlemapProvider {
 
     const size = resolveImageSizeForQuality(payload.qualityMode, payload.style)
     const quality = resolveImageQuality(payload.qualityMode)
-    const model = String(process.env.BATTLEMAP_IMAGE_MODEL ?? 'dall-e-3').trim() || 'dall-e-3'
+    const model = resolveImageModelForQuality(payload.qualityMode)
+    const imageRequest: Record<string, unknown> = {
+      model,
+      prompt: payload.prompt,
+      size,
+      response_format: 'b64_json',
+    }
+
+    // The quality field is supported for dall-e-3 image generation requests.
+    if (model === 'dall-e-3') {
+      imageRequest.quality = quality
+    }
 
     const response = await fetchOpenAiJson<OpenAiImageResponse>(
       this.apiKey,
       'https://api.openai.com/v1/images/generations',
-      {
-        model,
-        prompt: payload.prompt,
-        quality,
-        size,
-        response_format: 'b64_json',
-      },
+      imageRequest,
     )
 
     const first = Array.isArray(response.data) ? response.data[0] : null
