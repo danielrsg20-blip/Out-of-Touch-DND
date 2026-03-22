@@ -77,7 +77,13 @@ export default function BattlemapActions() {
     const heightFeet = Math.max(20, (map?.height ?? 21) * 5)
 
     // Prefer notable_features from metadata; fall back to tactical_tags for old sessions.
-    const features = (map?.metadata?.notable_features ?? map?.metadata?.tactical_tags ?? []).slice(0, 6)
+    const notableFeatures = Array.isArray(map?.metadata?.notable_features)
+      ? map.metadata.notable_features
+      : undefined
+    const tacticalTags = Array.isArray(map?.metadata?.tactical_tags)
+      ? map.metadata.tactical_tags
+      : undefined
+    const features = (notableFeatures ?? tacticalTags ?? []).slice(0, 6)
 
     const rawDescription = typeof map?.metadata?.description === 'string'
       ? map.metadata.description.trim() : ''
