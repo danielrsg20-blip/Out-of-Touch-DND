@@ -39,6 +39,18 @@ export async function uploadBattlemapImage(campaignId: string, assetId: string, 
   return data.publicUrl
 }
 
+export async function deleteBattlemapImage(campaignId: string, assetId: string): Promise<void> {
+  const supabase = getSupabaseServiceClient()
+  const bucket = getBattlemapBucketName()
+  const path = `${campaignId}/${assetId}.png`
+
+  const { error } = await supabase.storage.from(bucket).remove([path])
+
+  if (error) {
+    throw new Error(`Failed to delete battlemap image: ${error.message}`)
+  }
+}
+
 export async function insertBattlemapAsset(asset: BattlemapAsset): Promise<BattlemapAsset> {
   const supabase = getSupabaseServiceClient()
 

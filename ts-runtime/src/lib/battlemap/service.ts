@@ -18,6 +18,7 @@ import {
   insertBattlemapAsset,
   updateBattlemapAsset,
   uploadBattlemapImage,
+  deleteBattlemapImage,
 } from './repository.js'
 
 function ensureFinitePositiveInt(value: number, name: string): number {
@@ -176,6 +177,11 @@ export async function generateBattlemap(request: BattlemapGenerationRequest): Pr
 
     const validation = await validateNoText(tempUrl, { apiKey })
     totalValidationMs += validation.validationMs
+
+    // Clean up the temporary validation image from storage (fire-and-forget)
+    void deleteBattlemapImage(request.campaign_id, tempId).catch((err) => {
+      console.warn('[battlemap] Failed to delete temp validation image', { tempId, error: String(err) })
+    })
 
     const entry: TextValidationEntry = {
       attempt,
