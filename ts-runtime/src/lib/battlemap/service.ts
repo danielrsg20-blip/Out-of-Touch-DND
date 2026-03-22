@@ -186,15 +186,26 @@ export async function generateBattlemap(request: BattlemapGenerationRequest): Pr
     }
     validationLog.push(entry)
 
-    if (!validation.containsText) {
+    // Treat validator/system errors separately from genuine "no text" passes.
+    const isValidationSystemError =
+      typeof validation.explanation === 'string' &&
+      validation.explanation.startsWith('validation_error:')
+
+    if (!validation.containsText && !isValidationSystemError) {
       validationPassed = true
       console.log(`[battlemap] Text validation passed on attempt ${attempt}`)
       break
     }
 
-    console.warn(
-      `[battlemap] Text detected on attempt ${attempt}/${maxRetries}: ${validation.explanation} (confidence=${validation.confidence})`,
-    )
+    if (isValidationSystemError) {
+      console.warn(
+        `[battlemap] Text validation failed due to validator error on attempt ${attempt}/${maxRetries}: ${validation.explanation}`,
+      )
+    } else {
+      console.warn(
+        `[battlemap] Text detected on attempt ${attempt}/${maxRetries}: ${validation.explanation} (confidence=${validation.confidence})`,
+      )
+    }
 
     if (attempt === maxRetries) {
       console.warn('[battlemap] Max retries reached — returning best attempt with text_validation_passed=false')
