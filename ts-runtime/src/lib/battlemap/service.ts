@@ -183,13 +183,12 @@ export async function generateBattlemap(request: BattlemapGenerationRequest): Pr
       explanation: validation.explanation,
       confidence: validation.confidence,
       validation_ms: validation.validationMs,
+      ...(validation.validationError !== undefined && { validation_error: validation.validationError }),
     }
     validationLog.push(entry)
 
     // Treat validator/system errors separately from genuine "no text" passes.
-    const isValidationSystemError =
-      typeof validation.explanation === 'string' &&
-      validation.explanation.startsWith('validation_error:')
+    const isValidationSystemError = validation.validationError !== undefined
 
     if (!validation.containsText && !isValidationSystemError) {
       validationPassed = true
@@ -199,7 +198,7 @@ export async function generateBattlemap(request: BattlemapGenerationRequest): Pr
 
     if (isValidationSystemError) {
       console.warn(
-        `[battlemap] Text validation failed due to validator error on attempt ${attempt}/${maxRetries}: ${validation.explanation}`,
+        `[battlemap] Text validation failed due to validator error on attempt ${attempt}/${maxRetries}: ${validation.validationError}`,
       )
     } else {
       console.warn(
