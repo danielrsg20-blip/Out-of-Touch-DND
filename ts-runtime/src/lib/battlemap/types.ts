@@ -160,6 +160,8 @@ export type TextValidationEntry = {
   explanation: string
   confidence: number
   validation_ms: number
+  /** Set when the validator itself encountered an error rather than successfully checking for text. */
+  validation_error?: string
 }
 
 export type BattlemapGenerationAudit = {

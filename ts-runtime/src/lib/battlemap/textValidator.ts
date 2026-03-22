@@ -17,6 +17,12 @@ export type TextValidationResult = {
   confidence: number
   /** Time taken for the validation call in ms. */
   validationMs: number
+  /**
+   * Set when the validator itself encountered an error (HTTP failure, timeout,
+   * non-JSON response, etc.). Callers must not treat this as a clean pass.
+   * The value is a short description of what went wrong.
+   */
+  validationError?: string
 }
 
 export type TextValidationConfig = {
@@ -96,24 +102,27 @@ export async function validateNoText(
 
     if (!res.ok) {
       const text = await res.text().catch(() => '')
-      console.warn(`[textValidator] OpenAI HTTP ${res.status}: ${text.slice(0, 200)}`)
+      const errorDesc = `HTTP ${res.status}`
+      console.warn(`[textValidator] OpenAI ${errorDesc}: ${text.slice(0, 200)}`)
       return {
-        containsText: false,
-        explanation: `validation_error: HTTP ${res.status}`,
+        containsText: true,
+        explanation: '',
         confidence: 0,
         validationMs: Date.now() - started,
+        validationError: errorDesc,
       }
     }
 
     response = (await res.json()) as OpenAiChatResponse
   } catch (error) {
-    const msg = error instanceof Error ? error.message : String(error)
-    console.warn(`[textValidator] Request failed: ${msg}`)
+    const errorDesc = error instanceof Error ? error.message : String(error)
+    console.warn(`[textValidator] Request failed: ${errorDesc}`)
     return {
-      containsText: false,
-      explanation: `validation_error: ${msg}`,
+      containsText: true,
+      explanation: '',
       confidence: 0,
       validationMs: Date.now() - started,
+      validationError: errorDesc,
     }
   } finally {
     clearTimeout(timeoutHandle)
@@ -122,10 +131,11 @@ export async function validateNoText(
   const rawContent = response.choices?.[0]?.message?.content
   if (!rawContent || typeof rawContent !== 'string') {
     return {
-      containsText: false,
-      explanation: 'validation_error: empty response',
+      containsText: true,
+      explanation: '',
       confidence: 0,
       validationMs: Date.now() - started,
+      validationError: 'empty response from model',
     }
   }
 
@@ -136,15 +146,16 @@ export async function validateNoText(
       parsed = obj as JsonRecord
     }
   } catch {
-    // non-JSON response — treat as validation error, don't block generation
+    // non-JSON response — fall through to the error return below
   }
 
   if (!parsed) {
     return {
-      containsText: false,
-      explanation: 'validation_error: non-JSON response',
+      containsText: true,
+      explanation: '',
       confidence: 0,
       validationMs: Date.now() - started,
+      validationError: 'non-JSON response from model',
     }
   }
 
