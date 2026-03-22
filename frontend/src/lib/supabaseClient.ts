@@ -68,8 +68,8 @@ export async function invokeEdgeFunction<T = Record<string, unknown>>(
   options?: InvokeEdgeFunctionOptions,
 ): Promise<T> {
   const supabase = getSupabaseClient()
-  const url = import.meta.env.VITE_SUPABASE_URL
-  const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
+  const url = (import.meta.env.VITE_EDGE_FUNCTIONS_BASE_URL || import.meta.env.VITE_SUPABASE_URL)
+  const anonKey = (import.meta.env.VITE_EDGE_FUNCTIONS_ANON_KEY || import.meta.env.VITE_SUPABASE_ANON_KEY)
   const authMode = options?.authMode ?? 'auto'
   const maxRetries = Math.max(0, Math.min(options?.maxRetries ?? 2, 3))
 

@@ -6,8 +6,8 @@ const corsHeaders = {
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 }
 
-const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? ''
-const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? Deno.env.get('SUPABASE_ANON_KEY') ?? ''
+const supabaseUrl = Deno.env.get('OTDND_APP_SUPABASE_URL') || Deno.env.get('SUPABASE_URL') || ''
+const serviceRoleKey = Deno.env.get('OTDND_APP_SUPABASE_SERVICE_ROLE_KEY') || Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || Deno.env.get('SUPABASE_ANON_KEY') || ''
 
 const supabase = createClient(supabaseUrl, serviceRoleKey)
 

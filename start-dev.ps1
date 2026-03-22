@@ -41,7 +41,7 @@ if ($startLocalEdgeFunctions -and $dockerAvailable) {
   Start-Process powershell -ArgumentList @(
     '-NoExit',
     '-Command',
-    "Set-Location '$root'; `$env:OTDND_TS_RUNTIME_BASE_URL='http://host.docker.internal:9020'; supabase functions serve --env-file .env"
+    "Set-Location '$root'; `$env:OTDND_TS_RUNTIME_BASE_URL='http://host.docker.internal:9020'; supabase functions serve --env-file .env --no-verify-jwt"
   )
 } elseif ($startLocalEdgeFunctions) {
   Write-Host "Skipping local Supabase Edge Functions because Docker is unavailable."
@@ -53,7 +53,7 @@ Write-Host "Starting frontend on http://127.0.0.1:5174 ..."
 Start-Process powershell -ArgumentList @(
   '-NoExit',
   '-Command',
-  "`$env:VITE_API_URL='http://127.0.0.1:9020'; `$env:VITE_ENABLE_LEGACY_SPRITES='true'; Set-Location '$root/frontend'; npm run dev -- --host 127.0.0.1"
+  "`$env:VITE_API_URL='http://127.0.0.1:9020'; `$env:VITE_ENABLE_LEGACY_SPRITES='true'; `$env:VITE_EDGE_FUNCTIONS_BASE_URL='http://127.0.0.1:54321'; `$env:VITE_EDGE_FUNCTIONS_ANON_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0'; Set-Location '$root/frontend'; npm run dev -- --host 127.0.0.1"
 )
 
 if ($startLocalEdgeFunctions -and $dockerAvailable) {

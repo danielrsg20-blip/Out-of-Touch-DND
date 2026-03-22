@@ -107,7 +107,7 @@ export default function BattlemapActions() {
   }
 
   async function handleGenerate(): Promise<void> {
-    if (!roomCode || !map || busyMode) return
+    if (!roomCode || busyMode) return
 
     setBusyMode('generate')
     try {
@@ -248,7 +248,7 @@ export default function BattlemapActions() {
           type="button"
           className="battlemap-action-btn"
           onClick={() => void handleGenerate()}
-          disabled={!roomCode || !map || !!busyMode}
+          disabled={!roomCode || !!busyMode}
           title="Generate a new image battlemap and apply map_patch immediately"
         >
           {busyMode === 'generate' ? 'Generating...' : 'Generate Battlemap'}
