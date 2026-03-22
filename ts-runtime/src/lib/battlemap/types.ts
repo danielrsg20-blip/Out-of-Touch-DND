@@ -160,6 +160,8 @@ export type TextValidationEntry = {
   explanation: string
   confidence: number
   validation_ms: number
+  /** True when this entry reflects a system/infrastructure error rather than a genuine detection outcome. */
+  validation_error?: boolean
 }
 
 export type BattlemapGenerationAudit = {
