@@ -46,8 +46,15 @@ use start_combat with all participant IDs to roll initiative.
 - When combat starts, use start_combat with all participant IDs to roll initiative.
 - Use the map tools to create and update the battle map. Generate maps when players \
 enter new areas.
-- When generating maps, set environment plus terrain_theme to match scene tone \
-and visual motifs (e.g. ruined, overgrown, ancient, volcanic, frozen, flooded, arcane).
+- BATTLEMAP SCENE ACCURACY: When calling generate_map, the description field MUST \
+vividly describe the EXACT scene the players see — it is used directly to generate \
+the battlemap image. Include key visual details: terrain, lighting, weather, structures, \
+and atmosphere. Also fill location (forest/swamp/dungeon/city_alley/tavern/ruins/mountain/coastal), \
+biome (temperate/tropical/arctic/underground/urban/magical), mood_style \
+(hand-drawn/painterly/parchment/gritty/high-fantasy/realistic), notable_features \
+(up to 6 key visual landmarks like 'fallen stone columns' or 'glowing runes'), and \
+encounter_type (ambush/siege/chase/investigation/diplomacy/exploration). \
+These fields control how the battlemap image looks, so they must match your narration.
 - Place PC tokens on the map when generating a new map. Use entity type "pc" for \
 player characters and "enemy" for monsters.
 - Track HP, conditions, and spell slots through the tools. Do not invent values.
@@ -464,11 +471,19 @@ class Orchestrator:
     def _build_mock_map_input(self, seed: int) -> dict[str, Any]:
         environments = ["dungeon", "forest", "cave", "tavern", "city"]
         themes = ["ruined", "overgrown", "ancient", "volcanic", "frozen", "flooded", "arcane"]
+        locations = ["dungeon", "forest", "dungeon", "tavern", "city_alley"]
+        biomes = ["underground", "temperate", "underground", "urban", "urban"]
         environment = environments[seed % len(environments)]
         terrain_theme = themes[(seed // len(environments)) % len(themes)]
+        location = locations[seed % len(locations)]
+        biome = biomes[seed % len(biomes)]
         return {
             "description": f"You step into a {terrain_theme} {environment} encounter area prepared for exploration and potential combat.",
             "environment": environment,
+            "location": location,
+            "biome": biome,
+            "mood_style": "high-fantasy",
+            "notable_features": ["scattered debris", "faint torchlight"],
             "terrain_theme": terrain_theme,
             "encounter_type": "exploration",
             "encounter_scale": "medium",

@@ -63,23 +63,35 @@ export default function BattlemapActions() {
   const mapImageUrl = typeof map?.metadata?.image_url === 'string' ? map.metadata.image_url.trim() : ''
 
   const sceneSpec = useMemo(() => {
-    const location = sanitizeLocation(map?.metadata?.environment)
+    // Prefer new location field; fall back to sanitized environment for backward compat.
+    const location = sanitizeLocation(map?.metadata?.location ?? map?.metadata?.environment)
     const inferredBiome = inferBiome(location)
-    const mapBiome = typeof map?.metadata?.environment === 'string' ? map.metadata.environment.trim().toLowerCase() : ''
-    const biome = SCENE_BIOMES.has(mapBiome) ? mapBiome : inferredBiome
+    const rawBiome = typeof map?.metadata?.biome === 'string' ? map.metadata.biome.trim().toLowerCase() : ''
+    const biome = SCENE_BIOMES.has(rawBiome) ? rawBiome : inferredBiome
 
-    const widthFeet = Math.max(20, (map?.width ?? 20) * 5)
-    const heightFeet = Math.max(20, (map?.height ?? 20) * 5)
+    const rawMood = typeof map?.metadata?.mood_style === 'string' ? map.metadata.mood_style.trim().toLowerCase() : ''
+    const MOOD_STYLES = new Set(['hand-drawn', 'painterly', 'parchment', 'gritty', 'high-fantasy', 'realistic'])
+    const mood_style = MOOD_STYLES.has(rawMood) ? rawMood : 'high-fantasy'
+
+    const widthFeet = Math.max(20, (map?.width ?? 30) * 5)
+    const heightFeet = Math.max(20, (map?.height ?? 21) * 5)
+
+    // Prefer notable_features from metadata; fall back to tactical_tags for old sessions.
+    const features = (map?.metadata?.notable_features ?? map?.metadata?.tactical_tags ?? []).slice(0, 6)
+
+    const rawDescription = typeof map?.metadata?.description === 'string'
+      ? map.metadata.description.trim() : ''
 
     return {
       location,
       biome,
       encounter_type: sanitizeEncounterType(map?.metadata?.encounter_type),
-      mood_style: 'high-fantasy',
+      mood_style,
       map_width_feet: widthFeet,
       map_height_feet: heightFeet,
-      notable_features: (map?.metadata?.tactical_tags ?? []).slice(0, 6),
+      notable_features: features,
       campaign_tone: campaignTone ?? undefined,
+      ...(rawDescription ? { description: rawDescription } : {}),
     }
   }, [campaignTone, map])
 
@@ -102,8 +114,24 @@ export default function BattlemapActions() {
       ? (audit as Record<string, unknown>).quality_mode
       : qualityMode
     const totalMs = typeof timing?.total_ms === 'number' ? timing.total_ms : null
+    const stageBreakdown = timing?.stage_breakdown_ms as Record<string, unknown> | undefined
+    const requestPrepMs = typeof stageBreakdown?.request_prep_ms === 'number'
+      ? Math.round(stageBreakdown.request_prep_ms)
+      : null
+    const imageUploadMs = typeof stageBreakdown?.image_upload_ms === 'number'
+      ? Math.round(stageBreakdown.image_upload_ms)
+      : null
+    const assetPersistMs = typeof stageBreakdown?.asset_persist_ms === 'number'
+      ? Math.round(stageBreakdown.asset_persist_ms)
+      : null
     const timingText = totalMs !== null ? ` (${Math.round(totalMs)}ms)` : ''
-    addNarrative('system', `${verb} [${resolvedQualityMode}] and applied immediately.${timingText}`)
+    const stageParts = [
+      requestPrepMs !== null ? `prep ${requestPrepMs}ms` : null,
+      imageUploadMs !== null ? `upload ${imageUploadMs}ms` : null,
+      assetPersistMs !== null ? `persist ${assetPersistMs}ms` : null,
+    ].filter((value): value is string => typeof value === 'string')
+    const stageText = stageParts.length > 0 ? ` [${stageParts.join(', ')}]` : ''
+    addNarrative('system', `${verb} [${resolvedQualityMode}] and applied immediately.${timingText}${stageText}`)
   }
 
   async function handleGenerate(): Promise<void> {

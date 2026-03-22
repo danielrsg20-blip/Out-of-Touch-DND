@@ -155,6 +155,8 @@ export default function MapCanvas({ onTileClick, onEntityClick, targetingMode = 
     collisionMask: null,
     costMap: null,
   })
+  const mapDiagnosticsSignatureRef = useRef<string | null>(null)
+  const mapDiagnosticsLoggedAtRef = useRef(0)
   const hoverCellRef = useRef<{ tx: number; ty: number } | null>(null)
   const lastPaintCellKeyRef = useRef<string | null>(null)
   const isPaintingRef = useRef(false)
@@ -267,6 +269,46 @@ export default function MapCanvas({ onTileClick, onEntityClick, targetingMode = 
     const fallback = playerId ? `pc_${playerId}` : null
     return fallback && characters[fallback] ? fallback : null
   }, [players, playerId, characters])
+
+  const localPlayerEntityIds = useMemo(() => {
+    const ids = new Set<string>()
+    const playerCharacterId = players.find((p) => p.id === playerId)?.character_id
+    if (typeof playerCharacterId === 'string' && playerCharacterId.trim()) {
+      ids.add(playerCharacterId)
+    }
+    if (typeof myCharacterId === 'string' && myCharacterId.trim()) {
+      ids.add(myCharacterId)
+    }
+    if (playerId) {
+      ids.add(`pc_${playerId}`)
+    }
+    return ids
+  }, [players, playerId, myCharacterId])
+
+  const localPlayerNameNormalized = useMemo(() => {
+    const playerCharacterId = players.find((p) => p.id === playerId)?.character_id
+    const candidateNames = [
+      playerCharacterId ? characters[playerCharacterId]?.name : null,
+      myCharacterId ? characters[myCharacterId]?.name : null,
+    ]
+      .filter((value): value is string => typeof value === 'string' && value.trim().length > 0)
+
+    const resolvedName = candidateNames[0] ?? null
+    return resolvedName ? resolvedName.trim().toLowerCase() : null
+  }, [players, playerId, myCharacterId, characters])
+
+  const isLocalPlayerEntity = useCallback((entity: { id: string; type: string; name: string }) => {
+    if (localPlayerEntityIds.has(entity.id)) {
+      return true
+    }
+    if (entity.type !== 'pc') {
+      return false
+    }
+    if (!localPlayerNameNormalized) {
+      return false
+    }
+    return entity.name.trim().toLowerCase() === localPlayerNameNormalized
+  }, [localPlayerEntityIds, localPlayerNameNormalized])
 
   const resolveCharacterForEntity = useCallback((entityId: string, entityName: string) => {
     const direct = characters[entityId]
@@ -628,19 +670,16 @@ export default function MapCanvas({ onTileClick, onEntityClick, targetingMode = 
   }, [previewArtifacts.collisionMaskPngBase64, previewArtifacts.costMapPngBase64])
 
   useEffect(() => {
-    if (!map) {
+    if (!import.meta.env.DEV || !map) {
       return
     }
     const traversal = map.traversal_grid as any
     const widthCells = Number(traversal?.width_cells ?? 0)
     const heightCells = Number(traversal?.height_cells ?? 0)
     const cellSizeWorld = Number(traversal?.cell_size_world ?? 0)
-    const fallbackPlayerTokenId = playerId ? `pc_${playerId}` : null
-    const localTokenId = myCharacterId ?? fallbackPlayerTokenId
-    const localTokenEntity = localTokenId
-      ? map.entities.find((entity) => entity.id === localTokenId)
-      : null
-    console.info('[MapCanvas] map diagnostics', {
+    const localTokenEntity = map.entities.find((entity) => isLocalPlayerEntity(entity)) ?? null
+    const localTokenId = localTokenEntity?.id ?? null
+    const diagnostics = {
       mapMode,
       active_renderer: 'ai_battlemap_image',
       active_traversal_provider: 'ai_traversal_grid',
@@ -661,8 +700,17 @@ export default function MapCanvas({ onTileClick, onEntityClick, targetingMode = 
       local_token_visible: localTokenEntity
         ? (Array.isArray(map.visible) ? map.visible.some((v) => v.x === localTokenEntity.x && v.y === localTokenEntity.y) : null)
         : null,
-    })
-  }, [map, mapMetadata?.image_url, mapMetadata?.image_width_px, mapMetadata?.image_height_px, mapMode, renderCellWidth, renderCellHeight, tokenBaseSizePx, myCharacterId, playerId])
+    }
+    const diagnosticsSignature = JSON.stringify(diagnostics)
+    const now = Date.now()
+    const isDuplicate = mapDiagnosticsSignatureRef.current === diagnosticsSignature
+    if (isDuplicate && now - mapDiagnosticsLoggedAtRef.current < 5000) {
+      return
+    }
+    mapDiagnosticsSignatureRef.current = diagnosticsSignature
+    mapDiagnosticsLoggedAtRef.current = now
+    console.debug(`[MapCanvas] map diagnostics ${diagnosticsSignature}`)
+  }, [map, mapMetadata?.image_url, mapMetadata?.image_width_px, mapMetadata?.image_height_px, mapMode, renderCellWidth, renderCellHeight, tokenBaseSizePx, isLocalPlayerEntity])
 
   useEffect(() => {
     if (!imageUrl) {
@@ -1073,7 +1121,7 @@ export default function MapCanvas({ onTileClick, onEntityClick, targetingMode = 
     for (const entity of renderEntities) {
       entityIndex++
       const entityKey = `${entity.x},${entity.y}`
-      const isLocalPlayerToken = entity.id === myCharacterId || (playerId ? entity.id === `pc_${playerId}` : false)
+      const isLocalPlayerToken = isLocalPlayerEntity(entity)
       if (hasVisibility && !visibleSet.has(entityKey) && !isLocalPlayerToken) continue
 
       const isDefeatedEnemy = entity.type === 'enemy' && (characters[entity.id]?.hp ?? 1) <= 0
@@ -1344,7 +1392,7 @@ export default function MapCanvas({ onTileClick, onEntityClick, targetingMode = 
     // Layer 4: selection / targeting / active-turn indicators above sprites.
     for (const entity of renderEntities) {
       const entityKey = `${entity.x},${entity.y}`
-      const isLocalPlayerToken = entity.id === myCharacterId || (playerId ? entity.id === `pc_${playerId}` : false)
+      const isLocalPlayerToken = isLocalPlayerEntity(entity)
       if (hasVisibility && !visibleSet.has(entityKey) && !isLocalPlayerToken) continue
       const anim = tokenAnimationsRef.current.get(entity.id)
       let drawGX = entity.x
@@ -1434,7 +1482,7 @@ export default function MapCanvas({ onTileClick, onEntityClick, targetingMode = 
     })
 
     ctx.restore()
-  }, [map, combat, characters, interaction.offsetX, interaction.offsetY, interaction.zoom, selectedEntityId, myCharacterId, imageUrl, imageOpacity, resolveCharacterForEntity, getMonsterFrameKeyForEnemy, targetingMode, runtimeOverlayForRender, showVectorLabels, showDmOnlyLabels, gridOverlayConfig, traversalGrid, mapGridTransform, correctionModeEnabled, showCollisionMaskLayer, showCostMapLayer, artifactLayerOpacity, activeTool, getBrushTraversalCellsAtTraversalCell])
+  }, [map, combat, characters, interaction.offsetX, interaction.offsetY, interaction.zoom, selectedEntityId, myCharacterId, imageUrl, imageOpacity, resolveCharacterForEntity, getMonsterFrameKeyForEnemy, targetingMode, runtimeOverlayForRender, showVectorLabels, showDmOnlyLabels, gridOverlayConfig, traversalGrid, mapGridTransform, correctionModeEnabled, showCollisionMaskLayer, showCostMapLayer, artifactLayerOpacity, activeTool, getBrushTraversalCellsAtTraversalCell, isLocalPlayerEntity])
 
   useEffect(() => {
     let frameId: number

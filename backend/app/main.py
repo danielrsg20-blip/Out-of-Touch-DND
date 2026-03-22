@@ -1533,6 +1533,10 @@ async def handle_ws_message(session: GameSession, player: Player, msg: dict[str,
         if not action_text:
             return
 
+        is_bootstrap_action = action_text == "[SESSION_START]"
+        had_map_before_action = session.orchestrator.game_map is not None
+        previous_map = session.orchestrator.game_map
+
         await session.broadcast({
             "type": "player_message",
             "player_id": player.id,
@@ -1560,6 +1564,10 @@ async def handle_ws_message(session: GameSession, player: Player, msg: dict[str,
                 result = event["result"]
 
                 if tool_name == "generate_map":
+                    if is_bootstrap_action and had_map_before_action:
+                        # Keep the original startup map authoritative during bootstrap.
+                        session.orchestrator.game_map = previous_map
+                        continue
                     fov = None
                     gmap = session.orchestrator.game_map
                     if gmap:
@@ -1651,6 +1659,9 @@ async def handle_ws_message(session: GameSession, player: Player, msg: dict[str,
                     "action": "generate_from_narrative",
                     "overlay": overlay_payload,
                 })
+
+        if is_bootstrap_action and had_map_before_action:
+            session.orchestrator.game_map = previous_map
 
         state = _state_with_overlay(session)
         await session.broadcast({"type": "state_sync", "state": state})

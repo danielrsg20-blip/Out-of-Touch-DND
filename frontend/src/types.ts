@@ -26,6 +26,12 @@ export interface MapMetadata {
   map_source?: 'library' | 'generated' | 'manual' | string
   cache_hit?: boolean
   pack_id?: string
+  description?: string
+  location?: string
+  biome?: string
+  mood_style?: string
+  notable_features?: string[]
+  terrain_theme?: string
   environment?: string
   encounter_type?: string
   encounter_scale?: string

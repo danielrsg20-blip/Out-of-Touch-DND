@@ -55,6 +55,8 @@ export type SceneSpec = {
   map_width_feet: number
   map_height_feet: number
   campaign_tone?: string
+  /** Vivid scene narrative from the AI DM, injected into the image generation prompt. */
+  description?: string
 }
 
 export type BattlemapStyleConfig = {
@@ -152,6 +154,14 @@ export type TraversalGrid = {
   cells: TraversalCell[]
 }
 
+export type TextValidationEntry = {
+  attempt: number
+  contains_text: boolean
+  explanation: string
+  confidence: number
+  validation_ms: number
+}
+
 export type BattlemapGenerationAudit = {
   provider: 'openai'
   model: string
@@ -167,6 +177,12 @@ export type BattlemapGenerationAudit = {
   no_text_or_watermark_best_effort: boolean
   regenerated_from_id?: string
   regeneration_mode?: 'same_settings' | 'new_seed' | 'traversal_only'
+  /** Number of text-validation retries (0 = first attempt passed). */
+  text_validation_retries?: number
+  /** Detailed text validation log for each attempt. */
+  text_validation_log?: TextValidationEntry[]
+  /** Final text validation verdict after all attempts. */
+  text_validation_passed?: boolean
 }
 
 export type BattlemapAsset = {
@@ -189,6 +205,12 @@ export type BattlemapGenerationResult = {
     image_generation_ms: number
     traversal_generation_ms: number
     total_ms: number
+    text_validation_ms?: number
+    stage_breakdown_ms?: {
+      request_prep_ms: number
+      image_upload_ms: number
+      asset_persist_ms: number
+    }
   }
 }
 
