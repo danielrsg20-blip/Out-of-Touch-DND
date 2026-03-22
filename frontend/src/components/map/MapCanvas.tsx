@@ -209,6 +209,7 @@ export default function MapCanvas({ onTileClick, onEntityClick, targetingMode = 
   const setArtifactLayerOpacity = useMapEditorStore((s) => s.setArtifactLayerOpacity)
   const setPreviewArtifacts = useMapEditorStore((s) => s.setPreviewArtifacts)
   const previewArtifacts = useMapEditorStore((s) => s.previewArtifacts)
+  const mapMode = resolveMapMode(map)
 
   const runtimeOverlay = useMemo(() => {
     if (!map) {
@@ -224,6 +225,25 @@ export default function MapCanvas({ onTileClick, onEntityClick, targetingMode = 
       overlay,
     )
   }, [map, overlay, showVectorLabels, showDmOnlyLabels, scaleLabelsWithZoom])
+
+  const runtimeOverlayForRender = useMemo(() => {
+    if (!runtimeOverlay) {
+      return runtimeOverlay
+    }
+
+    if (mapMode !== MAP_MODE_AI) {
+      return runtimeOverlay
+    }
+
+    return {
+      ...runtimeOverlay,
+      // AI image is authoritative for the base scene; remove synthetic tile/token underlays.
+      layers: runtimeOverlay.layers.filter((layer) => (
+        layer.id !== 'layer_vector_base_tiles'
+        && layer.id !== 'layer_vector_base_tokens'
+      )),
+    }
+  }, [runtimeOverlay, mapMode])
 
   useEffect(() => {
     if (!correctionModeEnabled || !map) {
@@ -276,7 +296,6 @@ export default function MapCanvas({ onTileClick, onEntityClick, targetingMode = 
   }, [characters, players])
 
   const mapMetadata = map?.metadata
-  const mapMode = resolveMapMode(map)
   const mapGridTransform = useMemo(() => createMapGridTransform(map), [map])
   const imageUrl = mapMetadata?.image_url
   const imageOpacity = Math.min(1, Math.max(0, mapMetadata?.image_opacity ?? 1))
@@ -1030,8 +1049,8 @@ export default function MapCanvas({ onTileClick, onEntityClick, targetingMode = 
     renderGridOverlay(ctx, gridOverlayConfig, map, traversalGrid, mapGridTransform)
 
     // Layer 2: vector props/objects overlay.
-    if (runtimeOverlay) {
-      renderOverlayLayers(runtimeOverlay, {
+    if (runtimeOverlayForRender) {
+      renderOverlayLayers(runtimeOverlayForRender, {
         ctx,
         mapBounds: { x: 0, y: 0, width: mapGridTransform.mapWidthPx, height: mapGridTransform.mapHeightPx },
         zoom: interaction.zoom,
@@ -1415,7 +1434,7 @@ export default function MapCanvas({ onTileClick, onEntityClick, targetingMode = 
     })
 
     ctx.restore()
-  }, [map, combat, characters, interaction.offsetX, interaction.offsetY, interaction.zoom, selectedEntityId, myCharacterId, imageUrl, imageOpacity, resolveCharacterForEntity, getMonsterFrameKeyForEnemy, targetingMode, runtimeOverlay, showVectorLabels, showDmOnlyLabels, gridOverlayConfig, traversalGrid, mapGridTransform, correctionModeEnabled, showCollisionMaskLayer, showCostMapLayer, artifactLayerOpacity, activeTool, getBrushTraversalCellsAtTraversalCell])
+  }, [map, combat, characters, interaction.offsetX, interaction.offsetY, interaction.zoom, selectedEntityId, myCharacterId, imageUrl, imageOpacity, resolveCharacterForEntity, getMonsterFrameKeyForEnemy, targetingMode, runtimeOverlayForRender, showVectorLabels, showDmOnlyLabels, gridOverlayConfig, traversalGrid, mapGridTransform, correctionModeEnabled, showCollisionMaskLayer, showCostMapLayer, artifactLayerOpacity, activeTool, getBrushTraversalCellsAtTraversalCell])
 
   useEffect(() => {
     let frameId: number
