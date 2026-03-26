@@ -1571,6 +1571,215 @@
   transform: translateY(0);
 }
 
+/* ── Die tumble animation (3D-ish roll effect) ─────────────────────── */
+@keyframes dice-tumble {
+  0%   { transform: rotate(0deg) scale(1); }
+  18%  { transform: rotate(-20deg) scale(1.18); }
+  40%  { transform: rotate(16deg) scale(0.88); }
+  60%  { transform: rotate(-10deg) scale(1.1); }
+  80%  { transform: rotate(5deg) scale(0.95); }
+  100% { transform: rotate(0deg) scale(1); }
+}
+
+.die-btn-rolling {
+  animation: dice-tumble 0.56s ease-in-out;
+  pointer-events: none;
+}
+
+/* ── Die count input (narrower than mod) ───────────────────────────── */
+.dice-count-input {
+  width: 40px !important;
+}
+
+/* ── Advantage / Disadvantage row ──────────────────────────────────── */
+.dice-adv-row {
+  display: flex;
+  gap: 0.35rem;
+}
+
+.dice-adv-btn {
+  flex: 1;
+  background: rgba(155, 89, 182, 0.06);
+  border: 1px solid rgba(155, 89, 182, 0.2);
+  color: var(--text-secondary);
+  padding: 0.28rem 0.4rem;
+  border-radius: 5px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.dice-adv-btn:hover {
+  border-color: var(--accent-purple);
+  color: var(--accent-purple);
+}
+
+.dice-adv-active {
+  background: rgba(155, 89, 182, 0.22);
+  border-color: var(--accent-purple) !important;
+  color: var(--accent-purple) !important;
+  box-shadow: 0 0 6px rgba(155, 89, 182, 0.2);
+}
+
+.dice-dis-btn:hover {
+  border-color: #ef9a9a;
+  color: #ef9a9a;
+}
+
+.dice-dis-active {
+  background: rgba(239, 154, 154, 0.18) !important;
+  border-color: #ef9a9a !important;
+  color: #ef9a9a !important;
+  box-shadow: 0 0 6px rgba(239, 154, 154, 0.2);
+}
+
+/* ── Preset buttons ─────────────────────────────────────────────────── */
+.dice-presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+}
+
+.dice-preset-btn {
+  background: rgba(228, 168, 83, 0.07);
+  border: 1px solid rgba(228, 168, 83, 0.22);
+  color: var(--text-secondary);
+  padding: 0.22rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+
+.dice-preset-btn:hover {
+  border-color: var(--accent-gold, #e4a853);
+  color: var(--accent-gold, #e4a853);
+  background: rgba(228, 168, 83, 0.14);
+}
+
+.dice-preset-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* ── Roll breakdown (individual dice + math) ────────────────────────── */
+.dice-breakdown {
+  display: flex;
+  align-items: center;
+  gap: 0.15rem;
+  font-family: 'Consolas', 'Courier New', monospace;
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  padding: 0.25rem 0.4rem;
+  background: rgba(155, 89, 182, 0.06);
+  border: 1px solid rgba(155, 89, 182, 0.15);
+  border-radius: 5px;
+  flex-wrap: wrap;
+}
+
+.dice-bd-brackets {
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.dice-bd-die {
+  font-weight: 700;
+  padding: 0.05rem 0.22rem;
+  border-radius: 3px;
+}
+
+.dice-bd-kept {
+  color: var(--accent-purple);
+  background: rgba(155, 89, 182, 0.15);
+}
+
+.dice-bd-dropped {
+  color: var(--text-secondary);
+  background: rgba(255, 255, 255, 0.05);
+  text-decoration: line-through;
+  opacity: 0.55;
+}
+
+.dice-bd-sep {
+  color: var(--text-secondary);
+  opacity: 0.5;
+}
+
+.dice-bd-arrow {
+  color: var(--text-secondary);
+  font-size: 0.75rem;
+}
+
+.dice-bd-mod {
+  color: var(--text-secondary);
+}
+
+.dice-bd-total {
+  color: var(--accent-purple);
+  font-size: 0.9rem;
+}
+
+/* ── Roll history ───────────────────────────────────────────────────── */
+.dice-history {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.dice-history-label {
+  font-size: 0.62rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-secondary);
+  opacity: 0.55;
+}
+
+.dice-history-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.12rem;
+  max-height: 120px;
+  overflow-y: auto;
+}
+
+.dice-history-entry {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.15rem 0.4rem;
+  border-radius: 3px;
+  font-size: 0.72rem;
+  opacity: 0.5;
+  transition: opacity 0.15s;
+}
+
+.dice-history-entry:hover {
+  opacity: 0.8;
+}
+
+.dice-history-latest {
+  opacity: 1;
+  background: rgba(155, 89, 182, 0.08);
+  border: 1px solid rgba(155, 89, 182, 0.15);
+}
+
+.dice-history-notation {
+  color: var(--text-secondary);
+  font-family: 'Consolas', 'Courier New', monospace;
+  font-size: 0.7rem;
+}
+
+.dice-history-total {
+  font-weight: 700;
+  font-family: 'Consolas', 'Courier New', monospace;
+  color: var(--accent-purple);
+  min-width: 24px;
+  text-align: right;
+}
+
 /* ── Weight bar warning state ──────────────────────────────────────── */
 .inv-weight-bar-fill.warning {
   background: var(--accent-gold, #e4a853);
