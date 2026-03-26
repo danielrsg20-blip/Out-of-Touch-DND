@@ -610,6 +610,39 @@ def _state_with_overlay(session: GameSession) -> dict[str, Any]:
     return state
 
 
+def _auto_place_unplaced_pcs(session: "GameSession") -> bool:
+    """Place any PC characters that exist but have no map entity. Returns True if any were placed."""
+    from .map_engine import MapEntity
+    game_map = session.orchestrator.game_map
+    if not game_map:
+        return False
+    placed_any = False
+    for cid, char in session.orchestrator.characters.items():
+        if cid.startswith("enemy_") or cid in game_map.entities:
+            continue
+        spawn_pos: tuple[int, int] | None = None
+        for y in range(1, game_map.height - 1):
+            for x in range(1, game_map.width - 1):
+                if game_map.can_occupy(x, y):
+                    spawn_pos = (x, y)
+                    break
+            if spawn_pos is not None:
+                break
+        if spawn_pos is None:
+            continue
+        sx, sy = spawn_pos
+        game_map.place_entity(MapEntity(
+            id=cid,
+            name=char.name,
+            x=sx,
+            y=sy,
+            entity_type="pc",
+            sprite="default",
+        ))
+        placed_any = True
+    return placed_any
+
+
 @app.post("/api/character/create")
 async def create_character(req: CreateCharacterRequest, request: Request):
     session = session_manager.get_session(req.room_code)
@@ -636,6 +669,13 @@ async def create_character(req: CreateCharacterRequest, request: Request):
         "type": "character_created",
         "character": char.to_dict(),
     })
+
+    # Auto-place the PC on the map if one exists and the entity isn't already there.
+    if _auto_place_unplaced_pcs(session):
+        await session.broadcast({
+            "type": "state_sync",
+            "state": session.orchestrator.get_full_state(),
+        })
 
     user_id = _extract_user_id(request)
     player = session.players.get(req.player_id)
@@ -1166,6 +1206,9 @@ async def action_endpoint(req: PlayerActionRequest):
                 "overlay": overlay_payload,
             })
 
+    # If the map was just generated this turn, place any PC characters that are missing.
+    _auto_place_unplaced_pcs(session)
+
     state = _state_with_overlay(session)
     await session.broadcast({"type": "state_sync", "state": state})
 
@@ -1439,6 +1482,8 @@ async def websocket_endpoint(websocket: WebSocket, room_code: str, player_id: st
     await websocket.accept()
     player.websocket = websocket
     session_start = build_session_start_protocol(session)
+
+    _auto_place_unplaced_pcs(session)
 
     await websocket.send_json({
         "type": "connected",

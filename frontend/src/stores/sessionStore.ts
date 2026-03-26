@@ -16,6 +16,49 @@ let sessionEventsChannel: RealtimeChannel | null = null
 type BattlemapQualityMode = 'fast' | 'final'
 
 const BATTLEMAP_QUALITY_MODE_KEY_PREFIX = 'otdnd.battlemapQualityMode'
+const SESSION_PERSIST_KEY = 'otdnd.activeSession'
+
+type StoredSessionData = {
+  roomCode: string
+  playerId: string
+  playerName: string
+  sessionId: string | null
+  phase: 'lobby' | 'character_create' | 'playing'
+}
+
+function writeActiveSession(data: StoredSessionData): void {
+  try {
+    window.localStorage.setItem(SESSION_PERSIST_KEY, JSON.stringify(data))
+  } catch {
+    // Ignore localStorage errors (private browsing, quota exceeded, etc.)
+  }
+}
+
+function readActiveSession(): StoredSessionData | null {
+  try {
+    const raw = window.localStorage.getItem(SESSION_PERSIST_KEY)
+    if (!raw) return null
+    const parsed = JSON.parse(raw) as Record<string, unknown>
+    if (typeof parsed.roomCode !== 'string' || typeof parsed.playerId !== 'string') return null
+    return {
+      roomCode: parsed.roomCode,
+      playerId: parsed.playerId,
+      playerName: typeof parsed.playerName === 'string' ? parsed.playerName : '',
+      sessionId: typeof parsed.sessionId === 'string' ? parsed.sessionId : null,
+      phase: parsed.phase === 'character_create' ? 'character_create' : 'playing',
+    }
+  } catch {
+    return null
+  }
+}
+
+function clearActiveSession(): void {
+  try {
+    window.localStorage.removeItem(SESSION_PERSIST_KEY)
+  } catch {
+    // Ignore
+  }
+}
 
 function isBattlemapQualityMode(value: unknown): value is BattlemapQualityMode {
   return value === 'fast' || value === 'final'
@@ -170,6 +213,7 @@ interface SessionState {
   campaignTitle: string | null
   battlemapQualityMode: BattlemapQualityMode
 
+  hydrateSession: () => void
   setPhase: (phase: SessionState['phase']) => void
   createSession: (playerName: string, mockMode?: boolean, campaignPremise?: string, campaignTone?: string, campaignTitle?: string) => Promise<void>
   joinSession: (roomCode: string, playerName: string) => Promise<void>
@@ -202,7 +246,34 @@ export const useSessionStore = create<SessionState>((set) => ({
   campaignTitle: null,
   battlemapQualityMode: 'fast',
 
-  setPhase: (phase) => set({ phase }),
+  hydrateSession: () => {
+    const stored = readActiveSession()
+    if (!stored) return
+    set({
+      roomCode: stored.roomCode,
+      playerId: stored.playerId,
+      playerName: stored.playerName,
+      sessionId: stored.sessionId,
+      phase: stored.phase,
+      battlemapQualityMode: readBattlemapQualityMode(stored.roomCode),
+    })
+    if (stored.sessionId) {
+      startSessionEvents(stored.sessionId, stored.roomCode)
+    }
+  },
+
+  setPhase: (phase) => set((s) => {
+    if (s.roomCode && s.playerId) {
+      writeActiveSession({
+        roomCode: s.roomCode,
+        playerId: s.playerId,
+        playerName: s.playerName ?? '',
+        sessionId: s.sessionId,
+        phase,
+      })
+    }
+    return { phase }
+  }),
 
   getSession: async (roomCode) => {
     const normalizedRoomCode = roomCode.toUpperCase()
@@ -298,6 +369,7 @@ export const useSessionStore = create<SessionState>((set) => ({
         campaignTitle: campaignTitle || null,
         battlemapQualityMode: readBattlemapQualityMode(data.room_code),
       })
+      writeActiveSession({ roomCode: data.room_code, playerId: data.player_id, playerName, sessionId: null, phase: 'lobby' })
       const createdRoomCode = data.room_code
       void (async () => {
         try {
@@ -346,6 +418,8 @@ export const useSessionStore = create<SessionState>((set) => ({
       battlemapQualityMode: readBattlemapQualityMode(data.room_code),
     })
 
+    writeActiveSession({ roomCode: data.room_code, playerId: data.player_id, playerName, sessionId, phase: 'lobby' })
+
     if (sessionId) {
       startSessionEvents(sessionId, data.room_code)
     }
@@ -392,6 +466,7 @@ export const useSessionStore = create<SessionState>((set) => ({
         players,
         battlemapQualityMode: readBattlemapQualityMode(roomCode),
       })
+      writeActiveSession({ roomCode: roomCode.toUpperCase(), playerId: data.player_id, playerName, sessionId: null, phase: 'lobby' })
       void (async () => {
         try {
           await syncStateWithPendingPolling(roomCode.toUpperCase(), 'join')
@@ -441,6 +516,8 @@ export const useSessionStore = create<SessionState>((set) => ({
       players,
       battlemapQualityMode: readBattlemapQualityMode(roomCode),
     })
+
+    writeActiveSession({ roomCode: roomCode.toUpperCase(), playerId: data.player_id, playerName, sessionId, phase: 'lobby' })
 
     if (sessionId) {
       startSessionEvents(sessionId, roomCode.toUpperCase())
@@ -534,6 +611,7 @@ export const useSessionStore = create<SessionState>((set) => ({
 
   reset: () => {
     stopSessionEvents()
+    clearActiveSession()
     set({
       sessionId: null,
       roomCode: null,

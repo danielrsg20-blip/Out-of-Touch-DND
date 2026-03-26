@@ -301,9 +301,36 @@ export const useGameStore = create<GameState>((set) => ({
       ? (Object.keys(normalizedIncomingCharacters).length > 0 || Object.keys(current.characters).length === 0)
       : false
 
+    const finalCharacters = shouldReplaceCharacters ? normalizedIncomingCharacters! : current.characters
+    let finalMap = state.map ?? current.map ?? null
+
+    // Auto-place any PC characters that are missing from the map as entities.
+    // The server snapshot's map may not include client-placed entities (the AI
+    // battlemap asset is stored separately from the Supabase session snapshot).
+    if (finalMap) {
+      const existingIds = new Set(finalMap.entities.map((e) => e.id))
+      const spawnX = Math.max(1, Math.floor(finalMap.width / 2))
+      const spawnY = Math.max(1, Math.floor(finalMap.height / 2))
+      const missing = Object.entries(finalCharacters)
+        .filter(([charId]) => !existingIds.has(charId))
+        .map(([charId, char]) => ({
+          id: charId,
+          name: char.name,
+          x: spawnX,
+          y: spawnY,
+          type: 'pc' as const,
+          sprite: typeof char.sprite_id === 'string' && char.sprite_id.trim()
+            ? char.sprite_id
+            : `pc_${(char.race ?? 'human').trim().toLowerCase().replaceAll(/[\s_]+/g, '-')}_${(char.class ?? 'fighter').trim().toLowerCase()}`,
+        }))
+      if (missing.length > 0) {
+        finalMap = { ...finalMap, entities: [...finalMap.entities, ...missing] }
+      }
+    }
+
     return {
-      characters: shouldReplaceCharacters ? normalizedIncomingCharacters! : current.characters,
-      map: state.map ?? current.map ?? null,
+      characters: finalCharacters,
+      map: finalMap,
       combat: state.combat ?? current.combat,
       usage: state.usage ?? current.usage ?? DEFAULT_USAGE,
     }

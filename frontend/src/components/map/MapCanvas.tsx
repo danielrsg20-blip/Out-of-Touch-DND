@@ -29,7 +29,7 @@ import { buildVectorBaseOverlayFromMap } from '../../lib/mapToVectorOverlay'
 import { createMapGridTransform } from '../../lib/mapGridTransform'
 import './MapCanvas.css'
 
-const CHARACTER_SPRITE_SCALE = 1.5
+const CHARACTER_SPRITE_SCALE = 1.0
 const ANIM_FRAME_MS = 350  // ms per frame (~3fps idle animation)
 
 const ENTITY_COLORS: Record<string, string> = {
@@ -344,7 +344,7 @@ export default function MapCanvas({ onTileClick, onEntityClick, targetingMode = 
   const imageOpacity = Math.min(1, Math.max(0, mapMetadata?.image_opacity ?? 1))
   const renderCellWidth = mapGridTransform.cellWidthPx
   const renderCellHeight = mapGridTransform.cellHeightPx
-  const tokenBaseSizePx = Math.max(12, Math.min(renderCellWidth, renderCellHeight) * 0.86)
+  const tokenBaseSizePx = Math.max(12, Math.min(renderCellWidth, renderCellHeight) * 0.70)
 
   const applyTraversalGridToState = useCallback((nextGrid: FrontendTraversalGrid) => {
     useOverlayStore.getState().setTraversalGrid(nextGrid)
@@ -1123,7 +1123,8 @@ export default function MapCanvas({ onTileClick, onEntityClick, targetingMode = 
       entityIndex++
       const entityKey = `${entity.x},${entity.y}`
       const isLocalPlayerToken = isLocalPlayerEntity(entity)
-      if (hasVisibility && !visibleSet.has(entityKey) && !isLocalPlayerToken) continue
+      const isPlayerCharacter = entity.type === 'pc'
+      if (hasVisibility && !visibleSet.has(entityKey) && !isLocalPlayerToken && !isPlayerCharacter) continue
 
       const isDefeatedEnemy = entity.type === 'enemy' && (characters[entity.id]?.hp ?? 1) <= 0
 
@@ -1415,7 +1416,8 @@ export default function MapCanvas({ onTileClick, onEntityClick, targetingMode = 
     for (const entity of renderEntities) {
       const entityKey = `${entity.x},${entity.y}`
       const isLocalPlayerToken = isLocalPlayerEntity(entity)
-      if (hasVisibility && !visibleSet.has(entityKey) && !isLocalPlayerToken) continue
+      const isPlayerCharacter = entity.type === 'pc'
+      if (hasVisibility && !visibleSet.has(entityKey) && !isLocalPlayerToken && !isPlayerCharacter) continue
       const anim = tokenAnimationsRef.current.get(entity.id)
       let drawGX = entity.x
       let drawGY = entity.y
@@ -1574,6 +1576,25 @@ export default function MapCanvas({ onTileClick, onEntityClick, targetingMode = 
 
     onTileClick?.(gx, gy)
   }, [map, interaction, onTileClick, onEntityClick, mapGridTransform.cellWidthPx, mapGridTransform.cellHeightPx, correctionModeEnabled])
+
+  const handleSnapToParty = useCallback(() => {
+    if (!map) return
+    const container = containerRef.current
+    if (!container) return
+    const rect = container.getBoundingClientRect()
+    if (rect.width <= 0 || rect.height <= 0) return
+    const pcEntities = map.entities.filter((e) => e.type === 'pc')
+    if (pcEntities.length === 0) return
+    const minX = Math.min(...pcEntities.map((e) => e.x))
+    const maxX = Math.max(...pcEntities.map((e) => e.x))
+    const minY = Math.min(...pcEntities.map((e) => e.y))
+    const maxY = Math.max(...pcEntities.map((e) => e.y))
+    const centerGX = (minX + maxX) / 2
+    const centerGY = (minY + maxY) / 2
+    const centerPX = (centerGX + 0.5) * mapGridTransform.cellWidthPx
+    const centerPY = (centerGY + 0.5) * mapGridTransform.cellHeightPx
+    interaction.panToWorldPoint(centerPX, centerPY, rect.width, rect.height)
+  }, [map, interaction, mapGridTransform.cellWidthPx, mapGridTransform.cellHeightPx])
 
   const handleRecenter = useCallback(() => {
     if (!map) return
@@ -1735,6 +1756,14 @@ export default function MapCanvas({ onTileClick, onEntityClick, targetingMode = 
       </button>
       {showMapControls && (
         <div className="map-controls-panel">
+          <button
+            type="button"
+            className="map-controls-panel-btn"
+            onClick={handleSnapToParty}
+            title="Snap view to party"
+          >
+            Find party
+          </button>
           <button
             type="button"
             className={`map-controls-panel-btn ${showVectorLabels ? 'is-active' : ''}`}

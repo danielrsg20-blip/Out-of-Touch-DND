@@ -14,10 +14,12 @@ function isTableMode() {
 export default function App() {
   const phase = useSessionStore(s => s.phase)
   const { isAuthenticated, isLoading, hydrateFromStorage } = useAuthStore()
+  const hydrateSession = useSessionStore(s => s.hydrateSession)
 
   useEffect(() => {
     hydrateFromStorage()
-  }, [hydrateFromStorage])
+    hydrateSession()
+  }, [hydrateFromStorage, hydrateSession])
 
   if (isLoading) {
     return null

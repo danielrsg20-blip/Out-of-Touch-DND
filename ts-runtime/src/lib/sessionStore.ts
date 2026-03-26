@@ -286,6 +286,32 @@ export function createCharacterInSession(params: {
     player.user_id = params.userId
   }
 
+  // If a map already exists, place the PC entity on it so their sprite renders immediately.
+  const map = updated.game_state.map as (JsonRecord & { entities?: unknown[] }) | null
+  if (map && Array.isArray(map.entities)) {
+    const alreadyPlaced = map.entities.some(
+      (e) => typeof e === 'object' && e !== null && (e as JsonRecord).id === characterId
+    )
+    if (!alreadyPlaced) {
+      const tiles = Array.isArray((map as JsonRecord).tiles)
+        ? (map as JsonRecord & { tiles: JsonRecord[] }).tiles
+        : []
+      const floorCell = tiles.find((t) => t.blocks_movement === false) ?? { x: 1, y: 1 }
+      map.entities = [
+        ...map.entities,
+        {
+          id: characterId,
+          name: params.name,
+          x: floorCell.x ?? 1,
+          y: floorCell.y ?? 1,
+          type: 'pc',
+          sprite: params.spriteId ?? 'default',
+          blocks_movement: true,
+        },
+      ]
+    }
+  }
+
   refreshSessionStart(updated)
   sessions.set(key, clone(updated))
   return clone(character)

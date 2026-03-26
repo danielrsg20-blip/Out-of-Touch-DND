@@ -185,9 +185,32 @@ export default function CharacterCreator() {
         const sessionState = useSessionStore.getState()
         sessionState.setPlayers(sessionState.players.map(p => p.id === playerId ? { ...p, character_id: created.id as string } : p))
       }
-      // Sync the full state returned by create_character so map.entities (with the placed PC token) is loaded
+      // Sync characters from the snapshot without touching the map.
+      // The edge function returns a snapshot map that may lack image_url (since
+      // the AI battlemap asset is stored separately and not written back to the
+      // Supabase session_snapshots table by the ts-runtime). Replacing the map
+      // via syncState would wipe the AI dungeon image currently rendered.
       if (payload.state && typeof payload.state === 'object') {
-        useGameStore.getState().syncState(payload.state as any)
+        const stateObj = payload.state as Record<string, unknown>
+        if (stateObj.characters && typeof stateObj.characters === 'object') {
+          useGameStore.getState().setCharacters(stateObj.characters as Record<string, CharacterData>)
+        }
+      }
+      // Place the PC token on whichever map is currently rendered in the store.
+      if (created?.id && typeof created.id === 'string') {
+        const store = useGameStore.getState()
+        if (store.map) {
+          const spawnX = Math.max(1, Math.floor((store.map.width ?? 20) / 2))
+          const spawnY = Math.max(1, Math.floor((store.map.height ?? 14) / 2))
+          store.addEntity({
+            id: created.id,
+            name: (created.name as string | undefined) ?? 'Adventurer',
+            x: spawnX,
+            y: spawnY,
+            type: 'pc',
+            sprite: resolvedSpriteId ?? 'default',
+          })
+        }
       }
       useSessionStore.getState().setPhase('playing')
     } catch (err: unknown) {

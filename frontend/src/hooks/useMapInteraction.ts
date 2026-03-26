@@ -19,6 +19,7 @@ interface MapInteraction {
     viewportHeight: number,
     options?: GridScreenTransformOptions,
   ) => void
+  panToWorldPoint: (worldX: number, worldY: number, viewportWidth: number, viewportHeight: number) => void
   handleWheel: (e: WheelEvent) => void
   handlePointerDown: (e: React.PointerEvent) => void
   handlePointerMove: (e: React.PointerEvent) => void
@@ -60,6 +61,11 @@ export function useMapInteraction(): MapInteraction {
     setOffsetX(centeredOffsetX)
     setOffsetY(centeredOffsetY)
   }, [])
+
+  const panToWorldPoint = useCallback((worldX: number, worldY: number, viewportWidth: number, viewportHeight: number) => {
+    setOffsetX(viewportWidth / 2 - worldX * zoom)
+    setOffsetY(viewportHeight / 2 - worldY * zoom)
+  }, [zoom])
 
   const handleWheel = useCallback((e: WheelEvent) => {
     e.preventDefault()
@@ -107,5 +113,5 @@ export function useMapInteraction(): MapInteraction {
     }
   }, [offsetX, offsetY, zoom])
 
-  return { offsetX, offsetY, zoom, isPanning, fitToView, handleWheel, handlePointerDown, handlePointerMove, handlePointerUp, screenToGrid }
+  return { offsetX, offsetY, zoom, isPanning, fitToView, panToWorldPoint, handleWheel, handlePointerDown, handlePointerMove, handlePointerUp, screenToGrid }
 }
