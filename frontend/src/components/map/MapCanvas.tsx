@@ -179,6 +179,7 @@ export default function MapCanvas({ onTileClick, onEntityClick, targetingMode = 
   const interaction = useMapInteraction()
   const [showVectorLabels, setShowVectorLabels] = useState(true)
   const [showDmOnlyLabels, setShowDmOnlyLabels] = useState(false)
+  const [showMapControls, setShowMapControls] = useState(false)
   const [scaleLabelsWithZoom, setScaleLabelsWithZoom] = useState(true)
   const [transformCopyStatus, setTransformCopyStatus] = useState<'idle' | 'copied' | 'failed'>('idle')
   const [editorGridCellSizeWorld, setEditorGridCellSizeWorld] = useState(5)
@@ -1114,7 +1115,7 @@ export default function MapCanvas({ onTileClick, onEntityClick, targetingMode = 
 
     // Layer 2 then Layer 3: props/objects first, then units/characters.
     const layer2Props = map.entities.filter((entity) => entity.type === 'object')
-    const layer3Units = map.entities.filter((entity) => entity.type !== 'object')
+    const layer3Units = map.entities.filter((entity) => entity.type !== 'object').sort((a, b) => a.y - b.y)
     const renderEntities = [...layer2Props, ...layer3Units]
 
     let entityIndex = -1
@@ -1208,7 +1209,6 @@ export default function MapCanvas({ onTileClick, onEntityClick, targetingMode = 
         spriteDrawHeight = scaledHeight
         spriteDrawWidth = scaledHeight * (monsterRect.w / monsterRect.h)
       }
-      const spriteVisualRadius = Math.max(spriteDrawWidth, spriteDrawHeight) / 2
       const shouldRotateDefeated = isDefeatedEnemy
 
       // Idle bob for player characters: gentle 2px vertical oscillation
@@ -1234,6 +1234,25 @@ export default function MapCanvas({ onTileClick, onEntityClick, targetingMode = 
         ctx.restore()
       }
 
+      // One-time debug log per entity to trace sprite resolution
+      if (!spriteCacheRef.current.has(`__logged_${entity.id}`)) {
+        spriteCacheRef.current.set(`__logged_${entity.id}`, 'logged' as unknown as HTMLImageElement)
+        console.log('[MapCanvas] entity', entity.id, entity.type, entity.name,
+          '| spriteKey:', spriteKey, '| characterFrameKey:', characterFrameKey,
+          '| sheetUrl:', characterSheetUrl, '| sheetImg:', characterSheetImage === undefined ? 'not-yet-requested' : characterSheetImage === null ? 'load-failed' : characterSheetImage === 'loading' ? 'loading' : 'loaded')
+      }
+
+      // Foot shadow — grounding ellipse at tile center (feet anchor point)
+      if (entity.type !== 'object') {
+        ctx.save()
+        ctx.globalAlpha = 0.28
+        ctx.fillStyle = '#000'
+        ctx.beginPath()
+        ctx.ellipse(px, py, spriteDrawWidth * 0.38, renderCellHeight * 0.1, 0, 0, Math.PI * 2)
+        ctx.fill()
+        ctx.restore()
+      }
+
       let drewSprite = false
       if (characterCell && characterSheetUrl && characterSheetImage && characterSheetImage !== 'loading') {
         const sourceW = characterSheetImage.naturalWidth / CHARACTER_SPRITESHEET_COLUMNS
@@ -1249,13 +1268,13 @@ export default function MapCanvas({ onTileClick, onEntityClick, targetingMode = 
             sourceW,
             sourceH,
             -spriteDrawWidth / 2,
-            -spriteDrawHeight / 2,
+            -spriteDrawHeight,
             spriteDrawWidth,
             spriteDrawHeight,
           )
         }, bobY)
         drewSprite = true
-      } else if (characterCell && characterSheetUrl && !characterSheetImage) {
+      } else if (characterCell && characterSheetUrl && characterSheetImage === undefined) {
         characterSheetCacheRef.current.set(characterSheetUrl, 'loading')
         const img = new Image()
         img.decoding = 'async'
@@ -1263,6 +1282,7 @@ export default function MapCanvas({ onTileClick, onEntityClick, targetingMode = 
           characterSheetCacheRef.current.set(characterSheetUrl, img)
         }
         img.onerror = () => {
+          console.error('[MapCanvas] Failed to load character spritesheet:', characterSheetUrl)
           characterSheetCacheRef.current.set(characterSheetUrl, null)
         }
         img.src = characterSheetUrl
@@ -1276,7 +1296,7 @@ export default function MapCanvas({ onTileClick, onEntityClick, targetingMode = 
             monsterRect.w,
             monsterRect.h,
             -spriteDrawWidth / 2,
-            -spriteDrawHeight / 2,
+            -spriteDrawHeight,
             spriteDrawWidth,
             spriteDrawHeight,
           )
@@ -1290,6 +1310,7 @@ export default function MapCanvas({ onTileClick, onEntityClick, targetingMode = 
           monsterSheetCacheRef.current.set(MONSTER_SPRITESHEET_URL, img)
         }
         img.onerror = () => {
+          console.error('[MapCanvas] Failed to load monster spritesheet:', MONSTER_SPRITESHEET_URL)
           monsterSheetCacheRef.current.set(MONSTER_SPRITESHEET_URL, null)
         }
         img.src = MONSTER_SPRITESHEET_URL
@@ -1298,7 +1319,7 @@ export default function MapCanvas({ onTileClick, onEntityClick, targetingMode = 
         if (cached && cached !== 'loading') {
           ctx.imageSmoothingEnabled = false
           drawEntitySprite(() => {
-            ctx.drawImage(cached, -spriteDrawWidth / 2, -spriteDrawHeight / 2, spriteDrawWidth, spriteDrawHeight)
+            ctx.drawImage(cached, -spriteDrawWidth / 2, -spriteDrawHeight, spriteDrawWidth, spriteDrawHeight)
           })
           drewSprite = true
         } else if (!cached) {
@@ -1309,6 +1330,7 @@ export default function MapCanvas({ onTileClick, onEntityClick, targetingMode = 
             spriteCacheRef.current.set(resolvedSpriteUrl, img)
           }
           img.onerror = () => {
+            console.error('[MapCanvas] Failed to load sprite:', resolvedSpriteUrl)
             spriteCacheRef.current.set(resolvedSpriteUrl, null)
           }
           img.src = resolvedSpriteUrl
@@ -1339,7 +1361,7 @@ export default function MapCanvas({ onTileClick, onEntityClick, targetingMode = 
         const char = characters[entity.id]
         const hp = char?.hp ?? hpEntry?.hp ?? null
         const maxHp = char?.max_hp ?? hpEntry?.max_hp ?? null
-        const topOfToken = py + bobY - (drewSprite ? spriteVisualRadius : radius)
+        const topOfToken = py + bobY - (drewSprite ? spriteDrawHeight : radius)
 
         if (hp !== null && maxHp !== null && maxHp > 0) {
           const barW = 28
@@ -1386,7 +1408,7 @@ export default function MapCanvas({ onTileClick, onEntityClick, targetingMode = 
 
       ctx.fillStyle = 'rgba(255,255,255,0.85)'
       ctx.font = `${Math.max(8, 10 * interaction.zoom) / interaction.zoom}px sans-serif`
-      ctx.fillText(entity.name, px, py + bobY + (drewSprite ? spriteVisualRadius : radius) + 10)
+      ctx.fillText(entity.name, px, py + 12)
     }
 
     // Layer 4: selection / targeting / active-turn indicators above sprites.
@@ -1703,102 +1725,78 @@ export default function MapCanvas({ onTileClick, onEntityClick, targetingMode = 
       >
         Recenter map
       </button>
-      <div className="map-transform-debug-panel" aria-live="polite">
-        <div className="map-transform-debug-title">Transform</div>
-        <div className="map-transform-debug-row">
-          <span className="map-transform-debug-key">mode</span>
-          <span className="map-transform-debug-value">{mapMode}</span>
-        </div>
-        <div className="map-transform-debug-row">
-          <span className="map-transform-debug-key">mapWidthPx</span>
-          <span className="map-transform-debug-value">{Math.round(mapGridTransform.mapWidthPx)}</span>
-        </div>
-        <div className="map-transform-debug-row">
-          <span className="map-transform-debug-key">mapHeightPx</span>
-          <span className="map-transform-debug-value">{Math.round(mapGridTransform.mapHeightPx)}</span>
-        </div>
-        <div className="map-transform-debug-row">
-          <span className="map-transform-debug-key">cellWidthPx</span>
-          <span className="map-transform-debug-value">{Number(mapGridTransform.cellWidthPx.toFixed(3))}</span>
-        </div>
-        <div className="map-transform-debug-row">
-          <span className="map-transform-debug-key">cellHeightPx</span>
-          <span className="map-transform-debug-value">{Number(mapGridTransform.cellHeightPx.toFixed(3))}</span>
-        </div>
-        <div className="map-transform-debug-actions">
+      <button
+        type="button"
+        className={`map-controls-toggle-btn ${showMapControls ? 'is-active' : ''}`}
+        onClick={() => setShowMapControls((v) => !v)}
+        title="Map settings"
+      >
+        ⚙
+      </button>
+      {showMapControls && (
+        <div className="map-controls-panel">
           <button
             type="button"
-            className="map-transform-debug-copy-btn"
-            onClick={handleCopyTransformJson}
-            title="Copy transform snapshot JSON"
+            className={`map-controls-panel-btn ${showVectorLabels ? 'is-active' : ''}`}
+            onClick={() => setShowVectorLabels((v) => !v)}
+            title="Show/hide generated vector labels"
           >
-            Copy JSON
+            {showVectorLabels ? 'Hide labels' : 'Show labels'}
           </button>
-          <span className={`map-transform-debug-copy-status ${transformCopyStatus !== 'idle' ? 'is-visible' : ''}`}>
-            {transformCopyStatus === 'copied' ? 'Copied' : transformCopyStatus === 'failed' ? 'Copy failed' : ''}
-          </span>
+          <button
+            type="button"
+            className={`map-controls-panel-btn ${showDmOnlyLabels ? 'is-active' : ''}`}
+            onClick={() => setShowDmOnlyLabels((v) => !v)}
+            title="Show/hide DM-only labels"
+          >
+            {showDmOnlyLabels ? 'Hide DM labels' : 'Show DM labels'}
+          </button>
+          <button
+            type="button"
+            className={`map-controls-panel-btn ${scaleLabelsWithZoom ? 'is-active' : ''}`}
+            onClick={() => setScaleLabelsWithZoom((v) => !v)}
+            title="Toggle zoom-based label scaling"
+          >
+            {scaleLabelsWithZoom ? 'Label zoom: on' : 'Label zoom: off'}
+          </button>
+          <button
+            type="button"
+            className={`map-controls-panel-btn ${gridOverlayConfig.visible ? 'is-active' : ''}`}
+            onClick={() => {
+              const modes: GridOverlayMode[] = ['outlines', 'blocked', 'movement_cost', 'tags']
+              if (!gridOverlayConfig.visible) {
+                setGridOverlayConfig({ visible: true, mode: 'outlines' })
+              } else {
+                const idx = modes.indexOf(gridOverlayConfig.mode)
+                if (idx < 0 || idx === modes.length - 1) {
+                  setGridOverlayConfig({ visible: false })
+                } else {
+                  setGridOverlayConfig({ mode: modes[idx + 1] })
+                }
+              }
+            }}
+            title="Cycle traversal-grid overlay: off → outlines → blocked → heat → tags → off"
+          >
+            {!gridOverlayConfig.visible
+              ? 'Grid: off'
+              : gridOverlayConfig.mode === 'outlines'
+                ? 'Grid: lines'
+                : gridOverlayConfig.mode === 'blocked'
+                  ? 'Grid: blocked'
+                  : gridOverlayConfig.mode === 'movement_cost'
+                    ? 'Grid: heat'
+                    : 'Grid: tags'}
+          </button>
+          <button
+            type="button"
+            className={`map-controls-panel-btn ${correctionModeEnabled ? 'is-active' : ''}`}
+            onClick={() => setCorrectionModeEnabled(!correctionModeEnabled)}
+            title="Toggle battlemap correction mode"
+          >
+            {correctionModeEnabled ? 'Correction: on' : 'Correction: off'}
+          </button>
         </div>
-      </div>
-      <button
-        type="button"
-        className={`map-label-toggle-btn ${showVectorLabels ? 'is-active' : ''}`}
-        onClick={() => setShowVectorLabels((v) => !v)}
-        title="Show/hide generated vector labels"
-      >
-        {showVectorLabels ? 'Hide labels' : 'Show labels'}
-      </button>
-      <button
-        type="button"
-        className={`map-dm-label-toggle-btn ${showDmOnlyLabels ? 'is-active' : ''}`}
-        onClick={() => setShowDmOnlyLabels((v) => !v)}
-        title="Show/hide DM-only labels"
-      >
-        {showDmOnlyLabels ? 'Hide DM labels' : 'Show DM labels'}
-      </button>
-      <button
-        type="button"
-        className={`map-label-scale-toggle-btn ${scaleLabelsWithZoom ? 'is-active' : ''}`}
-        onClick={() => setScaleLabelsWithZoom((v) => !v)}
-        title="Toggle zoom-based label scaling"
-      >
-        {scaleLabelsWithZoom ? 'Label zoom: on' : 'Label zoom: off'}
-      </button>
-      <button
-        type="button"
-        className={`map-grid-overlay-btn ${gridOverlayConfig.visible ? 'is-active' : ''}`}
-        onClick={() => {
-          const modes: GridOverlayMode[] = ['outlines', 'blocked', 'movement_cost', 'tags']
-          if (!gridOverlayConfig.visible) {
-            setGridOverlayConfig({ visible: true, mode: 'outlines' })
-          } else {
-            const idx = modes.indexOf(gridOverlayConfig.mode)
-            if (idx < 0 || idx === modes.length - 1) {
-              setGridOverlayConfig({ visible: false })
-            } else {
-              setGridOverlayConfig({ mode: modes[idx + 1] })
-            }
-          }
-        }}
-        title="Cycle traversal-grid overlay: off → outlines → blocked → heat → tags → off"
-      >
-        {!gridOverlayConfig.visible
-          ? 'Grid: off'
-          : gridOverlayConfig.mode === 'outlines'
-            ? 'Grid: lines'
-            : gridOverlayConfig.mode === 'blocked'
-              ? 'Grid: blocked'
-              : gridOverlayConfig.mode === 'movement_cost'
-                ? 'Grid: heat'
-                : 'Grid: tags'}
-      </button>
-      <button
-        type="button"
-        className={`map-correction-toggle-btn ${correctionModeEnabled ? 'is-active' : ''}`}
-        onClick={() => setCorrectionModeEnabled(!correctionModeEnabled)}
-        title="Toggle battlemap correction mode"
-      >
-        {correctionModeEnabled ? 'Correction: on' : 'Correction: off'}
-      </button>
+      )}
       {correctionModeEnabled && (
         <div className="map-correction-panel" aria-live="polite">
           <button

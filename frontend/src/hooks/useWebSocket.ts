@@ -507,6 +507,14 @@ export function useWebSocket() {
           updatedAt: Date.now(),
         })
       }
+
+      // Include narrative directly from the HTTP response in case the Realtime
+      // subscription hasn't been established yet (e.g. SESSION_START fires on mount).
+      if (typeof payload.narrative === 'string' && payload.narrative.trim()) {
+        addNarrative('dm', payload.narrative.trim(), 'DM')
+        narrativeLockRef.current = false
+        setLoading(false)
+      }
     }
 
     sendViaEdge()

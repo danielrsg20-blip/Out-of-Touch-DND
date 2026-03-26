@@ -2371,6 +2371,7 @@ async function actionPlayerAction(body: Record<string, unknown>) {
 
   return {
     ok: true,
+    narrative,
     combat_started: startCombat,
     combat_advanced: combatAdvanceMessage !== null,
     dm_generation: {

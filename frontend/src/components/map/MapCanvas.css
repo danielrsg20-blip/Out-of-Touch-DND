@@ -164,14 +164,47 @@
   opacity: 1;
 }
 
-.map-label-toggle-btn,
-.map-dm-label-toggle-btn,
-.map-label-scale-toggle-btn,
-.map-grid-overlay-btn,
-.map-correction-toggle-btn {
+.map-controls-toggle-btn {
   position: absolute;
+  top: 2.35rem;
   right: 0.6rem;
   z-index: 2;
+  border: 1px solid var(--border-color);
+  background: rgba(0, 0, 0, 0.58);
+  color: var(--text-primary);
+  border-radius: 4px;
+  padding: 0.25rem 0.45rem;
+  font-size: 0.85rem;
+  cursor: pointer;
+  line-height: 1;
+}
+
+.map-controls-toggle-btn:hover {
+  border-color: var(--accent-gold);
+  color: var(--accent-gold);
+}
+
+.map-controls-toggle-btn.is-active {
+  border-color: var(--accent-gold);
+  color: var(--accent-gold);
+  background: rgba(78, 62, 20, 0.62);
+}
+
+.map-controls-panel {
+  position: absolute;
+  top: 4.1rem;
+  right: 0.6rem;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  background: rgba(5, 14, 21, 0.88);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  padding: 0.4rem;
+}
+
+.map-controls-panel-btn {
   border: 1px solid var(--border-color);
   background: rgba(0, 0, 0, 0.58);
   color: var(--text-primary);
@@ -179,42 +212,16 @@
   padding: 0.25rem 0.5rem;
   font-size: 0.68rem;
   cursor: pointer;
+  white-space: nowrap;
+  text-align: left;
 }
 
-.map-label-toggle-btn {
-  top: 2.35rem;
-}
-
-.map-dm-label-toggle-btn {
-  top: 4.1rem;
-}
-
-.map-label-scale-toggle-btn {
-  top: 5.85rem;
-}
-
-.map-grid-overlay-btn {
-  top: 7.6rem;
-}
-
-.map-correction-toggle-btn {
-  top: 9.35rem;
-}
-
-.map-label-toggle-btn:hover,
-.map-dm-label-toggle-btn:hover,
-.map-label-scale-toggle-btn:hover,
-.map-grid-overlay-btn:hover,
-.map-correction-toggle-btn:hover {
+.map-controls-panel-btn:hover {
   border-color: var(--accent-gold);
   color: var(--accent-gold);
 }
 
-.map-label-toggle-btn.is-active,
-.map-dm-label-toggle-btn.is-active,
-.map-label-scale-toggle-btn.is-active,
-.map-grid-overlay-btn.is-active,
-.map-correction-toggle-btn.is-active {
+.map-controls-panel-btn.is-active {
   border-color: var(--accent-gold);
   color: var(--accent-gold);
   background: rgba(78, 62, 20, 0.62);
@@ -222,7 +229,7 @@
 
 .map-correction-panel {
   position: absolute;
-  top: 11.1rem;
+  top: 4.1rem;
   right: 0.6rem;
   z-index: 2;
   min-width: 170px;

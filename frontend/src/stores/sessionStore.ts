@@ -208,7 +208,24 @@ export const useSessionStore = create<SessionState>((set) => ({
     const normalizedRoomCode = roomCode.toUpperCase()
 
     if (!shouldUseSupabaseSessions()) {
-      throw new Error('Supabase sessions are disabled or not configured.')
+      const res = await callBackendApi(`/api/session/${normalizedRoomCode}`)
+      if (!res.ok) {
+        throw new Error('Failed to get session from local runtime.')
+      }
+      const payload = res.data
+      const session = payload.session as Record<string, unknown> | undefined
+      const players = Array.isArray(session?.players) ? (session?.players as PlayerData[]) : null
+      if (players) {
+        set({ players })
+      }
+      if (payload.overlay && typeof payload.overlay === 'object') {
+        useOverlayStore.getState().setOverlay(payload.overlay as any)
+      }
+      const traversalGrid = extractTraversalGridFromPayload(payload)
+      if (traversalGrid) {
+        useOverlayStore.getState().setTraversalGrid(traversalGrid)
+      }
+      return payload
     }
 
     const supabase = getSupabaseClient()
@@ -251,7 +268,45 @@ export const useSessionStore = create<SessionState>((set) => ({
     let supabaseCreateError: string | null = null
 
     if (!shouldUseSupabaseSessions()) {
-      throw new Error('Supabase sessions are disabled or not configured.')
+      const res = await callBackendApi('/api/session/create', {
+        method: 'POST',
+        body: {
+          player_name: playerName,
+          mock_mode: mockMode,
+          campaign_premise: campaignPremise,
+          campaign_tone: campaignTone,
+          campaign_title: campaignTitle,
+        },
+      })
+      if (!res.ok) {
+        throw new Error('Failed to create session on local runtime.')
+      }
+      data = res.data
+      if (typeof data.room_code !== 'string' || typeof data.player_id !== 'string') {
+        throw new TypeError('Unable to create session (invalid server response).')
+      }
+      set({
+        sessionId: null,
+        roomCode: data.room_code,
+        playerId: data.player_id,
+        playerName,
+        mockMode,
+        isHost: true,
+        players: [{ id: data.player_id, name: playerName, character_id: null }],
+        campaignPremise: campaignPremise || null,
+        campaignTone: campaignTone || null,
+        campaignTitle: campaignTitle || null,
+        battlemapQualityMode: readBattlemapQualityMode(data.room_code),
+      })
+      const createdRoomCode = data.room_code
+      void (async () => {
+        try {
+          await syncStateWithPendingPolling(createdRoomCode, 'create')
+        } catch (error) {
+          console.error('Failed to sync initial game state after session create:', error instanceof Error ? error.message : error)
+        }
+      })()
+      return
     }
 
     const supabase = getSupabaseClient()
@@ -311,7 +366,40 @@ export const useSessionStore = create<SessionState>((set) => ({
     let supabaseJoinError: string | null = null
 
     if (!shouldUseSupabaseSessions()) {
-      throw new Error('Supabase sessions are disabled or not configured.')
+      const res = await callBackendApi('/api/session/join', {
+        method: 'POST',
+        body: { room_code: roomCode, player_name: playerName },
+      })
+      if (!res.ok) {
+        throw new Error('Failed to join session on local runtime.')
+      }
+      data = res.data
+      const session = data.session as Record<string, unknown> | undefined
+      if (session?.error && typeof session.error === 'string') {
+        throw new Error(session.error)
+      }
+      if (typeof data.player_id !== 'string') {
+        throw new TypeError('Unable to join session (invalid server response).')
+      }
+      const players = Array.isArray(session?.players) ? (session?.players as PlayerData[]) : []
+      set({
+        sessionId: null,
+        roomCode: roomCode.toUpperCase(),
+        playerId: data.player_id,
+        playerName,
+        mockMode: false,
+        isHost: false,
+        players,
+        battlemapQualityMode: readBattlemapQualityMode(roomCode),
+      })
+      void (async () => {
+        try {
+          await syncStateWithPendingPolling(roomCode.toUpperCase(), 'join')
+        } catch (error) {
+          console.error('Failed to sync initial game state after session join:', error instanceof Error ? error.message : error)
+        }
+      })()
+      return
     }
 
     const supabase = getSupabaseClient()
