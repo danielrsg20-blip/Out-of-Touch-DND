@@ -219,7 +219,10 @@ export async function registerCampaignRoutes(app: FastifyInstance): Promise<void
 
     const authorization = (request.headers as Record<string, unknown>).authorization
     const userId = decodeUserIdFromAuthorization(authorization)
-    const existing = getCampaign(roomCode)
+    // Use the stable campaign_id if provided (prevents duplicate campaigns on resume).
+    // Falls back to room_code for brand-new campaigns.
+    const recordId = asString(body.campaign_id) ?? roomCode
+    const existing = getCampaign(recordId)
 
     const rawCharacters = asRecord(body.characters) ?? {}
     const characters: Record<string, JsonRecord> = {}
@@ -243,7 +246,7 @@ export async function registerCampaignRoutes(app: FastifyInstance): Promise<void
     }
 
     const saved = saveCampaign({
-      id: roomCode,
+      id: recordId,
       name: campaignName,
       updated_at: nowIsoUtc(),
       session_count: (existing?.session_count ?? 0) + 1,

@@ -24,6 +24,7 @@ type StoredSessionData = {
   playerName: string
   sessionId: string | null
   phase: 'lobby' | 'character_create' | 'playing'
+  campaignId: string | null
 }
 
 function writeActiveSession(data: StoredSessionData): void {
@@ -46,6 +47,7 @@ function readActiveSession(): StoredSessionData | null {
       playerName: typeof parsed.playerName === 'string' ? parsed.playerName : '',
       sessionId: typeof parsed.sessionId === 'string' ? parsed.sessionId : null,
       phase: resolveStoredPhase(parsed.phase),
+      campaignId: typeof parsed.campaignId === 'string' ? parsed.campaignId : null,
     }
   } catch {
     return null
@@ -217,6 +219,7 @@ interface SessionState {
   campaignPremise: string | null
   campaignTone: string | null
   campaignTitle: string | null
+  campaignId: string | null
   battlemapQualityMode: BattlemapQualityMode
 
   hydrateSession: () => void
@@ -250,17 +253,21 @@ export const useSessionStore = create<SessionState>((set) => ({
   campaignPremise: null,
   campaignTone: null,
   campaignTitle: null,
+  campaignId: null,
   battlemapQualityMode: 'fast',
 
   hydrateSession: () => {
     const stored = readActiveSession()
     if (!stored) return
+    // Always start at lobby on app restart — game state is not persisted locally
+    // and the Supabase session may be stale. The user can resume from the campaign list.
     set({
       roomCode: stored.roomCode,
       playerId: stored.playerId,
       playerName: stored.playerName,
       sessionId: stored.sessionId,
-      phase: stored.phase,
+      campaignId: stored.campaignId,
+      phase: 'lobby',
       battlemapQualityMode: readBattlemapQualityMode(stored.roomCode),
     })
     if (stored.sessionId) {
@@ -421,10 +428,11 @@ export const useSessionStore = create<SessionState>((set) => ({
       campaignPremise: campaignPremise || null,
       campaignTone: campaignTone || null,
       campaignTitle: campaignTitle || null,
+      campaignId: null,
       battlemapQualityMode: readBattlemapQualityMode(data.room_code),
     })
 
-    writeActiveSession({ roomCode: data.room_code, playerId: data.player_id, playerName, sessionId, phase: 'lobby' })
+    writeActiveSession({ roomCode: data.room_code, playerId: data.player_id, playerName, sessionId, phase: 'lobby', campaignId: null })
 
     if (sessionId) {
       startSessionEvents(sessionId, data.room_code)
@@ -655,6 +663,7 @@ export const useSessionStore = create<SessionState>((set) => ({
     }
 
     const hasCharacter = characterId !== null
+    const resolvedPhase = hasCharacter ? 'playing' : 'character_create'
     set({
       sessionId,
       roomCode,
@@ -663,9 +672,10 @@ export const useSessionStore = create<SessionState>((set) => ({
       isHost: true,
       players: [{ id: playerId, name: playerName, character_id: characterId }],
       campaignTitle: campaign.name ?? campaignId,
-      phase: hasCharacter ? 'playing' : 'character_create',
+      campaignId,
+      phase: resolvedPhase,
     })
-    writeActiveSession({ roomCode, playerId, playerName, sessionId, phase: hasCharacter ? 'playing' : 'character_create' })
+    writeActiveSession({ roomCode, playerId, playerName, sessionId, phase: resolvedPhase, campaignId })
 
     if (sessionId) {
       startSessionEvents(sessionId, roomCode)
@@ -689,6 +699,7 @@ export const useSessionStore = create<SessionState>((set) => ({
       campaignPremise: null,
       campaignTone: null,
       campaignTitle: null,
+      campaignId: null,
       battlemapQualityMode: 'fast',
     })
   },

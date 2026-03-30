@@ -33,7 +33,7 @@ function showOverlayTester(): boolean {
 
 export default function GameBoard() {
   const { sendAction, sendMoveToken, sendSpellCast, transcribeVoiceInput, runVoiceTest } = useWebSocket()
-  const { roomCode, playerId, players, campaignTitle, reset } = useSessionStore()
+  const { roomCode, playerId, players, campaignTitle, campaignId, reset } = useSessionStore()
   const { token, logout } = useAuthStore()
   const [sessionMenuOpen, setSessionMenuOpen] = useState(false)
   const [sessionMenuSaving, setSessionMenuSaving] = useState(false)
@@ -104,6 +104,7 @@ export default function GameBoard() {
       headers: { Authorization: `Bearer ${token}` },
       body: {
         room_code: roomCode,
+        campaign_id: campaignId ?? undefined,
         campaign_name: campaignTitle ?? roomCode,
         characters,
         map,
@@ -111,7 +112,7 @@ export default function GameBoard() {
         my_character_id: myPlayer?.character_id ?? null,
       },
     })
-  }, [roomCode, token, campaignTitle, playerId])
+  }, [roomCode, campaignId, token, campaignTitle, playerId])
 
   const handleSaveCampaign = useCallback(async () => {
     setSessionMenuSaving(true)
