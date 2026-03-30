@@ -171,6 +171,15 @@ class CampaignMemory:
 
         return "\n\n".join(sections)
 
+    def to_codex(self) -> dict:
+        """Minimal snapshot for the frontend Codex panel (no session internals)."""
+        return {
+            "npcs": {k: v.to_dict() for k, v in self.npcs.items()},
+            "locations": {k: v.to_dict() for k, v in self.locations.items()},
+            "quests": {k: v.to_dict() for k, v in self.quests.items()},
+            "world_events": [e.to_dict() for e in self.world_events if e.importance in ("major", "critical")],
+        }
+
     def to_dict(self) -> dict:
         return {
             "npcs": {k: v.to_dict() for k, v in self.npcs.items()},

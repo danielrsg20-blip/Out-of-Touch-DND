@@ -1,6 +1,6 @@
 import type { FastifyInstance } from 'fastify'
 import { decodeSubjectWithoutVerify } from '../lib/authToken.js'
-import { getCampaign, listCampaigns, saveCampaign, type PlayerCharacterSummary } from '../lib/campaignStore.js'
+import { getCampaign, listCampaigns, saveCampaign, deleteCampaign, type PlayerCharacterSummary } from '../lib/campaignStore.js'
 import { applyCampaignToSession, createSessionSnapshot, getSessionSnapshot, setHostCharacter } from '../lib/sessionStore.js'
 
 type JsonRecord = Record<string, unknown>
@@ -113,6 +113,37 @@ function rebindOverlayToRoom(overlay: JsonRecord | null, roomCode: string): Json
 }
 
 export async function registerCampaignRoutes(app: FastifyInstance): Promise<void> {
+  app.get('/api/campaign/:id', async (request, reply) => {
+    const { id } = request.params as { id: string }
+    const campaign = getCampaign(id)
+    if (!campaign) {
+      return reply.send({ error: 'Campaign not found' })
+    }
+    return reply.send(campaign)
+  })
+
+  app.delete('/api/campaign/:id', async (request, reply) => {
+    const { id } = request.params as { id: string }
+    const authorization = (request.headers as Record<string, unknown>).authorization
+    const userId = decodeUserIdFromAuthorization(authorization)
+
+    if (!userId) {
+      return reply.code(401).send({ error: 'Authentication required' })
+    }
+
+    const campaign = getCampaign(id)
+    if (!campaign) {
+      return reply.code(404).send({ error: 'Campaign not found' })
+    }
+    if (campaign.owner_id && campaign.owner_id !== userId) {
+      return reply.code(403).send({ error: 'Not your campaign' })
+    }
+
+    deleteCampaign(id)
+    return reply.send({ deleted: true })
+  })
+
+
   app.get('/api/campaign/list', async (request, reply) => {
     const authorization = (request.headers as Record<string, unknown>).authorization
     const userId = decodeUserIdFromAuthorization(authorization)
@@ -170,6 +201,58 @@ export async function registerCampaignRoutes(app: FastifyInstance): Promise<void
       map: extractMapFromSnapshot(sessionPayload),
       conversation: extractConversationFromSnapshot(sessionPayload),
       overlay: asRecord(sessionPayload.overlay),
+    })
+
+    return reply.send({ saved: true, campaign_id: saved.id, name: saved.name })
+  })
+
+  // Direct save — accepts full game state from the frontend without needing a ts-runtime session.
+  // Used when sessions are managed by Supabase edge functions instead of ts-runtime.
+  app.post('/api/campaign/direct-save', async (request, reply) => {
+    const body = (request.body ?? {}) as JsonRecord
+    const roomCode = asString(body.room_code)
+    const campaignName = asString(body.campaign_name)
+
+    if (!roomCode || !campaignName) {
+      return reply.send({ error: 'room_code and campaign_name are required' })
+    }
+
+    const authorization = (request.headers as Record<string, unknown>).authorization
+    const userId = decodeUserIdFromAuthorization(authorization)
+    const existing = getCampaign(roomCode)
+
+    const rawCharacters = asRecord(body.characters) ?? {}
+    const characters: Record<string, JsonRecord> = {}
+    for (const [id, value] of Object.entries(rawCharacters)) {
+      const char = asRecord(value)
+      if (char) characters[id] = char
+    }
+
+    const playerCharacters: Record<string, PlayerCharacterSummary> = {}
+    if (userId) {
+      const myCharId = asString(body.my_character_id)
+      const myChar = myCharId ? characters[myCharId] : Object.values(characters)[0]
+      if (myChar) {
+        playerCharacters[userId] = {
+          name: asString(myChar.name) ?? 'Unknown',
+          class: asString(myChar.char_class) ?? asString(myChar.class) ?? 'Unknown',
+          level: typeof myChar.level === 'number' ? myChar.level : 1,
+          char_id: asString(myChar.id) ?? (myCharId ?? ''),
+        }
+      }
+    }
+
+    const saved = saveCampaign({
+      id: roomCode,
+      name: campaignName,
+      updated_at: nowIsoUtc(),
+      session_count: (existing?.session_count ?? 0) + 1,
+      owner_id: existing?.owner_id ?? userId,
+      player_characters: { ...existing?.player_characters, ...playerCharacters },
+      characters,
+      map: asRecord(body.map),
+      conversation: asArray(body.conversation),
+      overlay: asRecord(body.overlay),
     })
 
     return reply.send({ saved: true, campaign_id: saved.id, name: saved.name })

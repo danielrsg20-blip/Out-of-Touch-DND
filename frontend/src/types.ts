@@ -226,6 +226,53 @@ export interface TtsPlaybackStatus {
   updatedAt: number
 }
 
+// ============================================================================
+// LORE CODEX TYPES
+// ============================================================================
+
+export interface CodexNPC {
+  id: string
+  name: string
+  race: string
+  role: string
+  location: string
+  disposition: 'hostile' | 'unfriendly' | 'neutral' | 'friendly' | 'allied'
+  notes: string[]
+  alive: boolean
+}
+
+export interface CodexLocation {
+  id: string
+  name: string
+  description: string
+  region: string
+  visited: boolean
+  notes: string[]
+}
+
+export interface CodexQuest {
+  id: string
+  title: string
+  description: string
+  status: 'active' | 'completed' | 'failed' | 'abandoned'
+  objectives: string[]
+  completed_objectives: string[]
+  reward: string
+}
+
+export interface CodexWorldEvent {
+  session: number
+  description: string
+  importance: 'minor' | 'major' | 'critical'
+}
+
+export interface Codex {
+  npcs: Record<string, CodexNPC>
+  locations: Record<string, CodexLocation>
+  quests: Record<string, CodexQuest>
+  world_events: CodexWorldEvent[]
+}
+
 export interface CampaignSlot {
   id: string
   name: string

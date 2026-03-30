@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import type { MapData, CharacterData, CombatData, NarrativeEntry, EntityData, PendingRoll, ItemData, DmGenerationStatus, TtsPlaybackStatus } from '../types'
+import type { MapData, CharacterData, CombatData, NarrativeEntry, EntityData, PendingRoll, ItemData, DmGenerationStatus, TtsPlaybackStatus, Codex } from '../types'
 import type { TranscriptMode } from '../components/VoiceControl'
 
 let entryCounter = 0
@@ -11,6 +11,7 @@ interface GameState {
   characters: Record<string, CharacterData>
   combat: CombatData | null
   narrative: NarrativeEntry[]
+  codex: Codex | null
   selectedEntityId: string | null
   usage: { input_tokens: number; output_tokens: number; estimated_cost_usd: number }
   isLoading: boolean
@@ -39,11 +40,13 @@ interface GameState {
   setPendingRoll: (roll: PendingRoll | null) => void
   setDmGenerationStatus: (status: DmGenerationStatus | null) => void
   setTtsPlaybackStatus: (status: TtsPlaybackStatus | null) => void
+  syncCodex: (codex: Codex) => void
   syncState: (state: {
     characters?: Record<string, CharacterData>
     map?: MapData | null
     combat?: CombatData | null
     usage?: GameState['usage']
+    codex?: Codex | null
   }) => void
 }
 
@@ -222,6 +225,7 @@ export const useGameStore = create<GameState>((set) => ({
   characters: {},
   combat: null,
   narrative: [],
+  codex: null,
   selectedEntityId: null,
   usage: DEFAULT_USAGE,
   isLoading: false,
@@ -272,6 +276,7 @@ export const useGameStore = create<GameState>((set) => ({
   setPendingRoll: (roll) => set({ pendingRoll: roll }),
   setDmGenerationStatus: (status) => set({ dmGenerationStatus: status }),
   setTtsPlaybackStatus: (status) => set({ ttsPlaybackStatus: status }),
+  syncCodex: (codex) => set({ codex }),
 
   setUsage: (usage) => set({ usage }),
   setLoading: (loading) => set({ isLoading: loading }),
@@ -333,6 +338,7 @@ export const useGameStore = create<GameState>((set) => ({
       map: finalMap,
       combat: state.combat ?? current.combat,
       usage: state.usage ?? current.usage ?? DEFAULT_USAGE,
+      codex: state.codex ?? current.codex,
     }
   }),
 }))

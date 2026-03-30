@@ -2,11 +2,13 @@ import { useEffect, useState } from 'react'
 import { motion, AnimatePresence } from 'motion/react'
 import { useSessionStore } from '../stores/sessionStore'
 import { useAuthStore } from '../stores/authStore'
-import type { CampaignCharacter, CampaignSlot } from '../types'
+import type { CampaignSlot } from '../types'
 import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
+
+const CAMPAIGN_CAP = 3
 
 const MOCK_MODE_STORAGE_KEY = 'otdnd.mockMode'
 
@@ -98,6 +100,134 @@ const modeVariants = {
   exit:    { opacity: 0, y: -8, transition: { duration: 0.13 } },
 }
 
+interface FilledSlotProps {
+  readonly slot: CampaignSlot
+  readonly index: number
+  readonly color: string
+  readonly isConfirming: boolean
+  readonly isDeleting: boolean
+  readonly resuming: boolean
+  readonly deleting: boolean
+  readonly onStartResume: () => void
+  readonly onStartDelete: () => void
+  readonly onConfirmResume: () => void
+  readonly onCancelResume: () => void
+  readonly onConfirmDelete: () => void
+  readonly onCancelDelete: () => void
+}
+
+function FilledCampaignSlot({ slot, index, color, isConfirming, isDeleting, resuming, deleting, onStartResume, onStartDelete, onConfirmResume, onCancelResume, onConfirmDelete, onCancelDelete }: FilledSlotProps) {
+  const dateStr = new Date(slot.updated_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
+  const freshnessColor = FRESHNESS_COLORS[slotFreshness(slot.updated_at)]
+
+  let slotStateClass: string
+  if (isConfirming) {
+    slotStateClass = 'flex-col items-start gap-2 bg-[rgba(228,168,83,0.04)] border-[rgba(228,168,83,0.6)]'
+  } else if (isDeleting) {
+    slotStateClass = 'flex-col items-start gap-2 bg-[rgba(231,76,60,0.04)] border-[rgba(231,76,60,0.6)]'
+  } else {
+    slotStateClass = 'hover:bg-[rgba(228,168,83,0.04)] hover:border-[rgba(228,168,83,0.35)] hover:shadow-[0_2px_12px_rgba(0,0,0,0.3)]'
+  }
+
+  return (
+    <motion.div
+      key={slot.id}
+      variants={slotVariants}
+      className={cn(
+        'flex items-center gap-2.5 px-3 py-2.5 border border-[#2a2a4a] rounded-lg min-h-[60px] bg-white/[0.02] transition-all',
+        slotStateClass,
+      )}
+      style={{ borderLeftColor: color, borderLeftWidth: '3px' }}
+    >
+      <div className="w-[22px] h-[22px] rounded-full bg-white/[0.06] border flex items-center justify-center text-[0.68rem] font-bold shrink-0" style={{ borderColor: color, color }}>{index + 1}</div>
+
+      {!isConfirming && !isDeleting && (
+        <>
+          <div className="flex flex-col gap-0.5 flex-1 min-w-0">
+            <span className="text-[0.88rem] font-semibold text-[#e0e0e0] truncate">{slot.name}</span>
+            <span className="text-[0.76rem] text-[#e4a853]">
+              {slot.my_character
+                ? <>{slot.my_character.name}<span className="text-[#a0a0b0]"> · {slot.my_character.class}</span><span className="text-[#e4a853] font-semibold"> Lv{slot.my_character.level}</span></>
+                : <span className="text-[#a0a0b0] italic">No character yet</span>
+              }
+            </span>
+            <div className="flex items-center gap-2.5 mt-0.5">
+              <span className="flex items-center gap-1.5 text-[0.69rem] text-[#a0a0b0]">
+                <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: freshnessColor.bg, boxShadow: freshnessColor.shadow }} />
+                {dateStr}
+              </span>
+              <span className="text-[0.68rem] text-[#a0a0b0] bg-white/[0.05] px-1.5 py-0.5 rounded-lg border border-[#2a2a4a]">
+                {slot.session_count} session{slot.session_count !== 1 ? 's' : ''}
+              </span>
+            </div>
+          </div>
+          <div className="flex items-center gap-1.5 shrink-0">
+            <Button
+              variant="outline"
+              size="sm"
+              type="button"
+              onClick={onStartResume}
+              className="text-[0.82rem] h-auto py-1.5 px-3 border-[#2a2a4a] bg-transparent text-[#e0e0e0] hover:border-[rgba(228,168,83,0.5)] hover:text-[#e4a853]"
+            >
+              Resume
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              type="button"
+              onClick={onStartDelete}
+              className="text-[0.82rem] h-auto py-1.5 px-2 text-[#555570] hover:text-[#e74c3c] hover:bg-[rgba(231,76,60,0.08)]"
+              aria-label={`Delete campaign ${slot.name}`}
+            >
+              ✕
+            </Button>
+          </div>
+        </>
+      )}
+
+      {isConfirming && (
+        <div className="flex flex-col gap-2 w-full">
+          <span className="text-[0.82rem] text-[#e0e0e0]">Continue &ldquo;{slot.name}&rdquo;?</span>
+          <div className="flex gap-2 flex-wrap">
+            <Button
+              type="button"
+              size="sm"
+              onClick={onConfirmResume}
+              disabled={resuming}
+              className="bg-linear-to-br from-[#e4a853] to-[#c8882a] text-[#1a1a2e] font-semibold border-none hover:opacity-90 disabled:opacity-40"
+            >
+              {resuming ? '…' : 'Yes, Resume'}
+            </Button>
+            <Button variant="ghost" size="sm" type="button" onClick={onCancelResume} className="text-[#a0a0b0] hover:text-[#e0e0e0]">
+              Cancel
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {isDeleting && (
+        <div className="flex flex-col gap-2 w-full">
+          <span className="text-[0.82rem] text-[#e0e0e0]">Delete &ldquo;{slot.name}&rdquo;? This cannot be undone.</span>
+          <div className="flex gap-2 flex-wrap">
+            <Button
+              type="button"
+              size="sm"
+              onClick={onConfirmDelete}
+              disabled={deleting}
+              className="bg-[#e74c3c] text-white font-semibold border-none hover:bg-[#c0392b] disabled:opacity-40"
+            >
+              {deleting ? '…' : 'Yes, Delete'}
+            </Button>
+            <Button variant="ghost" size="sm" type="button" onClick={onCancelDelete} className="text-[#a0a0b0] hover:text-[#e0e0e0]">
+              Cancel
+            </Button>
+          </div>
+        </div>
+      )}
+    </motion.div>
+  )
+}
+
 export default function SessionLobby() {
   const { username, logout } = useAuthStore()
   const [name, setName]               = useState(username ?? '')
@@ -107,16 +237,15 @@ export default function SessionLobby() {
   const [selectedHook, setSelectedHook]       = useState<AdventureHook | null>(null)
   const [customPremise, setCustomPremise]     = useState('')
   const [selectedTone, setSelectedTone]       = useState('High Fantasy')
-  const [error, setError]                     = useState('')
-  const [confirmSlot, setConfirmSlot]         = useState<CampaignSlot | null>(null)
-  const [resuming, setResuming]               = useState(false)
-  const [charPickSlot, setCharPickSlot]       = useState<CampaignSlot | null>(null)
-  const [charList, setCharList]               = useState<CampaignCharacter[]>([])
-  const [charListLoading, setCharListLoading] = useState(false)
+  const [error, setError]           = useState('')
+  const [confirmSlot, setConfirmSlot] = useState<CampaignSlot | null>(null)
+  const [resuming, setResuming]     = useState(false)
+  const [deleteSlot, setDeleteSlot]   = useState<CampaignSlot | null>(null)
+  const [deleting, setDeleting]       = useState(false)
 
   const {
     roomCode, players, createSession, joinSession, getSession,
-    campaigns, campaignsLoading, listCampaigns, fetchCampaignCharacters, resumeCampaign,
+    campaigns, campaignsLoading, listCampaigns, resumeCampaign, deleteCampaign,
   } = useSessionStore()
 
   useEffect(() => {
@@ -170,33 +299,30 @@ export default function SessionLobby() {
     }
   }
 
-  const handleConfirmResume = async (slot: CampaignSlot) => {
+  const handleResume = async (slot: CampaignSlot) => {
     if (!name.trim()) { setError('Enter your name before resuming.'); return }
+    setResuming(true)
     setError('')
-    setCharListLoading(true)
+    setConfirmSlot(null)
     try {
-      const chars = await fetchCampaignCharacters(slot.id)
-      setCharList(chars)
-      setCharPickSlot(slot)
-      setConfirmSlot(null)
-    } catch {
-      setError('Failed to load characters.')
+      await resumeCampaign(slot.id, name.trim())
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Failed to resume campaign.')
     } finally {
-      setCharListLoading(false)
+      setResuming(false)
     }
   }
 
-  const handleResume = async (slot: CampaignSlot, characterId?: string) => {
-    setResuming(true)
+  const handleDelete = async (slot: CampaignSlot) => {
+    setDeleting(true)
     setError('')
+    setDeleteSlot(null)
     try {
-      await resumeCampaign(slot.id, name.trim(), characterId)
+      await deleteCampaign(slot.id)
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Failed to resume campaign.')
-      setCharPickSlot(null)
-      setCharList([])
+      setError(err instanceof Error ? err.message : 'Failed to delete campaign.')
     } finally {
-      setResuming(false)
+      setDeleting(false)
     }
   }
 
@@ -270,7 +396,7 @@ export default function SessionLobby() {
           <AnimatePresence mode="wait">
 
             {/* ── MENU MODE ── */}
-            {mode === 'menu' && !charPickSlot && (
+            {mode === 'menu' && (
               <motion.div key="menu" variants={modeVariants} initial="initial" animate="animate" exit="exit" className="flex flex-col gap-5">
                 {/* Name input */}
                 <div className="flex flex-col gap-1.5">
@@ -288,13 +414,13 @@ export default function SessionLobby() {
                   />
                 </div>
 
-                {/* Campaign slots */}
+                {/* Campaign slots — capped at CAMPAIGN_CAP */}
                 <div>
                   <div className="flex items-center justify-between mb-2.5">
                     <h3 className="text-[0.7rem] uppercase tracking-[0.08em] text-[#a0a0b0] font-semibold">Your Campaigns</h3>
                     {!campaignsLoading && (
                       <span className="text-[0.68rem] text-[#a0a0b0] bg-white/[0.05] px-2 py-0.5 rounded-full border border-[#2a2a4a]">
-                        {campaigns.length} / 5
+                        {campaigns.length} / {CAMPAIGN_CAP}
                       </span>
                     )}
                   </div>
@@ -306,190 +432,75 @@ export default function SessionLobby() {
                     variants={{ animate: { transition: { staggerChildren: 0.05 } } }}
                   >
                     {campaignsLoading
-                      ? Array.from({ length: 5 }, (_, i) => <SlotSkeleton key={i} index={i} />)
-                      : Array.from({ length: 5 }, (_, i) => {
+                      ? Array.from({ length: CAMPAIGN_CAP }, (_, i) => <SlotSkeleton key={i} index={i} />)
+                      : Array.from({ length: CAMPAIGN_CAP }, (_, i) => {
                           const slot = campaigns[i]
                           const color = SLOT_COLORS[i]
                           if (!slot) {
+                            const atCap = campaigns.length >= CAMPAIGN_CAP
                             return (
                               <motion.div
                                 key={`empty-${i}`}
                                 variants={slotVariants}
-                                className="flex items-center gap-2.5 px-3 py-2.5 rounded-lg min-h-[60px] cursor-pointer opacity-50 border border-dashed bg-white/[0.02] transition-all hover:opacity-85"
+                                className={cn(
+                                  'flex items-center gap-2.5 px-3 py-2.5 rounded-lg min-h-[60px] border border-dashed bg-white/[0.02] transition-all',
+                                  atCap ? 'opacity-30 cursor-not-allowed' : 'opacity-50 cursor-pointer hover:opacity-85',
+                                )}
                                 style={{ borderColor: color }}
-                                onClick={() => setMode('create')}
+                                onClick={() => { if (!atCap) setMode('create') }}
                                 role="button"
-                                tabIndex={0}
-                                onKeyDown={(e: React.KeyboardEvent) => e.key === 'Enter' && setMode('create')}
-                                aria-label="Start a new campaign"
+                                tabIndex={atCap ? -1 : 0}
+                                onKeyDown={(e: React.KeyboardEvent) => { if (e.key === 'Enter' && !atCap) setMode('create') }}
+                                aria-label={atCap ? 'Campaign limit reached' : 'Start a new campaign'}
                               >
                                 <div className="w-[22px] h-[22px] rounded-full bg-white/[0.06] border flex items-center justify-center text-[0.68rem] font-bold shrink-0" style={{ borderColor: color, color }}>{i + 1}</div>
-                                <span className="text-[1.1rem] leading-none ml-1" style={{ color }}>+</span>
-                                <span className="text-[0.78rem] text-[#a0a0b0]">New Campaign</span>
+                                <span className="text-[1.1rem] leading-none ml-1" style={{ color }}>{atCap ? '—' : '+'}</span>
+                                <span className="text-[0.78rem] text-[#a0a0b0]">{atCap ? 'Limit reached' : 'New Campaign'}</span>
                               </motion.div>
                             )
                           }
 
-                          const isConfirming = confirmSlot?.id === slot.id
-                          const dateStr = new Date(slot.updated_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
-                          const freshness = slotFreshness(slot.updated_at)
-                          const freshnessColor = FRESHNESS_COLORS[freshness]
-
                           return (
-                            <motion.div
+                            <FilledCampaignSlot
                               key={slot.id}
-                              variants={slotVariants}
-                              className={cn(
-                                'flex items-center gap-2.5 px-3 py-2.5 border border-[#2a2a4a] rounded-lg min-h-[60px] bg-white/[0.02] transition-all',
-                                isConfirming
-                                  ? 'flex-col items-start gap-2 bg-[rgba(228,168,83,0.04)] border-[rgba(228,168,83,0.6)]'
-                                  : 'hover:bg-[rgba(228,168,83,0.04)] hover:border-[rgba(228,168,83,0.35)] hover:shadow-[0_2px_12px_rgba(0,0,0,0.3)]',
-                              )}
-                              style={{ borderLeftColor: color, borderLeftWidth: '3px' }}
-                            >
-                              <div className="w-[22px] h-[22px] rounded-full bg-white/[0.06] border flex items-center justify-center text-[0.68rem] font-bold shrink-0" style={{ borderColor: color, color }}>{i + 1}</div>
-
-                              {!isConfirming && (
-                                <>
-                                  <div className="flex flex-col gap-0.5 flex-1 min-w-0">
-                                    <span className="text-[0.88rem] font-semibold text-[#e0e0e0] truncate">{slot.name}</span>
-                                    <span className="text-[0.76rem] text-[#e4a853]">
-                                      {slot.my_character
-                                        ? <>{slot.my_character.name}<span className="text-[#a0a0b0]"> · {slot.my_character.class}</span><span className="text-[#e4a853] font-semibold"> Lv{slot.my_character.level}</span></>
-                                        : <span className="text-[#a0a0b0] italic">No character yet</span>
-                                      }
-                                    </span>
-                                    <div className="flex items-center gap-2.5 mt-0.5">
-                                      <span className="flex items-center gap-1.5 text-[0.69rem] text-[#a0a0b0]">
-                                        <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: freshnessColor.bg, boxShadow: freshnessColor.shadow }} />
-                                        {dateStr}
-                                      </span>
-                                      <span className="text-[0.68rem] text-[#a0a0b0] bg-white/[0.05] px-1.5 py-0.5 rounded-lg border border-[#2a2a4a]">
-                                        {slot.session_count} session{slot.session_count !== 1 ? 's' : ''}
-                                      </span>
-                                    </div>
-                                  </div>
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    type="button"
-                                    onClick={() => { setConfirmSlot(slot); setError('') }}
-                                    className="text-[0.82rem] shrink-0 h-auto py-1.5 px-3 border-[#2a2a4a] bg-transparent text-[#e0e0e0] hover:border-[rgba(228,168,83,0.5)] hover:text-[#e4a853]"
-                                  >
-                                    Resume
-                                  </Button>
-                                </>
-                              )}
-
-                              {isConfirming && (
-                                <div className="flex flex-col gap-2 w-full">
-                                  <span className="text-[0.82rem] text-[#e0e0e0]">Continue this campaign?</span>
-                                  <div className="flex gap-2 flex-wrap">
-                                    <Button
-                                      type="button"
-                                      size="sm"
-                                      onClick={() => handleConfirmResume(slot)}
-                                      disabled={charListLoading}
-                                      className="bg-linear-to-br from-[#e4a853] to-[#c8882a] text-[#1a1a2e] font-semibold border-none hover:opacity-90 disabled:opacity-40"
-                                    >
-                                      {charListLoading ? '…' : 'Yes, Resume'}
-                                    </Button>
-                                    <Button variant="ghost" size="sm" type="button" onClick={() => setConfirmSlot(null)} className="text-[#a0a0b0] hover:text-[#e0e0e0]">
-                                      Cancel
-                                    </Button>
-                                  </div>
-                                </div>
-                              )}
-                            </motion.div>
+                              slot={slot}
+                              index={i}
+                              color={color}
+                              isConfirming={confirmSlot?.id === slot.id}
+                              isDeleting={deleteSlot?.id === slot.id}
+                              resuming={resuming}
+                              deleting={deleting}
+                              onStartResume={() => { setConfirmSlot(slot); setDeleteSlot(null); setError('') }}
+                              onStartDelete={() => { setDeleteSlot(slot); setConfirmSlot(null); setError('') }}
+                              onConfirmResume={() => handleResume(slot)}
+                              onCancelResume={() => setConfirmSlot(null)}
+                              onConfirmDelete={() => handleDelete(slot)}
+                              onCancelDelete={() => setDeleteSlot(null)}
+                            />
                           )
                         })
                     }
                   </motion.div>
                 </div>
 
-                {/* Primary actions */}
+                {/* Primary actions — only show New Campaign if under cap */}
                 <div className="flex flex-col gap-2.5">
-                  <Button
-                    type="button"
-                    onClick={() => setMode('create')}
-                    className="bg-linear-to-br from-[#e4a853] to-[#c8882a] text-[#1a1a2e] font-semibold border-none hover:opacity-90 hover:-translate-y-px min-h-[40px]"
-                    style={{ boxShadow: '0 4px 14px rgba(228,168,83,0.2)' }}
-                  >
-                    Create Session
-                  </Button>
-                  <Button
-                    variant="outline"
-                    type="button"
-                    onClick={() => setMode('join')}
-                    className="bg-transparent text-[#e0e0e0] border-[#2a2a4a] hover:border-[#e4a853] hover:text-[#e4a853] min-h-[40px]"
-                  >
-                    Join Session
-                  </Button>
-                </div>
-              </motion.div>
-            )}
-
-            {/* ── CHARACTER PICKER ── */}
-            {charPickSlot && (
-              <motion.div key="char-pick" variants={modeVariants} initial="initial" animate="animate" exit="exit" className="flex flex-col gap-3">
-                <p className="text-[0.82rem] text-[#a0a0b0] text-center m-0">
-                  Choose a character for &ldquo;{charPickSlot.name}&rdquo;
-                </p>
-                <div className="flex flex-col gap-1.5">
-                  {charList.map((char) => (
-                    <div
-                      key={char.char_id}
-                      className={cn(
-                        'flex items-center justify-between px-3 py-2.5 border rounded-lg min-h-[52px] bg-white/[0.02] transition-colors',
-                        char.is_mine ? 'border-[rgba(228,168,83,0.5)] bg-[rgba(228,168,83,0.04)]' : 'border-[#2a2a4a]',
-                      )}
+                  {campaigns.length < CAMPAIGN_CAP && (
+                    <Button
+                      type="button"
+                      onClick={() => setMode('create')}
+                      className="bg-linear-to-br from-[#e4a853] to-[#c8882a] text-[#1a1a2e] font-semibold border-none hover:opacity-90 hover:-translate-y-px min-h-[40px]"
+                      style={{ boxShadow: '0 4px 14px rgba(228,168,83,0.2)' }}
                     >
-                      <div className="flex flex-col gap-0.5">
-                        <span className="text-[0.88rem] font-semibold text-[#e0e0e0]">{char.name}</span>
-                        <span className="text-[0.76rem] text-[#e4a853]">
-                          {char.class} Lv{char.level}
-                          {char.is_mine && <span className="text-[#2ecc71] font-semibold"> · Yours</span>}
-                        </span>
-                      </div>
-                      <Button
-                        size="sm"
-                        type="button"
-                        onClick={() => handleResume(charPickSlot, char.char_id)}
-                        disabled={resuming}
-                        className="bg-linear-to-br from-[#e4a853] to-[#c8882a] text-[#1a1a2e] font-semibold border-none hover:opacity-90 disabled:opacity-40"
-                      >
-                        {resuming ? '…' : 'Play'}
-                      </Button>
-                    </div>
-                  ))}
-                  {charList.length === 0 && (
-                    <p className="text-[0.8rem] text-[#a0a0b0] text-center py-1.5">No characters found — create one below.</p>
+                      New Campaign
+                    </Button>
                   )}
-                </div>
-                <div className="flex gap-2 justify-center flex-wrap pt-2 border-t border-[#2a2a4a]">
-                  <Button
-                    variant="outline"
-                    type="button"
-                    onClick={() => handleResume(charPickSlot)}
-                    disabled={resuming}
-                    className="bg-transparent text-[#e0e0e0] border-[#2a2a4a] hover:border-[#e4a853] hover:text-[#e4a853] disabled:opacity-40"
-                  >
-                    Create New Character
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    type="button"
-                    onClick={() => { setCharPickSlot(null); setCharList([]) }}
-                    className="text-[#a0a0b0] hover:text-[#e0e0e0]"
-                  >
-                    Cancel
-                  </Button>
                 </div>
               </motion.div>
             )}
 
             {/* ── CREATE MODE ── */}
-            {!charPickSlot && mode === 'create' && (
+            {mode === 'create' && (
               <motion.div key="create" variants={modeVariants} initial="initial" animate="animate" exit="exit" className="flex flex-col gap-3">
                 <h3 className="text-[0.85rem] font-semibold text-[#e4a853] uppercase tracking-[0.05em] pb-2 border-b border-[rgba(228,168,83,0.15)]">
                   New Campaign
@@ -528,7 +539,7 @@ export default function SessionLobby() {
             )}
 
             {/* ── CAMPAIGN SETUP MODE ── */}
-            {!charPickSlot && mode === 'campaign_setup' && (
+            {mode === 'campaign_setup' && (
               <motion.div key="campaign_setup" variants={modeVariants} initial="initial" animate="animate" exit="exit" className="flex flex-col gap-4">
                 <h3 className="text-[0.85rem] font-semibold text-[#e4a853] uppercase tracking-[0.05em] pb-2 border-b border-[rgba(228,168,83,0.15)]">
                   Choose Your Adventure
@@ -602,7 +613,7 @@ export default function SessionLobby() {
             )}
 
             {/* ── JOIN MODE ── */}
-            {!charPickSlot && mode === 'join' && (
+            {mode === 'join' && (
               <motion.div key="join" variants={modeVariants} initial="initial" animate="animate" exit="exit" className="flex flex-col gap-3">
                 <h3 className="text-[0.85rem] font-semibold text-[#e4a853] uppercase tracking-[0.05em] pb-2 border-b border-[rgba(228,168,83,0.15)]">
                   Join a Campaign

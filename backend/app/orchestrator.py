@@ -657,6 +657,7 @@ class Orchestrator:
             "dm_turn_count": sum(
                 1 for m in self.conversation_history if m.get("role") == "assistant"
             ),
+            "codex": self.memory.to_codex(),
         }
 
 

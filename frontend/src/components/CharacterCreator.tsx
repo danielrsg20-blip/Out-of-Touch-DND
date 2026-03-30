@@ -3,6 +3,8 @@ import { motion, AnimatePresence } from 'motion/react'
 import { useSessionStore } from '../stores/sessionStore'
 import { useGameStore } from '../stores/gameStore'
 import { invokeEdgeFunction } from '../lib/supabaseClient'
+import { callBackendApi } from '../lib/backendApi'
+import { useAuthStore } from '../stores/authStore'
 import { getCharacterSpriteId } from '../config/characterSprites'
 import type { CharacterData, SpellOption } from '../types'
 import { Card } from '@/components/ui/card'
@@ -89,8 +91,9 @@ function getSpriteOptionsFor(race: string, charClass: string): CharacterSpriteOp
 }
 
 export default function CharacterCreator() {
-  const { roomCode, playerId, players, getSession, mockMode } = useSessionStore()
+  const { roomCode, playerId, players, getSession, mockMode, campaignTitle, reset } = useSessionStore()
   const setCharacters = useGameStore(s => s.setCharacters)
+  const token = useAuthStore(s => s.token)
 
   const [name, setName]           = useState('')
   const [race, setRace]           = useState('Human')
@@ -212,9 +215,31 @@ export default function CharacterCreator() {
           })
         }
       }
+      if (roomCode && token && created) {
+        const allCharacters = useGameStore.getState().characters
+        const map = useGameStore.getState().map
+        callBackendApi('/api/campaign/direct-save', {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${token}` },
+          body: {
+            room_code: roomCode,
+            campaign_name: campaignTitle ?? roomCode,
+            characters: allCharacters,
+            map,
+            conversation: [],
+            my_character_id: created.id,
+          },
+        }).catch(() => { /* non-critical */ })
+      }
       useSessionStore.getState().setPhase('playing')
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Unable to create character right now.')
+      const msg = err instanceof Error ? err.message : 'Unable to create character right now.'
+      const isStaleSession = msg.toLowerCase().includes('session not found') || msg.toLowerCase().includes('player not found')
+      if (isStaleSession) {
+        reset()
+        return
+      }
+      setError(msg)
       setCreating(false)
     }
   }

@@ -1,6 +1,7 @@
 import type { FastifyInstance } from 'fastify'
 import { decodeSubjectWithoutVerify } from '../lib/authToken.js'
 import { createCharacterInSession, createSessionSnapshot, getSessionSnapshot, joinSessionSnapshot, mutateSessionSnapshot } from '../lib/sessionStore.js'
+import { autoSaveSessionToCampaign } from '../lib/campaignStore.js'
 
 type JsonRecord = Record<string, unknown>
 
@@ -120,6 +121,11 @@ export async function registerSessionRoutes(app: FastifyInstance): Promise<void>
 
     if (!character) {
       return reply.send({ error: 'Session or player not found' })
+    }
+
+    const snapshot = getSessionSnapshot(roomCode)
+    if (snapshot) {
+      autoSaveSessionToCampaign(snapshot)
     }
 
     return reply.send({ character })

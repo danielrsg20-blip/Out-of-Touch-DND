@@ -10,12 +10,15 @@ import CharacterSheet from './panels/CharacterSheet'
 import ActionBar from './panels/ActionBar'
 import BattlemapActions from './panels/BattlemapActions'
 import DiceRoller from './panels/DiceRoller'
+import CodexPanel from './panels/CodexPanel'
 import VoiceControl from './VoiceControl'
 import VectorOverlayTester from './VectorOverlayTester'
 import CampaignBriefOverlay from './CampaignBriefOverlay'
 import { useWebSocket } from '../hooks/useWebSocket'
 import { useGameStore } from '../stores/gameStore'
 import { useSessionStore } from '../stores/sessionStore'
+import { useAuthStore } from '../stores/authStore'
+import { callBackendApi } from '../lib/backendApi'
 import { CollisionGrid } from '../lib/systems/movement/collisionGrid'
 import { MovementController } from '../lib/systems/movement/movementController'
 import { resolveMapMode } from '../lib/battlemapState'
@@ -30,7 +33,10 @@ function showOverlayTester(): boolean {
 
 export default function GameBoard() {
   const { sendAction, sendMoveToken, sendSpellCast, transcribeVoiceInput, runVoiceTest } = useWebSocket()
-  const { roomCode, playerId, players } = useSessionStore()
+  const { roomCode, playerId, players, campaignTitle, reset } = useSessionStore()
+  const { token, logout } = useAuthStore()
+  const [sessionMenuOpen, setSessionMenuOpen] = useState(false)
+  const [sessionMenuSaving, setSessionMenuSaving] = useState(false)
   const {
     selectedEntityId,
     setSelectedEntity,
@@ -75,10 +81,72 @@ export default function GameBoard() {
     setBriefDismissed(true)
     sendAction('[SESSION_START]')
   }, [sendAction])
+
+  const menuRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!sessionMenuOpen) return
+    const handleClickOutside = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setSessionMenuOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [sessionMenuOpen])
+
+  const doSaveCampaign = useCallback(async (): Promise<void> => {
+    if (!roomCode || !token) return
+    const { characters, map, narrative } = useGameStore.getState()
+    const myPlayer = useSessionStore.getState().players.find(p => p.id === playerId)
+    await callBackendApi('/api/campaign/direct-save', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+      body: {
+        room_code: roomCode,
+        campaign_name: campaignTitle ?? roomCode,
+        characters,
+        map,
+        conversation: narrative,
+        my_character_id: myPlayer?.character_id ?? null,
+      },
+    })
+  }, [roomCode, token, campaignTitle, playerId])
+
+  const handleSaveCampaign = useCallback(async () => {
+    setSessionMenuSaving(true)
+    try {
+      await doSaveCampaign()
+    } catch {
+      // Non-critical
+    } finally {
+      setSessionMenuSaving(false)
+    }
+  }, [doSaveCampaign])
+
+  const handleReturnToLobby = useCallback(async () => {
+    setSessionMenuSaving(true)
+    try {
+      await doSaveCampaign()
+    } catch {
+      // Non-critical — return to lobby even if save fails
+    }
+    setSessionMenuSaving(false)
+    setSessionMenuOpen(false)
+    reset()
+  }, [doSaveCampaign, reset])
+
+  const handleLogout = useCallback(() => {
+    setSessionMenuOpen(false)
+    reset()
+    logout()
+  }, [reset, logout])
+
   const [railWidth, setRailWidth] = useState(300)
   const [railCollapsed, setRailCollapsed] = useState(false)
   const [sidebarWidth, setSidebarWidth] = useState(360)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
+  const [sidebarTab, setSidebarTab] = useState<'stats' | 'codex'>('stats')
 
   const map = useGameStore(state => state.map)
 
@@ -238,6 +306,41 @@ export default function GameBoard() {
             ${(usage?.estimated_cost_usd ?? 0).toFixed(3)}
           </Badge>
         )}
+        <div ref={menuRef} className="relative shrink-0">
+          <button
+            onClick={() => setSessionMenuOpen(o => !o)}
+            className="w-7 h-7 flex items-center justify-center rounded text-text-secondary hover:text-accent-gold hover:bg-[rgba(228,168,83,0.1)] transition-colors text-lg leading-none"
+            title="Session menu"
+            aria-label="Session menu"
+          >
+            ⋮
+          </button>
+          {sessionMenuOpen && (
+            <div className="absolute right-0 top-full mt-1 z-50 min-w-47.5 rounded-md border border-border bg-bg-secondary shadow-lg py-1 text-sm">
+              <button
+                onClick={handleSaveCampaign}
+                disabled={sessionMenuSaving}
+                className="w-full text-left px-4 py-2 text-text-primary hover:bg-[rgba(228,168,83,0.1)] hover:text-accent-gold disabled:opacity-50 transition-colors"
+              >
+                {sessionMenuSaving ? 'Saving…' : 'Save campaign'}
+              </button>
+              <button
+                onClick={handleReturnToLobby}
+                disabled={sessionMenuSaving}
+                className="w-full text-left px-4 py-2 text-text-primary hover:bg-[rgba(228,168,83,0.1)] hover:text-accent-gold disabled:opacity-50 transition-colors"
+              >
+                Return to lobby
+              </button>
+              <div className="my-1 border-t border-border" />
+              <button
+                onClick={handleLogout}
+                className="w-full text-left px-4 py-2 text-text-secondary hover:bg-[rgba(255,80,80,0.08)] hover:text-[#ff6b6b] transition-colors"
+              >
+                Log out
+              </button>
+            </div>
+          )}
+        </div>
       </header>
 
       <div className="game-content">
@@ -309,19 +412,42 @@ export default function GameBoard() {
           className={`sidebar${sidebarCollapsed ? ' panel-collapsed' : ''}`}
           style={{ width: sidebarCollapsed ? 0 : sidebarWidth }}
         >
-          <div className="sidebar-top">
-            <CombatTracker />
-            <CharacterSheet />
+          <div className="sidebar-tab-bar">
+            <button
+              type="button"
+              className={`sidebar-tab-btn${sidebarTab === 'stats' ? ' sidebar-tab-btn--active' : ''}`}
+              onClick={() => setSidebarTab('stats')}
+            >
+              Stats
+            </button>
+            <button
+              type="button"
+              className={`sidebar-tab-btn${sidebarTab === 'codex' ? ' sidebar-tab-btn--active' : ''}`}
+              onClick={() => setSidebarTab('codex')}
+            >
+              Codex
+            </button>
           </div>
-          <div className="sidebar-bottom">
-            <BattlemapActions />
-            <ActionBar
-              onSend={sendAction}
-              onCastSpell={sendSpellCast}
-              onInitiateTarget={(name, slotLevel) => setTargetingSpell({ name, slotLevel })}
-            />
-            <DiceRoller onSubmitRoll={sendAction} />
-          </div>
+
+          {sidebarTab === 'stats' ? (
+            <>
+              <div className="sidebar-top">
+                <CombatTracker />
+                <CharacterSheet />
+              </div>
+              <div className="sidebar-bottom">
+                <BattlemapActions />
+                <ActionBar
+                  onSend={sendAction}
+                  onCastSpell={sendSpellCast}
+                  onInitiateTarget={(name, slotLevel) => setTargetingSpell({ name, slotLevel })}
+                />
+                <DiceRoller onSubmitRoll={sendAction} />
+              </div>
+            </>
+          ) : (
+            <CodexPanel />
+          )}
         </div>
       </div>
     </div>

@@ -1095,6 +1095,84 @@ Deno.serve(async (req: Request) => {
       return Response.json(await getSession(roomCode), { headers: corsHeaders })
     }
 
+    if (action === 'initialize_from_campaign') {
+      const roomCode = typeof body.room_code === 'string' ? body.room_code.trim() : ''
+      const playerId = typeof body.player_id === 'string' ? body.player_id.trim() : ''
+      const characters = (body.characters && typeof body.characters === 'object' && !Array.isArray(body.characters))
+        ? body.characters as Record<string, Record<string, unknown>>
+        : {}
+      const savedMap = (body.map && typeof body.map === 'object' && !Array.isArray(body.map))
+        ? body.map as Record<string, unknown>
+        : null
+      const conversation = Array.isArray(body.conversation) ? body.conversation as Array<Record<string, unknown>> : []
+      const characterId = typeof body.character_id === 'string' ? body.character_id.trim() : null
+
+      if (!roomCode || !playerId) {
+        return Response.json({ error: 'room_code and player_id are required' }, { status: 400, headers: corsHeaders })
+      }
+
+      const { data: sessionRow, error: sessionError } = await supabase
+        .from('game_sessions')
+        .select('id')
+        .eq('room_code', roomCode)
+        .maybeSingle()
+
+      if (sessionError) {
+        return Response.json({ error: sessionError.message }, { status: 500, headers: corsHeaders })
+      }
+      if (!sessionRow) {
+        return Response.json({ error: 'Session not found' }, { status: 404, headers: corsHeaders })
+      }
+
+      const sessionId = sessionRow.id as string
+
+      // If the player has a character, update session_members
+      if (characterId) {
+        await supabase
+          .from('session_members')
+          .update({ character_id: characterId })
+          .eq('session_id', sessionId)
+          .eq('player_id', playerId)
+      }
+
+      // Build a snapshot that merges saved characters + map with a fresh usage block
+      const baseSnapshot = await getLatestSnapshot(sessionId) ?? await buildInitialSnapshot(roomCode)
+      const mergedSnapshot = {
+        ...baseSnapshot,
+        characters: Object.keys(characters).length > 0 ? characters : baseSnapshot.characters,
+        map: savedMap ?? baseSnapshot.map,
+        narrative_history: conversation.length > 0 ? conversation.slice(-20) : (baseSnapshot.narrative_history ?? []),
+      }
+
+      // Append as the next snapshot version
+      const { data: latestRow } = await supabase
+        .from('session_snapshots')
+        .select('version')
+        .eq('session_id', sessionId)
+        .order('version', { ascending: false })
+        .limit(1)
+        .maybeSingle()
+
+      const nextVersion = (Number((latestRow as { version?: number } | null)?.version ?? 0)) + 1
+
+      const { error: snapError } = await supabase
+        .from('session_snapshots')
+        .insert({ session_id: sessionId, version: nextVersion, snapshot: mergedSnapshot })
+
+      if (snapError) {
+        return Response.json({ error: snapError.message }, { status: 500, headers: corsHeaders })
+      }
+
+      await supabase.from('game_events').insert({
+        session_id: sessionId,
+        event_type: 'state_sync',
+        actor_player_id: playerId,
+        payload: { state: mergedSnapshot },
+      })
+
+      return Response.json({ ok: true, state: mergedSnapshot }, { headers: corsHeaders })
+    }
+
     return Response.json({ error: `Unsupported action: ${action}` }, { status: 400, headers: corsHeaders })
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unexpected error'

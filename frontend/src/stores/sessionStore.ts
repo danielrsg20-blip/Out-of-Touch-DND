@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import type { CampaignCharacter, CampaignSlot, PlayerData } from '../types'
+import type { CampaignSlot, PlayerData } from '../types'
 import { callBackendApi } from '../lib/backendApi'
 import { getSupabaseClient, hasSupabaseConfig, invokeEdgeFunction } from '../lib/supabaseClient'
 import { extractTraversalGridFromPayload } from '../lib/battlemapState'
@@ -45,11 +45,17 @@ function readActiveSession(): StoredSessionData | null {
       playerId: parsed.playerId,
       playerName: typeof parsed.playerName === 'string' ? parsed.playerName : '',
       sessionId: typeof parsed.sessionId === 'string' ? parsed.sessionId : null,
-      phase: parsed.phase === 'character_create' ? 'character_create' : 'playing',
+      phase: resolveStoredPhase(parsed.phase),
     }
   } catch {
     return null
   }
+}
+
+function resolveStoredPhase(phase: unknown): StoredSessionData['phase'] {
+  if (phase === 'character_create') return 'character_create'
+  if (phase === 'lobby') return 'lobby'
+  return 'playing'
 }
 
 function clearActiveSession(): void {
@@ -224,8 +230,8 @@ interface SessionState {
   addPlayer: (player: PlayerData) => void
   removePlayer: (playerId: string) => void
   listCampaigns: () => Promise<void>
-  fetchCampaignCharacters: (campaignId: string) => Promise<CampaignCharacter[]>
-  resumeCampaign: (campaignId: string, playerName: string, characterId?: string) => Promise<void>
+  deleteCampaign: (campaignId: string) => Promise<void>
+  resumeCampaign: (campaignId: string, playerName: string) => Promise<void>
   reset: () => void
 }
 
@@ -562,51 +568,108 @@ export const useSessionStore = create<SessionState>((set) => ({
     }
   },
 
-  fetchCampaignCharacters: async (campaignId) => {
+  deleteCampaign: async (campaignId) => {
     const token = useAuthStore.getState().token
-    if (!token) return []
-    try {
-      const res = await callBackendApi(`/api/campaign/${campaignId}/characters`, {
-        headers: { Authorization: `Bearer ${token}` },
-      })
-      if (!res.ok) return []
-      const data = res.data
-      return Array.isArray(data.characters) ? (data.characters as CampaignCharacter[]) : []
-    } catch {
-      return []
+    if (!token) throw new Error('Authentication required')
+    const res = await callBackendApi(`/api/campaign/${campaignId}`, {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${token}` },
+    })
+    if (!res.ok) {
+      throw new Error(typeof res.data.error === 'string' ? res.data.error : 'Failed to delete campaign.')
     }
+    set((s) => ({ campaigns: s.campaigns.filter((c) => c.id !== campaignId) }))
   },
 
-  resumeCampaign: async (campaignId, playerName, characterId?) => {
+  resumeCampaign: async (campaignId, playerName) => {
     const token = useAuthStore.getState().token
     if (!token) {
       throw new Error('Authentication required to resume a campaign.')
     }
-    const res = await callBackendApi('/api/campaign/resume', {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-      body: { campaign_id: campaignId, player_name: playerName, character_id: characterId ?? null },
+
+    // 1. Fetch saved campaign data from ts-runtime (characters, map, conversation)
+    const campaignRes = await callBackendApi(`/api/campaign/${campaignId}`, {
+      headers: { Authorization: `Bearer ${token}` },
     })
-    const data = res.data
-    if (!res.ok || typeof data.error === 'string') {
-      throw new Error(typeof data.error === 'string' ? data.error : 'Failed to resume campaign.')
+    if (!campaignRes.ok || typeof campaignRes.data.error === 'string') {
+      throw new Error(typeof campaignRes.data.error === 'string' ? campaignRes.data.error : 'Campaign not found.')
     }
-    if (typeof data.room_code !== 'string' || typeof data.player_id !== 'string') {
-      throw new TypeError('Invalid response from server.')
+    const campaign = campaignRes.data as {
+      characters: Record<string, Record<string, unknown>>
+      map: Record<string, unknown> | null
+      conversation: unknown[]
+      name: string
+      player_characters: Record<string, { char_id: string; name: string; class: string; level: number }>
     }
-    const roomCode = data.room_code
-    const playerId = data.player_id
-    const hasCharacter = data.has_character === true
+
+    // 2. Create a fresh Supabase session
+    const createData = await invokeEdgeFunction<Record<string, unknown>>('session-actions', {
+      action: 'create_session',
+      player_name: playerName,
+      mock_mode: false,
+    }, { authMode: 'anon' })
+
+    if (typeof createData.room_code !== 'string' || typeof createData.player_id !== 'string') {
+      throw new Error('Failed to create session for campaign resume.')
+    }
+
+    const roomCode = createData.room_code
+    const playerId = createData.player_id
+    const sessionId = typeof createData.session_id === 'string' ? createData.session_id : null
+
+    // 3. Determine which character belongs to this user
+    const userId = useAuthStore.getState().userId
+    const myCharEntry = userId ? (campaign.player_characters?.[userId] ?? null) : null
+    const characterId = myCharEntry?.char_id ?? null
+
+    // 4. Initialize the snapshot with saved map + characters
+    const initData = await invokeEdgeFunction<Record<string, unknown>>('session-actions', {
+      action: 'initialize_from_campaign',
+      room_code: roomCode,
+      player_id: playerId,
+      characters: campaign.characters ?? {},
+      map: campaign.map ?? null,
+      conversation: campaign.conversation ?? [],
+      character_id: characterId,
+    }, { authMode: 'anon' })
+
+    const restoredState = initData.state as { characters?: Record<string, unknown>; map?: Record<string, unknown>; narrative_history?: unknown[] } | undefined
+
+    // 5. Preload game store with restored state so it's ready before the board mounts
+    if (restoredState) {
+      const { setCharacters, setMap, addNarrative } = useGameStore.getState()
+      if (restoredState.characters && Object.keys(restoredState.characters).length > 0) {
+        setCharacters(restoredState.characters as Record<string, import('../types').CharacterData>)
+      }
+      if (restoredState.map) {
+        setMap(restoredState.map as unknown as import('../types').MapData)
+      }
+      if (Array.isArray(restoredState.narrative_history)) {
+        for (const entry of restoredState.narrative_history as Array<{ type?: string; content?: string; speaker?: string }>) {
+          let entryType: 'dm' | 'system' | 'player' = 'player'
+          if (entry.type === 'dm') entryType = 'dm'
+          else if (entry.type === 'system') entryType = 'system'
+          addNarrative(entryType, entry.content ?? '', entry.speaker)
+        }
+      }
+    }
+
+    const hasCharacter = characterId !== null
     set({
+      sessionId,
       roomCode,
       playerId,
       playerName,
       isHost: true,
-      players: [{ id: playerId, name: playerName, character_id: null }],
+      players: [{ id: playerId, name: playerName, character_id: characterId }],
+      campaignTitle: campaign.name ?? campaignId,
       phase: hasCharacter ? 'playing' : 'character_create',
     })
+    writeActiveSession({ roomCode, playerId, playerName, sessionId, phase: hasCharacter ? 'playing' : 'character_create' })
+
+    if (sessionId) {
+      startSessionEvents(sessionId, roomCode)
+    }
   },
 
   reset: () => {

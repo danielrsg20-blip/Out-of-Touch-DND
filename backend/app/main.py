@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import base64
 import json
 import logging
@@ -498,6 +499,14 @@ async def join_session(req: JoinSessionRequest, request: Request):
     session.add_player(player)
     logger.info("Player %s (%s) joined %s", req.player_name, player_id, req.room_code)
     return JoinSessionResponse(player_id=player_id, session=session.to_dict())
+
+
+def _get_session_user_id(session: GameSession) -> str | None:
+    """Return the first authenticated player's user_id in the session, or None."""
+    for p in session.players.values():
+        if p.user_id:
+            return p.user_id
+    return None
 
 
 async def _auto_save_campaign(session: GameSession, room_code: str, user_id: str) -> None:
@@ -1571,6 +1580,9 @@ async def handle_ws_message(session: GameSession, player: Player, msg: dict[str,
 
         state = _state_with_overlay(session)
         await session.broadcast({"type": "state_sync", "state": state})
+        uid = _get_session_user_id(session)
+        if uid:
+            asyncio.create_task(_auto_save_campaign(session, session.room_code, uid))
         return
 
     if msg_type == "player_action":
@@ -1710,6 +1722,9 @@ async def handle_ws_message(session: GameSession, player: Player, msg: dict[str,
 
         state = _state_with_overlay(session)
         await session.broadcast({"type": "state_sync", "state": state})
+        uid = _get_session_user_id(session)
+        if uid:
+            asyncio.create_task(_auto_save_campaign(session, session.room_code, uid))
 
     elif msg_type == "voice_input":
         audio_b64 = msg.get("audio", "")

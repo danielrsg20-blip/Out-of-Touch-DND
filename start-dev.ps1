@@ -36,13 +36,33 @@ Start-Process powershell -ArgumentList @(
   "Set-Location '$root/ts-runtime'; `$env:TS_RUNTIME_PORT='9020'; `$env:VECTOR_MAP_GENERATION_TS_ENABLED='false'; `$env:VECTOR_GRID_DERIVATION_ENABLED='false'; npm run dev"
 )
 
-if ($startLocalEdgeFunctions -and $dockerAvailable) {
+$supabaseExe = $null
+$candidatePaths = @(
+  (Get-Command supabase -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Source),
+  "$env:USERPROFILE\scoop\apps\supabase\current\supabase.exe",
+  "C:\Program Files\Supabase\supabase.exe"
+) | Where-Object { $_ -and (Test-Path $_) }
+if ($candidatePaths) { $supabaseExe = $candidatePaths[0] }
+
+$supabaseRunnable = $false
+if ($supabaseExe) {
+  try {
+    & $supabaseExe --version 2>&1 | Out-Null
+    $supabaseRunnable = ($LASTEXITCODE -eq 0)
+  } catch {
+    $supabaseRunnable = $false
+  }
+}
+
+if ($startLocalEdgeFunctions -and $dockerAvailable -and $supabaseRunnable) {
   Write-Host "Starting Supabase Edge Functions on http://127.0.0.1:54321 ..."
   Start-Process powershell -ArgumentList @(
     '-NoExit',
     '-Command',
-    "Set-Location '$root'; `$env:OTDND_TS_RUNTIME_BASE_URL='http://host.docker.internal:9020'; supabase functions serve --env-file .env --no-verify-jwt"
+    "Set-Location '$root'; `$env:OTDND_TS_RUNTIME_BASE_URL='http://host.docker.internal:9020'; & '$supabaseExe' functions serve --env-file .env --no-verify-jwt"
   )
+} elseif ($startLocalEdgeFunctions -and $dockerAvailable) {
+  Write-Host "Skipping local Supabase Edge Functions: supabase CLI not found or blocked by Application Control policy."
 } elseif ($startLocalEdgeFunctions) {
   Write-Host "Skipping local Supabase Edge Functions because Docker is unavailable."
 } else {
