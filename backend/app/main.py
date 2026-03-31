@@ -12,10 +12,10 @@ import uuid
 from contextlib import asynccontextmanager
 from typing import Any
 
-from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, HTTPException, Request, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, Response
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 
 from .config import CORS_ALLOW_ORIGINS, LOCAL_MOCK_MODE
 from .map_catalog import run_terrain_atlas_resolution_check, validate_map_catalog_startup
@@ -39,6 +39,8 @@ from .rules.spells import (
 from .overlay_api import overlay_api
 from .map_to_overlay import build_overlay_payload_from_map
 from .models.user import User  # noqa: F401 — ensures table is created by init_db
+from jose import JWTError
+
 from .auth import create_access_token, decode_token, hash_password, verify_password
 
 logging.basicConfig(level=logging.INFO)
@@ -87,17 +89,14 @@ class AuthResponse(BaseModel):
 @app.post("/api/auth/register", response_model=AuthResponse)
 async def register(req: RegisterRequest):
     if len(req.username) < 3:
-        from fastapi import HTTPException
         raise HTTPException(status_code=400, detail="Username must be at least 3 characters")
     if len(req.password) < 6:
-        from fastapi import HTTPException
         raise HTTPException(status_code=400, detail="Password must be at least 6 characters")
 
     from sqlalchemy import select
     async with async_session() as db:
         existing = await db.execute(select(User).where(User.username == req.username))
         if existing.scalar_one_or_none():
-            from fastapi import HTTPException
             raise HTTPException(status_code=409, detail="Username already taken")
 
         user_id = str(uuid.uuid4())
@@ -113,7 +112,6 @@ async def register(req: RegisterRequest):
 @app.post("/api/auth/login", response_model=AuthResponse)
 async def login(req: LoginRequest):
     from sqlalchemy import select
-    from fastapi import HTTPException
     async with async_session() as db:
         result = await db.execute(select(User).where(User.username == req.username))
         user = result.scalar_one_or_none()
@@ -128,8 +126,6 @@ async def login(req: LoginRequest):
 
 @app.get("/api/auth/me")
 async def auth_me(request: Request):
-    from fastapi import HTTPException
-    from jose import JWTError
     auth_header = request.headers.get("Authorization", "")
     if not auth_header.startswith("Bearer "):
         raise HTTPException(status_code=401, detail="Missing token")
@@ -656,7 +652,7 @@ def _auto_place_unplaced_pcs(session: "GameSession") -> bool:
 async def create_character(req: CreateCharacterRequest, request: Request):
     session = session_manager.get_session(req.room_code)
     if not session:
-        return {"error": "Session not found"}
+        raise HTTPException(status_code=404, detail="Session not found")
 
     char_id = f"pc_{req.player_id}"
     try:
@@ -672,7 +668,7 @@ async def create_character(req: CreateCharacterRequest, request: Request):
             sprite_id=req.sprite_id,
         )
     except ValueError as e:
-        return {"error": str(e)}
+        raise HTTPException(status_code=400, detail=str(e))
 
     await session.broadcast({
         "type": "character_created",
@@ -730,15 +726,15 @@ async def get_spell_options_for_class(char_class: str, level: int):
 async def get_character_spell_options(req: CharacterSpellOptionsRequest):
     session = session_manager.get_session(req.room_code)
     if not session:
-        return {"error": "Session not found"}
+        raise HTTPException(status_code=404, detail="Session not found")
 
     player = session.players.get(req.player_id)
     if not player or not player.character_id:
-        return {"error": "Character not found for player"}
+        raise HTTPException(status_code=404, detail="Character not found for player")
 
     character = session.orchestrator.characters.get(player.character_id)
     if not character:
-        return {"error": "Character not found"}
+        raise HTTPException(status_code=404, detail="Character not found")
 
     in_combat = bool(req.in_combat)
     return {
@@ -753,22 +749,22 @@ async def get_character_spell_options(req: CharacterSpellOptionsRequest):
 async def level_up_character(req: LevelUpRequest):
     session = session_manager.get_session(req.room_code)
     if not session:
-        return {"error": "Session not found"}
+        raise HTTPException(status_code=404, detail="Session not found")
 
     player = session.players.get(req.player_id)
     if not player or not player.character_id:
-        return {"error": "Character not found for player"}
+        raise HTTPException(status_code=404, detail="Character not found for player")
 
     character = session.orchestrator.characters.get(player.character_id)
     if not character:
-        return {"error": "Character not found"}
+        raise HTTPException(status_code=404, detail="Character not found")
 
     in_combat = bool(session.orchestrator.combat and session.orchestrator.combat.is_active)
     if in_combat and req.prepared_spells is not None:
-        return {"error": "Prepared spells cannot be changed during active combat"}
+        raise HTTPException(status_code=409, detail="Prepared spells cannot be changed during active combat")
 
     if req.new_level < character.level or req.new_level > 20:
-        return {"error": "Invalid level value"}
+        raise HTTPException(status_code=400, detail="Invalid level value")
 
     character.level = req.new_level
     initialize_spell_slots(character)
@@ -780,7 +776,7 @@ async def level_up_character(req: LevelUpRequest):
         rules_version=character.rules_version,
     )
     if not selection.get("valid", False):
-        return {"error": selection.get("error", "Invalid spell selection")}
+        raise HTTPException(status_code=400, detail=selection.get("error", "Invalid spell selection"))
 
     character.known_spells = list(selection.get("known_spells", character.known_spells))
     character.prepared_spells = list(selection.get("prepared_spells", character.prepared_spells))
@@ -819,7 +815,8 @@ async def tts_endpoint(req: TTSRequest):
         audio_bytes = await dm_speak(req.text, req.voice)
         return Response(content=audio_bytes, media_type="audio/mpeg")
     except Exception as e:
-        return {"error": str(e)}
+        logger.exception("TTS error: %s", e)
+        return JSONResponse(status_code=500, content={"error": "TTS failed."})
 
 
 @app.post("/api/stt")
@@ -829,14 +826,15 @@ async def stt_endpoint(req: STTRequest):
         transcript = await speech_to_text(audio_bytes, filename=req.filename)
         return {"transcript": transcript}
     except Exception as e:
-        return {"error": str(e)}
+        logger.exception("STT error: %s", e)
+        return JSONResponse(status_code=500, content={"error": "Transcription failed."})
 
 
 @app.get("/api/session/{room_code}")
 async def get_session(room_code: str):
     session = session_manager.get_session(room_code)
     if not session:
-        return {"error": "Session not found"}
+        raise HTTPException(status_code=404, detail="Session not found")
     _ensure_mock_starter_map(session)
     state = _state_with_overlay(session)
     state["session"] = session.to_dict()
@@ -852,7 +850,7 @@ class SaveCampaignRequest(BaseModel):
 async def save_campaign(req: SaveCampaignRequest, request: Request):
     session = session_manager.get_session(req.room_code)
     if not session:
-        return {"error": "Session not found"}
+        raise HTTPException(status_code=404, detail="Session not found")
 
     from sqlalchemy import select
     campaign_id = req.room_code
@@ -931,6 +929,13 @@ class PlayerActionRequest(BaseModel):
     player_id: str
     content: str
 
+    @field_validator("content")
+    @classmethod
+    def content_length(cls, v: str) -> str:
+        if len(v) > 4000:
+            raise ValueError("Action text exceeds maximum length of 4000 characters.")
+        return v
+
 
 class NextTurnRequest(BaseModel):
     room_code: str
@@ -948,7 +953,7 @@ class MoveTokenRequest(BaseModel):
 async def load_campaign(req: LoadCampaignRequest):
     session = session_manager.get_session(req.room_code)
     if not session:
-        return {"error": "Session not found"}
+        raise HTTPException(status_code=404, detail="Session not found")
 
     from sqlalchemy import select
     from .map_engine import build_map_from_data
@@ -959,7 +964,7 @@ async def load_campaign(req: LoadCampaignRequest):
         campaign = result.scalar_one_or_none()
 
     if not campaign:
-        return {"error": "Campaign not found"}
+        raise HTTPException(status_code=404, detail="Campaign not found")
 
     chars_data = campaign.get_characters()
     for cid, cd in chars_data.items():
@@ -1019,9 +1024,9 @@ async def get_campaign_characters(campaign_id: str, request: Request):
         campaign = result.scalar_one_or_none()
 
     if not campaign:
-        return {"error": "Campaign not found"}
+        raise HTTPException(status_code=404, detail="Campaign not found")
     if campaign.owner_id and campaign.owner_id != user_id:
-        return {"error": "Not your campaign"}
+        raise HTTPException(status_code=403, detail="Not your campaign")
 
     chars_data = campaign.get_characters()
     pc_map = campaign.get_player_characters()
@@ -1049,16 +1054,16 @@ async def resume_campaign(req: ResumeCampaignRequest, request: Request):
 
     user_id = _extract_user_id(request)
     if not user_id:
-        return {"error": "Authentication required"}
+        raise HTTPException(status_code=401, detail="Authentication required")
 
     async with async_session() as db:
         result = await db.execute(select(SavedCampaign).where(SavedCampaign.id == req.campaign_id))
         campaign = result.scalar_one_or_none()
 
     if not campaign:
-        return {"error": "Campaign not found"}
+        raise HTTPException(status_code=404, detail="Campaign not found")
     if campaign.owner_id and campaign.owner_id != user_id:
-        return {"error": "Not your campaign"}
+        raise HTTPException(status_code=403, detail="Not your campaign")
 
     player_id = str(uuid.uuid4())[:8]
     session = session_manager.create_session(host_id=player_id)
@@ -1121,19 +1126,19 @@ async def resume_campaign(req: ResumeCampaignRequest, request: Request):
 
 @app.post("/api/action")
 async def action_endpoint(req: PlayerActionRequest):
-    logger.info(f"[/api/action] Looking up session: room_code={req.room_code}, player_id={req.player_id}, sessions_count={len(session_manager.sessions)}, available_codes={list(session_manager.sessions.keys())}")
+    logger.info("[/api/action] Looking up session: room_code=%s, player_id=%s", req.room_code, req.player_id)
     session = session_manager.get_session(req.room_code)
     if not session:
-        logger.warning(f"[/api/action] Session not found for room_code={req.room_code}")
-        return {"error": "Session not found"}
+        logger.warning("[/api/action] Session not found for room_code=%s", req.room_code)
+        raise HTTPException(status_code=404, detail="Session not found")
 
     player = session.players.get(req.player_id)
     if not player:
-        return {"error": "Player not found in session"}
+        raise HTTPException(status_code=404, detail="Player not found in session")
 
     action_text = req.content.strip()
     if not action_text:
-        return {"error": "Action text is required"}
+        raise HTTPException(status_code=400, detail="Action text is required")
 
     await session.broadcast({
         "type": "player_message",
@@ -1276,11 +1281,11 @@ def _auto_generate_overlay_for_session(
 async def combat_next_turn(req: NextTurnRequest):
     session = session_manager.get_session(req.room_code)
     if not session:
-        return {"error": "Session not found"}
+        raise HTTPException(status_code=404, detail="Session not found")
 
     player = session.players.get(req.player_id)
     if not player:
-        return {"error": "Player not found in session"}
+        raise HTTPException(status_code=404, detail="Player not found in session")
 
     dispatcher = ToolDispatcher(
         session.orchestrator.characters,
@@ -1327,18 +1332,18 @@ async def combat_next_turn(req: NextTurnRequest):
 async def move_token_endpoint(req: MoveTokenRequest):
     session = session_manager.get_session(req.room_code)
     if not session:
-        return {"error": "Session not found"}
+        raise HTTPException(status_code=404, detail="Session not found")
 
     player = session.players.get(req.player_id)
     if not player:
-        return {"error": "Player not found in session"}
+        raise HTTPException(status_code=404, detail="Player not found in session")
 
     if player.character_id and req.character_id != player.character_id:
-        return {"error": "You can only move your own character token"}
+        raise HTTPException(status_code=403, detail="You can only move your own character token")
 
     game_map = session.orchestrator.game_map
     if not game_map:
-        return {"error": "No map loaded"}
+        raise HTTPException(status_code=409, detail="No map loaded")
 
     entity = game_map.entities.get(req.character_id)
     if entity is None:
@@ -1434,18 +1439,18 @@ async def player_equip_endpoint(req: PlayerEquipRequest):
     """Let a player equip or unequip their own item outside of combat."""
     session = session_manager.get_session(req.room_code)
     if not session:
-        return {"error": "Session not found"}
+        raise HTTPException(status_code=404, detail="Session not found")
 
     player = session.players.get(req.player_id)
     if not player:
-        return {"error": "Player not found in session"}
+        raise HTTPException(status_code=404, detail="Player not found in session")
 
     if not player.character_id:
-        return {"error": "You have no character in this session"}
+        raise HTTPException(status_code=404, detail="You have no character in this session")
 
     combat = session.orchestrator.combat
     if combat and combat.is_active:
-        return {"error": "You cannot change equipment during combat"}
+        raise HTTPException(status_code=409, detail="You cannot change equipment during combat")
 
     dispatcher = ToolDispatcher(
         session.orchestrator.characters,

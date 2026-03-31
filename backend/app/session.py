@@ -2,8 +2,7 @@
 
 from __future__ import annotations
 
-import random
-import string
+import secrets
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -21,8 +20,8 @@ WORD_LIST = [
 
 
 def generate_room_code() -> str:
-    word = random.choice(WORD_LIST).upper()
-    num = random.randint(10, 99)
+    word = secrets.choice(WORD_LIST).upper()
+    num = secrets.randbelow(90) + 10
     return f"{word}-{num}"
 
 

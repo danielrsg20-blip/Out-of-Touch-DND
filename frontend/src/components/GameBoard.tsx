@@ -157,11 +157,8 @@ export default function GameBoard() {
       return
     }
 
-    console.log(`[GameBoard.handleTileClick] Moving ${player.character_id} to (${gx},${gy})`)
-
     // Validate movement locally before sending
     if (!map) {
-      console.log(`[GameBoard.handleTileClick] No map available`)
       addNarrative('system', 'Map not loaded')
       return
     }
@@ -188,12 +185,10 @@ export default function GameBoard() {
     )
 
     if (!validation.valid) {
-      console.log(`[GameBoard.handleTileClick] Validation failed: ${validation.error}`)
       addNarrative('system', validation.error || 'Invalid move')
       return
     }
 
-    console.log(`[GameBoard.handleTileClick] Validation passed, sending move`)
     sendMoveToken(player.character_id, gx, gy)
     setSelectedEntity(null)
   }, [playerId, players, selectedEntityId, map, sendMoveToken, setSelectedEntity, addNarrative])

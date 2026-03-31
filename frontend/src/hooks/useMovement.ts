@@ -69,11 +69,9 @@ export function useMovement(sendMoveToken?: (characterId: string, x: number, y: 
       );
 
       if (!validation.valid) {
-        console.log(`[useMovement.executeMove] Local validation FAILED: ${validation.error}`);
         setError(validation.error || "Invalid move");
         return false;
       }
-      console.log(`[useMovement.executeMove] Local validation PASSED, calling sendMoveToken`);
 
       setIsMoving(true);
       setError(null);
@@ -87,11 +85,9 @@ export function useMovement(sendMoveToken?: (characterId: string, x: number, y: 
         // sendMoveToken handles the actual RPC/REST call
         // It will emit realtime updates on success
         sendMoveToken(entityId, targetX, targetY);
-        console.log(`[useMovement.executeMove] Move request sent`);
         
         return true;
       } catch (err: any) {
-        console.log(`[useMovement.executeMove] Error: ${err.message}`);
         setError(err.message || "Move failed");
         return false;
       } finally {

@@ -6,7 +6,13 @@ type AuthTokenPayload = {
   exp: number
 }
 
-const JWT_SECRET = process.env.TS_RUNTIME_JWT_SECRET || 'change-me-to-a-long-random-secret'
+const _WEAK_JWT_DEFAULT = 'change-me-to-a-long-random-secret'
+const JWT_SECRET = process.env.TS_RUNTIME_JWT_SECRET || _WEAK_JWT_DEFAULT
+if (process.env.NODE_ENV !== 'test' && JWT_SECRET === _WEAK_JWT_DEFAULT) {
+  throw new Error(
+    'TS_RUNTIME_JWT_SECRET must be set to a strong random value in production.'
+  )
+}
 const TOKEN_TTL_SECONDS = Number(process.env.TS_RUNTIME_ACCESS_TOKEN_TTL_SECONDS || 60 * 60 * 24 * 7)
 
 function base64UrlEncode(text: string): string {

@@ -214,6 +214,15 @@ class Orchestrator:
         if not self._client:
             return [{"type": "error", "content": "Anthropic API key not configured."}]
 
+        from .config import MAX_SESSION_COST_USD
+        if self.session_usage.estimated_cost_usd >= MAX_SESSION_COST_USD:
+            logger.warning(
+                "Session cost cap reached: $%.4f >= $%.2f",
+                self.session_usage.estimated_cost_usd,
+                MAX_SESSION_COST_USD,
+            )
+            return [{"type": "error", "content": "Session cost limit reached. Please start a new session."}]
+
         # Bootstrap prompt: triggered by the frontend when the DM has not yet spoken.
         is_bootstrap = action.strip() == "[SESSION_START]"
         if is_bootstrap:
@@ -323,7 +332,7 @@ class Orchestrator:
                 "content": [_block_to_dict(b) for b in assistant_content],
             })
 
-        self.conversation_history = messages[:1] + messages[1:]
+        self.conversation_history = messages
         if len(self.conversation_history) > MAX_HISTORY:
             self.conversation_history = self.conversation_history[-MAX_HISTORY:]
 

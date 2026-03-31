@@ -34,6 +34,14 @@ def _normalize_database_url(url: str) -> str:
 DATABASE_URL: str = _normalize_database_url(os.getenv("DATABASE_URL", "sqlite+aiosqlite:///./campaign.db"))
 
 JWT_SECRET_KEY: str = os.getenv("JWT_SECRET_KEY", "change-me-to-a-long-random-secret")
+
+_WEAK_JWT_DEFAULT = "change-me-to-a-long-random-secret"
+if not LOCAL_MOCK_MODE and JWT_SECRET_KEY == _WEAK_JWT_DEFAULT:
+    raise RuntimeError(
+        "JWT_SECRET_KEY must be set to a strong random value. "
+        "Set it in your .env file or as an environment variable."
+    )
+
 JWT_ALGORITHM: str = os.getenv("JWT_ALGORITHM", "HS256")
 ACCESS_TOKEN_EXPIRE_MINUTES: int = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "10080"))
 

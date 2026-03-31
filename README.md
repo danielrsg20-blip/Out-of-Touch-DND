@@ -153,7 +153,8 @@ Supabase-only rewrite scaffold (work in progress):
 ### Required backend env vars
 
 - `DATABASE_URL` (Supabase Postgres direct URL recommended for production)
-- `JWT_SECRET_KEY`
+- `JWT_SECRET_KEY` (generate with `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"`)
+- `TS_RUNTIME_JWT_SECRET` (generate separately with the same command)
 - `CORS_ALLOW_ORIGINS` (set to your Vercel frontend URL)
 - `ANTHROPIC_API_KEY` (or use `LOCAL_MOCK_MODE=true` for mock mode)
 - `OPENAI_API_KEY` (optional depending on features)
