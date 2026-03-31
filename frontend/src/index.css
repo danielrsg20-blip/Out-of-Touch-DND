@@ -1,6 +1,8 @@
 @import "tailwindcss";
 
 :root {
+  --font-fantasy: 'Cinzel', Georgia, 'Times New Roman', serif;
+  --font-fantasy-decorative: 'Cinzel Decorative', 'Cinzel', Georgia, serif;
   --bg-primary: #1a1a2e;
   --bg-secondary: #16213e;
   --bg-panel: #0f3460;
@@ -38,6 +40,9 @@
 }
 
 @theme inline {
+  /* Fonts */
+  --font-fantasy: 'Cinzel', Georgia, 'Times New Roman', serif;
+
   /* Backgrounds */
   --color-bg-primary:   var(--bg-primary);
   --color-bg-secondary: var(--bg-secondary);
@@ -95,4 +100,65 @@ button {
 
 input, textarea {
   font-family: inherit;
+}
+
+/* ============================================================
+   FANTASY TYPOGRAPHY
+   ============================================================ */
+
+.font-fantasy {
+  font-family: var(--font-fantasy);
+  letter-spacing: 0.04em;
+}
+
+.font-fantasy-decorative {
+  font-family: var(--font-fantasy-decorative);
+  letter-spacing: 0.06em;
+}
+
+/* ============================================================
+   PANEL TEXTURE  — subtle noise grain via SVG filter
+   Apply .panel-texture to any panel wrapper
+   ============================================================ */
+
+.panel-texture {
+  position: relative;
+}
+
+.panel-texture::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  border-radius: inherit;
+  opacity: 0.028;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)' opacity='1'/%3E%3C/svg%3E");
+  background-size: 200px 200px;
+  background-repeat: repeat;
+  mix-blend-mode: overlay;
+  z-index: 1;
+}
+
+/* ============================================================
+   GOLD GLOW UTILITIES
+   ============================================================ */
+
+@keyframes gold-border-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(228, 168, 83, 0); border-color: rgba(228, 168, 83, 0.28); }
+  50%       { box-shadow: 0 0 12px 2px rgba(228, 168, 83, 0.18); border-color: rgba(228, 168, 83, 0.55); }
+}
+
+@keyframes gold-text-shimmer {
+  0%, 100% { text-shadow: 0 0 8px rgba(228, 168, 83, 0.0); }
+  50%       { text-shadow: 0 0 18px rgba(228, 168, 83, 0.45), 0 0 4px rgba(228, 168, 83, 0.25); }
+}
+
+/* Slow ambient glow on card borders */
+.gold-glow-card {
+  animation: gold-border-pulse 4s ease-in-out infinite;
+}
+
+/* Shimmering heading text */
+.gold-shimmer-text {
+  animation: gold-text-shimmer 3.5s ease-in-out infinite;
 }

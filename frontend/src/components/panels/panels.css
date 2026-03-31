@@ -2,14 +2,16 @@
   display: flex;
   align-items: center;
   gap: 0.45rem;
+  font-family: var(--font-fantasy, 'Cinzel', Georgia, serif);
   font-size: 0.68rem;
   text-transform: uppercase;
-  letter-spacing: 0.1em;
+  letter-spacing: 0.12em;
   color: var(--accent-gold);
   font-weight: 700;
   margin-bottom: 0.5rem;
   padding-bottom: 0;
   border-bottom: none;
+  text-shadow: 0 0 12px rgba(228, 168, 83, 0.25);
 }
 
 .panel-title::before {
@@ -281,13 +283,15 @@
   border: 1px solid rgba(228, 168, 83, 0.55);
   border-radius: 6px;
   color: var(--accent-gold);
-  font-size: 0.8rem;
+  font-family: var(--font-fantasy, 'Cinzel', Georgia, serif);
+  font-size: 0.72rem;
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.12em;
+  letter-spacing: 0.16em;
   text-align: center;
   padding: 0.3rem 0.5rem;
   margin-bottom: 0.4rem;
+  text-shadow: 0 0 10px rgba(228, 168, 83, 0.5);
   animation: your-turn-pulse 1.6s ease-in-out infinite;
 }
 
@@ -1571,19 +1575,49 @@
   transform: translateY(0);
 }
 
-/* ── Die tumble animation (3D-ish roll effect) ─────────────────────── */
+/* ── Die tumble animation — true CSS 3D ────────────────────────────── */
 @keyframes dice-tumble {
-  0%   { transform: rotate(0deg) scale(1); }
-  18%  { transform: rotate(-20deg) scale(1.18); }
-  40%  { transform: rotate(16deg) scale(0.88); }
-  60%  { transform: rotate(-10deg) scale(1.1); }
-  80%  { transform: rotate(5deg) scale(0.95); }
-  100% { transform: rotate(0deg) scale(1); }
+  0%   { transform: perspective(120px) rotateX(0deg)   rotateY(0deg)   scale(1); }
+  15%  { transform: perspective(120px) rotateX(-35deg) rotateY(20deg)  scale(1.15); }
+  35%  { transform: perspective(120px) rotateX(25deg)  rotateY(-40deg) scale(0.9); }
+  55%  { transform: perspective(120px) rotateX(-18deg) rotateY(30deg)  scale(1.08); }
+  75%  { transform: perspective(120px) rotateX(12deg)  rotateY(-15deg) scale(0.96); }
+  100% { transform: perspective(120px) rotateX(0deg)   rotateY(0deg)   scale(1); }
 }
 
 .die-btn-rolling {
   animation: dice-tumble 0.56s ease-in-out;
   pointer-events: none;
+  transform-style: preserve-3d;
+}
+
+/* ── Floating die face shown during roll ────────────────────────────── */
+@keyframes die-face-spin {
+  0%   { transform: perspective(200px) rotateX(0deg)   rotateY(0deg)   scale(1); opacity: 0.9; }
+  25%  { transform: perspective(200px) rotateX(-90deg) rotateY(45deg)  scale(1.1); }
+  50%  { transform: perspective(200px) rotateX(180deg) rotateY(-90deg) scale(0.95); }
+  75%  { transform: perspective(200px) rotateX(270deg) rotateY(135deg) scale(1.05); }
+  100% { transform: perspective(200px) rotateX(360deg) rotateY(0deg)   scale(1); opacity: 0.9; }
+}
+
+.dice-rolling-indicator {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  background: linear-gradient(135deg, rgba(155, 89, 182, 0.35), rgba(155, 89, 182, 0.15));
+  border: 1px solid rgba(155, 89, 182, 0.6);
+  border-radius: 5px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  font-family: 'Consolas', 'Courier New', monospace;
+  color: var(--accent-purple);
+  animation: die-face-spin 0.56s linear infinite;
+  transform-style: preserve-3d;
+  box-shadow: 0 0 10px rgba(155, 89, 182, 0.35);
+  cursor: default;
+  user-select: none;
 }
 
 /* ── Die count input (narrower than mod) ───────────────────────────── */
@@ -1630,7 +1664,7 @@
 .dice-dis-active {
   background: rgba(239, 154, 154, 0.18) !important;
   border-color: #ef9a9a !important;
-  color: #ef9a9a !important;
+  color: var(--accent-red, #e05252) !important;
   box-shadow: 0 0 6px rgba(239, 154, 154, 0.2);
 }
 
@@ -1882,6 +1916,39 @@
   border-color: var(--text-secondary);
 }
 
+/* ── Narrative log filter row ──────────────────────────────────────── */
+.narrative-filter-row {
+  display: flex;
+  gap: 0.25rem;
+  margin-bottom: 0.45rem;
+  flex-wrap: wrap;
+}
+
+.narrative-filter-btn {
+  background: none;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 999px;
+  color: var(--text-secondary);
+  font-size: 0.62rem;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  padding: 0.12rem 0.55rem;
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s, background 0.15s;
+  line-height: 1.4;
+}
+
+.narrative-filter-btn:hover {
+  color: var(--text-primary);
+  border-color: rgba(228, 168, 83, 0.3);
+}
+
+.narrative-filter-btn.narrative-filter-active {
+  color: var(--accent-gold);
+  border-color: rgba(228, 168, 83, 0.55);
+  background: rgba(228, 168, 83, 0.08);
+}
+
 /* ── Narrative log header (title + timestamp toggle) ───────────────── */
 .narrative-log-header {
   display: flex;
@@ -1965,6 +2032,49 @@
   font-weight: 700;
   font-size: 0.9rem;
   color: var(--accent-purple);
+}
+
+/* ── Natural 20 — golden crit ───────────────────────────────── */
+@keyframes crit-flash {
+  0%   { box-shadow: 0 0 0 0 rgba(228, 168, 83, 0); }
+  30%  { box-shadow: 0 0 18px 4px rgba(228, 168, 83, 0.7); }
+  100% { box-shadow: 0 0 6px 1px rgba(228, 168, 83, 0.22); }
+}
+
+.narrative-crit {
+  background: linear-gradient(90deg, rgba(228, 168, 83, 0.06) 0%, transparent 100%);
+  border-left: 2px solid rgba(228, 168, 83, 0.55);
+}
+
+.narrative-crit .narrative-dice-result,
+.dice-nat20 {
+  background: rgba(228, 168, 83, 0.22);
+  border-color: rgba(228, 168, 83, 0.7);
+  color: var(--accent-gold);
+  font-family: var(--font-fantasy, 'Cinzel', Georgia, serif);
+  animation: crit-flash 0.9s ease-out forwards;
+}
+
+/* ── Natural 1 — red fumble ─────────────────────────────────── */
+@keyframes fumble-shake {
+  0%, 100% { transform: translateX(0); }
+  20%       { transform: translateX(-3px); }
+  40%       { transform: translateX(3px); }
+  60%       { transform: translateX(-2px); }
+  80%       { transform: translateX(2px); }
+}
+
+.narrative-fumble {
+  background: linear-gradient(90deg, rgba(231, 76, 60, 0.06) 0%, transparent 100%);
+  border-left: 2px solid rgba(231, 76, 60, 0.45);
+  animation: fumble-shake 0.45s ease-out;
+}
+
+.narrative-fumble .narrative-dice-result,
+.dice-nat1 {
+  background: rgba(231, 76, 60, 0.2);
+  border-color: rgba(231, 76, 60, 0.6);
+  color: var(--accent-red);
 }
 
 

@@ -356,7 +356,7 @@ export default function SessionLobby() {
         transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
       >
         <Card
-          className="bg-[rgba(18,27,56,0.93)] border-[rgba(228,168,83,0.28)] rounded-2xl py-7 px-8 max-h-[calc(100vh-2rem)] overflow-y-auto overflow-x-hidden"
+          className="panel-texture gold-glow-card bg-[rgba(18,27,56,0.93)] border-[rgba(228,168,83,0.28)] rounded-2xl py-7 px-8 max-h-[calc(100vh-2rem)] overflow-y-auto overflow-x-hidden"
           style={{ boxShadow: '0 8px 48px rgba(0,0,0,0.7), 0 0 0 1px rgba(228,168,83,0.06), inset 0 1px 0 rgba(228,168,83,0.1)' }}
         >
           {/* User bar */}
@@ -387,7 +387,7 @@ export default function SessionLobby() {
 
           {/* Header */}
           <div className="text-center mb-6">
-            <h1 className="text-[1.7rem] font-bold text-[#e4a853] mb-1 tracking-[0.02em]">Out of Touch DND</h1>
+            <h1 className="font-fantasy text-[1.7rem] font-bold text-[#e4a853] mb-1 tracking-[0.04em] gold-shimmer-text">Out of Touch DnD</h1>
             <p className="text-[#a0a0b0] text-[0.85rem] mb-4">LLM-Powered Campaign Engine</p>
             <div className="h-px mx-auto w-4/5" style={{ background: 'linear-gradient(90deg, transparent, rgba(228,168,83,0.4), transparent)' }} />
           </div>
@@ -417,7 +417,7 @@ export default function SessionLobby() {
                 {/* Campaign slots — capped at CAMPAIGN_CAP */}
                 <div>
                   <div className="flex items-center justify-between mb-2.5">
-                    <h3 className="text-[0.7rem] uppercase tracking-[0.08em] text-[#a0a0b0] font-semibold">Your Campaigns</h3>
+                    <h3 className="font-fantasy text-[0.65rem] uppercase tracking-[0.12em] text-[#a0a0b0] font-semibold">Your Campaigns</h3>
                     {!campaignsLoading && (
                       <span className="text-[0.68rem] text-[#a0a0b0] bg-white/[0.05] px-2 py-0.5 rounded-full border border-[#2a2a4a]">
                         {campaigns.length} / {CAMPAIGN_CAP}
@@ -502,7 +502,7 @@ export default function SessionLobby() {
             {/* ── CREATE MODE ── */}
             {mode === 'create' && (
               <motion.div key="create" variants={modeVariants} initial="initial" animate="animate" exit="exit" className="flex flex-col gap-3">
-                <h3 className="text-[0.85rem] font-semibold text-[#e4a853] uppercase tracking-[0.05em] pb-2 border-b border-[rgba(228,168,83,0.15)]">
+                <h3 className="font-fantasy text-[0.82rem] font-semibold text-[#e4a853] uppercase tracking-widest pb-2 border-b border-[rgba(228,168,83,0.15)]" style={{ textShadow: '0 0 10px rgba(228,168,83,0.2)' }}>
                   New Campaign
                 </h3>
                 <Input
@@ -541,7 +541,7 @@ export default function SessionLobby() {
             {/* ── CAMPAIGN SETUP MODE ── */}
             {mode === 'campaign_setup' && (
               <motion.div key="campaign_setup" variants={modeVariants} initial="initial" animate="animate" exit="exit" className="flex flex-col gap-4">
-                <h3 className="text-[0.85rem] font-semibold text-[#e4a853] uppercase tracking-[0.05em] pb-2 border-b border-[rgba(228,168,83,0.15)]">
+                <h3 className="font-fantasy text-[0.82rem] font-semibold text-[#e4a853] uppercase tracking-widest pb-2 border-b border-[rgba(228,168,83,0.15)]" style={{ textShadow: '0 0 10px rgba(228,168,83,0.2)' }}>
                   Choose Your Adventure
                 </h3>
                 <div className="grid grid-cols-2 gap-2.5 max-h-80 overflow-y-auto pr-0.5">
@@ -553,11 +553,11 @@ export default function SessionLobby() {
                       className={cn(
                         'bg-white/[0.04] border rounded-lg p-2.5 text-left flex flex-col gap-1 transition-all cursor-pointer',
                         selectedHook?.id === hook.id
-                          ? 'bg-[rgba(228,168,83,0.12)] border-[rgba(228,168,83,0.65)] shadow-[0_0_12px_rgba(228,168,83,0.1)]'
-                          : 'border-white/10 hover:bg-[rgba(228,168,83,0.07)] hover:border-[rgba(228,168,83,0.35)]',
+                          ? 'bg-[rgba(228,168,83,0.12)] border-[rgba(228,168,83,0.65)] shadow-[0_0_16px_rgba(228,168,83,0.18)]'
+                          : 'border-white/10 hover:bg-[rgba(228,168,83,0.07)] hover:border-[rgba(228,168,83,0.35)] hover:shadow-[0_0_8px_rgba(228,168,83,0.08)]',
                       )}
                     >
-                      <span className="text-[0.82rem] font-semibold text-white/90">{hook.title}</span>
+                      <span className="font-fantasy text-[0.72rem] font-semibold text-white/90 leading-tight">{hook.title}</span>
                       <span className="text-[0.72rem] text-[#a0a0b0] leading-[1.35]">{hook.summary}</span>
                       <span className="text-[0.65rem] uppercase tracking-[0.08em] text-[#e4a853] opacity-75 mt-0.5">{hook.tone}</span>
                     </button>
@@ -615,7 +615,7 @@ export default function SessionLobby() {
             {/* ── JOIN MODE ── */}
             {mode === 'join' && (
               <motion.div key="join" variants={modeVariants} initial="initial" animate="animate" exit="exit" className="flex flex-col gap-3">
-                <h3 className="text-[0.85rem] font-semibold text-[#e4a853] uppercase tracking-[0.05em] pb-2 border-b border-[rgba(228,168,83,0.15)]">
+                <h3 className="font-fantasy text-[0.82rem] font-semibold text-[#e4a853] uppercase tracking-widest pb-2 border-b border-[rgba(228,168,83,0.15)]" style={{ textShadow: '0 0 10px rgba(228,168,83,0.2)' }}>
                   Join a Campaign
                 </h3>
                 <Input

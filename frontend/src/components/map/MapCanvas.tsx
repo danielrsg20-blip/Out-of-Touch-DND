@@ -1217,6 +1217,11 @@ export default function MapCanvas({ onTileClick, onEntityClick, targetingMode = 
         ? Math.sin(performance.now() / 700 + entityIndex * 1.7) * 2
         : 0
 
+      // Breathing scale: slow 2.5% pulse for live units (offset per entity so they don't sync)
+      const breathScale = !isDefeatedEnemy && entity.type !== 'object'
+        ? 1 + Math.sin(performance.now() / 1800 + entityIndex * 0.9) * 0.025
+        : 1
+
       const drawEntitySprite = (
         drawFn: () => void,
         yOffset = 0,
@@ -1229,6 +1234,7 @@ export default function MapCanvas({ onTileClick, onEntityClick, targetingMode = 
           ctx.rotate(Math.PI / 2)
           ctx.globalAlpha = 0.72
         } else {
+          if (breathScale !== 1) ctx.scale(breathScale, breathScale)
           ctx.globalAlpha = fallbackOpacity
         }
         drawFn()

@@ -175,7 +175,7 @@ export default function AuthScreen() {
         transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
       >
         <Card
-          className="flex flex-col items-center py-10 px-8 bg-[rgba(18,27,56,0.93)] border-[rgba(228,168,83,0.3)] rounded-2xl"
+          className="panel-texture gold-glow-card flex flex-col items-center py-10 px-8 bg-[rgba(18,27,56,0.93)] border-[rgba(228,168,83,0.3)] rounded-2xl"
           style={{ boxShadow: '0 8px 48px rgba(0,0,0,0.75), 0 0 0 1px rgba(228,168,83,0.07), inset 0 1px 0 rgba(228,168,83,0.12)' }}
         >
           {/* Shield with glow pulse */}
@@ -193,8 +193,8 @@ export default function AuthScreen() {
             <ShieldLogo />
           </motion.div>
 
-          <h1 className="text-xl font-bold text-[#e4a853] tracking-[0.06em] uppercase mb-1 text-center">
-            Out of Touch DND
+          <h1 className="font-fantasy text-xl font-bold text-[#e4a853] tracking-[0.06em] uppercase mb-1 text-center gold-shimmer-text">
+            Out of Touch DnD
           </h1>
           <h2 className="text-sm text-[#a0a0b0] mb-7 font-normal">
             {mode === 'login' ? 'Sign In' : 'Create Account'}

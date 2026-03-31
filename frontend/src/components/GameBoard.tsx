@@ -272,11 +272,11 @@ export default function GameBoard() {
     <div className="game-board">
       <header className="flex items-center gap-3 px-4 py-[0.45rem] bg-[var(--bg-secondary)] border-b border-[var(--border-color)] shrink-0 relative">
         {/* Gold gradient line replacing ::after pseudo-element */}
-        <div className="absolute bottom-0 left-0 right-0 h-px pointer-events-none"
+        <div className="header-gold-line absolute bottom-0 left-0 right-0 h-px pointer-events-none"
           style={{ background: 'linear-gradient(90deg, rgba(228,168,83,0.4) 0%, transparent 60%)' }}
         />
-        <span className="font-bold text-[var(--accent-gold)] text-[0.9rem] tracking-[0.02em] whitespace-nowrap">
-          Out of Touch DND
+        <span className="font-fantasy font-bold text-accent-gold text-[0.88rem] tracking-[0.06em] whitespace-nowrap" style={{ textShadow: '0 0 10px rgba(228,168,83,0.3)' }}>
+          Out of Touch DnD
         </span>
         <Badge
           variant="outline"

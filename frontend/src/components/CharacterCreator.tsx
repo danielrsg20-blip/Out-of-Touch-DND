@@ -17,6 +17,36 @@ const CLASSES = ['Barbarian', 'Bard', 'Cleric', 'Druid', 'Fighter', 'Monk', 'Pal
 const ABILITIES     = ['STR', 'DEX', 'CON', 'INT', 'WIS', 'CHA']
 const STANDARD_ARRAY = [15, 14, 13, 12, 10, 8]
 
+const CLASS_HINTS: Record<string, string> = {
+  Barbarian: 'Rage-fuelled melee warrior — thrives on STR & CON.',
+  Bard:      'Arcane performer who inspires allies — relies on CHA.',
+  Cleric:    'Divine conduit of the gods — WIS governs your spells.',
+  Druid:     'Nature shapeshifter and caster — powered by WIS.',
+  Fighter:   'Master of weapons and tactics — STR or DEX focused.',
+  Monk:      'Martial artist channelling ki — DEX & WIS matter most.',
+  Paladin:   'Holy warrior of sacred oaths — STR and CHA.',
+  Ranger:    'Wilderness hunter and tracker — DEX & WIS.',
+  Rogue:     'Shadow operative with deadly precision — DEX is key.',
+  Sorcerer:  'Magic runs in your blood — CHA fuels your power.',
+  Warlock:   'Patron-bound wielder of eldritch might — CHA.',
+  Wizard:    'Scholar of the arcane arts — INT is everything.',
+}
+
+const CLASS_PRIMARY_STATS: Record<string, string[]> = {
+  Barbarian: ['STR', 'CON'],
+  Bard:      ['CHA'],
+  Cleric:    ['WIS'],
+  Druid:     ['WIS'],
+  Fighter:   ['STR', 'DEX'],
+  Monk:      ['DEX', 'WIS'],
+  Paladin:   ['STR', 'CHA'],
+  Ranger:    ['DEX', 'WIS'],
+  Rogue:     ['DEX'],
+  Sorcerer:  ['CHA'],
+  Warlock:   ['CHA'],
+  Wizard:    ['INT'],
+}
+
 type CharacterSpriteOption = { id: string; label: string; races: string[]; classes: string[] }
 
 const CHARACTER_SPRITES: CharacterSpriteOption[] = [
@@ -46,7 +76,7 @@ function SectionHeading({ icon, label }: { icon: string; label: string }) {
   return (
     <div className="flex items-center gap-2 mt-1">
       <span className="text-[0.72rem] text-[#e4a853] shrink-0">{icon}</span>
-      <span className="text-[0.68rem] uppercase tracking-[0.1em] text-[#e4a853] font-bold whitespace-nowrap">{label}</span>
+      <span className="font-fantasy text-[0.62rem] uppercase tracking-[0.12em] text-[#e4a853] font-bold whitespace-nowrap">{label}</span>
       <div className="flex-1 h-px" style={{ background: 'linear-gradient(90deg, rgba(228,168,83,0.3), transparent)' }} />
     </div>
   )
@@ -303,7 +333,7 @@ export default function CharacterCreator() {
             >
               ⚔
             </motion.div>
-            <h2 className="text-[1.55rem] font-bold text-[#e4a853] tracking-[0.02em] mb-1">Forge Your Hero</h2>
+            <h2 className="font-fantasy text-[1.55rem] font-bold text-[#e4a853] tracking-[0.04em] mb-1 gold-shimmer-text">Forge Your Hero</h2>
             <p className="text-[0.82rem] text-[#a0a0b0] mb-3.5 flex items-center justify-center gap-1.5 flex-wrap">
               {roomCode
                 ? <>
@@ -359,6 +389,13 @@ export default function CharacterCreator() {
                 </ThemedSelect>
               </div>
             </div>
+
+            {/* Class hint */}
+            {CLASS_HINTS[charClass] && (
+              <p className="text-[0.72rem] text-[#a0a0b0] italic -mt-2 m-0 leading-snug">
+                {CLASS_HINTS[charClass]}
+              </p>
+            )}
 
             {/* Appearance */}
             <SectionHeading icon="◈" label="Appearance" />
@@ -432,12 +469,23 @@ export default function CharacterCreator() {
             <div className="grid grid-cols-3 gap-2.5 max-sm:grid-cols-2">
               {ABILITIES.map(ab => {
                 const mod = Math.floor((abilities[ab] - 10) / 2)
+                const isPrimary = (CLASS_PRIMARY_STATS[charClass] ?? []).includes(ab)
                 return (
                   <div
                     key={ab}
-                    className="flex flex-col items-center gap-1 bg-white/[0.03] border border-[#2a2a4a] rounded-xl py-2.5 px-1.5 transition-all focus-within:border-[rgba(228,168,83,0.5)] focus-within:bg-[rgba(228,168,83,0.04)]"
+                    className={cn(
+                      'flex flex-col items-center gap-1 rounded-xl py-2.5 px-1.5 transition-all focus-within:border-[rgba(228,168,83,0.5)] focus-within:bg-[rgba(228,168,83,0.04)]',
+                      isPrimary
+                        ? 'bg-[rgba(228,168,83,0.07)] border border-[rgba(228,168,83,0.35)]'
+                        : 'bg-white/3 border border-[#2a2a4a]',
+                    )}
                   >
-                    <span className="text-[0.65rem] uppercase tracking-[0.08em] text-[#a0a0b0] font-semibold leading-none">{ab}</span>
+                    <span className={cn(
+                      'text-[0.65rem] uppercase tracking-[0.08em] font-semibold leading-none',
+                      isPrimary ? 'text-[#e4a853]' : 'text-[#a0a0b0]',
+                    )}>
+                      {ab}{isPrimary ? ' ★' : ''}
+                    </span>
                     <input
                       type="number"
                       min={3}

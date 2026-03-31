@@ -197,13 +197,25 @@ export default function DiceRoller({ onSubmitRoll }: DiceRollerProps) {
   // ── Render ───────────────────────────────────────────────────────────
   return (
     <div className="dice-roller">
-      {/* Header + latest result badge */}
+      {/* Header + latest result badge / rolling indicator */}
       <div className="dice-roller-header">
         <span className="panel-title" style={{ marginBottom: 0, borderBottom: 'none', paddingBottom: 0 }}>
           Dice Roller
         </span>
         <AnimatePresence mode="wait">
-          {lastResult && (
+          {isRolling ? (
+            <motion.span
+              key="rolling"
+              className="dice-rolling-indicator"
+              initial={{ opacity: 0, scale: 0.7 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.7 }}
+              transition={{ duration: 0.15 }}
+              aria-label="Rolling…"
+            >
+              d{selectedDie}
+            </motion.span>
+          ) : lastResult ? (
             <motion.span
               key={lastResult.key}
               className="dice-last-result"
@@ -214,7 +226,7 @@ export default function DiceRoller({ onSubmitRoll }: DiceRollerProps) {
             >
               {lastResult.total}
             </motion.span>
-          )}
+          ) : null}
         </AnimatePresence>
       </div>
 

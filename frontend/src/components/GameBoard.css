@@ -34,6 +34,24 @@
 .map-area {
   flex: 1;
   min-width: 0;
+  position: relative;
+}
+
+/* ── Atmospheric vignette over the map canvas ────────────────────────
+   Pointer-events: none so clicks pass through to the canvas beneath.  */
+.map-area::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 2;
+  background:
+    radial-gradient(
+      ellipse 85% 80% at 50% 50%,
+      transparent 45%,
+      rgba(4, 6, 18, 0.42) 80%,
+      rgba(4, 6, 18, 0.72) 100%
+    );
 }
 
 .sidebar {
@@ -203,4 +221,40 @@
 .sidebar-tab-btn--active {
   color: var(--accent-gold);
   border-bottom-color: var(--accent-gold);
+}
+
+/* ── Adventure rail: fog seep into map on right edge ─────────────── */
+.adventure-rail::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: -18px;
+  width: 18px;
+  height: 100%;
+  pointer-events: none;
+  z-index: 3;
+  background: linear-gradient(90deg, rgba(9, 13, 31, 0.55) 0%, transparent 100%);
+}
+
+/* ── Sidebar: fog seep into map on left edge ─────────────────────── */
+.sidebar::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -18px;
+  width: 18px;
+  height: 100%;
+  pointer-events: none;
+  z-index: 3;
+  background: linear-gradient(270deg, rgba(9, 13, 31, 0.55) 0%, transparent 100%);
+}
+
+/* ── Header gold line: slow ambient breathe ─────────────────────── */
+@keyframes header-line-breathe {
+  0%, 100% { opacity: 0.6; }
+  50%       { opacity: 1; }
+}
+
+.header-gold-line {
+  animation: header-line-breathe 4s ease-in-out infinite;
 }
