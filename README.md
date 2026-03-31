@@ -88,6 +88,7 @@ python scripts/import_srd_2024.py --allow-2014-fallback
 Imported records include `source_rules_version` metadata so you can distinguish true 2024 source data from fallback content.
 
 This updates:
+
 - `backend/app/rules/data/spells.2024.json`
 - `backend/app/rules/data/class_spell_lists.2024.json`
 - `backend/app/rules/data/class_features.2024.json`
@@ -124,7 +125,7 @@ $env:OTDND_START_LOCAL_EDGE_FUNCTIONS='false'
 ./start-dev.ps1
 ```
 
-Frontend: `http://127.0.0.1:5174`  Backend docs: `http://127.0.0.1:8010/docs`
+Frontend: `http://127.0.0.1:5174` Backend docs: `http://127.0.0.1:8010/docs`
 
 ## Deployment (Vercel + Railway + Supabase)
 
@@ -181,14 +182,14 @@ Auth note:
 ### Supabase Auth troubleshooting
 
 - **Invalid anon key / auth not configured**
-	- Confirm `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` are set in Vercel project env vars and redeploy.
-	- Ensure the values are from the same Supabase project.
+  - Confirm `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` are set in Vercel project env vars and redeploy.
+  - Ensure the values are from the same Supabase project.
 - **Email already registered**
-	- Registration uses a username alias email (`<normalized-username>@example.com`).
-	- If taken, sign in with that username or choose a different username.
+  - Registration uses a username alias email (`<normalized-username>@example.com`).
+  - If taken, sign in with that username or choose a different username.
 - **Bad credentials (invalid login credentials)**
-	- Check username/password exactly; usernames are normalized (trimmed/lowercased).
-	- If this is a pre-migration account, re-register once under Supabase Auth.
+  - Check username/password exactly; usernames are normalized (trimmed/lowercased).
+  - If this is a pre-migration account, re-register once under Supabase Auth.
 
 ### Verify
 

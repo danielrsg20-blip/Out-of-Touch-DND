@@ -24,6 +24,7 @@ from .rules.items import (
 )
 from .rules.spells import (
     evaluate_cast_permission,
+    initialize_spell_slots,
     restore_all_slots,
     use_spell_slot,
 )
@@ -511,6 +512,122 @@ TOOL_DEFINITIONS: list[dict[str, Any]] = [
                 "sprite": {"type": "string", "description": "Optional atlas key such as 'env:grass'"},
             },
             "required": ["x", "y", "tile_type"],
+        },
+    },
+    {
+        "name": "short_rest",
+        "description": "Perform a short rest for a character, spending hit dice to recover HP. Warlocks and Monks also recover certain features.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "character_id": {"type": "string"},
+                "hit_dice_to_spend": {
+                    "type": "integer",
+                    "description": "Number of hit dice to spend for HP recovery (1 to character_level)",
+                },
+            },
+            "required": ["character_id", "hit_dice_to_spend"],
+        },
+    },
+    {
+        "name": "give_xp",
+        "description": "Award XP to a character. Use after defeating enemies or completing major objectives.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "character_id": {"type": "string"},
+                "amount": {"type": "integer", "description": "XP to award"},
+                "reason": {"type": "string", "description": "Why XP is being awarded"},
+            },
+            "required": ["character_id", "amount"],
+        },
+    },
+    {
+        "name": "level_up",
+        "description": "Level up a character after they've accumulated enough XP. Increases level, adds HP, updates spell slots and class features.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "character_id": {"type": "string"},
+                "use_average_hp": {
+                    "type": "boolean",
+                    "description": "If true, take the average HP increase instead of rolling. Defaults to true.",
+                },
+            },
+            "required": ["character_id"],
+        },
+    },
+    {
+        "name": "reveal_area",
+        "description": "Reveal map area around a character or specific tiles, updating fog of war.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "entity_id": {
+                    "type": "string",
+                    "description": "Entity ID whose position is used as the center of the reveal (optional)",
+                },
+                "tiles": {
+                    "type": "array",
+                    "description": "Specific coordinates to reveal",
+                    "items": {
+                        "type": "object",
+                        "properties": {"x": {"type": "integer"}, "y": {"type": "integer"}},
+                        "required": ["x", "y"],
+                    },
+                },
+                "vision_radius": {
+                    "type": "integer",
+                    "description": "Vision radius in tiles when using entity_id (default 8)",
+                },
+            },
+        },
+    },
+    {
+        "name": "generate_loot",
+        "description": "Generate a loot table for a defeated encounter and optionally award it to a character.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "encounter_strength": {
+                    "type": "string",
+                    "enum": ["trivial", "easy", "medium", "hard", "deadly"],
+                    "description": "Strength of the defeated encounter",
+                },
+                "award_to": {
+                    "type": "string",
+                    "description": "Character ID to award loot to. If omitted, loot is described but not awarded.",
+                },
+                "gold_multiplier": {
+                    "type": "number",
+                    "description": "Multiplier for gold rewards (default 1.0)",
+                },
+            },
+            "required": ["encounter_strength"],
+        },
+    },
+    {
+        "name": "open_shop",
+        "description": "Generate a shop inventory for players to browse and purchase from a merchant.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "shop_type": {
+                    "type": "string",
+                    "enum": ["general", "weapons", "armor", "magic", "potions", "blacksmith"],
+                    "description": "Type of shop",
+                },
+                "shop_name": {
+                    "type": "string",
+                    "description": "Name of the shop or merchant",
+                },
+                "settlement_size": {
+                    "type": "string",
+                    "enum": ["hamlet", "village", "town", "city", "metropolis"],
+                    "description": "Settlement size — affects stock variety and price range",
+                },
+            },
+            "required": ["shop_type"],
         },
     },
     {
@@ -1068,4 +1185,267 @@ class ToolDispatcher:
             "dice": inp["dice"],
             "modifier": int(inp.get("modifier", 0)),
             "context": inp["context"],
+        }
+
+    def _tool_short_rest(self, inp: dict) -> dict:
+        from .rules.characters import CLASSES
+        char = self.characters.get(inp["character_id"])
+        if not char:
+            return {"error": f"Character {inp['character_id']} not found"}
+
+        class_data = CLASSES.get(char.char_class, {})
+        hit_die = class_data.get("hit_die", 8)
+        con_mod = char.ability_modifier("CON")
+
+        dice_to_spend = max(1, min(int(inp.get("hit_dice_to_spend", 1)), char.level))
+
+        total_healed = 0
+        rolls: list[int] = []
+        for _ in range(dice_to_spend):
+            rolled = roll(f"1d{hit_die}")
+            heal_amount = max(0, rolled.total + con_mod)
+            rolls.append(rolled.total)
+            old_hp = char.hp
+            char.hp = min(char.max_hp, char.hp + heal_amount)
+            total_healed += char.hp - old_hp
+
+        # Warlocks recover Pact Magic slots on short rest
+        pact_slots_recovered = 0
+        if char.char_class == "Warlock":
+            restore_all_slots(char)
+            pact_slots_recovered = sum(char.spell_slots.values())
+
+        msg = (f"{char.name} takes a short rest, spending {dice_to_spend} "
+               f"hit {'die' if dice_to_spend == 1 else 'dice'} (rolled {rolls}).")
+        if total_healed > 0:
+            msg += f" Recovered {total_healed} HP (now {char.hp}/{char.max_hp})."
+        else:
+            msg += f" Already at full HP ({char.hp}/{char.max_hp})."
+        if pact_slots_recovered:
+            msg += f" Pact Magic slots restored."
+
+        return {
+            "character": char.name,
+            "hit_dice_spent": dice_to_spend,
+            "rolls": rolls,
+            "hp_recovered": total_healed,
+            "current_hp": char.hp,
+            "max_hp": char.max_hp,
+            "pact_slots_recovered": pact_slots_recovered,
+            "message": msg,
+        }
+
+    def _tool_give_xp(self, inp: dict) -> dict:
+        char = self.characters.get(inp["character_id"])
+        if not char:
+            return {"error": f"Character {inp['character_id']} not found"}
+
+        amount = max(0, int(inp["amount"]))
+        char.xp = getattr(char, "xp", 0) + amount
+        reason = inp.get("reason", "")
+
+        XP_FOR_LEVEL = [
+            0, 300, 900, 2700, 6500, 14000, 23000, 34000,
+            48000, 64000, 85000, 100000, 120000, 140000,
+            165000, 195000, 225000, 265000, 305000, 355000,
+        ]
+        next_threshold = XP_FOR_LEVEL[min(char.level, len(XP_FOR_LEVEL) - 1)]
+        level_up_ready = char.level < 20 and char.xp >= next_threshold
+
+        msg = f"{char.name} earned {amount} XP{f' for {reason}' if reason else ''}. Total: {char.xp} XP."
+        if level_up_ready:
+            msg += f" {char.name} has enough XP to reach level {char.level + 1}!"
+
+        return {
+            "character": char.name,
+            "xp_awarded": amount,
+            "total_xp": char.xp,
+            "level_up_ready": level_up_ready,
+            "next_level": char.level + 1 if level_up_ready else None,
+            "message": msg,
+        }
+
+    def _tool_level_up(self, inp: dict) -> dict:
+        from .rules.characters import CLASSES, PROFICIENCY_BY_LEVEL
+        from .rules.content_repository import get_class_features
+
+        char = self.characters.get(inp["character_id"])
+        if not char:
+            return {"error": f"Character {inp['character_id']} not found"}
+
+        if char.level >= 20:
+            return {"error": f"{char.name} is already at max level (20)"}
+
+        use_average = bool(inp.get("use_average_hp", True))
+        class_data = CLASSES.get(char.char_class, {})
+        hit_die = class_data.get("hit_die", 8)
+        con_mod = char.ability_modifier("CON")
+
+        old_level = char.level
+        char.level += 1
+
+        if use_average:
+            hp_roll = hit_die // 2 + 1
+        else:
+            hp_roll = roll(f"1d{hit_die}").total
+
+        hp_gain = max(1, hp_roll + con_mod)
+        char.max_hp += hp_gain
+        char.hp += hp_gain
+
+        initialize_spell_slots(char)
+
+        new_features = get_class_features(char.char_class, level=char.level)
+        level_specific = [f for f in new_features if f.get("level") == char.level]
+        existing_ids = {f.get("id") or f.get("name") for f in char.class_features}
+        for feat in level_specific:
+            fid = feat.get("id") or feat.get("name")
+            if fid and fid not in existing_ids:
+                char.class_features.append(feat)
+                existing_ids.add(fid)
+
+        new_prof = PROFICIENCY_BY_LEVEL.get(char.level, 2)
+        old_prof = PROFICIENCY_BY_LEVEL.get(old_level, 2)
+        feature_names = [f.get("name", "?") for f in level_specific]
+
+        msg = f"{char.name} advances to level {char.level}! HP +{hp_gain} (now {char.hp}/{char.max_hp})."
+        if new_prof > old_prof:
+            msg += f" Proficiency bonus increased to +{new_prof}."
+        if feature_names:
+            msg += f" New features: {', '.join(feature_names)}."
+
+        return {
+            "character": char.name,
+            "old_level": old_level,
+            "new_level": char.level,
+            "hp_gain": hp_gain,
+            "current_hp": char.hp,
+            "max_hp": char.max_hp,
+            "new_proficiency_bonus": new_prof,
+            "new_features": feature_names,
+            "spell_slots": char.spell_slots,
+            "message": msg,
+        }
+
+    def _tool_reveal_area(self, inp: dict) -> dict:
+        if not self.game_map:
+            return {"error": "No map loaded"}
+
+        radius = int(inp.get("vision_radius", 8))
+
+        entity_id = inp.get("entity_id")
+        if entity_id:
+            entity = self.game_map.entities.get(entity_id)
+            if entity:
+                self.game_map.compute_fov(entity.x, entity.y, radius)
+
+        for tile_coord in (inp.get("tiles") or []):
+            self.game_map.revealed.add((int(tile_coord["x"]), int(tile_coord["y"])))
+
+        return {
+            "revealed": True,
+            "total_revealed": len(self.game_map.revealed),
+            "message": f"Area revealed. Total known tiles: {len(self.game_map.revealed)}.",
+        }
+
+    def _tool_generate_loot(self, inp: dict) -> dict:
+        import random as _random
+        from .rules.items import ITEM_CATALOG
+
+        strength = inp.get("encounter_strength", "medium")
+        gold_mult = float(inp.get("gold_multiplier", 1.0))
+
+        GOLD_RANGE = {
+            "trivial": (2, 10),
+            "easy": (5, 25),
+            "medium": (10, 50),
+            "hard": (25, 100),
+            "deadly": (50, 250),
+        }
+        ITEM_COUNT = {"trivial": 0, "easy": 1, "medium": 1, "hard": 2, "deadly": 3}
+
+        gold_min, gold_max = GOLD_RANGE.get(strength, (10, 50))
+        gold = int(_random.randint(gold_min, gold_max) * gold_mult)
+        item_count = ITEM_COUNT.get(strength, 1)
+
+        candidates = [
+            item for item in ITEM_CATALOG.values()
+            if 0 < item.cost_gp <= gold_max * 2
+        ]
+        chosen = _random.sample(candidates, min(item_count, len(candidates))) if candidates and item_count > 0 else []
+        loot_items = [{"id": i.id, "name": i.name, "value_gp": i.cost_gp} for i in chosen]
+
+        award_to = inp.get("award_to")
+        if award_to:
+            char = self.characters.get(award_to)
+            if char:
+                char.gold_gp = getattr(char, "gold_gp", 0) + gold
+                for li in loot_items:
+                    item = lookup_catalog_item(li["id"])
+                    if item:
+                        entry = item.to_dict()
+                        entry["quantity"] = 1
+                        entry["notes"] = "Found as loot"
+                        char.inventory.append(entry)
+
+        awarded_to_name: str | None = None
+        if award_to:
+            c = self.characters.get(award_to)
+            awarded_to_name = c.name if c else award_to
+
+        item_names = [i["name"] for i in loot_items]
+        msg = f"Loot: {gold} gp"
+        if item_names:
+            msg += f" and {', '.join(item_names)}"
+        if awarded_to_name:
+            msg += f" (awarded to {awarded_to_name})"
+        msg += "."
+
+        return {
+            "gold": gold,
+            "items": loot_items,
+            "awarded_to": award_to,
+            "message": msg,
+        }
+
+    def _tool_open_shop(self, inp: dict) -> dict:
+        from .rules.items import ITEM_CATALOG
+
+        shop_type = inp.get("shop_type", "general")
+        shop_name = inp.get("shop_name", "The Merchant")
+        settlement = inp.get("settlement_size", "town")
+
+        SHOP_CATEGORIES: dict[str, list[str]] = {
+            "general": ["gear", "tool", "ammunition"],
+            "weapons": ["weapon"],
+            "armor": ["armor", "shield"],
+            "magic": ["gear"],
+            "potions": ["gear"],
+            "blacksmith": ["weapon", "armor", "shield", "tool"],
+        }
+        PRICE_CAP = {"hamlet": 5, "village": 15, "town": 50, "city": 200, "metropolis": 1000}
+
+        max_price = PRICE_CAP.get(settlement, 50)
+        categories = SHOP_CATEGORIES.get(shop_type, ["gear"])
+
+        available = [
+            {
+                "id": item.id,
+                "name": item.name,
+                "category": item.category,
+                "cost_gp": item.cost_gp,
+                "description": item.description or "",
+                "weight_lb": item.weight_lb,
+            }
+            for item in ITEM_CATALOG.values()
+            if item.category in categories and 0 < item.cost_gp <= max_price
+        ]
+        available.sort(key=lambda x: x["cost_gp"])
+
+        return {
+            "shop_name": shop_name,
+            "shop_type": shop_type,
+            "settlement_size": settlement,
+            "items": available,
+            "message": f"{shop_name} offers {len(available)} items for sale.",
         }

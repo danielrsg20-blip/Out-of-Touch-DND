@@ -37,7 +37,7 @@ export function useWebSocket() {
   const narrativeLockRef = useRef(false)
   const lastVoiceNoticeRef = useRef<{ stt: string; tts: string; browserTtsShown: boolean }>({ stt: '', tts: '', browserTtsShown: false })
   const { roomCode, sessionId, playerId, setConnected, addPlayer, setPlayers, getSession, mockMode } = useSessionStore()
-  const { setMap, updateEntity, addEntity, removeEntity, setCombat, addNarrative, syncState, setLoading, setPendingRoll, setDmGenerationStatus, setTtsPlaybackStatus, voiceSpeed } = useGameStore()
+  const { setMap, updateEntity, addEntity, removeEntity, setCombat, addNarrative, syncState, setLoading, setPendingRoll, setDmGenerationStatus, setTtsPlaybackStatus, voiceSpeed, setShopData, setLootData } = useGameStore()
   const setOverlay = useOverlayStore((s) => s.setOverlay)
   const setTraversalGrid = useOverlayStore((s) => s.setTraversalGrid)
 
@@ -448,6 +448,30 @@ export function useWebSocket() {
         }
         break
 
+      case 'shop_open': {
+        const d = msg.data as Record<string, unknown>
+        if (d && typeof d.shop_name === 'string') {
+          setShopData({
+            shop_name: d.shop_name,
+            shopkeeper: typeof d.shopkeeper === 'string' ? d.shopkeeper : undefined,
+            items: Array.isArray(d.items) ? d.items as import('../stores/gameStore').ShopItem[] : [],
+          })
+        }
+        break
+      }
+
+      case 'loot_result': {
+        const d = msg.data as Record<string, unknown>
+        if (d) {
+          setLootData({
+            items: Array.isArray(d.items) ? d.items as Array<{ name: string; quantity?: number; value_gp?: number }> : [],
+            gold: typeof d.gold === 'number' ? d.gold : undefined,
+            description: typeof d.description === 'string' ? d.description : undefined,
+          })
+        }
+        break
+      }
+
       case 'character_created':
         addNarrative('system', `Character created: ${(msg.character as { name: string }).name}`)
         break
@@ -457,7 +481,7 @@ export function useWebSocket() {
         setLoading(false)
         break
     }
-  }, [addNarrative, addEntity, addPlayer, removeEntity, renderSessionStartProtocol, setCombat, setLoading, setMap, setOverlay, setPlayers, setPendingRoll, setTraversalGrid, speakNarration, syncState, updateEntity])
+  }, [addNarrative, addEntity, addPlayer, removeEntity, renderSessionStartProtocol, setCombat, setLoading, setLootData, setMap, setOverlay, setPlayers, setPendingRoll, setShopData, setTraversalGrid, speakNarration, syncState, updateEntity])
 
   const sendAction = useCallback((content: string) => {
     if (!roomCode || !playerId) {

@@ -2,6 +2,26 @@ import { create } from 'zustand'
 import type { MapData, CharacterData, CombatData, NarrativeEntry, EntityData, PendingRoll, ItemData, DmGenerationStatus, TtsPlaybackStatus, Codex } from '../types'
 import type { TranscriptMode } from '../components/VoiceControl'
 
+export interface ShopItem {
+  name: string
+  type: string
+  price_gp: number
+  description?: string
+  quantity?: number
+}
+
+export interface ShopData {
+  shop_name: string
+  shopkeeper?: string
+  items: ShopItem[]
+}
+
+export interface LootData {
+  items: Array<{ name: string; quantity?: number; value_gp?: number }>
+  gold?: number
+  description?: string
+}
+
 let entryCounter = 0
 
 const ABILITY_KEYS = ['STR', 'DEX', 'CON', 'INT', 'WIS', 'CHA'] as const
@@ -41,6 +61,11 @@ interface GameState {
   setDmGenerationStatus: (status: DmGenerationStatus | null) => void
   setTtsPlaybackStatus: (status: TtsPlaybackStatus | null) => void
   syncCodex: (codex: Codex) => void
+
+  shopData: ShopData | null
+  lootData: LootData | null
+  setShopData: (data: ShopData | null) => void
+  setLootData: (data: LootData | null) => void
   syncState: (state: {
     characters?: Record<string, CharacterData>
     map?: MapData | null
@@ -236,6 +261,8 @@ export const useGameStore = create<GameState>((set) => ({
   pendingRoll: null,
   dmGenerationStatus: null,
   ttsPlaybackStatus: null,
+  shopData: null,
+  lootData: null,
 
   setMap: (map) => set({ map }),
 
@@ -277,6 +304,8 @@ export const useGameStore = create<GameState>((set) => ({
   setDmGenerationStatus: (status) => set({ dmGenerationStatus: status }),
   setTtsPlaybackStatus: (status) => set({ ttsPlaybackStatus: status }),
   syncCodex: (codex) => set({ codex }),
+  setShopData: (data) => set({ shopData: data }),
+  setLootData: (data) => set({ lootData: data }),
 
   setUsage: (usage) => set({ usage }),
   setLoading: (loading) => set({ isLoading: loading }),

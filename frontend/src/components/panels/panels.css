@@ -2348,3 +2348,251 @@
   text-decoration: line-through;
   opacity: 0.7;
 }
+
+/* ── Level-up banner ─────────────────────────────────────────────────── */
+.levelup-banner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  padding: 0.35rem 0.6rem;
+  margin: 0.4rem 0;
+  background: linear-gradient(90deg, rgba(228,168,83,0.18) 0%, rgba(228,168,83,0.08) 100%);
+  border: 1px solid rgba(228,168,83,0.4);
+  border-radius: 4px;
+  color: var(--accent-gold);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  animation: levelup-pulse 2s ease-in-out infinite;
+  transition: background 0.2s;
+}
+.levelup-banner:hover {
+  background: linear-gradient(90deg, rgba(228,168,83,0.28) 0%, rgba(228,168,83,0.14) 100%);
+}
+@keyframes levelup-pulse {
+  0%, 100% { box-shadow: 0 0 6px rgba(228,168,83,0.2); }
+  50% { box-shadow: 0 0 14px rgba(228,168,83,0.55); }
+}
+
+/* ── Rest panel (ActionBar out-of-combat) ────────────────────────────── */
+.rest-panel .rest-header-label {
+  font-size: 0.65rem;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+/* ── Journal panel ───────────────────────────────────────────────────── */
+.journal-panel {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+}
+.journal-panel h3 {
+  margin-bottom: 0.5rem;
+}
+.journal-textarea {
+  flex: 1;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  color: var(--text-primary);
+  font-size: 0.78rem;
+  line-height: 1.55;
+  padding: 0.5rem;
+  resize: none;
+  font-family: inherit;
+  outline: none;
+  transition: border-color 0.2s;
+  min-height: 160px;
+}
+.journal-textarea:focus {
+  border-color: rgba(228,168,83,0.35);
+}
+.journal-saved-hint {
+  font-size: 0.6rem;
+  color: var(--text-secondary);
+  text-align: right;
+  margin-top: 0.2rem;
+  opacity: 0.7;
+}
+
+/* ── Shop modal ──────────────────────────────────────────────────────── */
+.shop-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.7);
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.shop-modal {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 1.2rem;
+  max-width: 480px;
+  width: 92vw;
+  max-height: 72vh;
+  overflow-y: auto;
+}
+.shop-modal h2 {
+  font-family: var(--font-fantasy, 'Cinzel', Georgia, serif);
+  color: var(--accent-gold);
+  font-size: 0.9rem;
+  margin-bottom: 0.8rem;
+}
+.shop-item-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.3rem 0;
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+  font-size: 0.78rem;
+}
+.shop-item-name { flex: 1; color: var(--text-primary); }
+.shop-item-price { color: var(--accent-gold); font-weight: 600; min-width: 3rem; text-align: right; }
+.shop-buy-btn {
+  padding: 0.15rem 0.5rem;
+  background: rgba(228,168,83,0.15);
+  border: 1px solid rgba(228,168,83,0.3);
+  color: var(--accent-gold);
+  border-radius: 3px;
+  font-size: 0.7rem;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.shop-buy-btn:hover { background: rgba(228,168,83,0.28); }
+.shop-close-btn {
+  margin-top: 0.8rem;
+  display: block;
+  width: 100%;
+  padding: 0.4rem;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid var(--border-color);
+  color: var(--text-secondary);
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.78rem;
+}
+.shop-close-btn:hover { color: var(--text-primary); }
+
+/* ── Loot notification ───────────────────────────────────────────────── */
+.loot-toast {
+  position: fixed;
+  bottom: 4.5rem;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 150;
+  background: var(--bg-secondary);
+  border: 1px solid rgba(228,168,83,0.4);
+  border-radius: 6px;
+  padding: 0.6rem 1rem;
+  font-size: 0.78rem;
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+  animation: loot-slide-up 0.3s ease;
+}
+@keyframes loot-slide-up {
+  from { opacity: 0; transform: translateX(-50%) translateY(12px); }
+  to { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
+
+/* Loot toast sub-elements */
+.loot-toast {
+  flex-direction: column;
+  align-items: flex-start;
+  cursor: pointer;
+  min-width: 220px;
+  max-width: 360px;
+}
+.loot-toast-header {
+  font-weight: 700;
+  color: var(--accent-gold);
+  font-size: 0.82rem;
+  margin-bottom: 0.2rem;
+}
+.loot-toast-desc { color: var(--text-secondary); margin-bottom: 0.2rem; }
+.loot-toast-gold { color: #f7c948; font-weight: 600; margin-bottom: 0.15rem; }
+.loot-toast-items {
+  margin: 0;
+  padding-left: 1rem;
+  list-style: disc;
+  color: var(--text-primary);
+}
+.loot-toast-dismiss {
+  font-size: 0.65rem;
+  color: var(--text-muted, #666);
+  margin-top: 0.3rem;
+  align-self: flex-end;
+}
+
+/* Shop modal sub-elements */
+.shop-modal-header {
+  display: flex;
+  align-items: baseline;
+  gap: 0.6rem;
+  margin-bottom: 0.8rem;
+  flex-wrap: wrap;
+}
+.shop-modal-title {
+  font-family: var(--font-fantasy, 'Cinzel', Georgia, serif);
+  color: var(--accent-gold);
+  font-size: 0.9rem;
+  flex: 1;
+}
+.shop-modal-keeper {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  font-style: italic;
+}
+.shop-modal .shop-close-btn {
+  position: absolute;
+  top: 0.6rem;
+  right: 0.7rem;
+  width: auto;
+  margin: 0;
+  padding: 0.1rem 0.4rem;
+  font-size: 0.8rem;
+  background: transparent;
+  border: none;
+}
+.shop-modal { position: relative; }
+.shop-items-list { display: flex; flex-direction: column; gap: 0; }
+.shop-empty { color: var(--text-secondary); font-style: italic; font-size: 0.8rem; text-align: center; padding: 1rem 0; }
+.shop-item-row {
+  justify-content: space-between;
+}
+.shop-item-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  flex: 1;
+  min-width: 0;
+}
+.shop-item-desc {
+  font-size: 0.7rem;
+  color: var(--text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.shop-item-type {
+  font-size: 0.65rem;
+  color: var(--text-muted, #777);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.shop-item-right {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex-shrink: 0;
+}

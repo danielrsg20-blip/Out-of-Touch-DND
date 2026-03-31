@@ -24,6 +24,7 @@ export default function ActionBar({ onSend, onCastSpell, onInitiateTarget }: Act
   const [selectedSpell, setSelectedSpell] = useState('')
   const [selectedSlot, setSelectedSlot] = useState(0)
   const [advancingTurn, setAdvancingTurn] = useState(false)
+  const [resting, setResting] = useState<'short' | 'long' | null>(null)
 
   const combatActive = !!combat?.is_active
 
@@ -127,7 +128,71 @@ export default function ActionBar({ onSend, onCastSpell, onInitiateTarget }: Act
     return () => document.removeEventListener('keydown', handler)
   }, [combatActive, isMyTurn, onSend, handleEndTurn, quickSpells, castSpell])
 
-  if (!combatActive || !combat) return null
+  if (!combatActive || !combat) {
+    const handleShortRest = async () => {
+      if (!roomCode || !playerId || resting) return
+      setResting('short')
+      try {
+        await invokeEdgeFunction<Record<string, unknown>>('dm-action', {
+          action: 'player_action',
+          room_code: roomCode,
+          player_id: playerId,
+          content: 'I want to take a short rest, spending 1 hit die to recover HP.',
+          mock_mode: mockMode,
+        }, { authMode: 'anon' })
+      } catch (err) {
+        addNarrative('system', `Short rest failed: ${err instanceof Error ? err.message : 'Unknown error'}`)
+      } finally {
+        setResting(null)
+      }
+    }
+
+    const handleLongRest = async () => {
+      if (!roomCode || !playerId || resting) return
+      setResting('long')
+      try {
+        await invokeEdgeFunction<Record<string, unknown>>('dm-action', {
+          action: 'player_action',
+          room_code: roomCode,
+          player_id: playerId,
+          content: 'The party takes a long rest to recover fully.',
+          mock_mode: mockMode,
+        }, { authMode: 'anon' })
+      } catch (err) {
+        addNarrative('system', `Long rest failed: ${err instanceof Error ? err.message : 'Unknown error'}`)
+      } finally {
+        setResting(null)
+      }
+    }
+
+    return (
+      <div className="action-bar rest-panel">
+        <div className="action-bar-header">
+          <span className="rest-header-label">⏳ Downtime</span>
+        </div>
+        <div className="action-buttons">
+          <button
+            className="action-btn"
+            onClick={handleShortRest}
+            disabled={!!resting}
+            title="Spend 1 hit die to recover HP (1 hour)"
+          >
+            <span className="action-icon">🌙</span>
+            <span className="action-label">{resting === 'short' ? 'Resting…' : 'Short Rest'}</span>
+          </button>
+          <button
+            className="action-btn"
+            onClick={handleLongRest}
+            disabled={!!resting}
+            title="Fully recover HP and spell slots (8 hours)"
+          >
+            <span className="action-icon">🛌</span>
+            <span className="action-label">{resting === 'long' ? 'Resting…' : 'Long Rest'}</span>
+          </button>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="action-bar">

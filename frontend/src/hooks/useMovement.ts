@@ -1,6 +1,6 @@
 /**
  * useMovement Hook
- * 
+ *
  * Integrates with Supabase edge function for movement commands.
  * Handles RPC calls, realtime updates, and animation orchestration.
  */
@@ -16,13 +16,27 @@ import { createMapGridTransform } from "../lib/mapGridTransform";
 export interface UseMovementReturn {
   isMoving: boolean;
   error: string | null;
-  executeMove: (entityId: string, targetX: number, targetY: number) => Promise<boolean>;
+  executeMove: (
+    entityId: string,
+    targetX: number,
+    targetY: number,
+  ) => Promise<boolean>;
   calculateReachable: (entityId: string) => Set<string>;
-  getPathPreview: (entityId: string, targetX: number, targetY: number) => NavNode[];
-  getPathPreviewWorld: (entityId: string, targetX: number, targetY: number) => Array<{ x: number; y: number }>;
+  getPathPreview: (
+    entityId: string,
+    targetX: number,
+    targetY: number,
+  ) => NavNode[];
+  getPathPreviewWorld: (
+    entityId: string,
+    targetX: number,
+    targetY: number,
+  ) => Array<{ x: number; y: number }>;
 }
 
-export function useMovement(sendMoveToken?: (characterId: string, x: number, y: number) => void): UseMovementReturn {
+export function useMovement(
+  sendMoveToken?: (characterId: string, x: number, y: number) => void,
+): UseMovementReturn {
   const gameStore = useGameStore();
   const [isMoving, setIsMoving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -51,7 +65,11 @@ export function useMovement(sendMoveToken?: (characterId: string, x: number, y: 
 
   // Execute movement request
   const executeMove = useCallback(
-    async (entityId: string, targetX: number, targetY: number): Promise<boolean> => {
+    async (
+      entityId: string,
+      targetX: number,
+      targetY: number,
+    ): Promise<boolean> => {
       const grid = collisionGrid();
       if (!grid || !gameStore.map) {
         setError("Game state not available");
@@ -65,7 +83,7 @@ export function useMovement(sendMoveToken?: (characterId: string, x: number, y: 
         targetY,
         grid,
         gameStore,
-        gameStore.map
+        gameStore.map,
       );
 
       if (!validation.valid) {
@@ -81,11 +99,11 @@ export function useMovement(sendMoveToken?: (characterId: string, x: number, y: 
         if (!sendMoveToken) {
           throw new Error("Move function not available");
         }
-        
+
         // sendMoveToken handles the actual RPC/REST call
         // It will emit realtime updates on success
         sendMoveToken(entityId, targetX, targetY);
-        
+
         return true;
       } catch (err: any) {
         setError(err.message || "Move failed");
@@ -94,7 +112,7 @@ export function useMovement(sendMoveToken?: (characterId: string, x: number, y: 
         setIsMoving(false);
       }
     },
-    [gameStore, collisionGrid, sendMoveToken]
+    [gameStore, collisionGrid, sendMoveToken],
   );
 
   // Calculate reachable tiles for UI overlay
@@ -114,10 +132,10 @@ export function useMovement(sendMoveToken?: (characterId: string, x: number, y: 
         entity.x,
         entity.y,
         movementRemaining,
-        grid
+        grid,
       );
     },
-    [gameStore.map, collisionGrid]
+    [gameStore.map, collisionGrid],
   );
 
   // Get path preview for hover
@@ -130,21 +148,33 @@ export function useMovement(sendMoveToken?: (characterId: string, x: number, y: 
       const grid = collisionGrid();
       if (!grid) return [];
 
-      return MovementController.getPathPreview(entity.x, entity.y, targetX, targetY, grid);
+      return MovementController.getPathPreview(
+        entity.x,
+        entity.y,
+        targetX,
+        targetY,
+        grid,
+      );
     },
-    [gameStore.map, collisionGrid]
+    [gameStore.map, collisionGrid],
   );
 
   // Get path preview projected to world-space pixels via shared map-grid transform.
   const getPathPreviewWorld = useCallback(
-    (entityId: string, targetX: number, targetY: number): Array<{ x: number; y: number }> => {
+    (
+      entityId: string,
+      targetX: number,
+      targetY: number,
+    ): Array<{ x: number; y: number }> => {
       const mapData = gameStore.map;
       if (!mapData) return [];
       const path = getPathPreview(entityId, targetX, targetY);
       const gridTransform = createMapGridTransform(mapData);
-      return path.map((node) => gridTransform.cellToPixelCenter(node.x, node.y));
+      return path.map((node) =>
+        gridTransform.cellToPixelCenter(node.x, node.y),
+      );
     },
-    [gameStore.map, getPathPreview]
+    [gameStore.map, getPathPreview],
   );
 
   return {

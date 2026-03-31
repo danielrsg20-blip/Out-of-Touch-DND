@@ -708,6 +708,30 @@ export default function CharacterSheet() {
           {/* XP bar */}
           <XPBar xp={char.xp} level={char.level} />
 
+          {/* Level-up banner */}
+          {(() => {
+            const nextThreshold = XP_THRESHOLDS[char.level] ?? Infinity
+            const canLevelUp = char.level < 20 && char.xp >= nextThreshold
+            if (!canLevelUp) return null
+            const handleLevelUp = async () => {
+              if (!roomCode || !playerId) return
+              try {
+                await invokeEdgeFunction<Record<string, unknown>>('dm-action', {
+                  action: 'player_action',
+                  room_code: roomCode,
+                  player_id: playerId,
+                  content: `I have enough XP to reach level ${char.level + 1}. Please level me up.`,
+                  mock_mode: mockMode,
+                }, { authMode: 'anon' })
+              } catch { /* non-critical */ }
+            }
+            return (
+              <button className="levelup-banner" onClick={handleLevelUp} title="Notify DM to level up">
+                ⚡ Level Up Available! → Level {char.level + 1}
+              </button>
+            )
+          })()}
+
           {/* Ability scores */}
           <div className="char-abilities">
             {Object.entries(char.abilities).map(([ab, score]) => (
