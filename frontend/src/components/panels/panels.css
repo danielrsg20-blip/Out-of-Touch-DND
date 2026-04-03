@@ -2,7 +2,7 @@
   display: flex;
   align-items: center;
   gap: 0.45rem;
-  font-family: var(--font-fantasy, 'Cinzel', Georgia, serif);
+  font-family: var(--font-fantasy, "Cinzel", Georgia, serif);
   font-size: 0.68rem;
   text-transform: uppercase;
   letter-spacing: 0.12em;
@@ -15,14 +15,14 @@
 }
 
 .panel-title::before {
-  content: '◈';
+  content: "◈";
   font-size: 0.6rem;
   flex-shrink: 0;
   opacity: 0.8;
 }
 
 .panel-title::after {
-  content: '';
+  content: "";
   flex: 1;
   height: 1px;
   background: linear-gradient(90deg, rgba(228, 168, 83, 0.35), transparent);
@@ -77,8 +77,16 @@
 }
 
 @keyframes typing-bounce {
-  0%, 80%, 100% { transform: translateY(0); opacity: 0.35; }
-  40%           { transform: translateY(-4px); opacity: 1; }
+  0%,
+  80%,
+  100% {
+    transform: translateY(0);
+    opacity: 0.35;
+  }
+  40% {
+    transform: translateY(-4px);
+    opacity: 1;
+  }
 }
 
 .dm-typing {
@@ -106,8 +114,12 @@
   animation: typing-bounce 1.2s ease-in-out infinite;
 }
 
-.dm-typing-dots span:nth-child(2) { animation-delay: 0.18s; }
-.dm-typing-dots span:nth-child(3) { animation-delay: 0.36s; }
+.dm-typing-dots span:nth-child(2) {
+  animation-delay: 0.18s;
+}
+.dm-typing-dots span:nth-child(3) {
+  animation-delay: 0.36s;
+}
 
 .narrative-empty {
   display: flex;
@@ -123,7 +135,7 @@
 }
 
 .narrative-empty::before {
-  content: '📜';
+  content: "📜";
   font-style: normal;
   font-size: 1.4rem;
   opacity: 0.5;
@@ -167,7 +179,7 @@
 
 .narrative-dice {
   color: var(--accent-purple);
-  font-family: 'Consolas', 'Courier New', monospace;
+  font-family: "Consolas", "Courier New", monospace;
   font-size: 0.85rem;
   background: rgba(155, 89, 182, 0.1);
   padding: 0.2rem 0.4rem;
@@ -192,7 +204,9 @@
   border-radius: 6px;
   font-size: 0.9rem;
   outline: none;
-  transition: border-color 0.2s, box-shadow 0.2s;
+  transition:
+    border-color 0.2s,
+    box-shadow 0.2s;
 }
 .chat-text-input:focus {
   border-color: rgba(228, 168, 83, 0.6);
@@ -210,7 +224,10 @@
   border-radius: 6px;
   font-weight: 700;
   font-size: 0.9rem;
-  transition: opacity 0.2s, transform 0.15s, box-shadow 0.2s;
+  transition:
+    opacity 0.2s,
+    transform 0.15s,
+    box-shadow 0.2s;
   box-shadow: 0 2px 8px rgba(228, 168, 83, 0.2);
   cursor: pointer;
   flex-shrink: 0;
@@ -260,7 +277,9 @@
   background: rgba(228, 168, 83, 0.1);
   border-radius: 999px;
   padding: 0.12rem 0.45rem;
-  transition: transform 0.2s ease, background-color 0.2s ease;
+  transition:
+    transform 0.2s ease,
+    background-color 0.2s ease;
 }
 
 .combat-round-badge.round-transition {
@@ -269,21 +288,37 @@
 }
 
 @keyframes turn-glow {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(228, 168, 83, 0); }
-  50%       { box-shadow: 0 0 10px 2px rgba(228, 168, 83, 0.2); }
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(228, 168, 83, 0);
+  }
+  50% {
+    box-shadow: 0 0 10px 2px rgba(228, 168, 83, 0.2);
+  }
 }
 
 @keyframes your-turn-pulse {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(228, 168, 83, 0); border-color: rgba(228, 168, 83, 0.55); }
-  50%       { box-shadow: 0 0 14px 3px rgba(228, 168, 83, 0.28); border-color: rgba(228, 168, 83, 0.9); }
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(228, 168, 83, 0);
+    border-color: rgba(228, 168, 83, 0.55);
+  }
+  50% {
+    box-shadow: 0 0 14px 3px rgba(228, 168, 83, 0.28);
+    border-color: rgba(228, 168, 83, 0.9);
+  }
 }
 
 .your-turn-banner {
-  background: linear-gradient(135deg, rgba(228, 168, 83, 0.18) 0%, rgba(228, 168, 83, 0.08) 100%);
+  background: linear-gradient(
+    135deg,
+    rgba(228, 168, 83, 0.18) 0%,
+    rgba(228, 168, 83, 0.08) 100%
+  );
   border: 1px solid rgba(228, 168, 83, 0.55);
   border-radius: 6px;
   color: var(--accent-gold);
-  font-family: var(--font-fantasy, 'Cinzel', Georgia, serif);
+  font-family: var(--font-fantasy, "Cinzel", Georgia, serif);
   font-size: 0.72rem;
   font-weight: 700;
   text-transform: uppercase;
@@ -333,7 +368,9 @@
 .init-hp-fill {
   height: 100%;
   background: var(--hp-bar, var(--accent-green));
-  transition: width 0.4s ease, background 0.4s ease;
+  transition:
+    width 0.4s ease,
+    background 0.4s ease;
 }
 
 .init-hp-text {
@@ -341,6 +378,47 @@
   color: var(--text-secondary);
   min-width: 38px;
   text-align: right;
+}
+
+/* ── Death Save Pips ─────────────────────────────────────────────────── */
+.death-save-row {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  width: 100%;
+  padding: 0.15rem 0 0;
+  flex-basis: 100%;
+}
+.initiative-entry {
+  flex-wrap: wrap;
+}
+.death-save-label {
+  font-size: 0.65rem;
+  opacity: 0.7;
+  margin-right: 0.1rem;
+}
+.death-save-group {
+  display: flex;
+  gap: 3px;
+}
+.death-save-pip {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  border: 1.5px solid;
+}
+.death-save-success {
+  border-color: var(--accent-green, #2ecc71);
+}
+.death-save-success.filled {
+  background: var(--accent-green, #2ecc71);
+}
+.death-save-failure {
+  border-color: var(--accent-red, #e74c3c);
+}
+.death-save-failure.filled {
+  background: var(--accent-red, #e74c3c);
 }
 
 /* Character Sheet */
@@ -475,7 +553,7 @@
 }
 
 .skill-bonus {
-  font-family: 'Consolas', 'Courier New', monospace;
+  font-family: "Consolas", "Courier New", monospace;
   font-size: 0.72rem;
   color: var(--accent-gold);
   min-width: 24px;
@@ -504,7 +582,9 @@
 .char-hp-fill {
   height: 100%;
   background: var(--hp-bar, var(--accent-green));
-  transition: width 0.4s ease, background 0.4s ease;
+  transition:
+    width 0.4s ease,
+    background 0.4s ease;
 }
 .char-hp-text {
   font-size: 0.8rem;
@@ -745,7 +825,7 @@
 .inv-item-stat {
   font-size: 0.72rem;
   color: var(--accent-gold);
-  font-family: 'Consolas', 'Courier New', monospace;
+  font-family: "Consolas", "Courier New", monospace;
   flex-shrink: 0;
 }
 
@@ -809,7 +889,9 @@
   border-radius: 6px;
   background: rgba(255, 255, 255, 0.02);
   text-align: center;
-  transition: border-color 0.15s, background 0.15s;
+  transition:
+    border-color 0.15s,
+    background 0.15s;
 }
 
 .paper-doll-slot.filled {
@@ -859,7 +941,7 @@
 .paper-doll-slot-stat {
   font-size: 0.55rem;
   color: var(--accent-gold);
-  font-family: 'Consolas', 'Courier New', monospace;
+  font-family: "Consolas", "Courier New", monospace;
 }
 
 .paper-doll-unequip-btn {
@@ -907,7 +989,7 @@
 
 .inv-gold-value {
   color: var(--accent-gold);
-  font-family: 'Consolas', 'Courier New', monospace;
+  font-family: "Consolas", "Courier New", monospace;
   font-size: 0.85rem;
   font-weight: 600;
 }
@@ -991,7 +1073,9 @@
   height: 100%;
   background: var(--accent-green);
   border-radius: 2px;
-  transition: width 0.3s ease, background 0.3s ease;
+  transition:
+    width 0.3s ease,
+    background 0.3s ease;
 }
 
 .inv-weight-bar-fill.encumbered {
@@ -1058,7 +1142,9 @@
   cursor: pointer;
   flex-shrink: 0;
   margin-left: auto;
-  transition: background 0.15s, color 0.15s;
+  transition:
+    background 0.15s,
+    color 0.15s;
 }
 
 .inv-equip-btn:hover {
@@ -1350,7 +1436,11 @@
 .battlemap-actions-panel {
   border: 1px solid var(--border-color);
   border-radius: 8px;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.045), rgba(255, 255, 255, 0.015));
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.045),
+    rgba(255, 255, 255, 0.015)
+  );
   padding: 0.5rem;
   margin-bottom: 0.55rem;
 }
@@ -1445,9 +1535,17 @@
 
 /* Dice Roller */
 @keyframes dice-result-pop {
-  0%   { transform: scale(1.5); opacity: 0.6; }
-  60%  { transform: scale(0.92); }
-  100% { transform: scale(1); opacity: 1; }
+  0% {
+    transform: scale(1.5);
+    opacity: 0.6;
+  }
+  60% {
+    transform: scale(0.92);
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
 }
 
 .dice-roller {
@@ -1465,7 +1563,7 @@
 }
 
 .dice-last-result {
-  font-family: 'Consolas', 'Courier New', monospace;
+  font-family: "Consolas", "Courier New", monospace;
   font-size: 1.05rem;
   font-weight: 700;
   color: var(--accent-purple);
@@ -1489,7 +1587,7 @@
   padding: 0.28rem 0.5rem;
   border-radius: 5px;
   font-size: 0.75rem;
-  font-family: 'Consolas', 'Courier New', monospace;
+  font-family: "Consolas", "Courier New", monospace;
   font-weight: 600;
   transition: all 0.15s;
   cursor: pointer;
@@ -1497,7 +1595,7 @@
 }
 
 .die-btn::before {
-  content: '⬡';
+  content: "⬡";
   position: absolute;
   inset: 0;
   display: flex;
@@ -1553,7 +1651,11 @@
 
 .dice-roll-btn {
   flex: 1;
-  background: linear-gradient(135deg, rgba(155, 89, 182, 0.25) 0%, rgba(155, 89, 182, 0.12) 100%);
+  background: linear-gradient(
+    135deg,
+    rgba(155, 89, 182, 0.25) 0%,
+    rgba(155, 89, 182, 0.12) 100%
+  );
   border: 1px solid rgba(155, 89, 182, 0.55);
   color: var(--accent-purple);
   padding: 0.35rem 0.6rem;
@@ -1565,7 +1667,11 @@
 }
 
 .dice-roll-btn:hover {
-  background: linear-gradient(135deg, rgba(155, 89, 182, 0.38) 0%, rgba(155, 89, 182, 0.22) 100%);
+  background: linear-gradient(
+    135deg,
+    rgba(155, 89, 182, 0.38) 0%,
+    rgba(155, 89, 182, 0.22) 100%
+  );
   border-color: var(--accent-purple);
   transform: translateY(-1px);
   box-shadow: 0 3px 10px rgba(155, 89, 182, 0.2);
@@ -1577,12 +1683,24 @@
 
 /* ── Die tumble animation — true CSS 3D ────────────────────────────── */
 @keyframes dice-tumble {
-  0%   { transform: perspective(120px) rotateX(0deg)   rotateY(0deg)   scale(1); }
-  15%  { transform: perspective(120px) rotateX(-35deg) rotateY(20deg)  scale(1.15); }
-  35%  { transform: perspective(120px) rotateX(25deg)  rotateY(-40deg) scale(0.9); }
-  55%  { transform: perspective(120px) rotateX(-18deg) rotateY(30deg)  scale(1.08); }
-  75%  { transform: perspective(120px) rotateX(12deg)  rotateY(-15deg) scale(0.96); }
-  100% { transform: perspective(120px) rotateX(0deg)   rotateY(0deg)   scale(1); }
+  0% {
+    transform: perspective(120px) rotateX(0deg) rotateY(0deg) scale(1);
+  }
+  15% {
+    transform: perspective(120px) rotateX(-35deg) rotateY(20deg) scale(1.15);
+  }
+  35% {
+    transform: perspective(120px) rotateX(25deg) rotateY(-40deg) scale(0.9);
+  }
+  55% {
+    transform: perspective(120px) rotateX(-18deg) rotateY(30deg) scale(1.08);
+  }
+  75% {
+    transform: perspective(120px) rotateX(12deg) rotateY(-15deg) scale(0.96);
+  }
+  100% {
+    transform: perspective(120px) rotateX(0deg) rotateY(0deg) scale(1);
+  }
 }
 
 .die-btn-rolling {
@@ -1593,11 +1711,23 @@
 
 /* ── Floating die face shown during roll ────────────────────────────── */
 @keyframes die-face-spin {
-  0%   { transform: perspective(200px) rotateX(0deg)   rotateY(0deg)   scale(1); opacity: 0.9; }
-  25%  { transform: perspective(200px) rotateX(-90deg) rotateY(45deg)  scale(1.1); }
-  50%  { transform: perspective(200px) rotateX(180deg) rotateY(-90deg) scale(0.95); }
-  75%  { transform: perspective(200px) rotateX(270deg) rotateY(135deg) scale(1.05); }
-  100% { transform: perspective(200px) rotateX(360deg) rotateY(0deg)   scale(1); opacity: 0.9; }
+  0% {
+    transform: perspective(200px) rotateX(0deg) rotateY(0deg) scale(1);
+    opacity: 0.9;
+  }
+  25% {
+    transform: perspective(200px) rotateX(-90deg) rotateY(45deg) scale(1.1);
+  }
+  50% {
+    transform: perspective(200px) rotateX(180deg) rotateY(-90deg) scale(0.95);
+  }
+  75% {
+    transform: perspective(200px) rotateX(270deg) rotateY(135deg) scale(1.05);
+  }
+  100% {
+    transform: perspective(200px) rotateX(360deg) rotateY(0deg) scale(1);
+    opacity: 0.9;
+  }
 }
 
 .dice-rolling-indicator {
@@ -1606,12 +1736,16 @@
   justify-content: center;
   width: 28px;
   height: 28px;
-  background: linear-gradient(135deg, rgba(155, 89, 182, 0.35), rgba(155, 89, 182, 0.15));
+  background: linear-gradient(
+    135deg,
+    rgba(155, 89, 182, 0.35),
+    rgba(155, 89, 182, 0.15)
+  );
   border: 1px solid rgba(155, 89, 182, 0.6);
   border-radius: 5px;
   font-size: 0.82rem;
   font-weight: 700;
-  font-family: 'Consolas', 'Courier New', monospace;
+  font-family: "Consolas", "Courier New", monospace;
   color: var(--accent-purple);
   animation: die-face-spin 0.56s linear infinite;
   transform-style: preserve-3d;
@@ -1704,7 +1838,7 @@
   display: flex;
   align-items: center;
   gap: 0.15rem;
-  font-family: 'Consolas', 'Courier New', monospace;
+  font-family: "Consolas", "Courier New", monospace;
   font-size: 0.8rem;
   color: var(--text-secondary);
   padding: 0.25rem 0.4rem;
@@ -1802,13 +1936,13 @@
 
 .dice-history-notation {
   color: var(--text-secondary);
-  font-family: 'Consolas', 'Courier New', monospace;
+  font-family: "Consolas", "Courier New", monospace;
   font-size: 0.7rem;
 }
 
 .dice-history-total {
   font-weight: 700;
-  font-family: 'Consolas', 'Courier New', monospace;
+  font-family: "Consolas", "Courier New", monospace;
   color: var(--accent-purple);
   min-width: 24px;
   text-align: right;
@@ -1821,15 +1955,23 @@
 
 /* ── Roll Request Panel ─────────────────────────────────────────────── */
 @keyframes roll-request-in {
-  from { opacity: 0; transform: translateY(6px); }
-  to   { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .roll-request-panel {
   border: 1px solid rgba(228, 168, 83, 0.65) !important;
   background: rgba(9, 13, 31, 0.96) !important;
   animation: roll-request-in 0.2s ease;
-  box-shadow: 0 0 18px rgba(228, 168, 83, 0.12), 0 4px 14px rgba(0, 0, 0, 0.4);
+  box-shadow:
+    0 0 18px rgba(228, 168, 83, 0.12),
+    0 4px 14px rgba(0, 0, 0, 0.4);
 }
 
 .roll-request-header {
@@ -1865,7 +2007,7 @@
 }
 
 .roll-request-dice {
-  font-family: 'Consolas', 'Courier New', monospace;
+  font-family: "Consolas", "Courier New", monospace;
   font-size: 1.4rem;
   font-weight: 700;
   color: var(--accent-gold, #e4a853);
@@ -1934,7 +2076,10 @@
   letter-spacing: 0.07em;
   padding: 0.12rem 0.55rem;
   cursor: pointer;
-  transition: color 0.15s, border-color 0.15s, background 0.15s;
+  transition:
+    color 0.15s,
+    border-color 0.15s,
+    background 0.15s;
   line-height: 1.4;
 }
 
@@ -1961,7 +2106,7 @@
 }
 
 .narrative-log-header::after {
-  content: '';
+  content: "";
   position: absolute;
   bottom: 0;
   left: 0;
@@ -1985,7 +2130,9 @@
   padding: 0.1rem 0.25rem;
   cursor: pointer;
   opacity: 0.5;
-  transition: opacity 0.15s, border-color 0.15s;
+  transition:
+    opacity 0.15s,
+    border-color 0.15s;
   line-height: 1;
 }
 
@@ -2005,7 +2152,7 @@
   color: var(--text-secondary);
   opacity: 0.5;
   margin-right: 0.35rem;
-  font-family: 'Consolas', 'Courier New', monospace;
+  font-family: "Consolas", "Courier New", monospace;
 }
 
 /* ── Enhanced dice entry ───────────────────────────────────────────── */
@@ -2036,13 +2183,23 @@
 
 /* ── Natural 20 — golden crit ───────────────────────────────── */
 @keyframes crit-flash {
-  0%   { box-shadow: 0 0 0 0 rgba(228, 168, 83, 0); }
-  30%  { box-shadow: 0 0 18px 4px rgba(228, 168, 83, 0.7); }
-  100% { box-shadow: 0 0 6px 1px rgba(228, 168, 83, 0.22); }
+  0% {
+    box-shadow: 0 0 0 0 rgba(228, 168, 83, 0);
+  }
+  30% {
+    box-shadow: 0 0 18px 4px rgba(228, 168, 83, 0.7);
+  }
+  100% {
+    box-shadow: 0 0 6px 1px rgba(228, 168, 83, 0.22);
+  }
 }
 
 .narrative-crit {
-  background: linear-gradient(90deg, rgba(228, 168, 83, 0.06) 0%, transparent 100%);
+  background: linear-gradient(
+    90deg,
+    rgba(228, 168, 83, 0.06) 0%,
+    transparent 100%
+  );
   border-left: 2px solid rgba(228, 168, 83, 0.55);
 }
 
@@ -2051,21 +2208,36 @@
   background: rgba(228, 168, 83, 0.22);
   border-color: rgba(228, 168, 83, 0.7);
   color: var(--accent-gold);
-  font-family: var(--font-fantasy, 'Cinzel', Georgia, serif);
+  font-family: var(--font-fantasy, "Cinzel", Georgia, serif);
   animation: crit-flash 0.9s ease-out forwards;
 }
 
 /* ── Natural 1 — red fumble ─────────────────────────────────── */
 @keyframes fumble-shake {
-  0%, 100% { transform: translateX(0); }
-  20%       { transform: translateX(-3px); }
-  40%       { transform: translateX(3px); }
-  60%       { transform: translateX(-2px); }
-  80%       { transform: translateX(2px); }
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  20% {
+    transform: translateX(-3px);
+  }
+  40% {
+    transform: translateX(3px);
+  }
+  60% {
+    transform: translateX(-2px);
+  }
+  80% {
+    transform: translateX(2px);
+  }
 }
 
 .narrative-fumble {
-  background: linear-gradient(90deg, rgba(231, 76, 60, 0.06) 0%, transparent 100%);
+  background: linear-gradient(
+    90deg,
+    rgba(231, 76, 60, 0.06) 0%,
+    transparent 100%
+  );
   border-left: 2px solid rgba(231, 76, 60, 0.45);
   animation: fumble-shake 0.45s ease-out;
 }
@@ -2077,22 +2249,21 @@
   color: var(--accent-red);
 }
 
-
 /* ============================================================
    LORE CODEX PANEL
    ============================================================ */
 
 /* Color tokens scoped to the codex */
 :root {
-  --codex-hostile:       #e74c3c;
-  --codex-unfriendly:    #e67e22;
-  --codex-neutral:       #7f8c8d;
-  --codex-friendly:      #2ecc71;
-  --codex-allied:        #3498db;
-  --codex-visited:       #e4a853;
-  --codex-unvisited:     #555570;
-  --codex-quest-active:  #e4a853;
-  --codex-quest-done:    #2ecc71;
+  --codex-hostile: #e74c3c;
+  --codex-unfriendly: #e67e22;
+  --codex-neutral: #7f8c8d;
+  --codex-friendly: #2ecc71;
+  --codex-allied: #3498db;
+  --codex-visited: #e4a853;
+  --codex-unvisited: #555570;
+  --codex-quest-active: #e4a853;
+  --codex-quest-done: #2ecc71;
 }
 
 .codex-panel {
@@ -2149,7 +2320,10 @@
   background: transparent;
   color: var(--text-secondary);
   cursor: pointer;
-  transition: color 0.15s, border-color 0.15s, background 0.15s;
+  transition:
+    color 0.15s,
+    border-color 0.15s,
+    background 0.15s;
 }
 
 .codex-tab:hover {
@@ -2214,7 +2388,9 @@
   border-radius: 6px;
   background: rgba(255, 255, 255, 0.02);
   cursor: pointer;
-  transition: border-color 0.15s, background 0.15s;
+  transition:
+    border-color 0.15s,
+    background 0.15s;
   user-select: none;
 }
 
@@ -2245,6 +2421,40 @@
   height: 7px;
   border-radius: 50%;
   flex-shrink: 0;
+}
+
+/* NPC portrait: small in header, full-width when expanded */
+.codex-portrait-thumb {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+  border: 1px solid rgba(228, 168, 83, 0.3);
+}
+
+.codex-portrait-full {
+  width: 100%;
+  max-height: 140px;
+  object-fit: cover;
+  border-radius: 4px;
+  margin-bottom: 0.2rem;
+  border: 1px solid rgba(228, 168, 83, 0.2);
+}
+
+/* Relationships list */
+.codex-relationships {
+  margin: 0.15rem 0 0;
+  padding-left: 0.8rem;
+  font-size: 0.77rem;
+  color: var(--text-secondary);
+  list-style: disc;
+  line-height: 1.5;
+}
+
+.codex-field--block {
+  flex-direction: column;
+  align-items: flex-start;
 }
 
 .codex-card-name {
@@ -2357,8 +2567,12 @@
   width: 100%;
   padding: 0.35rem 0.6rem;
   margin: 0.4rem 0;
-  background: linear-gradient(90deg, rgba(228,168,83,0.18) 0%, rgba(228,168,83,0.08) 100%);
-  border: 1px solid rgba(228,168,83,0.4);
+  background: linear-gradient(
+    90deg,
+    rgba(228, 168, 83, 0.18) 0%,
+    rgba(228, 168, 83, 0.08) 100%
+  );
+  border: 1px solid rgba(228, 168, 83, 0.4);
   border-radius: 4px;
   color: var(--accent-gold);
   font-size: 0.72rem;
@@ -2369,11 +2583,20 @@
   transition: background 0.2s;
 }
 .levelup-banner:hover {
-  background: linear-gradient(90deg, rgba(228,168,83,0.28) 0%, rgba(228,168,83,0.14) 100%);
+  background: linear-gradient(
+    90deg,
+    rgba(228, 168, 83, 0.28) 0%,
+    rgba(228, 168, 83, 0.14) 100%
+  );
 }
 @keyframes levelup-pulse {
-  0%, 100% { box-shadow: 0 0 6px rgba(228,168,83,0.2); }
-  50% { box-shadow: 0 0 14px rgba(228,168,83,0.55); }
+  0%,
+  100% {
+    box-shadow: 0 0 6px rgba(228, 168, 83, 0.2);
+  }
+  50% {
+    box-shadow: 0 0 14px rgba(228, 168, 83, 0.55);
+  }
 }
 
 /* ── Rest panel (ActionBar out-of-combat) ────────────────────────────── */
@@ -2396,7 +2619,7 @@
 }
 .journal-textarea {
   flex: 1;
-  background: rgba(255,255,255,0.04);
+  background: rgba(255, 255, 255, 0.04);
   border: 1px solid var(--border-color);
   border-radius: 4px;
   color: var(--text-primary);
@@ -2410,7 +2633,7 @@
   min-height: 160px;
 }
 .journal-textarea:focus {
-  border-color: rgba(228,168,83,0.35);
+  border-color: rgba(228, 168, 83, 0.35);
 }
 .journal-saved-hint {
   font-size: 0.6rem;
@@ -2424,7 +2647,7 @@
 .shop-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0,0,0,0.7);
+  background: rgba(0, 0, 0, 0.7);
   z-index: 200;
   display: flex;
   align-items: center;
@@ -2441,7 +2664,7 @@
   overflow-y: auto;
 }
 .shop-modal h2 {
-  font-family: var(--font-fantasy, 'Cinzel', Georgia, serif);
+  font-family: var(--font-fantasy, "Cinzel", Georgia, serif);
   color: var(--accent-gold);
   font-size: 0.9rem;
   margin-bottom: 0.8rem;
@@ -2451,35 +2674,47 @@
   align-items: center;
   gap: 0.5rem;
   padding: 0.3rem 0;
-  border-bottom: 1px solid rgba(255,255,255,0.05);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
   font-size: 0.78rem;
 }
-.shop-item-name { flex: 1; color: var(--text-primary); }
-.shop-item-price { color: var(--accent-gold); font-weight: 600; min-width: 3rem; text-align: right; }
+.shop-item-name {
+  flex: 1;
+  color: var(--text-primary);
+}
+.shop-item-price {
+  color: var(--accent-gold);
+  font-weight: 600;
+  min-width: 3rem;
+  text-align: right;
+}
 .shop-buy-btn {
   padding: 0.15rem 0.5rem;
-  background: rgba(228,168,83,0.15);
-  border: 1px solid rgba(228,168,83,0.3);
+  background: rgba(228, 168, 83, 0.15);
+  border: 1px solid rgba(228, 168, 83, 0.3);
   color: var(--accent-gold);
   border-radius: 3px;
   font-size: 0.7rem;
   cursor: pointer;
   transition: background 0.15s;
 }
-.shop-buy-btn:hover { background: rgba(228,168,83,0.28); }
+.shop-buy-btn:hover {
+  background: rgba(228, 168, 83, 0.28);
+}
 .shop-close-btn {
   margin-top: 0.8rem;
   display: block;
   width: 100%;
   padding: 0.4rem;
-  background: rgba(255,255,255,0.05);
+  background: rgba(255, 255, 255, 0.05);
   border: 1px solid var(--border-color);
   color: var(--text-secondary);
   border-radius: 4px;
   cursor: pointer;
   font-size: 0.78rem;
 }
-.shop-close-btn:hover { color: var(--text-primary); }
+.shop-close-btn:hover {
+  color: var(--text-primary);
+}
 
 /* ── Loot notification ───────────────────────────────────────────────── */
 .loot-toast {
@@ -2489,7 +2724,7 @@
   transform: translateX(-50%);
   z-index: 150;
   background: var(--bg-secondary);
-  border: 1px solid rgba(228,168,83,0.4);
+  border: 1px solid rgba(228, 168, 83, 0.4);
   border-radius: 6px;
   padding: 0.6rem 1rem;
   font-size: 0.78rem;
@@ -2497,12 +2732,18 @@
   display: flex;
   align-items: center;
   gap: 0.6rem;
-  box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
   animation: loot-slide-up 0.3s ease;
 }
 @keyframes loot-slide-up {
-  from { opacity: 0; transform: translateX(-50%) translateY(12px); }
-  to { opacity: 1; transform: translateX(-50%) translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
 }
 
 /* Loot toast sub-elements */
@@ -2519,8 +2760,15 @@
   font-size: 0.82rem;
   margin-bottom: 0.2rem;
 }
-.loot-toast-desc { color: var(--text-secondary); margin-bottom: 0.2rem; }
-.loot-toast-gold { color: #f7c948; font-weight: 600; margin-bottom: 0.15rem; }
+.loot-toast-desc {
+  color: var(--text-secondary);
+  margin-bottom: 0.2rem;
+}
+.loot-toast-gold {
+  color: #f7c948;
+  font-weight: 600;
+  margin-bottom: 0.15rem;
+}
 .loot-toast-items {
   margin: 0;
   padding-left: 1rem;
@@ -2543,7 +2791,7 @@
   flex-wrap: wrap;
 }
 .shop-modal-title {
-  font-family: var(--font-fantasy, 'Cinzel', Georgia, serif);
+  font-family: var(--font-fantasy, "Cinzel", Georgia, serif);
   color: var(--accent-gold);
   font-size: 0.9rem;
   flex: 1;
@@ -2564,9 +2812,21 @@
   background: transparent;
   border: none;
 }
-.shop-modal { position: relative; }
-.shop-items-list { display: flex; flex-direction: column; gap: 0; }
-.shop-empty { color: var(--text-secondary); font-style: italic; font-size: 0.8rem; text-align: center; padding: 1rem 0; }
+.shop-modal {
+  position: relative;
+}
+.shop-items-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+.shop-empty {
+  color: var(--text-secondary);
+  font-style: italic;
+  font-size: 0.8rem;
+  text-align: center;
+  padding: 1rem 0;
+}
 .shop-item-row {
   justify-content: space-between;
 }

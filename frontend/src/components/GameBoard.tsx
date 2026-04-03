@@ -30,6 +30,7 @@ import { narrationOrchestrator } from "../lib/narrationOrchestrator";
 import "./GameBoard.css";
 
 const AVATAR_COLORS = ["#9b59b6", "#3498db", "#2ecc71", "#e67e22", "#e74c3c"];
+const COST_WARN_USD = Number(import.meta.env.VITE_COST_WARN_USD ?? 0.5);
 
 function showOverlayTester(): boolean {
   return (
@@ -44,6 +45,8 @@ export default function GameBoard() {
     sendSpellCast,
     transcribeVoiceInput,
     runVoiceTest,
+    reconnecting,
+    rateLimitRetryIn,
   } = useWebSocket();
   const { roomCode, playerId, players, campaignTitle, campaignId, reset } =
     useSessionStore();
@@ -63,6 +66,7 @@ export default function GameBoard() {
     setVoiceSpeed,
     setTranscriptMode,
     addNarrative,
+    setAoePreview,
   } = useGameStore();
   const [chatDraft, setChatDraft] = useState("");
   const [targetingSpell, setTargetingSpell] = useState<{
@@ -73,6 +77,8 @@ export default function GameBoard() {
   const autoBootstrapRef = useRef(false);
 
   const narrative = useGameStore((state) => state.narrative);
+  const skillChallenge = useGameStore((state) => state.skillChallenge);
+  const worldTime = useGameStore((state) => state.worldTime);
   // Show brief when no DM has spoken yet and user hasn't dismissed it
   const showBrief =
     !briefDismissed && narrative.filter((e) => e.type === "dm").length === 0;
@@ -166,15 +172,21 @@ export default function GameBoard() {
   const [railCollapsed, setRailCollapsed] = useState(false);
   const [sidebarWidth, setSidebarWidth] = useState(360);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const [sidebarTab, setSidebarTab] = useState<"stats" | "codex" | "journal">("stats");
+  const [sidebarTab, setSidebarTab] = useState<"stats" | "codex" | "journal">(
+    "stats",
+  );
 
   const map = useGameStore((state) => state.map);
 
-  const { enabled: ambientEnabled, toggle: toggleAmbient, volume: ambientVolume, setVolume: setAmbientVolume } =
-    useAmbientSound(
-      map?.metadata?.location as string | undefined,
-      map?.metadata?.biome as string | undefined,
-    );
+  const {
+    enabled: ambientEnabled,
+    toggle: toggleAmbient,
+    volume: ambientVolume,
+    setVolume: setAmbientVolume,
+  } = useAmbientSound(
+    map?.metadata?.location as string | undefined,
+    map?.metadata?.biome as string | undefined,
+  );
 
   const handleTileClick = useCallback(
     (gx: number, gy: number) => {
@@ -232,21 +244,31 @@ export default function GameBoard() {
       if (targetingSpell) {
         sendSpellCast(targetingSpell.name, targetingSpell.slotLevel, entityId);
         setTargetingSpell(null);
+        setAoePreview(null);
         return;
       }
       setSelectedEntity(selectedEntityId === entityId ? null : entityId);
     },
-    [selectedEntityId, setSelectedEntity, targetingSpell, sendSpellCast],
+    [
+      selectedEntityId,
+      setSelectedEntity,
+      targetingSpell,
+      sendSpellCast,
+      setAoePreview,
+    ],
   );
 
   useEffect(() => {
     if (!targetingSpell) return;
     const handler = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setTargetingSpell(null);
+      if (e.key === "Escape") {
+        setTargetingSpell(null);
+        setAoePreview(null);
+      }
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  }, [targetingSpell]);
+  }, [targetingSpell, setAoePreview]);
 
   const handleRailDragStart = (e: React.MouseEvent) => {
     if (railCollapsed) return;
@@ -376,9 +398,21 @@ export default function GameBoard() {
         {(usage?.estimated_cost_usd ?? 0) > 0 && (
           <Badge
             variant="outline"
-            className="font-mono text-[var(--text-secondary)] text-[0.72rem] bg-[rgba(255,255,255,0.04)] border-[var(--border-color)] px-[0.4rem] py-[0.15rem] rounded-[3px]"
+            className="font-mono text-[var(--text-secondary)] text-[0.72rem] bg-[rgba(255,255,255,0.04)] border-[var(--border-color)] px-[0.4rem] py-[0.15rem] rounded-[3px] cursor-default"
+            title={`${(usage?.input_tokens ?? 0).toLocaleString()} in / ${(usage?.output_tokens ?? 0).toLocaleString()} out tokens`}
           >
             ${(usage?.estimated_cost_usd ?? 0).toFixed(3)}
+          </Badge>
+        )}
+        {worldTime && (
+          <Badge
+            variant="outline"
+            className="font-mono text-[var(--text-secondary)] text-[0.72rem] bg-[rgba(255,255,255,0.04)] border-[var(--border-color)] px-[0.4rem] py-[0.15rem] rounded-[3px] cursor-default shrink-0"
+            title={`In-game time: Day ${worldTime.day}`}
+          >
+            {worldTime.hour >= 6 && worldTime.hour < 20 ? "☀" : "🌙"} Day{" "}
+            {worldTime.day} · {String(worldTime.hour).padStart(2, "0")}:
+            {String(worldTime.minute).padStart(2, "0")}
           </Badge>
         )}
         <div ref={menuRef} className="relative shrink-0">
@@ -392,6 +426,23 @@ export default function GameBoard() {
           </button>
           {sessionMenuOpen && (
             <div className="absolute right-0 top-full mt-1 z-50 min-w-47.5 rounded-md border border-border bg-bg-secondary shadow-lg py-1 text-sm">
+              {(usage?.estimated_cost_usd ?? 0) > 0 && (
+                <div className="px-4 py-2 text-[0.72rem] text-text-secondary border-b border-border font-mono">
+                  <div>
+                    ↑ {(usage?.input_tokens ?? 0).toLocaleString()} · ↓{" "}
+                    {(usage?.output_tokens ?? 0).toLocaleString()} tokens
+                  </div>
+                  <div className="text-[var(--accent-gold)]">
+                    ${(usage?.estimated_cost_usd ?? 0).toFixed(4)} est. cost
+                  </div>
+                  {(usage?.estimated_cost_usd ?? 0) >= COST_WARN_USD && (
+                    <div className="mt-1 text-[#ff6b6b]">
+                      ⚠ Cost above ${COST_WARN_USD.toFixed(2)} — consider saving
+                      soon
+                    </div>
+                  )}
+                </div>
+              )}
               <button
                 onClick={handleSaveCampaign}
                 disabled={sessionMenuSaving}
@@ -418,11 +469,39 @@ export default function GameBoard() {
         </div>
       </header>
 
+      {reconnecting && (
+        <div className="px-4 py-[0.35rem] text-[0.75rem] bg-[rgba(228,168,83,0.1)] border-b border-[rgba(228,168,83,0.3)] text-[#e4a853] flex items-center gap-2 shrink-0">
+          {"⟳ Reconnecting to session…"}
+        </div>
+      )}
+
+      {rateLimitRetryIn !== null && (
+        <div className="px-4 py-[0.35rem] text-[0.75rem] bg-[rgba(255,80,80,0.08)] border-b border-[rgba(255,80,80,0.2)] text-[#ff6b6b] flex items-center gap-2 shrink-0">
+          ⏳ DM rate limit reached — retrying in {rateLimitRetryIn}s
+        </div>
+      )}
+
       <div className="game-content">
         <div
           className={`adventure-rail${railCollapsed ? " panel-collapsed" : ""}`}
           style={{ width: railCollapsed ? 0 : railWidth }}
         >
+          {skillChallenge && !skillChallenge.is_resolved && (
+            <div className="mx-3 mb-2 rounded-lg px-3 py-2 bg-[rgba(228,168,83,0.08)] border border-[rgba(228,168,83,0.3)] flex items-center justify-between gap-3">
+              <span className="text-[0.78rem] font-semibold text-[#e4a853] truncate">
+                ⚔ {skillChallenge.title}
+              </span>
+              <div className="flex gap-3 shrink-0 text-[0.75rem]">
+                <span className="text-[#2ecc71]">
+                  ✓ {skillChallenge.successes}/
+                  {skillChallenge.success_threshold}
+                </span>
+                <span className="text-[#e74c3c]">
+                  ✗ {skillChallenge.failures}/{skillChallenge.failure_threshold}
+                </span>
+              </div>
+            </div>
+          )}
           <NarrativeLog />
           <VoiceControl
             enabled={voiceEnabled}
@@ -521,7 +600,11 @@ export default function GameBoard() {
             <button
               type="button"
               className="ambient-toggle-btn"
-              title={ambientEnabled ? `Ambient sound on — click to mute` : `Ambient sound off — click to enable`}
+              title={
+                ambientEnabled
+                  ? `Ambient sound on — click to mute`
+                  : `Ambient sound off — click to enable`
+              }
               onClick={toggleAmbient}
             >
               {ambientEnabled ? "🔊" : "🔇"}
@@ -539,9 +622,10 @@ export default function GameBoard() {
                 <ActionBar
                   onSend={sendAction}
                   onCastSpell={sendSpellCast}
-                  onInitiateTarget={(name, slotLevel) =>
-                    setTargetingSpell({ name, slotLevel })
-                  }
+                  onInitiateTarget={(name, slotLevel, aoe) => {
+                    setTargetingSpell({ name, slotLevel });
+                    setAoePreview(aoe ?? null);
+                  }}
                 />
                 <DiceRoller onSubmitRoll={sendAction} />
               </div>

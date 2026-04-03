@@ -21,6 +21,11 @@ class NPCMemory:
     notes: list[str] = field(default_factory=list)
     alive: bool = True
     first_met_session: int = 0
+    tts_voice: str = ""
+    last_spoke_session: int = 0
+    secrets: list[str] = field(default_factory=list)
+    relationships: dict[str, str] = field(default_factory=dict)
+    portrait_url: str = ""
 
     def to_dict(self) -> dict:
         return {
@@ -32,6 +37,12 @@ class NPCMemory:
             "disposition": self.disposition,
             "notes": self.notes,
             "alive": self.alive,
+            "tts_voice": self.tts_voice,
+            "first_met_session": self.first_met_session,
+            "last_spoke_session": self.last_spoke_session,
+            "secrets": self.secrets,
+            "relationships": self.relationships,
+            "portrait_url": self.portrait_url,
         }
 
     def summary(self) -> str:
@@ -41,6 +52,15 @@ class NPCMemory:
             parts.append(f"at {self.location}")
         if self.disposition != "neutral":
             parts.append(f"disposition: {self.disposition}")
+        if self.tts_voice:
+            parts.append(f"voice: {self.tts_voice}")
+        if self.relationships:
+            rel_parts = [f"{k}: {v}" for k, v in list(self.relationships.items())[:3]]
+            parts.append(f"knows: {'; '.join(rel_parts)}")
+        if self.secrets:
+            parts.append(f"secrets[DM-only]: {'; '.join(self.secrets[:2])}")
+        if self.last_spoke_session:
+            parts.append(f"last spoke: session {self.last_spoke_session}")
         if self.notes:
             parts.append(f"notes: {'; '.join(self.notes[-3:])}")
         return " - ".join(parts)
@@ -115,7 +135,10 @@ class CampaignMemory:
     party_notes: list[str] = field(default_factory=list)
     campaign_premise: str = ""
     campaign_tone: str = ""
+    campaign_pacing: str = ""
+    campaign_difficulty: str = ""
     campaign_title: str = ""
+    world_time: dict = field(default_factory=lambda: {"day": 1, "hour": 8, "minute": 0})
 
     def add_npc(self, npc: NPCMemory) -> None:
         self.npcs[npc.id] = npc
@@ -141,10 +164,30 @@ class CampaignMemory:
         """Build a structured text block for the system prompt."""
         sections = []
 
+        # 4d: Critical events upfront so Claude treats them as active world state
+        critical_events = [e for e in self.world_events if e.importance == "critical"]
+        if critical_events:
+            recent_critical = critical_events[-3:]
+            sections.append(
+                "ACTIVE WORLD STATE (critical — affects current play):\n"
+                + "\n".join(f"- {e.description}" for e in recent_critical)
+            )
+
+        # 4c: World clock
+        wt = self.world_time
+        hour = wt.get("hour", 8)
+        time_of_day = "day" if 6 <= hour < 20 else "night"
+        sections.append(
+            f"CURRENT TIME: Day {wt.get('day', 1)}, "
+            f"{hour:02d}:{wt.get('minute', 0):02d} ({time_of_day})"
+        )
+
         if self.campaign_premise:
             tone_line = f"\nTone: {self.campaign_tone}" if self.campaign_tone else ""
+            pacing_line = f"\nPacing: {self.campaign_pacing}" if self.campaign_pacing else ""
+            difficulty_line = f"\nDifficulty: {self.campaign_difficulty}" if self.campaign_difficulty else ""
             title_line = f"\nTitle: {self.campaign_title}" if self.campaign_title else ""
-            sections.append(f"CAMPAIGN PREMISE:{title_line}{tone_line}\n{self.campaign_premise}")
+            sections.append(f"CAMPAIGN PREMISE:{title_line}{tone_line}{pacing_line}{difficulty_line}\n{self.campaign_premise}")
 
         if self.session_summaries:
             recent = self.session_summaries[-5:]
@@ -178,6 +221,7 @@ class CampaignMemory:
             "locations": {k: v.to_dict() for k, v in self.locations.items()},
             "quests": {k: v.to_dict() for k, v in self.quests.items()},
             "world_events": [e.to_dict() for e in self.world_events if e.importance in ("major", "critical")],
+            "world_time": self.world_time,
         }
 
     def to_dict(self) -> dict:
@@ -191,7 +235,10 @@ class CampaignMemory:
             "party_notes": self.party_notes,
             "campaign_premise": self.campaign_premise,
             "campaign_tone": self.campaign_tone,
+            "campaign_pacing": self.campaign_pacing,
+            "campaign_difficulty": self.campaign_difficulty,
             "campaign_title": self.campaign_title,
+            "world_time": self.world_time,
         }
 
     @classmethod
@@ -202,7 +249,10 @@ class CampaignMemory:
         mem.party_notes = data.get("party_notes", [])
         mem.campaign_premise = data.get("campaign_premise", "")
         mem.campaign_tone = data.get("campaign_tone", "")
+        mem.campaign_pacing = data.get("campaign_pacing", "")
+        mem.campaign_difficulty = data.get("campaign_difficulty", "")
         mem.campaign_title = data.get("campaign_title", "")
+        mem.world_time = data.get("world_time", {"day": 1, "hour": 8, "minute": 0})
 
         for npc_data in data.get("npcs", {}).values():
             mem.npcs[npc_data["id"]] = NPCMemory(**{k: v for k, v in npc_data.items() if k in NPCMemory.__dataclass_fields__})

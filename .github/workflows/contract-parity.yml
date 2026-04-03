@@ -3,7 +3,7 @@ name: Contract Parity
 on:
   pull_request:
     branches:
-      - '**'
+      - "**"
   push:
     branches:
       - main
@@ -22,12 +22,12 @@ jobs:
       - name: Set up Node
         uses: actions/setup-node@v5
         with:
-          node-version: '20'
+          node-version: "20"
 
       - name: Set up Python
         uses: actions/setup-python@v6
         with:
-          python-version: '3.12'
+          python-version: "3.12"
 
       - name: Install Node dependencies
         run: |
@@ -52,6 +52,8 @@ jobs:
         run: npm run validate:ts-cutover
 
       - name: Start Python backend
+        env:
+          JWT_SECRET_KEY: "ci-placeholder-not-for-production"
         run: |
           nohup bash -lc 'cd backend && python -m uvicorn app.main:app --host 127.0.0.1 --port 8010' > backend.log 2>&1 &
 

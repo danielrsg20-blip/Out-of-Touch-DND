@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 import os
+from dataclasses import dataclass, field
 from typing import Any
 
 from .map_catalog import build_automated_map, assign_terrain_atlas_sprites
@@ -24,6 +25,7 @@ from .rules.items import (
 )
 from .rules.spells import (
     evaluate_cast_permission,
+    get_spell_definition,
     initialize_spell_slots,
     restore_all_slots,
     use_spell_slot,
@@ -31,6 +33,33 @@ from .rules.spells import (
 from .memory import CampaignMemory, NPCMemory, QuestMemory, LocationMemory
 
 logger = logging.getLogger(__name__)
+
+
+@dataclass
+class SkillChallengeState:
+    """Tracks an active skill challenge (successes/failures contest)."""
+
+    title: str = ""
+    success_threshold: int = 3
+    failure_threshold: int = 3
+    successes: int = 0
+    failures: int = 0
+    participants: list[str] = field(default_factory=list)
+
+    @property
+    def is_resolved(self) -> bool:
+        return self.successes >= self.success_threshold or self.failures >= self.failure_threshold
+
+    def to_dict(self) -> dict:
+        return {
+            "title": self.title,
+            "success_threshold": self.success_threshold,
+            "failure_threshold": self.failure_threshold,
+            "successes": self.successes,
+            "failures": self.failures,
+            "participants": self.participants,
+            "is_resolved": self.is_resolved,
+        }
 
 
 def _parse_env_flag(name: str, default: bool) -> bool:
@@ -401,6 +430,18 @@ TOOL_DEFINITIONS: list[dict[str, Any]] = [
                 "location": {"type": "string"},
                 "disposition": {"type": "string", "enum": ["hostile", "unfriendly", "neutral", "friendly", "allied"]},
                 "note": {"type": "string", "description": "A note about recent interactions"},
+                "tts_voice": {"type": "string", "enum": ["alloy", "echo", "fable", "onyx", "nova", "shimmer"], "description": "OpenAI TTS voice for this NPC's speech"},
+                "secret": {"type": "string", "description": "A DM-only secret about this NPC (never revealed to players)"},
+                "relationship": {
+                    "type": "object",
+                    "description": "A relationship this NPC has with another character or faction",
+                    "properties": {
+                        "target": {"type": "string", "description": "Name or ID of the other person/faction"},
+                        "description": {"type": "string", "description": "Nature of the relationship, e.g. 'estranged sister', 'owes a debt to'"},
+                    },
+                    "required": ["target", "description"],
+                },
+                "last_spoke_session": {"type": "integer", "description": "Session number when party last interacted with this NPC"},
             },
             "required": ["id", "name"],
         },
@@ -631,6 +672,38 @@ TOOL_DEFINITIONS: list[dict[str, Any]] = [
         },
     },
     {
+        "name": "start_skill_challenge",
+        "description": (
+            "Begin a skill challenge — a structured multi-roll contest where the party "
+            "must accumulate successes before accumulating too many failures. Use for "
+            "heists, chases, rituals, negotiations, and other multi-step challenges. "
+            "After starting, use check_ability for each participant attempt and narrate progress."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "title": {
+                    "type": "string",
+                    "description": "Name of the challenge e.g. 'Chase Through Waterdeep'",
+                },
+                "success_threshold": {
+                    "type": "integer",
+                    "description": "Number of successes needed to win (typically 3-6)",
+                },
+                "failure_threshold": {
+                    "type": "integer",
+                    "description": "Number of failures that cause defeat (typically 3)",
+                },
+                "participants": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": "Character IDs participating in the challenge",
+                },
+            },
+            "required": ["title", "success_threshold", "failure_threshold"],
+        },
+    },
+    {
         "name": "request_player_roll",
         "description": (
             "Request that a player character rolls their own dice for an attack roll, ability check, or saving throw. "
@@ -664,6 +737,41 @@ TOOL_DEFINITIONS: list[dict[str, Any]] = [
             "required": ["character_id", "label", "dice", "modifier", "context"],
         },
     },
+    {
+        "name": "summarize_session",
+        "description": (
+            "Record a 2-3 sentence summary of what happened this session. "
+            "Call this at natural session breakpoints (long rest, end of session, major milestone) "
+            "so the party's progress is preserved across sessions."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "summary": {
+                    "type": "string",
+                    "description": "2-3 sentence summary of this session's key events and outcomes",
+                },
+            },
+            "required": ["summary"],
+        },
+    },
+    {
+        "name": "advance_time",
+        "description": (
+            "Advance the in-game world clock. Use when time passes narratively: "
+            "travel, resting, waiting, or after a major event. "
+            "Days roll over automatically. Always include a reason."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "hours": {"type": "integer", "description": "Hours to advance (0-23)", "default": 0},
+                "minutes": {"type": "integer", "description": "Minutes to advance (0-59)", "default": 0},
+                "reason": {"type": "string", "description": "Narrative reason for the time passing, e.g. 'The party takes a long rest'"},
+            },
+            "required": ["reason"],
+        },
+    },
 ]
 
 
@@ -676,11 +784,13 @@ class ToolDispatcher:
         game_map: GameMap | None,
         combat: CombatState | None,
         memory: CampaignMemory | None = None,
+        skill_challenge: SkillChallengeState | None = None,
     ):
         self.characters = characters
         self.game_map = game_map
         self.combat = combat
         self.memory = memory or CampaignMemory()
+        self.skill_challenge = skill_challenge
 
     def dispatch(self, tool_name: str, tool_input: dict) -> dict[str, Any]:
         handler = getattr(self, f"_tool_{tool_name}", None)
@@ -730,6 +840,46 @@ class ToolDispatcher:
         cls_data = CLASSES.get(char.char_class, {})
         return cls_data.get("saving_throws", [])
 
+    def _get_participant(self, char_id: str):
+        """Return the CombatParticipant for char_id, or None if not found/in combat."""
+        if not self.combat or not self.combat.is_active:
+            return None
+        for p in self.combat.participants:
+            if p.character.id == char_id:
+                return p
+        return None
+
+    def _check_concentration_after_damage(self, char_id: str, damage: int) -> dict | None:
+        """Roll CON save for concentration. Clears concentration on failure. Returns result dict or None."""
+        participant = self._get_participant(char_id)
+        if not participant or not participant.concentrating_on:
+            return None
+        dc = max(10, damage // 2)
+        char = participant.character
+        con_mod = char.ability_modifier("CON")
+        has_prof = "CON" in self._get_save_proficiencies(char)
+        mod = con_mod + (char.proficiency_bonus if has_prof else 0)
+        dice_result = roll("1d20")
+        total = dice_result.total + mod
+        success = total >= dc
+        spell_name = participant.concentrating_on
+        if not success:
+            participant.concentrating_on = None
+            char.concentration_spell = None
+        return {
+            "concentration_check": True,
+            "spell": spell_name,
+            "dc": dc,
+            "roll": dice_result.rolls[0],
+            "modifier": mod,
+            "total": total,
+            "success": success,
+            "message": (
+                f"{char.name} {'maintains' if success else 'loses'} concentration on "
+                f"{spell_name} (CON save {total} vs DC {dc})"
+            ),
+        }
+
     def _tool_attack(self, inp: dict) -> dict:
         attacker = self.characters.get(inp["attacker_id"])
         target = self.characters.get(inp["target_id"])
@@ -738,7 +888,7 @@ class ToolDispatcher:
         if not target:
             return {"error": f"Target {inp['target_id']} not found"}
 
-        return attack_roll(
+        result = attack_roll(
             attacker=attacker,
             target=target,
             weapon_bonus=inp.get("weapon_bonus", 0),
@@ -747,6 +897,12 @@ class ToolDispatcher:
             advantage=inp.get("advantage", False),
             disadvantage=inp.get("disadvantage", False),
         )
+        dmg = result.get("damage") or 0
+        if dmg > 0:
+            conc = self._check_concentration_after_damage(inp["target_id"], dmg)
+            if conc:
+                result["concentration_check"] = conc
+        return result
 
     def _tool_apply_damage(self, inp: dict) -> dict:
         target = self.characters.get(inp["target_id"])
@@ -755,6 +911,11 @@ class ToolDispatcher:
         result = target.take_damage(inp["amount"])
         result["target"] = target.name
         result["damage_type"] = inp.get("damage_type", "untyped")
+        dmg = result.get("damage_taken") or 0
+        if dmg > 0:
+            conc = self._check_concentration_after_damage(inp["target_id"], dmg)
+            if conc:
+                result["concentration_check"] = conc
         return result
 
     def _tool_heal_character(self, inp: dict) -> dict:
@@ -826,6 +987,17 @@ class ToolDispatcher:
         if "error" not in result:
             result["spell"] = spell_name
             result["spell_level"] = required_level
+            # Concentration tracking: set concentrating_on if spell requires it
+            spell_def = get_spell_definition(spell_name)
+            if spell_def and spell_def.get("concentration", False):
+                participant = self._get_participant(inp["caster_id"])
+                if participant:
+                    if participant.concentrating_on:
+                        result["concentration_dropped"] = participant.concentrating_on
+                    participant.concentrating_on = spell_name
+                caster.concentration_spell = spell_name
+                result["concentration"] = True
+                result["concentration_spell"] = spell_name
         return result
 
     def _tool_long_rest(self, inp: dict) -> dict:
@@ -837,6 +1009,8 @@ class ToolDispatcher:
         char.temp_hp = 0
         char.conditions = []
         char.death_saves = {"successes": 0, "failures": 0}
+        char.hit_dice_used = max(0, char.hit_dice_used - max(1, char.level // 2))  # recover half level hit dice on long rest
+        char.concentration_spell = None  # concentration spells end on long rest
         slot_result = restore_all_slots(char)
 
         return {
@@ -887,17 +1061,42 @@ class ToolDispatcher:
                 },
             }
         else:
-            map_data = build_automated_map({
-                "description": str(inp.get("description", "")),
-                "environment": str(inp.get("environment", "")).strip().lower(),
-                "terrain_theme": str(inp.get("terrain_theme", "")).strip().lower(),
-                "encounter_type": str(inp.get("encounter_type", "")).strip().lower(),
-                "encounter_scale": str(inp.get("encounter_scale", "")).strip().lower(),
-                "tactical_tags": [str(t) for t in inp.get("tactical_tags", [])],
-                "width": int(inp.get("width", 30)),
-                "height": int(inp.get("height", 21)),
-                "seed": int(inp.get("seed")) if inp.get("seed") is not None else None,
-            })
+            try:
+                map_data = build_automated_map({
+                    "description": str(inp.get("description", "")),
+                    "environment": str(inp.get("environment", "")).strip().lower(),
+                    "terrain_theme": str(inp.get("terrain_theme", "")).strip().lower(),
+                    "encounter_type": str(inp.get("encounter_type", "")).strip().lower(),
+                    "encounter_scale": str(inp.get("encounter_scale", "")).strip().lower(),
+                    "tactical_tags": [str(t) for t in inp.get("tactical_tags", [])],
+                    "width": int(inp.get("width", 30)),
+                    "height": int(inp.get("height", 21)),
+                    "seed": int(inp.get("seed")) if inp.get("seed") is not None else None,
+                })
+            except Exception as map_err:
+                import logging as _logging
+                _logging.getLogger(__name__).warning("Map generation failed (%s) — using fallback 10×10 floor grid", map_err)
+                w, h = 10, 10
+                fallback_tiles = []
+                for fy in range(h):
+                    for fx in range(w):
+                        is_wall = fx == 0 or fx == w - 1 or fy == 0 or fy == h - 1
+                        fallback_tiles.append({"x": fx, "y": fy, "type": "wall" if is_wall else "floor", "sprite": ""})
+                map_data = {
+                    "width": w,
+                    "height": h,
+                    "tiles": fallback_tiles,
+                    "entities": [],
+                    "metadata": {
+                        "map_source": "fallback",
+                        "map_id": "fallback",
+                        "grid_size": 5,
+                        "grid_units": "ft",
+                        "tile_size_px": 32,
+                        "cache_hit": False,
+                        "generation_error": str(map_err),
+                    },
+                }
 
             if inp.get("entities"):
                 map_data["entities"] = inp.get("entities", [])
@@ -1015,6 +1214,12 @@ class ToolDispatcher:
             if "disposition" in inp: existing.disposition = inp["disposition"]
             if "role" in inp: existing.role = inp["role"]
             if "note" in inp: existing.notes.append(inp["note"])
+            if "tts_voice" in inp: existing.tts_voice = inp["tts_voice"]
+            if "secret" in inp: existing.secrets.append(inp["secret"])
+            if "relationship" in inp:
+                rel = inp["relationship"]
+                existing.relationships[rel["target"]] = rel["description"]
+            if "last_spoke_session" in inp: existing.last_spoke_session = inp["last_spoke_session"]
             return {"updated": existing.to_dict()}
         else:
             npc = NPCMemory(
@@ -1025,6 +1230,10 @@ class ToolDispatcher:
                 disposition=inp.get("disposition", "neutral"),
                 notes=[inp["note"]] if "note" in inp else [],
                 first_met_session=self.memory.current_session,
+                tts_voice=inp.get("tts_voice", ""),
+                last_spoke_session=inp.get("last_spoke_session", self.memory.current_session),
+                secrets=[inp["secret"]] if "secret" in inp else [],
+                relationships={inp["relationship"]["target"]: inp["relationship"]["description"]} if "relationship" in inp else {},
             )
             self.memory.add_npc(npc)
             return {"recorded": npc.to_dict()}
@@ -1054,6 +1263,30 @@ class ToolDispatcher:
             importance=inp.get("importance", "minor"),
         )
         return {"recorded": True, "event": inp["description"]}
+
+    def _tool_summarize_session(self, inp: dict) -> dict:
+        summary = inp.get("summary", "").strip()
+        if not summary:
+            return {"error": "summary is required"}
+        session_num = self.memory.current_session
+        self.memory.end_session(summary)
+        return {"recorded": True, "session_number": session_num, "summary": summary}
+
+    def _tool_advance_time(self, inp: dict) -> dict:
+        hours = max(0, int(inp.get("hours", 0)))
+        minutes = max(0, int(inp.get("minutes", 0)))
+        wt = self.memory.world_time
+        total_minutes = wt.get("minute", 0) + minutes + (wt.get("hour", 8) + hours) * 60
+        new_day = wt.get("day", 1) + total_minutes // (24 * 60)
+        remaining = total_minutes % (24 * 60)
+        new_hour = remaining // 60
+        new_minute = remaining % 60
+        self.memory.world_time = {"day": new_day, "hour": new_hour, "minute": new_minute}
+        return {
+            "advanced": True,
+            "reason": inp.get("reason", ""),
+            "world_time": self.memory.world_time,
+        }
 
     def _tool_give_item(self, inp: dict) -> dict:
         char = self.characters.get(inp["character_id"])
@@ -1199,6 +1432,10 @@ class ToolDispatcher:
 
         dice_to_spend = max(1, min(int(inp.get("hit_dice_to_spend", 1)), char.level))
 
+        # Clamp to how many hit dice are actually available
+        available = max(0, char.level - char.hit_dice_used)
+        dice_to_spend = min(dice_to_spend, available) if available > 0 else 0
+
         total_healed = 0
         rolls: list[int] = []
         for _ in range(dice_to_spend):
@@ -1209,6 +1446,8 @@ class ToolDispatcher:
             char.hp = min(char.max_hp, char.hp + heal_amount)
             total_healed += char.hp - old_hp
 
+        char.hit_dice_used = min(char.level, char.hit_dice_used + dice_to_spend)
+
         # Warlocks recover Pact Magic slots on short rest
         pact_slots_recovered = 0
         if char.char_class == "Warlock":
@@ -1217,6 +1456,8 @@ class ToolDispatcher:
 
         msg = (f"{char.name} takes a short rest, spending {dice_to_spend} "
                f"hit {'die' if dice_to_spend == 1 else 'dice'} (rolled {rolls}).")
+        if dice_to_spend == 0:
+            msg = f"{char.name} has no hit dice remaining for a short rest."
         if total_healed > 0:
             msg += f" Recovered {total_healed} HP (now {char.hp}/{char.max_hp})."
         else:
@@ -1227,6 +1468,7 @@ class ToolDispatcher:
         return {
             "character": char.name,
             "hit_dice_spent": dice_to_spend,
+            "hit_dice_remaining": max(0, char.level - char.hit_dice_used),
             "rolls": rolls,
             "hp_recovered": total_healed,
             "current_hp": char.hp,
@@ -1448,4 +1690,20 @@ class ToolDispatcher:
             "settlement_size": settlement,
             "items": available,
             "message": f"{shop_name} offers {len(available)} items for sale.",
+        }
+
+    def _tool_start_skill_challenge(self, inp: dict) -> dict:
+        self.skill_challenge = SkillChallengeState(
+            title=inp["title"],
+            success_threshold=int(inp["success_threshold"]),
+            failure_threshold=int(inp["failure_threshold"]),
+            participants=list(inp.get("participants") or []),
+        )
+        return {
+            **self.skill_challenge.to_dict(),
+            "message": (
+                f"Skill challenge '{self.skill_challenge.title}' started. "
+                f"Party needs {self.skill_challenge.success_threshold} successes "
+                f"before {self.skill_challenge.failure_threshold} failures."
+            ),
         }

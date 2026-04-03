@@ -1,27 +1,31 @@
-import { useEffect, useState } from 'react'
-import { motion, AnimatePresence } from 'motion/react'
-import { useGameStore } from '../../stores/gameStore'
-import { useSessionStore } from '../../stores/sessionStore'
-import './panels.css'
+import { useEffect, useState } from "react";
+import { motion, AnimatePresence } from "motion/react";
+import { useGameStore } from "../../stores/gameStore";
+import { useSessionStore } from "../../stores/sessionStore";
+import "./panels.css";
 
 export default function CombatTracker() {
-  const combat = useGameStore(s => s.combat)
-  const playerId = useSessionStore(s => s.playerId)
-  const players = useSessionStore(s => s.players)
-  const myCharacterId = players.find(p => p.id === playerId)?.character_id ?? null
-  const isMyTurn = !!(combat?.is_active && combat.current_turn === myCharacterId)
-  const [roundKey, setRoundKey] = useState(0)
+  const combat = useGameStore((s) => s.combat);
+  const characters = useGameStore((s) => s.characters);
+  const playerId = useSessionStore((s) => s.playerId);
+  const players = useSessionStore((s) => s.players);
+  const myCharacterId =
+    players.find((p) => p.id === playerId)?.character_id ?? null;
+  const isMyTurn = !!(
+    combat?.is_active && combat.current_turn === myCharacterId
+  );
+  const [roundKey, setRoundKey] = useState(0);
 
   useEffect(() => {
-    if (!combat?.is_active) return
-    setRoundKey(k => k + 1)
-  }, [combat?.is_active, combat?.round])
+    if (!combat?.is_active) return;
+    setRoundKey((k) => k + 1);
+  }, [combat?.is_active, combat?.round]);
 
-  if (!combat || !combat.is_active) return null
+  if (!combat || !combat.is_active) return null;
 
-  const currentTotal = Number(combat.current_movement_total ?? 0)
-  const currentRemaining = Number(combat.current_movement_remaining ?? 0)
-  const currentUsed = Math.max(0, currentTotal - currentRemaining)
+  const currentTotal = Number(combat.current_movement_total ?? 0);
+  const currentRemaining = Number(combat.current_movement_remaining ?? 0);
+  const currentUsed = Math.max(0, currentTotal - currentRemaining);
 
   return (
     <div className="combat-tracker">
@@ -32,7 +36,7 @@ export default function CombatTracker() {
           className="combat-round-badge"
           initial={{ scale: 1.25, opacity: 0.6 }}
           animate={{ scale: 1, opacity: 1 }}
-          transition={{ type: 'spring', stiffness: 340, damping: 20 }}
+          transition={{ type: "spring", stiffness: 340, damping: 20 }}
         >
           Round {combat.round}
         </motion.span>
@@ -47,16 +51,16 @@ export default function CombatTracker() {
               opacity: [1, 0.7, 1],
               y: 0,
               boxShadow: [
-                '0 0 8px rgba(228,168,83,0.4)',
-                '0 0 18px rgba(228,168,83,0.75)',
-                '0 0 8px rgba(228,168,83,0.4)',
+                "0 0 8px rgba(228,168,83,0.4)",
+                "0 0 18px rgba(228,168,83,0.75)",
+                "0 0 8px rgba(228,168,83,0.4)",
               ],
             }}
             exit={{ opacity: 0, y: -4 }}
             transition={{
               y: { duration: 0.18 },
-              opacity: { duration: 1.4, repeat: Infinity, ease: 'easeInOut' },
-              boxShadow: { duration: 1.4, repeat: Infinity, ease: 'easeInOut' },
+              opacity: { duration: 1.4, repeat: Infinity, ease: "easeInOut" },
+              boxShadow: { duration: 1.4, repeat: Infinity, ease: "easeInOut" },
             }}
           >
             ⚔ Your Turn
@@ -70,12 +74,13 @@ export default function CombatTracker() {
 
       <div className="initiative-list">
         {combat.initiative_order.map((entry, idx) => {
-          const isCurrent = idx === combat.turn_index
-          const hpPercent = entry.max_hp > 0 ? (entry.hp / entry.max_hp) * 100 : 0
+          const isCurrent = idx === combat.turn_index;
+          const hpPercent =
+            entry.max_hp > 0 ? (entry.hp / entry.max_hp) * 100 : 0;
           return (
             <div
               key={entry.id}
-              className={`initiative-entry ${isCurrent ? 'current-turn' : ''}`}
+              className={`initiative-entry ${isCurrent ? "current-turn" : ""}`}
             >
               <span className="init-order">{entry.initiative}</span>
               <span className="init-name">{entry.name}</span>
@@ -84,14 +89,46 @@ export default function CombatTracker() {
                   className="init-hp-fill"
                   initial={false}
                   animate={{ width: `${hpPercent}%` }}
-                  transition={{ duration: 0.4, ease: 'easeOut' }}
+                  transition={{ duration: 0.4, ease: "easeOut" }}
                 />
               </div>
-              <span className="init-hp-text">{entry.hp}/{entry.max_hp}</span>
+              <span className="init-hp-text">
+                {entry.hp}/{entry.max_hp}
+              </span>
+              {entry.hp === 0 &&
+                (() => {
+                  const saves = characters[entry.id]?.death_saves ?? {
+                    successes: 0,
+                    failures: 0,
+                  };
+                  return (
+                    <div className="death-save-row">
+                      <span className="death-save-label">☠</span>
+                      <span className="death-save-group">
+                        {[0, 1, 2].map((i) => (
+                          <span
+                            key={`s${i}`}
+                            className={`death-save-pip death-save-success${i < saves.successes ? " filled" : ""}`}
+                            title="Success"
+                          />
+                        ))}
+                      </span>
+                      <span className="death-save-group">
+                        {[0, 1, 2].map((i) => (
+                          <span
+                            key={`f${i}`}
+                            className={`death-save-pip death-save-failure${i < saves.failures ? " filled" : ""}`}
+                            title="Failure"
+                          />
+                        ))}
+                      </span>
+                    </div>
+                  );
+                })()}
             </div>
-          )
+          );
         })}
       </div>
     </div>
-  )
+  );
 }

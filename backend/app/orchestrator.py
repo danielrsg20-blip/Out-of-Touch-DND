@@ -21,7 +21,7 @@ from .map_engine import GameMap
 from .memory import CampaignMemory
 from .rules.characters import Character, create_character
 from .rules.combat import CombatState
-from .tools import TOOL_DEFINITIONS, ToolDispatcher
+from .tools import TOOL_DEFINITIONS, ToolDispatcher, SkillChallengeState
 
 logger = logging.getLogger(__name__)
 
@@ -139,6 +139,8 @@ class Orchestrator:
     player_activity: dict[str, float | None] = field(default_factory=dict)
     mock_turn_counter: int = 0
     mock_session_nonce: int = field(default_factory=lambda: int(time.time_ns()) ^ random.getrandbits(32))
+    pending_context_notes: list[str] = field(default_factory=list)
+    skill_challenge: SkillChallengeState | None = None
     _client: Any | None = field(default=None, repr=False)
 
     def __post_init__(self) -> None:
@@ -163,6 +165,14 @@ class Orchestrator:
                 f"COMBAT: Round {self.combat.round_number}, "
                 f"Current turn: {current.character.name if current else 'unknown'}"
             )
+            concentrating = [
+                (p.character.name, p.concentrating_on)
+                for p in self.combat.participants
+                if p.concentrating_on
+            ]
+            if concentrating:
+                conc_lines = [f"- {name} is concentrating on {spell}" for name, spell in concentrating]
+                state_parts.append("CONCENTRATION:\n" + "\n".join(conc_lines))
 
         if self.game_map:
             state_parts.append(
@@ -173,6 +183,15 @@ class Orchestrator:
         memory_block = self.memory.build_context_block()
         if memory_block:
             state_parts.append("CAMPAIGN MEMORY:\n" + memory_block)
+
+        if self.skill_challenge and not self.skill_challenge.is_resolved:
+            sc = self.skill_challenge
+            state_parts.append(
+                f"SKILL CHALLENGE: '{sc.title}' — "
+                f"{sc.successes}/{sc.success_threshold} successes, "
+                f"{sc.failures}/{sc.failure_threshold} failures. "
+                f"Use check_ability for each attempt. Announce progress to players."
+            )
 
         if self.player_activity:
             activity_lines = []
@@ -236,6 +255,12 @@ class Orchestrator:
         else:
             user_content = f"[{player_name}]: {action}"
 
+        # Consume any pending context notes (e.g. opportunity attack hints)
+        if self.pending_context_notes:
+            notes_block = "\n".join(f"[DM NOTE] {n}" for n in self.pending_context_notes)
+            user_content = f"{notes_block}\n{user_content}"
+            self.pending_context_notes.clear()
+
         self.conversation_history.append({
             "role": "user",
             "content": user_content,
@@ -246,7 +271,7 @@ class Orchestrator:
             self.conversation_history = self.conversation_history[-MAX_HISTORY:]
 
         events: list[dict[str, Any]] = []
-        dispatcher = ToolDispatcher(self.characters, self.game_map, self.combat, self.memory)
+        dispatcher = ToolDispatcher(self.characters, self.game_map, self.combat, self.memory, self.skill_challenge)
 
         # If the previous turn was a clarifying question, skip tool dispatch this turn
         # so the player's clarifying answer is processed as plain conversation first.
@@ -267,6 +292,18 @@ class Orchestrator:
                 api_kwargs["tools"] = TOOL_DEFINITIONS
             try:
                 response = self._client.messages.create(**api_kwargs)
+            except anthropic.RateLimitError as e:
+                logger.warning("Anthropic rate limit hit: %s", e)
+                retry_after = 60
+                # Anthropic SDK may include retry-after in the response headers
+                if hasattr(e, "response") and hasattr(e.response, "headers"):
+                    raw = e.response.headers.get("retry-after") or e.response.headers.get("x-ratelimit-reset-requests")
+                    if raw:
+                        try:
+                            retry_after = max(1, int(float(raw)))
+                        except (ValueError, TypeError):
+                            pass
+                return [{"type": "rate_limit", "retry_after": retry_after}]
             except Exception as e:
                 logger.error("Anthropic API error: %s", e)
                 return [{"type": "error", "content": f"API error: {e}"}]
@@ -311,6 +348,7 @@ class Orchestrator:
                     self.game_map = dispatcher.game_map
                     self.combat = dispatcher.combat
                     self.memory = dispatcher.memory
+                    self.skill_challenge = dispatcher.skill_challenge
 
                     events.append({
                         "type": "tool_result",
@@ -351,7 +389,7 @@ class Orchestrator:
         if len(self.conversation_history) > MAX_HISTORY:
             self.conversation_history = self.conversation_history[-MAX_HISTORY:]
 
-        dispatcher = ToolDispatcher(self.characters, self.game_map, self.combat, self.memory)
+        dispatcher = ToolDispatcher(self.characters, self.game_map, self.combat, self.memory, self.skill_challenge)
         events: list[dict[str, Any]] = []
 
         seed_base = self._mock_seed(player_id, normalized_action, "base")
@@ -450,6 +488,7 @@ class Orchestrator:
         self.game_map = dispatcher.game_map
         self.combat = dispatcher.combat
         self.memory = dispatcher.memory
+        self.skill_challenge = dispatcher.skill_challenge
 
         self.conversation_history.append({
             "role": "assistant",
@@ -473,6 +512,7 @@ class Orchestrator:
             self.game_map = dispatcher.game_map
             self.combat = dispatcher.combat
             self.memory = dispatcher.memory
+            self.skill_challenge = dispatcher.skill_challenge
             return result
         finally:
             random.setstate(state)
@@ -667,6 +707,7 @@ class Orchestrator:
                 1 for m in self.conversation_history if m.get("role") == "assistant"
             ),
             "codex": self.memory.to_codex(),
+            "world_time": self.memory.world_time,
         }
 
 

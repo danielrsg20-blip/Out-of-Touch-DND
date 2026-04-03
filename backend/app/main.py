@@ -17,7 +17,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, Response
 from pydantic import BaseModel, field_validator
 
-from .config import CORS_ALLOW_ORIGINS, LOCAL_MOCK_MODE
+from .config import CORS_ALLOW_ORIGINS, LOCAL_MOCK_MODE, ENABLE_NPC_PORTRAITS
 from .map_catalog import run_terrain_atlas_resolution_check, validate_map_catalog_startup
 from .session import GameSession, Player, SessionManager
 from .session_start_protocol import build_session_start_protocol
@@ -143,6 +143,8 @@ class CreateSessionRequest(BaseModel):
     tracking_flags: dict[str, bool] = {}
     campaign_premise: str = ""
     campaign_tone: str = ""
+    campaign_pacing: str = ""
+    campaign_difficulty: str = ""
     campaign_title: str = ""
 
 class CreateSessionResponse(BaseModel):
@@ -168,6 +170,7 @@ class CreateCharacterRequest(BaseModel):
     sprite_id: str | None = None
     known_spells: list[str] | None = None
     prepared_spells: list[str] | None = None
+    background: str = ""
 
 
 class CharacterSpellOptionsRequest(BaseModel):
@@ -472,6 +475,10 @@ async def create_session(req: CreateSessionRequest, request: Request):
         session.orchestrator.memory.campaign_premise = req.campaign_premise
     if req.campaign_tone:
         session.orchestrator.memory.campaign_tone = req.campaign_tone
+    if req.campaign_pacing:
+        session.orchestrator.memory.campaign_pacing = req.campaign_pacing
+    if req.campaign_difficulty:
+        session.orchestrator.memory.campaign_difficulty = req.campaign_difficulty
     if req.campaign_title:
         session.orchestrator.memory.campaign_title = req.campaign_title
     _ensure_mock_starter_map(session)
@@ -503,6 +510,58 @@ def _get_session_user_id(session: GameSession) -> str | None:
         if p.user_id:
             return p.user_id
     return None
+
+
+# Holds strong references to portrait-generation tasks to prevent GC.
+_portrait_tasks: set[asyncio.Task] = set()
+
+
+def _schedule_npc_portrait(session: GameSession, npc_id: str) -> None:
+    task = asyncio.create_task(_generate_npc_portrait(session, npc_id))
+    _portrait_tasks.add(task)
+
+
+async def _generate_npc_portrait(session: GameSession, npc_id: str) -> None:
+    """Async task: generate a DALL-E portrait for an NPC and broadcast the updated codex."""
+    _portrait_tasks.discard(asyncio.current_task())
+    try:
+        try:
+            import openai as _openai
+        except ImportError:
+            logger.warning("openai package not installed — NPC portrait generation skipped")
+            return
+
+        from .config import OPENAI_API_KEY
+        if not OPENAI_API_KEY:
+            logger.warning("OPENAI_API_KEY not set — NPC portrait generation skipped")
+            return
+
+        npc = session.orchestrator.memory.npcs.get(npc_id)
+        if not npc or npc.portrait_url:
+            return
+
+        prompt = (
+            f"Fantasy RPG portrait of {npc.name}, a {npc.race} {npc.role}. "
+            "Head and shoulders, dramatic lighting, detailed digital painting, no text."
+        )
+        client = _openai.AsyncOpenAI(api_key=OPENAI_API_KEY)
+        resp = await client.images.generate(
+            model="dall-e-3",
+            prompt=prompt,
+            size="1024x1024",
+            quality="standard",
+            n=1,
+        )
+        url = resp.data[0].url if resp.data else None
+        if not url:
+            return
+
+        npc.portrait_url = url
+        state = _state_with_overlay(session)
+        await session.broadcast({"type": "state_sync", "state": state})
+        logger.info("Generated portrait for NPC %s (%s)", npc.name, npc_id)
+    except Exception:
+        logger.exception("NPC portrait generation failed for %s", npc_id)
 
 
 async def _auto_save_campaign(session: GameSession, room_code: str, user_id: str) -> None:
@@ -666,6 +725,7 @@ async def create_character(req: CreateCharacterRequest, request: Request):
             known_spells=req.known_spells,
             prepared_spells=req.prepared_spells,
             sprite_id=req.sprite_id,
+            background=req.background,
         )
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -797,6 +857,31 @@ class TTSRequest(BaseModel):
     text: str
     voice: str = "dm_default"
     mock_mode: bool = False
+
+
+class UploadMapImageRequest(BaseModel):
+    room_code: str
+    image_data_url: str  # base64 data URL, e.g. "data:image/jpeg;base64,..."
+
+
+@app.post("/api/upload-map-image")
+async def upload_map_image(req: UploadMapImageRequest):
+    session = session_manager.get_session(req.room_code)
+    if not session:
+        raise HTTPException(status_code=404, detail="Session not found")
+    if not session.orchestrator.game_map:
+        raise HTTPException(status_code=404, detail="No map loaded in session")
+    # Enforce max ~1.5 MB encoded size to prevent abuse
+    if len(req.image_data_url) > 1_500_000:
+        raise HTTPException(status_code=413, detail="Image too large (max ~1 MB)")
+    gmap = session.orchestrator.game_map
+    gmap.metadata["image_url"] = req.image_data_url
+    gmap.metadata["image_mode"] = "custom"
+    map_dict = gmap.to_dict()
+    map_dict["revealed"] = [{"x": r[0], "y": r[1]} for r in gmap.revealed]
+    map_dict["visible"] = map_dict["revealed"]
+    await session.broadcast({"type": "map_update", "map": map_dict})
+    return {"ok": True}
 
 
 class STTRequest(BaseModel):
@@ -1173,6 +1258,13 @@ async def action_endpoint(req: PlayerActionRequest):
                     "type": "dm_narrative",
                     "content": content,
                 })
+        elif event.get("type") == "rate_limit":
+            retry_after = int(event.get("retry_after", 60))
+            await session.send_to_player(player.id, {
+                "type": "rate_limit_retry",
+                "retry_in_seconds": retry_after,
+            })
+            return {"ok": False, "error": "rate_limit", "retry_after": retry_after}
         elif event.get("type") == "tool_result":
             tool_name = str(event.get("tool", ""))
             result = event.get("result")
@@ -1205,6 +1297,12 @@ async def action_endpoint(req: PlayerActionRequest):
                 }
                 dice_results.append(payload)
                 await session.broadcast(payload)
+            elif tool_name == "record_npc" and ENABLE_NPC_PORTRAITS and isinstance(result, dict):
+                npc_data = result.get("recorded") or result.get("updated")
+                if isinstance(npc_data, dict):
+                    npc_id = npc_data.get("id")
+                    if npc_id and not npc_data.get("portrait_url"):
+                        _schedule_npc_portrait(session, npc_id)
 
     overlay_payload = None
     if narratives:
@@ -1621,6 +1719,13 @@ async def handle_ws_message(session: GameSession, player: Player, msg: dict[str,
                     "type": "dm_narrative",
                     "content": event["content"],
                 })
+            elif event["type"] == "rate_limit":
+                retry_after = int(event.get("retry_after", 60))
+                await session.send_to_player(player.id, {
+                    "type": "rate_limit_retry",
+                    "retry_in_seconds": retry_after,
+                })
+                return
             elif event["type"] == "tool_result":
                 tool_name = event["tool"]
                 result = event["result"]
@@ -1696,12 +1801,62 @@ async def handle_ws_message(session: GameSession, player: Player, msg: dict[str,
                         "tool": tool_name,
                         "data": result,
                     })
+                    # If a concentration check failed, broadcast updated character state
+                    conc = result.get("concentration_check") if isinstance(result, dict) else None
+                    if isinstance(conc, dict) and not conc.get("success"):
+                        target_id = (
+                            result.get("target_id")
+                            or tool_name == "apply_damage" and tool_input.get("target_id")   # noqa: E501
+                        )
+                        if not target_id and tool_name == "attack":
+                            target_id = event.get("input", {}).get("target_id")
+                        char_obj = session.orchestrator.characters.get(str(target_id or ""))
+                        if char_obj:
+                            await session.broadcast({
+                                "type": "character_update",
+                                "character": char_obj.to_dict(),
+                            })
+
+                elif tool_name == "cast_spell":
+                    await session.broadcast({
+                        "type": "dice_result",
+                        "tool": tool_name,
+                        "data": result,
+                    })
+                    # Sync character state so frontend sees updated concentration_spell
+                    caster_obj = session.orchestrator.characters.get(str(event.get("input", {}).get("caster_id") or ""))
+                    if caster_obj:
+                        await session.broadcast({
+                            "type": "character_update",
+                            "character": caster_obj.to_dict(),
+                        })
+
+                elif tool_name == "start_skill_challenge":
+                    await session.broadcast({
+                        "type": "skill_challenge_update",
+                        "data": result,
+                    })
+
+                elif tool_name == "reveal_area":
+                    gmap = session.orchestrator.game_map
+                    if gmap:
+                        map_dict = gmap.to_dict()
+                        map_dict["revealed"] = [{"x": r[0], "y": r[1]} for r in gmap.revealed]
+                        map_dict["visible"] = map_dict["revealed"]
+                        await session.broadcast({"type": "map_update", "map": map_dict})
 
                 elif tool_name == "get_character":
                     await session.send_to_player(player.id, {
                         "type": "character_info",
                         "data": result,
                     })
+
+                elif tool_name == "record_npc" and ENABLE_NPC_PORTRAITS and isinstance(result, dict):
+                    npc_data = result.get("recorded") or result.get("updated")
+                    if isinstance(npc_data, dict):
+                        npc_id = npc_data.get("id")
+                        if npc_id and not npc_data.get("portrait_url"):
+                            _schedule_npc_portrait(session, npc_id)
 
             elif event["type"] == "error":
                 await session.send_to_player(player.id, {
@@ -1810,6 +1965,22 @@ async def handle_ws_message(session: GameSession, player: Player, msg: dict[str,
                     if current and current.character.id == char_id:
                         move_cost_feet = (abs(original_x - x) + abs(original_y - y)) * 5
                         current.movement_remaining = max(0, current.movement_remaining - move_cost_feet)
+
+                    # Opportunity attack detection: any enemy adjacent to the departed cell?
+                    pc_char = session.orchestrator.characters.get(char_id)
+                    pc_name = pc_char.name if pc_char else char_id
+                    for other_id, other_entity in list(gmap.entities.items()):
+                        if other_id == char_id or other_entity.entity_type not in ("enemy", "npc"):
+                            continue
+                        was_adjacent = max(abs(other_entity.x - original_x), abs(other_entity.y - original_y)) <= 1
+                        now_out_of_reach = max(abs(other_entity.x - x), abs(other_entity.y - y)) > 1
+                        if was_adjacent and now_out_of_reach:
+                            session.orchestrator.pending_context_notes.append(
+                                f"[OA] {pc_name} moved out of reach of {other_entity.name}. "
+                                f"{other_entity.name} may use their reaction for an opportunity attack "
+                                f"(attack tool, target {char_id}) if they choose to."
+                            )
+                            break  # Only inject one OA note per movement action
 
                 await session.broadcast({
                     "type": "map_change",

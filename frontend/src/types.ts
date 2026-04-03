@@ -1,229 +1,256 @@
 export interface TileData {
-  x: number
-  y: number
-  type: string
-  state?: string
-  sprite?: string
-  variant?: string
+  x: number;
+  y: number;
+  type: string;
+  state?: string;
+  sprite?: string;
+  variant?: string;
 }
 
 export interface EntityData {
-  id: string
-  name: string
-  x: number
-  y: number
-  type: 'pc' | 'npc' | 'enemy' | 'object'
-  sprite: string
-  visible?: boolean
-  blocks_movement?: boolean
-  prop_category?: string
+  id: string;
+  name: string;
+  x: number;
+  y: number;
+  type: "pc" | "npc" | "enemy" | "object";
+  sprite: string;
+  visible?: boolean;
+  blocks_movement?: boolean;
+  prop_category?: string;
 }
 
 export interface MapMetadata {
-  map_mode?: MapMode | string
-  map_id?: string
-  battlemap_id?: string
-  map_source?: 'library' | 'generated' | 'manual' | string
-  cache_hit?: boolean
-  pack_id?: string
-  description?: string
-  location?: string
-  biome?: string
-  mood_style?: string
-  notable_features?: string[]
-  terrain_theme?: string
-  environment?: string
-  encounter_type?: string
-  encounter_scale?: string
-  difficulty?: string
-  tactical_tags?: string[]
-  license?: string
-  license_spdx?: string
-  author?: string
-  source_url?: string
-  attribution_required?: boolean
-  attribution_text?: string
-  grid_size?: number
-  grid_units?: string
-  grid_width_cells?: number
-  grid_height_cells?: number
-  grid_cell_size_px?: number
-  image_width_px?: number
-  image_height_px?: number
-  image_url?: string
-  image_opacity?: number
-  generation_quality_mode?: 'fast' | 'final' | string
-  generation_status?: 'pending' | 'ready' | string
+  map_mode?: MapMode | string;
+  map_id?: string;
+  battlemap_id?: string;
+  map_source?: "library" | "generated" | "manual" | string;
+  cache_hit?: boolean;
+  pack_id?: string;
+  description?: string;
+  location?: string;
+  biome?: string;
+  mood_style?: string;
+  notable_features?: string[];
+  terrain_theme?: string;
+  environment?: string;
+  encounter_type?: string;
+  encounter_scale?: string;
+  difficulty?: string;
+  tactical_tags?: string[];
+  license?: string;
+  license_spdx?: string;
+  author?: string;
+  source_url?: string;
+  attribution_required?: boolean;
+  attribution_text?: string;
+  grid_size?: number;
+  grid_units?: string;
+  grid_width_cells?: number;
+  grid_height_cells?: number;
+  grid_cell_size_px?: number;
+  image_width_px?: number;
+  image_height_px?: number;
+  image_url?: string;
+  image_opacity?: number;
+  generation_quality_mode?: "fast" | "final" | string;
+  generation_status?: "pending" | "ready" | string;
 }
 
-export type MapMode = 'ai_generated_image'
+export type MapMode = "ai_generated_image";
 
 export interface MapData {
-  width: number
-  height: number
-  tiles: TileData[]
-  entities: EntityData[]
-  revealed?: { x: number; y: number }[]
-  visible?: { x: number; y: number }[]
-  metadata?: MapMetadata
-  traversal_grid?: FrontendTraversalGrid
+  width: number;
+  height: number;
+  tiles: TileData[];
+  entities: EntityData[];
+  revealed?: { x: number; y: number }[];
+  visible?: { x: number; y: number }[];
+  metadata?: MapMetadata;
+  traversal_grid?: FrontendTraversalGrid;
 }
 
 export interface ItemData {
-  id: string
-  name: string
-  category: 'weapon' | 'armor' | 'shield' | 'tool' | 'gear' | 'ammunition'
-  subcategory: string
-  cost_gp: number
-  weight_lb: number
-  description: string
+  id: string;
+  name: string;
+  category: "weapon" | "armor" | "shield" | "tool" | "gear" | "ammunition";
+  subcategory: string;
+  cost_gp: number;
+  weight_lb: number;
+  description: string;
   // Weapon fields
-  damage: string | null
-  damage_type: string | null
-  properties: string[]
+  damage: string | null;
+  damage_type: string | null;
+  properties: string[];
   // Armor fields
-  ac_base: number | null
-  dex_mod: boolean
-  max_dex: number | null
-  str_req: number | null
-  stealth_disadvantage: boolean
+  ac_base: number | null;
+  dex_mod: boolean;
+  max_dex: number | null;
+  str_req: number | null;
+  stealth_disadvantage: boolean;
   // Inventory state
-  equipped: boolean
-  quantity: number
-  notes: string
+  equipped: boolean;
+  quantity: number;
+  notes: string;
 }
 
 export interface CharacterData {
-  id: string
-  sprite_id?: string
-  name: string
-  race: string
-  class: string
-  level: number
-  abilities: Record<string, number>
-  modifiers: Record<string, number>
-  hp: number
-  max_hp: number
-  temp_hp: number
-  ac: number
-  speed: number
-  proficiency_bonus: number
-  skill_proficiencies: string[]
-  conditions: string[]
-  inventory: ItemData[]
-  gold_gp: number
-  spell_slots: Record<number, number>
-  spell_slots_used: Record<number, number>
-  known_spells: string[]
-  prepared_spells: string[]
-  class_features: Array<{ id?: string; name: string; level?: number; description?: string }>
-  traits: string[]
-  xp: number
-  is_alive: boolean
-  rules_version?: string
-  spellcasting_mode?: 'none' | 'known' | 'prepared'
+  id: string;
+  sprite_id?: string;
+  name: string;
+  race: string;
+  class: string;
+  level: number;
+  abilities: Record<string, number>;
+  modifiers: Record<string, number>;
+  hp: number;
+  max_hp: number;
+  temp_hp: number;
+  ac: number;
+  speed: number;
+  proficiency_bonus: number;
+  skill_proficiencies: string[];
+  conditions: string[];
+  inventory: ItemData[];
+  gold_gp: number;
+  spell_slots: Record<number, number>;
+  spell_slots_used: Record<number, number>;
+  known_spells: string[];
+  prepared_spells: string[];
+  class_features: Array<{
+    id?: string;
+    name: string;
+    level?: number;
+    description?: string;
+  }>;
+  traits: string[];
+  xp: number;
+  is_alive: boolean;
+  rules_version?: string;
+  spellcasting_mode?: "none" | "known" | "prepared";
+  death_saves?: { successes: number; failures: number };
+  hit_dice_used?: number;
+  hit_dice_available?: number;
+  concentration_spell?: string | null;
+  background?: string;
 }
 
 export interface SpellOption {
-  name: string
-  level: number
-  school?: string
+  name: string;
+  level: number;
+  school?: string;
+}
+
+export interface AoePreview {
+  shape: "circle" | "cone" | "line" | "square";
+  size_ft: number;
 }
 
 export interface CastableSpellOption {
-  name: string
-  level: number
-  castable: boolean
-  reason?: string | null
-  slot_options: number[]
+  name: string;
+  level: number;
+  castable: boolean;
+  reason?: string | null;
+  slot_options: number[];
+  aoe?: AoePreview | null;
 }
 
 export interface SpellSlotState {
-  level: number
-  total: number
-  used: number
-  remaining: number
-  state: 'available' | 'unavailable' | 'restricted'
-  restricted: boolean
+  level: number;
+  total: number;
+  used: number;
+  remaining: number;
+  state: "available" | "unavailable" | "restricted";
+  restricted: boolean;
 }
 
 export interface CombatData {
-  is_active: boolean
-  round: number
-  turn_index: number
-  current_turn: string | null
-  current_movement_total?: number
-  current_movement_remaining?: number
+  is_active: boolean;
+  round: number;
+  turn_index: number;
+  current_turn: string | null;
+  current_movement_total?: number;
+  current_movement_remaining?: number;
   initiative_order: Array<{
-    id: string
-    name: string
-    initiative: number
-    hp: number
-    max_hp: number
-    movement_remaining?: number
-  }>
+    id: string;
+    name: string;
+    initiative: number;
+    hp: number;
+    max_hp: number;
+    movement_remaining?: number;
+    concentrating_on?: string | null;
+  }>;
 }
 
 export interface PlayerData {
-  id: string
-  name: string
-  character_id: string | null
+  id: string;
+  name: string;
+  character_id: string | null;
+}
+
+export interface SkillChallengeData {
+  title: string;
+  success_threshold: number;
+  failure_threshold: number;
+  successes: number;
+  failures: number;
+  participants: string[];
+  is_resolved: boolean;
 }
 
 export interface SessionData {
-  room_code: string
-  host_id: string
-  players: PlayerData[]
-  started: boolean
-  characters: Record<string, CharacterData>
+  room_code: string;
+  host_id: string;
+  players: PlayerData[];
+  started: boolean;
+  characters: Record<string, CharacterData>;
 }
 
 export interface GameState {
-  characters: Record<string, CharacterData>
-  map: MapData | null
-  combat: CombatData | null
+  characters: Record<string, CharacterData>;
+  map: MapData | null;
+  combat: CombatData | null;
   usage: {
-    input_tokens: number
-    output_tokens: number
-    estimated_cost_usd: number
-  }
+    input_tokens: number;
+    output_tokens: number;
+    estimated_cost_usd: number;
+  };
 }
 
 export interface UserData {
-  user_id: string
-  username: string
-  token: string
+  user_id: string;
+  username: string;
+  token: string;
 }
 
 export interface NarrativeEntry {
-  id: string
-  type: 'dm' | 'player' | 'system' | 'dice'
-  speaker?: string
-  content: string
-  timestamp: number
+  id: string;
+  type: "dm" | "player" | "system" | "dice";
+  speaker?: string;
+  content: string;
+  timestamp: number;
 }
 
 export interface PendingRoll {
-  characterId: string
-  characterName: string
-  label: string
-  dice: string
-  modifier: number
-  context: string
+  characterId: string;
+  characterName: string;
+  label: string;
+  dice: string;
+  modifier: number;
+  context: string;
 }
 
 export interface DmGenerationStatus {
-  provider: string
-  model: string
-  fallback: boolean
-  reason?: string | null
-  updatedAt: number
+  provider: string;
+  model: string;
+  fallback: boolean;
+  reason?: string | null;
+  updatedAt: number;
 }
 
 export interface TtsPlaybackStatus {
-  source: 'edge-tts' | 'browser-fallback' | 'none'
-  reason?: string | null
-  updatedAt: number
+  source: "edge-tts" | "browser-fallback" | "none";
+  reason?: string | null;
+  updatedAt: number;
 }
 
 // ============================================================================
@@ -231,62 +258,76 @@ export interface TtsPlaybackStatus {
 // ============================================================================
 
 export interface CodexNPC {
-  id: string
-  name: string
-  race: string
-  role: string
-  location: string
-  disposition: 'hostile' | 'unfriendly' | 'neutral' | 'friendly' | 'allied'
-  notes: string[]
-  alive: boolean
+  id: string;
+  name: string;
+  race: string;
+  role: string;
+  location: string;
+  disposition: "hostile" | "unfriendly" | "neutral" | "friendly" | "allied";
+  notes: string[];
+  alive: boolean;
+  portrait_url?: string;
+  relationships?: Record<string, string>;
 }
 
 export interface CodexLocation {
-  id: string
-  name: string
-  description: string
-  region: string
-  visited: boolean
-  notes: string[]
+  id: string;
+  name: string;
+  description: string;
+  region: string;
+  visited: boolean;
+  notes: string[];
 }
 
 export interface CodexQuest {
-  id: string
-  title: string
-  description: string
-  status: 'active' | 'completed' | 'failed' | 'abandoned'
-  objectives: string[]
-  completed_objectives: string[]
-  reward: string
+  id: string;
+  title: string;
+  description: string;
+  status: "active" | "completed" | "failed" | "abandoned";
+  objectives: string[];
+  completed_objectives: string[];
+  reward: string;
 }
 
 export interface CodexWorldEvent {
-  session: number
-  description: string
-  importance: 'minor' | 'major' | 'critical'
+  session: number;
+  description: string;
+  importance: "minor" | "major" | "critical";
+}
+
+export interface WorldTime {
+  day: number;
+  hour: number;
+  minute: number;
 }
 
 export interface Codex {
-  npcs: Record<string, CodexNPC>
-  locations: Record<string, CodexLocation>
-  quests: Record<string, CodexQuest>
-  world_events: CodexWorldEvent[]
+  npcs: Record<string, CodexNPC>;
+  locations: Record<string, CodexLocation>;
+  quests: Record<string, CodexQuest>;
+  world_events: CodexWorldEvent[];
+  world_time?: WorldTime;
 }
 
 export interface CampaignSlot {
-  id: string
-  name: string
-  updated_at: string
-  session_count: number
-  my_character: { name: string; class: string; level: number; char_id: string } | null
+  id: string;
+  name: string;
+  updated_at: string;
+  session_count: number;
+  my_character: {
+    name: string;
+    class: string;
+    level: number;
+    char_id: string;
+  } | null;
 }
 
 export interface CampaignCharacter {
-  char_id: string
-  name: string
-  class: string
-  level: number
-  is_mine: boolean
+  char_id: string;
+  name: string;
+  class: string;
+  level: number;
+  is_mine: boolean;
 }
 
 // ============================================================================
@@ -294,170 +335,178 @@ export interface CampaignCharacter {
 // ============================================================================
 
 export interface Point {
-  x: number
-  y: number
+  x: number;
+  y: number;
 }
 
 export interface GradientStop {
-  offset: number // 0–1
-  color: string // "#rrggbbaa"
+  offset: number; // 0–1
+  color: string; // "#rrggbbaa"
 }
 
 export interface GradientDef {
-  type: 'linear' | 'radial'
-  start?: Point // linear only
-  end?: Point // linear only
-  center?: Point // radial
-  radius?: number // radial
-  stops: GradientStop[]
+  type: "linear" | "radial";
+  start?: Point; // linear only
+  end?: Point; // linear only
+  center?: Point; // radial
+  radius?: number; // radial
+  stops: GradientStop[];
 }
 
 export interface FillStyle {
-  color: string // "#rrggbbaa"
-  gradient?: GradientDef
+  color: string; // "#rrggbbaa"
+  gradient?: GradientDef;
 }
 
 export interface StrokeStyle {
-  color: string
-  width: number
-  line_cap?: 'butt' | 'round' | 'square'
-  line_join?: 'miter' | 'round' | 'bevel'
-  dash_array?: number[]
-  width_profile?: number[] // for paths: taper effect
+  color: string;
+  width: number;
+  line_cap?: "butt" | "round" | "square";
+  line_join?: "miter" | "round" | "bevel";
+  dash_array?: number[];
+  width_profile?: number[]; // for paths: taper effect
 }
 
 export interface NoiseMask {
-  enabled: boolean
-  intensity: number // 0–1
-  scale: number // 0.1–50
-  seed: number
-  octaves: number // 1–4
+  enabled: boolean;
+  intensity: number; // 0–1
+  scale: number; // 0.1–50
+  seed: number;
+  octaves: number; // 1–4
 }
 
 export interface DecalStampDef {
-  id: string
-  name: string
-  svg_data: string // simplified SVG path
-  bounding_box: { w: number; h: number }
-  color_key: string
-  variations?: string[]
+  id: string;
+  name: string;
+  svg_data: string; // simplified SVG path
+  bounding_box: { w: number; h: number };
+  color_key: string;
+  variations?: string[];
 }
 
 export interface StyleDefinition {
-  id: string
-  name: string
-  palette: Record<string, string>
-  noise_seed: number
+  id: string;
+  name: string;
+  palette: Record<string, string>;
+  noise_seed: number;
   paper_texture?: {
-    enabled: boolean
-    intensity: number
-    scale: number
-  }
-  edge_feathering?: number
-  jitter?: number
-  decal_library: Record<string, DecalStampDef>
+    enabled: boolean;
+    intensity: number;
+    scale: number;
+  };
+  edge_feathering?: number;
+  jitter?: number;
+  decal_library: Record<string, DecalStampDef>;
 }
 
 export interface Region {
-  type: 'polygon'
-  id: string
-  name: string
-  points: Point[]
-  fill: FillStyle
-  fill_opacity?: number
-  stroke?: StrokeStyle
-  noise_mask?: NoiseMask
-  feather?: number
-  tags?: string[]
+  type: "polygon";
+  id: string;
+  name: string;
+  points: Point[];
+  fill: FillStyle;
+  fill_opacity?: number;
+  stroke?: StrokeStyle;
+  noise_mask?: NoiseMask;
+  feather?: number;
+  tags?: string[];
 }
 
 export interface Path {
-  type: 'polyline'
-  id: string
-  name: string
-  points: Point[]
-  stroke: StrokeStyle
-  stroke_opacity?: number
-  style_jitter?: number
-  noise_mask?: NoiseMask
-  end_cap_style?: 'round' | 'square' | 'arrow' | 'none'
-  tags?: string[]
+  type: "polyline";
+  id: string;
+  name: string;
+  points: Point[];
+  stroke: StrokeStyle;
+  stroke_opacity?: number;
+  style_jitter?: number;
+  noise_mask?: NoiseMask;
+  end_cap_style?: "round" | "square" | "arrow" | "none";
+  tags?: string[];
 }
 
 export interface Decal {
-  type: 'decal'
-  id: string
-  name: string
-  position: Point
-  decal_type: string
-  scale?: number
-  rotation?: number
-  opacity?: number
-  blend_mode?: string
-  tags?: string[]
+  type: "decal";
+  id: string;
+  name: string;
+  position: Point;
+  decal_type: string;
+  scale?: number;
+  rotation?: number;
+  opacity?: number;
+  blend_mode?: string;
+  tags?: string[];
 }
 
 export interface TextLabel {
-  type: 'text'
-  id: string
-  name: string
-  parent_object_id?: string
-  position: Point
-  text: string
-  offset?: Point
-  color?: string
-  font_family?: string
-  font_size?: number
-  align?: CanvasTextAlign
-  baseline?: CanvasTextBaseline
-  outline_color?: string
-  outline_width?: number
-  chip_color?: string
-  chip_padding?: number
-  dm_only?: boolean
-  visible?: boolean
-  scale_with_zoom?: boolean
-  min_screen_px?: number
-  max_screen_px?: number
-  tags?: string[]
+  type: "text";
+  id: string;
+  name: string;
+  parent_object_id?: string;
+  position: Point;
+  text: string;
+  offset?: Point;
+  color?: string;
+  font_family?: string;
+  font_size?: number;
+  align?: CanvasTextAlign;
+  baseline?: CanvasTextBaseline;
+  outline_color?: string;
+  outline_width?: number;
+  chip_color?: string;
+  chip_padding?: number;
+  dm_only?: boolean;
+  visible?: boolean;
+  scale_with_zoom?: boolean;
+  min_screen_px?: number;
+  max_screen_px?: number;
+  tags?: string[];
 }
 
-export type OverlayElement = Region | Path | Decal | TextLabel
+export type OverlayElement = Region | Path | Decal | TextLabel;
 
 export interface OverlayLayer {
-  id: string
-  name: string
-  z_index: number
-  visible: boolean
-  blend_mode: 'normal' | 'multiply' | 'screen' | 'overlay' | 'darken' | 'lighten' | 'color-dodge' | 'color-burn'
-  opacity: number
-  elements: OverlayElement[]
-  clip_region?: Point[]
-  clipped_to_bounds?: boolean
+  id: string;
+  name: string;
+  z_index: number;
+  visible: boolean;
+  blend_mode:
+    | "normal"
+    | "multiply"
+    | "screen"
+    | "overlay"
+    | "darken"
+    | "lighten"
+    | "color-dodge"
+    | "color-burn";
+  opacity: number;
+  elements: OverlayElement[];
+  clip_region?: Point[];
+  clipped_to_bounds?: boolean;
   /** Per-layer saturation cap (0-1). Overrides global StyleDefinition.max_saturation when set. */
-  max_saturation?: number
+  max_saturation?: number;
 }
 
 export interface OverlayWorldBounds {
-  origin_x: number
-  origin_y: number
-  width_world: number
-  height_world: number
+  origin_x: number;
+  origin_y: number;
+  width_world: number;
+  height_world: number;
 }
 
 export interface OverlayMetadata {
-  narrative_tags?: string[]
-  seed?: number
-  story_context?: string
-  vectorized_from_map?: boolean
-  world_bounds?: OverlayWorldBounds
-  generator_version?: string
-  rollout_flags?: Record<string, boolean>
-  normalized_to_map_space?: boolean
+  narrative_tags?: string[];
+  seed?: number;
+  story_context?: string;
+  vectorized_from_map?: boolean;
+  world_bounds?: OverlayWorldBounds;
+  generator_version?: string;
+  rollout_flags?: Record<string, boolean>;
+  normalized_to_map_space?: boolean;
   label_mode?: {
-    showLabels: boolean
-    showDmOnlyLabels: boolean
-  }
+    showLabels: boolean;
+    showDmOnlyLabels: boolean;
+  };
 }
 
 // ============================================================================
@@ -465,51 +514,56 @@ export interface OverlayMetadata {
 // ============================================================================
 
 /** Visual mode for the traversal-grid debug overlay. */
-export type GridOverlayMode = 'outlines' | 'blocked' | 'movement_cost' | 'tags'
+export type GridOverlayMode = "outlines" | "blocked" | "movement_cost" | "tags";
 
 export interface GridOverlayConfig {
-  visible: boolean
-  mode: GridOverlayMode
+  visible: boolean;
+  mode: GridOverlayMode;
   /** Overall opacity of the grid overlay layer (0-1). */
-  opacity: number
+  opacity: number;
   /** Whether to draw cell boundary lines in non-outlines modes. */
-  showGridLines: boolean
+  showGridLines: boolean;
   /** CSS color for cell boundary lines. */
-  gridLineColor: string
+  gridLineColor: string;
   /** Pixel width of cell boundary lines (in map pixel space, before zoom). */
-  gridLineWidth: number
+  gridLineWidth: number;
 }
 
 export const DEFAULT_GRID_OVERLAY_CONFIG: GridOverlayConfig = {
   visible: false,
-  mode: 'outlines',
+  mode: "outlines",
   opacity: 0.55,
   showGridLines: true,
-  gridLineColor: 'rgba(255, 255, 255, 0.18)',
+  gridLineColor: "rgba(255, 255, 255, 0.18)",
   gridLineWidth: 0.5,
-}
+};
 
 // ============================================================================
 // MAP CORRECTION EDITOR TYPES
 // ============================================================================
 
-export type MapCorrectionTool = 'inspect' | 'paint_blocked' | 'paint_walkable' | 'paint_cost' | 'mark_door'
+export type MapCorrectionTool =
+  | "inspect"
+  | "paint_blocked"
+  | "paint_walkable"
+  | "paint_cost"
+  | "mark_door";
 
 export interface MapCorrectionPreviewArtifacts {
-  collision_mask_png_base64?: string
-  cost_map_png_base64?: string
+  collision_mask_png_base64?: string;
+  cost_map_png_base64?: string;
 }
 
 /** Single cell from a traversal grid. Structurally compatible with GridCellData from ts-runtime. */
 export interface FrontendTraversalCell {
   /** Column index (0-based). */
-  x: number
+  x: number;
   /** Row index (0-based). */
-  y: number
-  traversable: boolean
-  movement_cost: number
-  movement_blocking_tags?: string[]
-  tags: string[]
+  y: number;
+  traversable: boolean;
+  movement_cost: number;
+  movement_blocking_tags?: string[];
+  tags: string[];
 }
 
 /**
@@ -517,13 +571,13 @@ export interface FrontendTraversalCell {
  * Structurally compatible with the ts-runtime TraversalGrid type.
  */
 export interface FrontendTraversalGrid {
-  width_cells: number
-  height_cells: number
+  width_cells: number;
+  height_cells: number;
   /** Size of each cell in world units. */
-  cell_size_world: number
-  world_bounds?: OverlayWorldBounds
-  resolution_scale?: number
-  cells: FrontendTraversalCell[]
+  cell_size_world: number;
+  world_bounds?: OverlayWorldBounds;
+  resolution_scale?: number;
+  cells: FrontendTraversalCell[];
 }
 
 // ============================================================================
@@ -531,30 +585,30 @@ export interface FrontendTraversalGrid {
 // ============================================================================
 
 export interface ColorValidationReport {
-  elements_total: number
-  elements_with_colors_clamped: number
+  elements_total: number;
+  elements_with_colors_clamped: number;
   /** 0-1 fraction of elements that had at least one color clamped. */
-  clamp_ratio: number
+  clamp_ratio: number;
   /** Highest observed HSL saturation per layer name (pre-clamp). */
-  max_observed_saturation_by_layer: Record<string, number>
+  max_observed_saturation_by_layer: Record<string, number>;
   /** Elements whose color strings were structurally invalid and rejected. */
-  out_of_bounds_rejected: number
+  out_of_bounds_rejected: number;
 }
 
 export interface Overlay {
-  id: string
-  name: string
-  version: string
-  created_at: string
-  map_id?: string
-  metadata?: OverlayMetadata
-  styles: Record<string, StyleDefinition>
-  layers: OverlayLayer[]
+  id: string;
+  name: string;
+  version: string;
+  created_at: string;
+  map_id?: string;
+  metadata?: OverlayMetadata;
+  styles: Record<string, StyleDefinition>;
+  layers: OverlayLayer[];
 }
 
 // Undo/redo command for overlay editing
 export interface OverlayCommand {
-  type: string
-  execute: () => void
-  undo: () => void
+  type: string;
+  execute: () => void;
+  undo: () => void;
 }

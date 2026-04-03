@@ -1,169 +1,275 @@
-import { useEffect, useMemo, useState } from 'react'
-import { useGameStore } from '../../stores/gameStore'
-import { useSessionStore } from '../../stores/sessionStore'
-import { invokeEdgeFunction } from '../../lib/supabaseClient'
-import type { CastableSpellOption, SpellSlotState } from '../../types'
-import './panels.css'
+import { useEffect, useMemo, useState } from "react";
+import { useGameStore } from "../../stores/gameStore";
+import { useSessionStore } from "../../stores/sessionStore";
+import { invokeEdgeFunction } from "../../lib/supabaseClient";
+import type { CastableSpellOption, SpellSlotState } from "../../types";
+import "./panels.css";
 
 interface ActionBarProps {
-  onSend: (message: string) => void
-  onCastSpell: (spellName: string, slotLevel: number, targetId?: string) => void
-  onInitiateTarget: (spellName: string, slotLevel: number) => void
+  onSend: (message: string) => void;
+  onCastSpell: (
+    spellName: string,
+    slotLevel: number,
+    targetId?: string,
+  ) => void;
+  onInitiateTarget: (
+    spellName: string,
+    slotLevel: number,
+    aoe?: CastableSpellOption["aoe"],
+  ) => void;
 }
 
-export default function ActionBar({ onSend, onCastSpell, onInitiateTarget }: ActionBarProps) {
-  const combat = useGameStore(s => s.combat)
-  const characters = useGameStore(s => s.characters)
-  const addNarrative = useGameStore(s => s.addNarrative)
-  const playerId = useSessionStore(s => s.playerId)
-  const players = useSessionStore(s => s.players)
-  const roomCode = useSessionStore(s => s.roomCode)
-  const mockMode = useSessionStore(s => s.mockMode)
-  const [castableSpells, setCastableSpells] = useState<CastableSpellOption[]>([])
-  const [slotStates, setSlotStates] = useState<SpellSlotState[]>([])
-  const [selectedSpell, setSelectedSpell] = useState('')
-  const [selectedSlot, setSelectedSlot] = useState(0)
-  const [advancingTurn, setAdvancingTurn] = useState(false)
-  const [resting, setResting] = useState<'short' | 'long' | null>(null)
+export default function ActionBar({
+  onSend,
+  onCastSpell,
+  onInitiateTarget,
+}: ActionBarProps) {
+  const combat = useGameStore((s) => s.combat);
+  const characters = useGameStore((s) => s.characters);
+  const addNarrative = useGameStore((s) => s.addNarrative);
+  const playerId = useSessionStore((s) => s.playerId);
+  const players = useSessionStore((s) => s.players);
+  const roomCode = useSessionStore((s) => s.roomCode);
+  const mockMode = useSessionStore((s) => s.mockMode);
+  const [castableSpells, setCastableSpells] = useState<CastableSpellOption[]>(
+    [],
+  );
+  const [slotStates, setSlotStates] = useState<SpellSlotState[]>([]);
+  const [selectedSpell, setSelectedSpell] = useState("");
+  const [selectedSlot, setSelectedSlot] = useState(0);
+  const [advancingTurn, setAdvancingTurn] = useState(false);
+  const [resting, setResting] = useState<"short" | "long" | null>(null);
 
-  const combatActive = !!combat?.is_active
+  const combatActive = !!combat?.is_active;
 
-  const player = players.find(p => p.id === playerId)
-  const isMyTurn = combatActive && player?.character_id === combat?.current_turn
-  const myChar = player?.character_id ? characters[player.character_id] : null
+  const player = players.find((p) => p.id === playerId);
+  const isMyTurn =
+    combatActive && player?.character_id === combat?.current_turn;
+  const myChar = player?.character_id ? characters[player.character_id] : null;
 
   useEffect(() => {
     const fetchSpellOptions = async () => {
-      if (!roomCode || !playerId || !combatActive) return
+      if (!roomCode || !playerId || !combatActive) return;
       try {
-        const payload = await invokeEdgeFunction<Record<string, unknown>>('dm-action', {
-          action: 'get_castable_spells',
-          room_code: roomCode,
-          player_id: playerId,
-          in_combat: true,
-          mock_mode: mockMode,
-        }, { authMode: 'anon' })
+        const payload = await invokeEdgeFunction<Record<string, unknown>>(
+          "dm-action",
+          {
+            action: "get_castable_spells",
+            room_code: roomCode,
+            player_id: playerId,
+            in_combat: true,
+            mock_mode: mockMode,
+          },
+          { authMode: "anon" },
+        );
         if (!payload.error) {
-          setCastableSpells((payload.castable_spells as CastableSpellOption[]) || [])
-          setSlotStates((payload.slot_states as SpellSlotState[]) || [])
+          setCastableSpells(
+            (payload.castable_spells as CastableSpellOption[]) || [],
+          );
+          setSlotStates((payload.slot_states as SpellSlotState[]) || []);
         }
       } catch {
-        setCastableSpells([])
-        setSlotStates([])
+        setCastableSpells([]);
+        setSlotStates([]);
       }
-    }
-    fetchSpellOptions()
-  }, [roomCode, playerId, combatActive, myChar?.spell_slots_used, myChar?.prepared_spells, myChar?.known_spells, mockMode])
+    };
+    fetchSpellOptions();
+  }, [
+    roomCode,
+    playerId,
+    combatActive,
+    myChar?.spell_slots_used,
+    myChar?.prepared_spells,
+    myChar?.known_spells,
+    mockMode,
+  ]);
 
-  const quickSpells = useMemo(() => castableSpells.slice(0, 4), [castableSpells])
-  const overflowSpells = useMemo(() => castableSpells.slice(4), [castableSpells])
+  const quickSpells = useMemo(
+    () => castableSpells.slice(0, 4),
+    [castableSpells],
+  );
+  const overflowSpells = useMemo(
+    () => castableSpells.slice(4),
+    [castableSpells],
+  );
 
-  const selectedSpellOption = castableSpells.find(s => s.name === selectedSpell)
-  const selectedSpellSlots = selectedSpellOption?.slot_options || []
+  const selectedSpellOption = castableSpells.find(
+    (s) => s.name === selectedSpell,
+  );
+  const selectedSpellSlots = selectedSpellOption?.slot_options || [];
 
   const castSpell = (spell: CastableSpellOption) => {
-    const slotLevel = spell.level === 0 ? 0 : (spell.slot_options[0] ?? spell.level)
+    const slotLevel =
+      spell.level === 0 ? 0 : (spell.slot_options[0] ?? spell.level);
     if (spell.level > 0) {
-      onInitiateTarget(spell.name, slotLevel)
+      onInitiateTarget(spell.name, slotLevel, spell.aoe);
     } else {
-      onCastSpell(spell.name, slotLevel)
+      onCastSpell(spell.name, slotLevel);
     }
-  }
+  };
 
   const handleEndTurn = async () => {
     if (!roomCode || !playerId || advancingTurn) {
-      return
+      return;
     }
-    setAdvancingTurn(true)
+    setAdvancingTurn(true);
 
     try {
-      await invokeEdgeFunction<Record<string, unknown>>('dm-action', {
-        action: 'next_combat_turn',
-        room_code: roomCode,
-        player_id: playerId,
-        mock_mode: mockMode,
-      }, { authMode: 'anon' })
+      await invokeEdgeFunction<Record<string, unknown>>(
+        "dm-action",
+        {
+          action: "next_combat_turn",
+          room_code: roomCode,
+          player_id: playerId,
+          mock_mode: mockMode,
+        },
+        { authMode: "anon" },
+      );
     } catch (error) {
-      const edgeMessage = error instanceof Error ? error.message : 'Unknown error'
-      addNarrative('system', `Unable to advance turn: ${edgeMessage}`)
+      const edgeMessage =
+        error instanceof Error ? error.message : "Unknown error";
+      addNarrative("system", `Unable to advance turn: ${edgeMessage}`);
     } finally {
-      setAdvancingTurn(false)
+      setAdvancingTurn(false);
     }
-  }
+  };
 
   const actions = [
-    { label: 'Attack',     action: 'I attack the nearest enemy',              icon: '⚔',  key: 'A' },
-    { label: 'Dash',       action: 'I use my action to Dash, doubling my movement', icon: '💨', key: 'D' },
-    { label: 'Dodge',      action: 'I take the Dodge action',                 icon: '🛡',  key: 'O' },
-    { label: 'Disengage',  action: 'I take the Disengage action',             icon: '🏃',  key: 'G' },
-    { label: 'Help',       action: 'I use the Help action',                   icon: '🤝',  key: 'H' },
-    { label: 'Hide',       action: 'I attempt to Hide',                       icon: '👤',  key: 'I' },
-    { label: 'End Turn',   action: 'I end my turn',                           icon: '⏭',  key: 'E' },
-  ]
+    {
+      label: "Attack",
+      action: "I attack the nearest enemy",
+      icon: "⚔",
+      key: "A",
+    },
+    {
+      label: "Dash",
+      action: "I use my action to Dash, doubling my movement",
+      icon: "💨",
+      key: "D",
+    },
+    { label: "Dodge", action: "I take the Dodge action", icon: "🛡", key: "O" },
+    {
+      label: "Disengage",
+      action: "I take the Disengage action",
+      icon: "🏃",
+      key: "G",
+    },
+    { label: "Help", action: "I use the Help action", icon: "🤝", key: "H" },
+    { label: "Hide", action: "I attempt to Hide", icon: "👤", key: "I" },
+    { label: "End Turn", action: "I end my turn", icon: "⏭", key: "E" },
+  ];
 
   useEffect(() => {
-    if (!combatActive || !isMyTurn) return
+    if (!combatActive || !isMyTurn) return;
     const handler = (e: KeyboardEvent) => {
-      const tag = (e.target as HTMLElement).tagName
-      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return
-      if (e.metaKey || e.ctrlKey || e.altKey) return
+      const tag = (e.target as HTMLElement).tagName;
+      if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
       switch (e.key.toLowerCase()) {
-        case 'a': onSend('I attack the nearest enemy'); break
-        case 'd': onSend('I use my action to Dash, doubling my movement'); break
-        case 'o': onSend('I take the Dodge action'); break
-        case 'g': onSend('I take the Disengage action'); break
-        case 'h': onSend('I use the Help action'); break
-        case 'i': onSend('I attempt to Hide'); break
-        case 'e': handleEndTurn().catch(() => {}); break
+        case "a":
+          onSend("I attack the nearest enemy");
+          break;
+        case "d":
+          onSend("I use my action to Dash, doubling my movement");
+          break;
+        case "o":
+          onSend("I take the Dodge action");
+          break;
+        case "g":
+          onSend("I take the Disengage action");
+          break;
+        case "h":
+          onSend("I use the Help action");
+          break;
+        case "i":
+          onSend("I attempt to Hide");
+          break;
+        case "e":
+          handleEndTurn().catch(() => {});
+          break;
         default: {
-          const num = parseInt(e.key)
+          const num = parseInt(e.key);
           if (num >= 1 && num <= 4) {
-            const spell = quickSpells[num - 1]
-            if (spell?.castable) castSpell(spell)
+            const spell = quickSpells[num - 1];
+            if (spell?.castable) castSpell(spell);
           }
         }
       }
-    }
-    document.addEventListener('keydown', handler)
-    return () => document.removeEventListener('keydown', handler)
-  }, [combatActive, isMyTurn, onSend, handleEndTurn, quickSpells, castSpell])
+    };
+    document.addEventListener("keydown", handler);
+    return () => document.removeEventListener("keydown", handler);
+  }, [combatActive, isMyTurn, onSend, handleEndTurn, quickSpells, castSpell]);
 
   if (!combatActive || !combat) {
+    const hitDiceAvailable =
+      myChar?.hit_dice_available ?? myChar?.level ?? null;
+    const HIT_DIE_BY_CLASS: Record<string, number> = {
+      Barbarian: 12,
+      Fighter: 10,
+      Paladin: 10,
+      Ranger: 10,
+      Bard: 8,
+      Cleric: 8,
+      Druid: 8,
+      Monk: 8,
+      Rogue: 8,
+      Warlock: 8,
+      Sorcerer: 6,
+      Wizard: 6,
+    };
+    const classData = myChar ? (HIT_DIE_BY_CLASS[myChar.class] ?? null) : null;
+    const hitDieLabel = classData ? `d${classData}` : "die";
+
     const handleShortRest = async () => {
-      if (!roomCode || !playerId || resting) return
-      setResting('short')
+      if (!roomCode || !playerId || resting) return;
+      setResting("short");
       try {
-        await invokeEdgeFunction<Record<string, unknown>>('dm-action', {
-          action: 'player_action',
-          room_code: roomCode,
-          player_id: playerId,
-          content: 'I want to take a short rest, spending 1 hit die to recover HP.',
-          mock_mode: mockMode,
-        }, { authMode: 'anon' })
+        await invokeEdgeFunction<Record<string, unknown>>(
+          "dm-action",
+          {
+            action: "player_action",
+            room_code: roomCode,
+            player_id: playerId,
+            content:
+              "I want to take a short rest, spending 1 hit die to recover HP.",
+            mock_mode: mockMode,
+          },
+          { authMode: "anon" },
+        );
       } catch (err) {
-        addNarrative('system', `Short rest failed: ${err instanceof Error ? err.message : 'Unknown error'}`)
+        addNarrative(
+          "system",
+          `Short rest failed: ${err instanceof Error ? err.message : "Unknown error"}`,
+        );
       } finally {
-        setResting(null)
+        setResting(null);
       }
-    }
+    };
 
     const handleLongRest = async () => {
-      if (!roomCode || !playerId || resting) return
-      setResting('long')
+      if (!roomCode || !playerId || resting) return;
+      setResting("long");
       try {
-        await invokeEdgeFunction<Record<string, unknown>>('dm-action', {
-          action: 'player_action',
-          room_code: roomCode,
-          player_id: playerId,
-          content: 'The party takes a long rest to recover fully.',
-          mock_mode: mockMode,
-        }, { authMode: 'anon' })
+        await invokeEdgeFunction<Record<string, unknown>>(
+          "dm-action",
+          {
+            action: "player_action",
+            room_code: roomCode,
+            player_id: playerId,
+            content: "The party takes a long rest to recover fully.",
+            mock_mode: mockMode,
+          },
+          { authMode: "anon" },
+        );
       } catch (err) {
-        addNarrative('system', `Long rest failed: ${err instanceof Error ? err.message : 'Unknown error'}`)
+        addNarrative(
+          "system",
+          `Long rest failed: ${err instanceof Error ? err.message : "Unknown error"}`,
+        );
       } finally {
-        setResting(null)
+        setResting(null);
       }
-    }
+    };
 
     return (
       <div className="action-bar rest-panel">
@@ -174,11 +280,27 @@ export default function ActionBar({ onSend, onCastSpell, onInitiateTarget }: Act
           <button
             className="action-btn"
             onClick={handleShortRest}
-            disabled={!!resting}
-            title="Spend 1 hit die to recover HP (1 hour)"
+            disabled={
+              !!resting || (hitDiceAvailable !== null && hitDiceAvailable <= 0)
+            }
+            title={(() => {
+              if (hitDiceAvailable === null)
+                return "Spend 1 hit die to recover HP (1 hour)";
+              const dieWord = hitDiceAvailable === 1 ? "die" : "dice";
+              return `Spend 1 ${hitDieLabel} to recover HP · ${hitDiceAvailable} hit ${dieWord} remaining`;
+            })()}
           >
             <span className="action-icon">🌙</span>
-            <span className="action-label">{resting === 'short' ? 'Resting…' : 'Short Rest'}</span>
+            <span className="action-label">
+              {(() => {
+                if (resting === "short") return "Resting…";
+                const diceCount =
+                  hitDiceAvailable !== null
+                    ? ` (${Math.max(0, hitDiceAvailable)})`
+                    : "";
+                return `Short Rest${diceCount}`;
+              })()}
+            </span>
           </button>
           <button
             className="action-btn"
@@ -187,11 +309,13 @@ export default function ActionBar({ onSend, onCastSpell, onInitiateTarget }: Act
             title="Fully recover HP and spell slots (8 hours)"
           >
             <span className="action-icon">🛌</span>
-            <span className="action-label">{resting === 'long' ? 'Resting…' : 'Long Rest'}</span>
+            <span className="action-label">
+              {resting === "long" ? "Resting…" : "Long Rest"}
+            </span>
           </button>
         </div>
       </div>
-    )
+    );
   }
 
   return (
@@ -201,103 +325,127 @@ export default function ActionBar({ onSend, onCastSpell, onInitiateTarget }: Act
           <span className="your-turn">Your Turn!</span>
         ) : (
           <span className="waiting-turn">
-            Waiting for {combat.initiative_order[combat.turn_index]?.name || '...'}
+            Waiting for{" "}
+            {combat.initiative_order[combat.turn_index]?.name || "..."}
           </span>
         )}
       </div>
       <div className="action-buttons">
-          {quickSpells.map((spell, idx) => (
-            <button
-              key={`spell-${spell.name}`}
-              className={`action-btn spell-action-btn ${!spell.castable ? 'disabled-action' : ''}`}
-              onClick={() => spell.castable && isMyTurn && castSpell(spell)}
-              disabled={!spell.castable || !isMyTurn}
-              title={spell.castable ? `Cast ${spell.name}` : `${spell.name}: ${spell.reason || 'Unavailable'}`}
-            >
-              <span className="action-icon">✨</span>
-              <span className="action-label">{spell.name}</span>
-              {isMyTurn && <kbd className="action-shortcut">{idx + 1}</kbd>}
-            </button>
-          ))}
+        {quickSpells.map((spell, idx) => (
+          <button
+            key={`spell-${spell.name}`}
+            className={`action-btn spell-action-btn ${!spell.castable ? "disabled-action" : ""}`}
+            onClick={() => spell.castable && isMyTurn && castSpell(spell)}
+            disabled={!spell.castable || !isMyTurn}
+            title={
+              spell.castable
+                ? `Cast ${spell.name}`
+                : `${spell.name}: ${spell.reason || "Unavailable"}`
+            }
+          >
+            <span className="action-icon">✨</span>
+            <span className="action-label">{spell.name}</span>
+            {isMyTurn && <kbd className="action-shortcut">{idx + 1}</kbd>}
+          </button>
+        ))}
 
-          {actions.map(a => (
-            <button
-              key={a.label}
-              className="action-btn"
-              onClick={() => {
-                if (a.label === 'End Turn') {
-                  handleEndTurn().catch(() => {})
-                  return
-                }
-                onSend(a.action)
+        {actions.map((a) => (
+          <button
+            key={a.label}
+            className="action-btn"
+            onClick={() => {
+              if (a.label === "End Turn") {
+                handleEndTurn().catch(() => {});
+                return;
+              }
+              onSend(a.action);
+            }}
+            title={a.action}
+            disabled={
+              a.label === "End Turn" ? !isMyTurn || advancingTurn : !isMyTurn
+            }
+          >
+            <span className="action-icon">{a.icon}</span>
+            <span className="action-label">
+              {a.label === "End Turn" && advancingTurn
+                ? "Advancing..."
+                : a.label}
+            </span>
+            {isMyTurn && <kbd className="action-shortcut">{a.key}</kbd>}
+          </button>
+        ))}
+
+        {overflowSpells.length > 0 && (
+          <div className="spell-cast-menu">
+            <label>More Spells</label>
+            <select
+              className="spell-select"
+              value={selectedSpell}
+              onChange={(e) => {
+                const nextSpell = e.target.value;
+                setSelectedSpell(nextSpell);
+                const spell = castableSpells.find((s) => s.name === nextSpell);
+                setSelectedSlot(
+                  spell?.level === 0 ? 0 : (spell?.slot_options?.[0] ?? 0),
+                );
               }}
-              title={a.action}
-              disabled={a.label === 'End Turn' ? (!isMyTurn || advancingTurn) : !isMyTurn}
             >
-              <span className="action-icon">{a.icon}</span>
-              <span className="action-label">{a.label === 'End Turn' && advancingTurn ? 'Advancing...' : a.label}</span>
-              {isMyTurn && <kbd className="action-shortcut">{a.key}</kbd>}
-            </button>
-          ))}
+              <option value="">Select spell...</option>
+              {overflowSpells.map((spell) => (
+                <option key={spell.name} value={spell.name}>
+                  {spell.name} (L{spell.level})
+                  {spell.castable ? "" : " - unavailable"}
+                </option>
+              ))}
+            </select>
 
-          {overflowSpells.length > 0 && (
-            <div className="spell-cast-menu">
-              <label>More Spells</label>
+            {selectedSpellOption && selectedSpellOption.level > 0 && (
               <select
                 className="spell-select"
-                value={selectedSpell}
-                onChange={e => {
-                  const nextSpell = e.target.value
-                  setSelectedSpell(nextSpell)
-                  const spell = castableSpells.find(s => s.name === nextSpell)
-                  setSelectedSlot(spell?.level === 0 ? 0 : (spell?.slot_options?.[0] ?? 0))
-                }}
+                value={selectedSlot}
+                onChange={(e) => setSelectedSlot(Number(e.target.value))}
               >
-                <option value="">Select spell...</option>
-                {overflowSpells.map(spell => (
-                  <option key={spell.name} value={spell.name}>
-                    {spell.name} (L{spell.level}){spell.castable ? '' : ' - unavailable'}
+                {selectedSpellSlots.map((sl) => (
+                  <option key={sl} value={sl}>
+                    Slot {sl}
                   </option>
                 ))}
               </select>
+            )}
 
-              {selectedSpellOption && selectedSpellOption.level > 0 && (
-                <select
-                  className="spell-select"
-                  value={selectedSlot}
-                  onChange={e => setSelectedSlot(Number(e.target.value))}
-                >
-                  {selectedSpellSlots.map(sl => (
-                    <option key={sl} value={sl}>Slot {sl}</option>
-                  ))}
-                </select>
-              )}
+            <button
+              className="action-btn cast-selected-btn"
+              disabled={
+                !selectedSpellOption ||
+                !selectedSpellOption.castable ||
+                !isMyTurn
+              }
+              onClick={() => {
+                if (!selectedSpellOption) return;
+                const slot = selectedSpellOption.level === 0 ? 0 : selectedSlot;
+                onCastSpell(selectedSpellOption.name, slot);
+              }}
+            >
+              <span className="action-icon">✨</span>
+              <span className="action-label">Cast Selected</span>
+            </button>
+          </div>
+        )}
 
-              <button
-                className="action-btn cast-selected-btn"
-                disabled={!selectedSpellOption || !selectedSpellOption.castable || !isMyTurn}
-                onClick={() => {
-                  if (!selectedSpellOption) return
-                  const slot = selectedSpellOption.level === 0 ? 0 : selectedSlot
-                  onCastSpell(selectedSpellOption.name, slot)
-                }}
+        {slotStates.length > 0 && (
+          <div className="slot-state-row">
+            {slotStates.map((slot) => (
+              <span
+                key={slot.level}
+                className={`slot-pill ${slot.state}`}
+                title={`Level ${slot.level}: ${slot.remaining}/${slot.total}`}
               >
-                <span className="action-icon">✨</span>
-                <span className="action-label">Cast Selected</span>
-              </button>
-            </div>
-          )}
-
-          {slotStates.length > 0 && (
-            <div className="slot-state-row">
-              {slotStates.map(slot => (
-                <span key={slot.level} className={`slot-pill ${slot.state}`} title={`Level ${slot.level}: ${slot.remaining}/${slot.total}`}>
-                  L{slot.level} {slot.remaining}/{slot.total}
-                </span>
-              ))}
-            </div>
-          )}
+                L{slot.level} {slot.remaining}/{slot.total}
+              </span>
+            ))}
+          </div>
+        )}
       </div>
     </div>
-  )
+  );
 }

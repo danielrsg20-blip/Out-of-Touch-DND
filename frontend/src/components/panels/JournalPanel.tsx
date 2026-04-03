@@ -1,55 +1,99 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
-import { useSessionStore } from '../../stores/sessionStore'
-import './panels.css'
+import { useCallback, useEffect, useRef, useState } from "react";
+import { useSessionStore } from "../../stores/sessionStore";
+import { callBackendApi } from "../../lib/backendApi";
+import "./panels.css";
 
-const AUTOSAVE_DELAY_MS = 1200
+const AUTOSAVE_DELAY_MS = 1200;
 
 export default function JournalPanel() {
-  const roomCode = useSessionStore(s => s.roomCode)
-  const campaignId = useSessionStore(s => s.campaignId)
+  const roomCode = useSessionStore((s) => s.roomCode);
+  const campaignId = useSessionStore((s) => s.campaignId);
 
-  const storageKey = `otdnd_journal_${campaignId ?? roomCode ?? 'default'}`
+  const storageKey = `otdnd_journal_${campaignId ?? roomCode ?? "default"}`;
 
   const [notes, setNotes] = useState<string>(() => {
     try {
-      return localStorage.getItem(storageKey) ?? ''
+      return localStorage.getItem(storageKey) ?? "";
     } catch {
-      return ''
+      return "";
     }
-  })
-  const [savedAt, setSavedAt] = useState<Date | null>(null)
-  const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  });
+  const [savedAt, setSavedAt] = useState<Date | null>(null);
+  const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // If campaign changes (resume), reload from storage
+  // If campaign changes (resume), reload — prefer API when campaignId is set
   useEffect(() => {
-    try {
-      setNotes(localStorage.getItem(storageKey) ?? '')
-    } catch { /* ignore */ }
-  }, [storageKey])
+    if (campaignId) {
+      callBackendApi(`/api/campaign/${campaignId}/journal`)
+        .then((res) => {
+          const text =
+            typeof (res as { journal_text?: unknown }).journal_text === "string"
+              ? (res as { journal_text: string }).journal_text
+              : null;
+          if (text !== null) {
+            setNotes(text);
+          } else {
+            try {
+              setNotes(localStorage.getItem(storageKey) ?? "");
+            } catch {
+              /* ignore */
+            }
+          }
+        })
+        .catch(() => {
+          try {
+            setNotes(localStorage.getItem(storageKey) ?? "");
+          } catch {
+            /* ignore */
+          }
+        });
+    } else {
+      try {
+        setNotes(localStorage.getItem(storageKey) ?? "");
+      } catch {
+        /* ignore */
+      }
+    }
+  }, [storageKey, campaignId]);
 
-  const persist = useCallback((text: string) => {
-    try {
-      localStorage.setItem(storageKey, text)
-      setSavedAt(new Date())
-    } catch { /* storage full — ignore */ }
-  }, [storageKey])
+  const persist = useCallback(
+    (text: string) => {
+      // Always write localStorage as fast local fallback
+      try {
+        localStorage.setItem(storageKey, text);
+      } catch {
+        /* storage full */
+      }
+      // When a campaignId exists, also persist to the backend
+      if (campaignId) {
+        callBackendApi(`/api/campaign/${campaignId}/journal`, {
+          method: "PATCH",
+          body: { journal_text: text },
+        }).catch(() => {
+          /* non-critical */
+        });
+      }
+      setSavedAt(new Date());
+    },
+    [storageKey, campaignId],
+  );
 
   const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    const value = e.target.value
-    setNotes(value)
-    if (saveTimerRef.current) clearTimeout(saveTimerRef.current)
-    saveTimerRef.current = setTimeout(() => persist(value), AUTOSAVE_DELAY_MS)
-  }
+    const value = e.target.value;
+    setNotes(value);
+    if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+    saveTimerRef.current = setTimeout(() => persist(value), AUTOSAVE_DELAY_MS);
+  };
 
   useEffect(() => {
     return () => {
-      if (saveTimerRef.current) clearTimeout(saveTimerRef.current)
-    }
-  }, [])
+      if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+    };
+  }, []);
 
   const savedHint = savedAt
-    ? `Saved ${savedAt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
-    : 'Auto-saves as you type'
+    ? `Saved ${savedAt.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`
+    : "Auto-saves as you type";
 
   return (
     <div className="journal-panel">
@@ -64,5 +108,5 @@ export default function JournalPanel() {
       />
       <div className="journal-saved-hint">{savedHint}</div>
     </div>
-  )
+  );
 }

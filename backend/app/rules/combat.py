@@ -77,6 +77,7 @@ class CombatState:
                     "hp": p.character.hp,
                     "max_hp": p.character.max_hp,
                     "movement_remaining": p.movement_remaining,
+                    "concentrating_on": p.concentrating_on,
                 }
                 for p in self.participants
             ],

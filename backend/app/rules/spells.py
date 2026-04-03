@@ -325,6 +325,7 @@ def get_castable_spell_options(character: Character, in_combat: bool, rules_vers
                 "castable": bool(permissions.get("allowed", False)),
                 "reason": permissions.get("reason"),
                 "slot_options": [0],
+                "aoe": spell_def.get("aoe"),
             })
             continue
 
@@ -353,6 +354,7 @@ def get_castable_spell_options(character: Character, in_combat: bool, rules_vers
             "castable": castable,
             "reason": None if castable else (best_reason or "not_castable"),
             "slot_options": slot_options if castable else legal_slot_levels,
+            "aoe": spell_def.get("aoe"),
         })
 
     return sorted(options, key=lambda s: (int(s.get("level", 0)), str(s.get("name", ""))))

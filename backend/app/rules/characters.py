@@ -54,6 +54,20 @@ SKILLS = {
     "Sleight of Hand": "DEX", "Stealth": "DEX", "Survival": "WIS",
 }
 
+BACKGROUNDS: dict[str, dict] = {
+    "Acolyte":       {"description": "Served in a temple.",               "skill_proficiencies": ["Insight", "Religion"]},
+    "Criminal":      {"description": "Life outside the law.",             "skill_proficiencies": ["Deception", "Stealth"]},
+    "Folk Hero":     {"description": "Champion of the common people.",    "skill_proficiencies": ["Animal Handling", "Survival"]},
+    "Guild Artisan": {"description": "Skilled tradesperson with guild ties.", "skill_proficiencies": ["Insight", "Persuasion"]},
+    "Hermit":        {"description": "Secluded life of contemplation.",   "skill_proficiencies": ["Medicine", "Religion"]},
+    "Noble":         {"description": "Aristocratic upbringing.",          "skill_proficiencies": ["History", "Persuasion"]},
+    "Outlander":     {"description": "Grew up in the wilderness.",        "skill_proficiencies": ["Athletics", "Survival"]},
+    "Sage":          {"description": "Lifelong academic pursuit.",        "skill_proficiencies": ["Arcana", "History"]},
+    "Sailor":        {"description": "Life on the open sea.",             "skill_proficiencies": ["Athletics", "Perception"]},
+    "Soldier":       {"description": "Military training and service.",    "skill_proficiencies": ["Athletics", "Intimidation"]},
+    "Urchin":        {"description": "Grew up on city streets.",          "skill_proficiencies": ["Sleight of Hand", "Stealth"]},
+}
+
 
 @dataclass
 class Character:
@@ -84,6 +98,9 @@ class Character:
     rules_version: str = SRD_RULES_VERSION
     player_id: str | None = None
     sprite_id: str | None = None
+    hit_dice_used: int = 0
+    concentration_spell: str | None = None
+    background: str = ""
 
     @property
     def proficiency_bonus(self) -> int:
@@ -158,6 +175,11 @@ class Character:
             "rules_version": self.rules_version,
             "spellcasting_mode": get_spellcasting_mode(self.char_class),
             "sprite_id": self.sprite_id,
+            "death_saves": dict(self.death_saves),
+            "hit_dice_used": self.hit_dice_used,
+            "hit_dice_available": max(0, self.level - self.hit_dice_used),
+            "concentration_spell": self.concentration_spell,
+            "background": self.background,
         }
 
 
@@ -172,6 +194,7 @@ def create_character(
     known_spells: list[str] | None = None,
     prepared_spells: list[str] | None = None,
     sprite_id: str | None = None,
+    background: str = "",
 ) -> Character:
     race_data = RACES.get(race, {})
     class_data = CLASSES.get(char_class, {})
@@ -207,6 +230,10 @@ def create_character(
         player_id=player_id,
         sprite_id=sprite_id,
     )
+
+    if background and background in BACKGROUNDS:
+        char.skill_proficiencies = list(BACKGROUNDS[background]["skill_proficiencies"])
+    char.background = background
 
     from .items import get_starting_inventory, calculate_ac_from_inventory, STARTING_GOLD
     from .spells import (

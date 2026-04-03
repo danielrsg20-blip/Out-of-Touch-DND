@@ -47,6 +47,8 @@ ACCESS_TOKEN_EXPIRE_MINUTES: int = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", 
 
 MAP_PACK_VALIDATION_MODE: str = os.getenv("MAP_PACK_VALIDATION_MODE", "warn").strip().lower() or "warn"
 
+ENABLE_NPC_PORTRAITS: bool = os.getenv("OTDND_ENABLE_NPC_PORTRAITS", "false").strip().lower() in {"1", "true", "yes", "on"}
+
 CORS_ALLOW_ORIGINS_RAW: str = os.getenv("CORS_ALLOW_ORIGINS", "http://localhost:5174,http://127.0.0.1:5174")
 CORS_ALLOW_ORIGINS: list[str] = [
 	origin.strip()
