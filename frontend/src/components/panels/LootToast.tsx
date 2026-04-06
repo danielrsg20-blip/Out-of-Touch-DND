@@ -15,15 +15,16 @@ export default function LootToast() {
   if (!lootData) return null;
 
   return (
-    <div className="loot-toast" onClick={() => setLootData(null)}>
-      <div className="loot-toast-header">⚔️ Loot Acquired!</div>
+    <div className="loot-toast gold-glow-card" onClick={() => setLootData(null)} style={{ position: "relative", overflow: "hidden" }}>
+      <span className="loot-shimmer" style={{ position: "absolute", inset: 0, pointerEvents: "none", zIndex: 0 }} aria-hidden="true" />
+      <div className="loot-toast-header" style={{ position: "relative", zIndex: 1 }}>⚔️ Loot Acquired!</div>
       {lootData.description && (
-        <p className="loot-toast-desc">{lootData.description}</p>
+        <p className="loot-toast-desc" style={{ position: "relative", zIndex: 1 }}>{lootData.description}</p>
       )}
       {lootData.gold != null && lootData.gold > 0 && (
-        <div className="loot-toast-gold">🪙 {lootData.gold} gold pieces</div>
+        <div className="loot-toast-gold gold-shimmer-text" style={{ position: "relative", zIndex: 1 }}>🪙 {lootData.gold} gold pieces</div>
       )}
-      <ul className="loot-toast-items">
+      <ul className="loot-toast-items" style={{ position: "relative", zIndex: 1 }}>
         {lootData.items.map((item, i) => (
           <li key={i}>
             {item.quantity && item.quantity > 1 ? `${item.quantity}× ` : ""}
@@ -32,7 +33,7 @@ export default function LootToast() {
           </li>
         ))}
       </ul>
-      <div className="loot-toast-dismiss">click to dismiss</div>
+      <div className="loot-toast-dismiss" style={{ position: "relative", zIndex: 1 }}>click to dismiss</div>
     </div>
   );
 }

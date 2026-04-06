@@ -874,7 +874,7 @@ export default function CharacterSheet() {
 
   if (!char) {
     return (
-      <div className="character-sheet">
+      <div className="character-sheet parchment-panel">
         <h3 className="panel-title">Character</h3>
         <p className="panel-empty">No character created yet.</p>
       </div>
@@ -910,7 +910,7 @@ export default function CharacterSheet() {
   const hitDie = CLASS_HIT_DIE[char.class.toLowerCase()] ?? 8;
 
   return (
-    <div className="character-sheet">
+    <div className="character-sheet parchment-panel">
       <div className="char-header-row">
         <div>
           <h3 className="panel-title" style={{ marginBottom: 0 }}>

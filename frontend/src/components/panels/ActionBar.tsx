@@ -322,7 +322,7 @@ export default function ActionBar({
     <div className="action-bar">
       <div className="action-bar-header">
         {isMyTurn ? (
-          <span className="your-turn">Your Turn!</span>
+          <span className="your-turn rune-pulse">Your Turn!</span>
         ) : (
           <span className="waiting-turn">
             Waiting for{" "}

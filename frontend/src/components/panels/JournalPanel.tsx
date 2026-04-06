@@ -96,10 +96,10 @@ export default function JournalPanel() {
     : "Auto-saves as you type";
 
   return (
-    <div className="journal-panel">
+    <div className="journal-panel parchment-panel">
       <h3 className="panel-title">Journal</h3>
       <textarea
-        className="journal-textarea"
+        className="journal-textarea font-narrative"
         value={notes}
         onChange={handleChange}
         placeholder="Keep notes about your adventure — NPCs, clues, quests, secrets…"

@@ -14,11 +14,11 @@ export default function CampaignBriefOverlay({ onBegin }: CampaignBriefOverlayPr
 
   return (
     <div className="campaign-brief-overlay">
-      <div className="campaign-brief-card">
+      <div className="campaign-brief-card glass-panel">
         <div className="campaign-brief-eyebrow">Campaign Brief</div>
-        <h2 className="campaign-brief-title">{title}</h2>
+        <h2 className="campaign-brief-title gold-shimmer-text">{title}</h2>
         <div className="campaign-brief-tone">{tone}</div>
-        <p className="campaign-brief-premise">{premise}</p>
+        <p className="campaign-brief-premise font-narrative">{premise}</p>
 
         {players.length > 0 && (
           <div className="campaign-brief-party">

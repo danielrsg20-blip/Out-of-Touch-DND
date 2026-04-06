@@ -538,6 +538,8 @@ export default function GameBoard() {
 
         <div className="map-area" style={{ position: "relative" }}>
           {showOverlayTester() && <VectorOverlayTester />}
+          <div className="map-fog-a" aria-hidden="true" />
+          <div className="map-fog-b" aria-hidden="true" />
           <MapCanvas
             onTileClick={handleTileClick}
             onEntityClick={handleEntityClick}

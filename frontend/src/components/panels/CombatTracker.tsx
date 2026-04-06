@@ -28,7 +28,7 @@ export default function CombatTracker() {
   const currentUsed = Math.max(0, currentTotal - currentRemaining);
 
   return (
-    <div className="combat-tracker">
+    <div className="combat-tracker torch-border">
       <h3 className="panel-title combat-title-row">
         <span>Combat</span>
         <motion.span
@@ -80,7 +80,7 @@ export default function CombatTracker() {
           return (
             <div
               key={entry.id}
-              className={`initiative-entry ${isCurrent ? "current-turn" : ""}`}
+              className={`initiative-entry ${isCurrent ? "current-turn combat-active-pulse" : ""}`}
             >
               <span className="init-order">{entry.initiative}</span>
               <span className="init-name">{entry.name}</span>

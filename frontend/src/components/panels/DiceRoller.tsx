@@ -206,7 +206,7 @@ export default function DiceRoller({ onSubmitRoll }: DiceRollerProps) {
           {isRolling ? (
             <motion.span
               key="rolling"
-              className="dice-rolling-indicator"
+              className={`dice-rolling-indicator${selectedDie === 20 ? " d20-spinner" : ""}`}
               initial={{ opacity: 0, scale: 0.7 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.7 }}
@@ -218,7 +218,15 @@ export default function DiceRoller({ onSubmitRoll }: DiceRollerProps) {
           ) : lastResult ? (
             <motion.span
               key={lastResult.key}
-              className="dice-last-result"
+              className={[
+                "dice-last-result",
+                lastResult.notation.includes("d20") && lastResult.rolls[0] === 20
+                  ? "narrative-crit-flash"
+                  : "",
+                lastResult.notation.includes("d20") && lastResult.rolls[0] === 1
+                  ? "narrative-fumble-flash"
+                  : "",
+              ].filter(Boolean).join(" ")}
               initial={{ opacity: 0, scale: 1.4, y: -4 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0 }}

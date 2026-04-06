@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import React from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { useGameStore } from "../../stores/gameStore";
 import "./panels.css";
@@ -202,7 +203,9 @@ export default function NarrativeLog() {
               `narrative-${entry.type}`,
               isRound ? "narrative-round-start" : "",
               critType === "crit" ? "narrative-crit" : "",
+              critType === "crit" ? "narrative-crit-flash" : "",
               critType === "fumble" ? "narrative-fumble" : "",
+              critType === "fumble" ? "narrative-fumble-flash" : "",
             ]
               .filter(Boolean)
               .join(" ");
@@ -241,30 +244,37 @@ export default function NarrativeLog() {
             }
 
             return (
-              <motion.div key={entry.id} {...entryAnim} className={entryClass}>
-                {showTimestamps && (
-                  <span className="narrative-timestamp">
-                    {formatRelativeTime(entry.timestamp)}
-                  </span>
+              <React.Fragment key={entry.id}>
+                {isRound && (
+                  <div className="runic-divider" aria-hidden="true" />
                 )}
-                {entry.speaker && (
-                  <span className="narrative-speaker">{entry.speaker}: </span>
-                )}
-                {isDice && diceData ? (
-                  <span className="narrative-dice-content">
-                    <span className="narrative-dice-label">
-                      {diceData.label}
+                <motion.div {...entryAnim} className={entryClass}>
+                  {showTimestamps && (
+                    <span className="narrative-timestamp">
+                      {formatRelativeTime(entry.timestamp)}
                     </span>
-                    <span
-                      className={`narrative-dice-result${critType === "crit" ? " dice-nat20" : ""}${critType === "fumble" ? " dice-nat1" : ""}`}
-                    >
-                      {diceData.result}
+                  )}
+                  {entry.speaker && (
+                    <span className="narrative-speaker">{entry.speaker}: </span>
+                  )}
+                  {isDice && diceData ? (
+                    <span className="narrative-dice-content">
+                      <span className="narrative-dice-label">
+                        {diceData.label}
+                      </span>
+                      <span
+                        className={`narrative-dice-result${critType === "crit" ? " dice-nat20" : ""}${critType === "fumble" ? " dice-nat1" : ""}`}
+                      >
+                        {diceData.result}
+                      </span>
                     </span>
-                  </span>
-                ) : (
-                  <span className="narrative-content">{entry.content}</span>
-                )}
-              </motion.div>
+                  ) : entry.type === "dm" ? (
+                    <span className="narrative-content font-narrative">{entry.content}</span>
+                  ) : (
+                    <span className="narrative-content">{entry.content}</span>
+                  )}
+                </motion.div>
+              </React.Fragment>
             );
           })}
 
@@ -293,7 +303,7 @@ export default function NarrativeLog() {
                   transition={{ duration: 1.2, repeat: Infinity, delay: 0.36 }}
                 />
               </div>
-              <span>DM is composing…</span>
+              <span className="loading-text-pulse">DM is composing…</span>
             </motion.div>
           )}
         </AnimatePresence>
