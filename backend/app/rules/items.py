@@ -29,6 +29,11 @@ class Item:
     equipped: bool = False
     quantity: int = 1
     notes: str = ""
+    # Magic item fields
+    magical: bool = False
+    rarity: str = "common"  # common | uncommon | rare | very_rare | legendary | artifact
+    requires_attunement: bool = False
+    attuned: bool = False
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -50,6 +55,10 @@ class Item:
             "equipped": self.equipped,
             "quantity": self.quantity,
             "notes": self.notes,
+            "magical": self.magical,
+            "rarity": self.rarity,
+            "requires_attunement": self.requires_attunement,
+            "attuned": self.attuned,
         }
 
 

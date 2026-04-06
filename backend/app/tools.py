@@ -483,7 +483,10 @@ TOOL_DEFINITIONS: list[dict[str, Any]] = [
                 "character_id": {"type": "string", "description": "ID of the character receiving the item"},
                 "item_id": {"type": "string", "description": "Item catalog ID or name (e.g. 'longsword', 'Potion of Healing', 'chain_mail')"},
                 "quantity": {"type": "integer", "default": 1, "description": "Number of items to add"},
-                "notes": {"type": "string", "default": "", "description": "Optional notes, e.g. '+1 magical', 'cursed', 'found in dragon hoard'"},
+                "notes": {"type": "string", "default": "", "description": "Optional notes, e.g. 'found in dragon hoard'"},
+                "magical": {"type": "boolean", "default": False, "description": "True if this is a magical item"},
+                "rarity": {"type": "string", "enum": ["common", "uncommon", "rare", "very_rare", "legendary", "artifact"], "description": "Magic item rarity"},
+                "requires_attunement": {"type": "boolean", "default": False, "description": "True if attuning is required to use the item"},
             },
             "required": ["character_id", "item_id"],
         },
@@ -512,6 +515,18 @@ TOOL_DEFINITIONS: list[dict[str, Any]] = [
                 "equip": {"type": "boolean", "default": True, "description": "True to equip, False to unequip"},
             },
             "required": ["character_id", "item_id"],
+        },
+    },
+    {
+        "name": "grant_inspiration",
+        "description": "Grant a character Bardic Inspiration or D&D Inspiration token. Use to reward excellent roleplay, clever thinking, or heroic deeds. A character can only hold one inspiration at a time.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "character_id": {"type": "string", "description": "ID of the character receiving inspiration"},
+                "reason": {"type": "string", "description": "Optional reason (e.g. 'exceptional roleplay', 'clever plan')"},
+            },
+            "required": ["character_id"],
         },
     },
     {
@@ -1299,6 +1314,9 @@ class ToolDispatcher:
 
         qty = max(1, int(inp.get("quantity", 1)))
         notes = inp.get("notes", "")
+        magical = bool(inp.get("magical", False))
+        rarity = str(inp.get("rarity", "common"))
+        requires_attunement = bool(inp.get("requires_attunement", False))
 
         # Stack with existing unequipped item of same id
         existing = find_item_in_inventory(char.inventory, item.id)
@@ -1310,6 +1328,11 @@ class ToolDispatcher:
             item_dict = item.to_dict()
             item_dict["quantity"] = qty
             item_dict["notes"] = notes
+            if magical:
+                item_dict["magical"] = True
+                item_dict["rarity"] = rarity
+            if requires_attunement:
+                item_dict["requires_attunement"] = True
             char.inventory.append(item_dict)
 
         return {
@@ -1386,6 +1409,15 @@ class ToolDispatcher:
         reason = inp.get("reason", "")
         msg = f"{char.name} received {amount} gp{f' ({reason})' if reason else ''}. Total: {char.gold_gp} gp."
         return {"character": char.name, "amount": amount, "total_gp": char.gold_gp, "message": msg}
+
+    def _tool_grant_inspiration(self, inp: dict) -> dict:
+        char = self.characters.get(inp["character_id"])
+        if not char:
+            return {"error": f"Character {inp['character_id']} not found"}
+        char.inspiration = True
+        reason = inp.get("reason", "")
+        msg = f"{char.name} received Inspiration{f' ({reason})' if reason else ''}!"
+        return {"character": char.name, "inspiration": True, "message": msg}
 
     def _tool_spend_gold(self, inp: dict) -> dict:
         char = self.characters.get(inp["character_id"])

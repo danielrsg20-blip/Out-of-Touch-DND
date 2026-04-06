@@ -854,6 +854,13 @@
   gap: 0.4rem;
 }
 
+/* Dual weapon column */
+.paper-doll-weapons {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
 /* Character sprite cell */
 .paper-doll-sprite {
   width: 56px;
@@ -969,6 +976,117 @@
   opacity: 1;
 }
 
+/* ── Death saves ─────────────────────────────────────────────────────────── */
+.death-saves-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.35rem 0.5rem;
+  margin: 0.2rem 0;
+  background: rgba(224, 82, 82, 0.07);
+  border: 1px solid rgba(224, 82, 82, 0.25);
+  border-radius: 6px;
+  font-size: 0.72rem;
+}
+
+.death-saves-label {
+  color: var(--text-secondary);
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  flex-shrink: 0;
+}
+
+.death-saves-group {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.death-saves-sublabel {
+  font-size: 0.75rem;
+  font-weight: 700;
+  line-height: 1;
+  width: 14px;
+  text-align: center;
+}
+
+.death-saves-sublabel.success {
+  color: #2ecc71;
+}
+.death-saves-sublabel.failure {
+  color: #e74c3c;
+}
+
+.death-save-pip {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: 1.5px solid rgba(255, 255, 255, 0.25);
+  background: transparent;
+}
+
+.death-save-pip.filled.success {
+  background: #2ecc71;
+  border-color: #2ecc71;
+}
+
+.death-save-pip.filled.failure {
+  background: #e74c3c;
+  border-color: #e74c3c;
+}
+
+/* ── Concentration badge ──────────────────────────────────────────────────── */
+.concentration-badge {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.25rem 0.5rem;
+  margin: 0.25rem 0;
+  background: rgba(88, 160, 230, 0.08);
+  border: 1px solid rgba(88, 160, 230, 0.3);
+  border-radius: 6px;
+  font-size: 0.72rem;
+  color: #7ab8e8;
+  font-style: italic;
+}
+
+/* ── Inspiration badge ────────────────────────────────────────────────────── */
+.inspiration-badge {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.25rem 0.5rem;
+  margin: 0.25rem 0;
+  background: rgba(228, 168, 83, 0.08);
+  border: 1px solid rgba(228, 168, 83, 0.4);
+  border-radius: 6px;
+  font-size: 0.72rem;
+  color: #e4a853;
+  font-weight: 600;
+}
+
+.inspiration-spend-btn {
+  font-size: 0.62rem;
+  padding: 0.15rem 0.4rem;
+  border-radius: 4px;
+  border: 1px solid rgba(228, 168, 83, 0.5);
+  background: rgba(228, 168, 83, 0.12);
+  color: #e4a853;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.inspiration-spend-btn:hover {
+  background: rgba(228, 168, 83, 0.25);
+}
+
+.inspiration-spend-btn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
 /* ── Feature #4: Gold display ──────────────────────────────────────── */
 .inv-gold {
   display: flex;
@@ -992,6 +1110,25 @@
   font-family: "Consolas", "Courier New", monospace;
   font-size: 0.85rem;
   font-weight: 600;
+}
+
+.inv-attuned-count {
+  margin-left: auto;
+  font-size: 0.7rem;
+  color: #b896e8;
+  font-family: "Consolas", "Courier New", monospace;
+}
+
+/* ── Magic item badges ─────────────────────────────────────────────────────── */
+.magic-badge {
+  font-size: 0.72rem;
+  flex-shrink: 0;
+}
+
+.attuned-badge {
+  font-size: 0.72rem;
+  color: #b896e8;
+  flex-shrink: 0;
 }
 
 /* ── Feature #1: Weapon properties ────────────────────────────────── */
@@ -1198,6 +1335,11 @@
   font-size: 0.72rem;
   margin-right: 0.25rem;
   margin-bottom: 0.2rem;
+}
+
+.spell-tag.cantrip {
+  background: rgba(88, 160, 230, 0.1);
+  color: #7ab8e8;
 }
 
 .prepared-manager {

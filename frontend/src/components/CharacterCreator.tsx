@@ -319,24 +319,43 @@ export default function CharacterCreator() {
     string[]
   >([]);
   const [error, setError] = useState("");
-  const [usePointBuy, setUsePointBuy] = useState(false);
+  const [scoringMethod, setScoringMethod] = useState<
+    "standard" | "pointbuy" | "roll"
+  >("standard");
   const [selectedBackground, setSelectedBackground] = useState("");
 
-  const pointBuySpent = usePointBuy
-    ? ABILITIES.reduce(
-        (sum, ab) =>
-          sum + (POINT_BUY_COST[Math.min(15, Math.max(8, abilities[ab]))] ?? 0),
-        0,
-      )
-    : 0;
+  const pointBuySpent =
+    scoringMethod === "pointbuy"
+      ? ABILITIES.reduce(
+          (sum, ab) =>
+            sum +
+            (POINT_BUY_COST[Math.min(15, Math.max(8, abilities[ab]))] ?? 0),
+          0,
+        )
+      : 0;
   const pointBuyRemaining = POINT_BUY_BUDGET - pointBuySpent;
 
-  const handlePointBuyToggle = (on: boolean) => {
-    setUsePointBuy(on);
+  const roll4d6DropLowest = (): number => {
+    const rolls = Array.from(
+      { length: 4 },
+      () => Math.floor(Math.random() * 6) + 1,
+    );
+    rolls.sort((a, b) => a - b);
+    return rolls.slice(1).reduce((s, n) => s + n, 0);
+  };
+
+  const handleScoringMethodChange = (
+    method: "standard" | "pointbuy" | "roll",
+  ) => {
+    setScoringMethod(method);
     const obj: Record<string, number> = {};
-    if (on) {
+    if (method === "pointbuy") {
       ABILITIES.forEach((a) => {
         obj[a] = 8;
+      });
+    } else if (method === "roll") {
+      ABILITIES.forEach((a) => {
+        obj[a] = roll4d6DropLowest();
       });
     } else {
       ABILITIES.forEach((a, i) => {
@@ -344,6 +363,10 @@ export default function CharacterCreator() {
       });
     }
     setAbilities(obj);
+  };
+
+  const rollSingleAbility = (ability: string) => {
+    setAbilities((prev) => ({ ...prev, [ability]: roll4d6DropLowest() }));
   };
 
   const handleAbilityChange = (ability: string, value: number) => {
@@ -861,7 +884,7 @@ export default function CharacterCreator() {
             <SectionHeading icon="◈" label="Ability Scores" />
             <div className="flex items-center justify-between -mt-2 gap-2">
               <p className="text-[0.72rem] text-[#a0a0b0] italic m-0">
-                {usePointBuy ? (
+                {scoringMethod === "pointbuy" ? (
                   <span
                     className={
                       pointBuyRemaining < 0
@@ -873,6 +896,10 @@ export default function CharacterCreator() {
                   >
                     {pointBuyRemaining} / {POINT_BUY_BUDGET} pts remaining
                   </span>
+                ) : scoringMethod === "roll" ? (
+                  <span>
+                    Roll 4d6, drop lowest — click ⬢ to re-roll any score
+                  </span>
                 ) : (
                   "Standard Array: 15, 14, 13, 12, 10, 8"
                 )}
@@ -880,10 +907,10 @@ export default function CharacterCreator() {
               <div className="flex rounded-md overflow-hidden border border-[#2a2a4a] shrink-0">
                 <button
                   type="button"
-                  onClick={() => handlePointBuyToggle(false)}
+                  onClick={() => handleScoringMethodChange("standard")}
                   className={cn(
                     "text-[0.62rem] px-2 py-1 transition-colors leading-none",
-                    !usePointBuy
+                    scoringMethod === "standard"
                       ? "bg-[rgba(228,168,83,0.2)] text-[#e4a853]"
                       : "bg-transparent text-[#a0a0b0] hover:text-[#e0e0e0]",
                   )}
@@ -892,15 +919,27 @@ export default function CharacterCreator() {
                 </button>
                 <button
                   type="button"
-                  onClick={() => handlePointBuyToggle(true)}
+                  onClick={() => handleScoringMethodChange("pointbuy")}
                   className={cn(
                     "text-[0.62rem] px-2 py-1 transition-colors leading-none border-l border-[#2a2a4a]",
-                    usePointBuy
+                    scoringMethod === "pointbuy"
                       ? "bg-[rgba(228,168,83,0.2)] text-[#e4a853]"
                       : "bg-transparent text-[#a0a0b0] hover:text-[#e0e0e0]",
                   )}
                 >
                   Point Buy
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleScoringMethodChange("roll")}
+                  className={cn(
+                    "text-[0.62rem] px-2 py-1 transition-colors leading-none border-l border-[#2a2a4a]",
+                    scoringMethod === "roll"
+                      ? "bg-[rgba(228,168,83,0.2)] text-[#e4a853]"
+                      : "bg-transparent text-[#a0a0b0] hover:text-[#e0e0e0]",
+                  )}
+                >
+                  🎲 Roll
                 </button>
               </div>
             </div>
@@ -932,12 +971,14 @@ export default function CharacterCreator() {
                     </span>
                     <input
                       type="number"
-                      min={usePointBuy ? 8 : 3}
-                      max={usePointBuy ? 15 : 20}
+                      min={scoringMethod === "pointbuy" ? 8 : 3}
+                      max={scoringMethod === "pointbuy" ? 15 : 20}
+                      readOnly={scoringMethod === "roll"}
                       value={abilities[ab]}
                       onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                        if (scoringMethod === "roll") return;
                         const val = parseInt(e.target.value) || 8;
-                        if (usePointBuy) {
+                        if (scoringMethod === "pointbuy") {
                           const clamped = Math.min(15, Math.max(8, val));
                           const newCost = POINT_BUY_COST[clamped] ?? 9;
                           const oldCost =
@@ -956,6 +997,16 @@ export default function CharacterCreator() {
                       }}
                       className="w-[52px] bg-[rgba(26,26,62,0.8)] border border-[#2a2a4a] text-[#e0e0e0] text-center py-1 rounded-md text-[1.15rem] font-bold outline-none transition-colors focus:border-[#e4a853] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                     />
+                    {scoringMethod === "roll" && (
+                      <button
+                        type="button"
+                        onClick={() => rollSingleAbility(ab)}
+                        className="text-[0.75rem] w-6 h-6 flex items-center justify-center rounded bg-[rgba(228,168,83,0.1)] border border-[rgba(228,168,83,0.3)] text-[#e4a853] hover:bg-[rgba(228,168,83,0.2)] transition-colors leading-none"
+                        title="Re-roll this ability (4d6 drop lowest)"
+                      >
+                        🎲
+                      </button>
+                    )}
                     <span
                       className={cn(
                         "text-[0.82rem] font-bold leading-none",
@@ -969,6 +1020,16 @@ export default function CharacterCreator() {
                 );
               })}
             </div>
+
+            {scoringMethod === "roll" && (
+              <button
+                type="button"
+                onClick={() => handleScoringMethodChange("roll")}
+                className="w-full text-[0.72rem] py-1.5 rounded-lg border border-[rgba(228,168,83,0.3)] bg-[rgba(228,168,83,0.07)] text-[#e4a853] hover:bg-[rgba(228,168,83,0.15)] transition-colors"
+              >
+                🎲 Roll All Abilities
+              </button>
+            )}
 
             {/* Background */}
             <SectionHeading icon="✦" label="Background" />

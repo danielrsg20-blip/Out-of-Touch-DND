@@ -91,6 +91,17 @@ export interface ItemData {
   equipped: boolean;
   quantity: number;
   notes: string;
+  // Magic item fields
+  magical?: boolean;
+  rarity?:
+    | "common"
+    | "uncommon"
+    | "rare"
+    | "very_rare"
+    | "legendary"
+    | "artifact";
+  requires_attunement?: boolean;
+  attuned?: boolean;
 }
 
 export interface CharacterData {
@@ -132,6 +143,7 @@ export interface CharacterData {
   hit_dice_available?: number;
   concentration_spell?: string | null;
   background?: string;
+  inspiration?: boolean;
 }
 
 export interface SpellOption {

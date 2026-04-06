@@ -101,6 +101,7 @@ class Character:
     hit_dice_used: int = 0
     concentration_spell: str | None = None
     background: str = ""
+    inspiration: bool = False
 
     @property
     def proficiency_bonus(self) -> int:
@@ -180,6 +181,7 @@ class Character:
             "hit_dice_available": max(0, self.level - self.hit_dice_used),
             "concentration_spell": self.concentration_spell,
             "background": self.background,
+            "inspiration": self.inspiration,
         }
 
 
