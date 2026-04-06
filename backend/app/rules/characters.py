@@ -102,6 +102,7 @@ class Character:
     concentration_spell: str | None = None
     background: str = ""
     inspiration: bool = False
+    alignment: str = ""
 
     @property
     def proficiency_bonus(self) -> int:
@@ -182,6 +183,7 @@ class Character:
             "concentration_spell": self.concentration_spell,
             "background": self.background,
             "inspiration": self.inspiration,
+            "alignment": self.alignment,
         }
 
 
@@ -197,6 +199,9 @@ def create_character(
     prepared_spells: list[str] | None = None,
     sprite_id: str | None = None,
     background: str = "",
+    alignment: str = "",
+    class_skill_choices: list[str] | None = None,
+    racial_ability_choices: dict[str, int] | None = None,
 ) -> Character:
     race_data = RACES.get(race, {})
     class_data = CLASSES.get(char_class, {})
@@ -204,6 +209,13 @@ def create_character(
     final_abilities = dict(abilities)
     for ab, bonus in race_data.get("ability_bonuses", {}).items():
         final_abilities[ab] = final_abilities.get(ab, 10) + bonus
+
+    # Half-Elf flexible +1/+1 to two additional ability scores
+    if race == "Half-Elf" and racial_ability_choices:
+        chosen = list(racial_ability_choices.items())[:2]
+        for ab, _ in chosen:
+            if ab in final_abilities:
+                final_abilities[ab] = final_abilities.get(ab, 10) + 1
 
     hit_die = class_data.get("hit_die", 8)
     con_mod = modifier_for(final_abilities.get("CON", 10))
@@ -236,6 +248,16 @@ def create_character(
     if background and background in BACKGROUNDS:
         char.skill_proficiencies = list(BACKGROUNDS[background]["skill_proficiencies"])
     char.background = background
+    char.alignment = alignment
+
+    # Merge class skill choices (validated against class options)
+    if class_skill_choices:
+        valid_class_skills = [
+            s for s in class_skill_choices
+            if s in SKILLS
+        ]
+        merged = list(dict.fromkeys(char.skill_proficiencies + valid_class_skills))
+        char.skill_proficiencies = merged
 
     from .items import get_starting_inventory, calculate_ac_from_inventory, STARTING_GOLD
     from .spells import (

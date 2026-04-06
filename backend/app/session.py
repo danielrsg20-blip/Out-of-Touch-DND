@@ -68,6 +68,9 @@ class GameSession:
         prepared_spells: list[str] | None = None,
         sprite_id: str | None = None,
         background: str = "",
+        alignment: str = "",
+        class_skill_choices: list[str] | None = None,
+        racial_ability_choices: dict[str, int] | None = None,
     ) -> Character:
         char = create_character(
             char_id=char_id,
@@ -80,6 +83,9 @@ class GameSession:
             prepared_spells=prepared_spells,
             sprite_id=sprite_id,
             background=background,
+            alignment=alignment,
+            class_skill_choices=class_skill_choices,
+            racial_ability_choices=racial_ability_choices,
         )
         self.orchestrator.characters[char_id] = char
         self.players[player_id].character_id = char_id

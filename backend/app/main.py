@@ -171,6 +171,9 @@ class CreateCharacterRequest(BaseModel):
     known_spells: list[str] | None = None
     prepared_spells: list[str] | None = None
     background: str = ""
+    alignment: str = ""
+    class_skill_choices: list[str] | None = None
+    racial_ability_choices: dict[str, int] | None = None
 
 
 class CharacterSpellOptionsRequest(BaseModel):
@@ -726,6 +729,9 @@ async def create_character(req: CreateCharacterRequest, request: Request):
             prepared_spells=req.prepared_spells,
             sprite_id=req.sprite_id,
             background=req.background,
+            alignment=req.alignment,
+            class_skill_choices=req.class_skill_choices,
+            racial_ability_choices=req.racial_ability_choices,
         )
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))

@@ -214,6 +214,104 @@ const CLASS_SPELL_CATALOG: Record<
   ],
 };
 
+const CLASS_CANTRIP_CATALOG: Record<
+  string,
+  Array<{ name: string; level: number; school?: string }>
+> = {
+  bard: [
+    { name: "Vicious Mockery", level: 0, school: "enchantment" },
+    { name: "Minor Illusion", level: 0, school: "illusion" },
+    { name: "Mage Hand", level: 0, school: "conjuration" },
+    { name: "Prestidigitation", level: 0, school: "transmutation" },
+  ],
+  cleric: [
+    { name: "Sacred Flame", level: 0, school: "evocation" },
+    { name: "Guidance", level: 0, school: "divination" },
+    { name: "Light", level: 0, school: "evocation" },
+    { name: "Toll the Dead", level: 0, school: "necromancy" },
+    { name: "Thaumaturgy", level: 0, school: "transmutation" },
+  ],
+  druid: [
+    { name: "Druidcraft", level: 0, school: "transmutation" },
+    { name: "Produce Flame", level: 0, school: "conjuration" },
+    { name: "Shillelagh", level: 0, school: "transmutation" },
+    { name: "Resistance", level: 0, school: "abjuration" },
+  ],
+  sorcerer: [
+    { name: "Fire Bolt", level: 0, school: "evocation" },
+    { name: "Mage Hand", level: 0, school: "conjuration" },
+    { name: "Minor Illusion", level: 0, school: "illusion" },
+    { name: "Prestidigitation", level: 0, school: "transmutation" },
+    { name: "Ray of Frost", level: 0, school: "evocation" },
+    { name: "Shocking Grasp", level: 0, school: "evocation" },
+  ],
+  warlock: [
+    { name: "Eldritch Blast", level: 0, school: "evocation" },
+    { name: "Minor Illusion", level: 0, school: "illusion" },
+    { name: "Chill Touch", level: 0, school: "necromancy" },
+    { name: "Prestidigitation", level: 0, school: "transmutation" },
+  ],
+  wizard: [
+    { name: "Fire Bolt", level: 0, school: "evocation" },
+    { name: "Mage Hand", level: 0, school: "conjuration" },
+    { name: "Minor Illusion", level: 0, school: "illusion" },
+    { name: "Prestidigitation", level: 0, school: "transmutation" },
+    { name: "Ray of Frost", level: 0, school: "evocation" },
+    { name: "Shocking Grasp", level: 0, school: "evocation" },
+    { name: "Light", level: 0, school: "evocation" },
+  ],
+};
+
+const CLASS_CANTRIP_LIMITS: Record<string, number> = {
+  bard: 2, cleric: 3, druid: 2, sorcerer: 4, warlock: 2, wizard: 3,
+};
+
+const BACKGROUND_SKILL_PROFS: Record<string, string[]> = {
+  Acolyte: ["Insight", "Religion"],
+  Criminal: ["Deception", "Stealth"],
+  "Folk Hero": ["Animal Handling", "Survival"],
+  "Guild Artisan": ["Insight", "Persuasion"],
+  Hermit: ["Medicine", "Religion"],
+  Noble: ["History", "Persuasion"],
+  Outlander: ["Athletics", "Survival"],
+  Sage: ["Arcana", "History"],
+  Sailor: ["Athletics", "Perception"],
+  Soldier: ["Athletics", "Intimidation"],
+  Urchin: ["Sleight of Hand", "Stealth"],
+};
+
+const RACE_ABILITY_BONUSES_EFN: Record<string, Record<string, number>> = {
+  Human:      { STR: 1, DEX: 1, CON: 1, INT: 1, WIS: 1, CHA: 1 },
+  Elf:        { DEX: 2 },
+  Dwarf:      { CON: 2 },
+  Halfling:   { DEX: 2 },
+  Dragonborn: { STR: 2, CHA: 1 },
+  Gnome:      { INT: 2 },
+  "Half-Elf": { CHA: 2 },
+  "Half-Orc": { STR: 2, CON: 1 },
+  Tiefling:   { CHA: 2, INT: 1 },
+};
+
+const RACE_SPEEDS_EFN: Record<string, number> = {
+  Human: 30, Elf: 30, Dwarf: 25, Halfling: 25, Dragonborn: 30,
+  Gnome: 25, "Half-Elf": 30, "Half-Orc": 30, Tiefling: 30,
+};
+
+const CLASS_SKILL_CHOICES: Record<string, { count: number; options: string[] }> = {
+  barbarian: { count: 2, options: ["Animal Handling", "Athletics", "Intimidation", "Nature", "Perception", "Survival"] },
+  bard:      { count: 3, options: ["Acrobatics","Animal Handling","Arcana","Athletics","Deception","History","Insight","Intimidation","Investigation","Medicine","Nature","Perception","Performance","Persuasion","Religion","Sleight of Hand","Stealth","Survival"] },
+  cleric:    { count: 2, options: ["History", "Insight", "Medicine", "Persuasion", "Religion"] },
+  druid:     { count: 2, options: ["Arcana", "Animal Handling", "Insight", "Medicine", "Nature", "Perception", "Religion", "Survival"] },
+  fighter:   { count: 2, options: ["Acrobatics", "Animal Handling", "Athletics", "History", "Insight", "Intimidation", "Perception", "Survival"] },
+  monk:      { count: 2, options: ["Acrobatics", "Athletics", "History", "Insight", "Religion", "Stealth"] },
+  paladin:   { count: 2, options: ["Athletics", "Insight", "Intimidation", "Medicine", "Persuasion", "Religion"] },
+  ranger:    { count: 3, options: ["Animal Handling", "Athletics", "Insight", "Investigation", "Nature", "Perception", "Stealth", "Survival"] },
+  rogue:     { count: 4, options: ["Acrobatics", "Athletics", "Deception", "Insight", "Intimidation", "Investigation", "Perception", "Performance", "Persuasion", "Sleight of Hand", "Stealth"] },
+  sorcerer:  { count: 2, options: ["Arcana", "Deception", "Insight", "Intimidation", "Persuasion", "Religion"] },
+  warlock:   { count: 2, options: ["Arcana", "Deception", "History", "Intimidation", "Investigation", "Nature", "Religion"] },
+  wizard:    { count: 2, options: ["Arcana", "History", "Insight", "Investigation", "Medicine", "Religion"] },
+};
+
 const PC_SPRITE_CATALOG: Array<{
   id: string;
   races: string[];
@@ -2253,7 +2351,9 @@ async function saveSnapshot(
 
 function getSpellCatalog(charClass: string) {
   const classKey = toClassKey(charClass);
-  return CLASS_SPELL_CATALOG[classKey] ?? [];
+  const leveled = CLASS_SPELL_CATALOG[classKey] ?? [];
+  const cantrips = CLASS_CANTRIP_CATALOG[classKey] ?? [];
+  return [...cantrips, ...leveled];
 }
 
 function getSpellcastingProfile(charClass: string) {
@@ -2273,6 +2373,7 @@ function getSpellcastingProfile(charClass: string) {
       mode,
       knownLimit: mode === "known" ? 2 : 0,
       preparedLimit: mode === "prepared" ? 2 : 0,
+      cantripLimit: CLASS_CANTRIP_LIMITS[classKey] ?? 0,
       slots: {} as Record<number, number>,
     };
   }
@@ -2281,6 +2382,7 @@ function getSpellcastingProfile(charClass: string) {
     mode,
     knownLimit: mode === "known" ? 2 : 0,
     preparedLimit: mode === "prepared" ? 3 : 0,
+    cantripLimit: CLASS_CANTRIP_LIMITS[classKey] ?? 0,
     slots: { 1: 2 } as Record<number, number>,
   };
 }
@@ -2734,16 +2836,37 @@ function buildCharacter(input: {
   abilities: Record<string, number>;
   knownSpells: string[];
   preparedSpells: string[];
+  background: string;
+  skillProficiencies: string[];
+  alignment: string;
+  racialAbilityChoices?: Record<string, number>;
 }) {
   const classKey = toClassKey(input.charClass);
   const profile = getSpellcastingProfile(classKey);
-  const conMod = abilityModifier(input.abilities.CON);
-  const dexMod = abilityModifier(input.abilities.DEX);
+
+  // Apply racial ability bonuses
+  const raceBonuses = RACE_ABILITY_BONUSES_EFN[input.race] ?? {};
+  const finalAbilities: Record<string, number> = { ...input.abilities };
+  for (const [ab, bonus] of Object.entries(raceBonuses)) {
+    finalAbilities[ab] = (finalAbilities[ab] ?? 10) + bonus;
+  }
+
+  // Half-Elf flexible +1/+1 to two chosen abilities
+  if (input.race === "Half-Elf" && input.racialAbilityChoices) {
+    const chosen = Object.keys(input.racialAbilityChoices).slice(0, 2);
+    for (const ab of chosen) {
+      finalAbilities[ab] = (finalAbilities[ab] ?? 10) + 1;
+    }
+  }
+
+  const conMod = abilityModifier(finalAbilities.CON);
+  const dexMod = abilityModifier(finalAbilities.DEX);
   const hitDie = CLASS_HIT_DIE[classKey] ?? 8;
   const maxHp = Math.max(1, hitDie + conMod);
+  const speed = RACE_SPEEDS_EFN[input.race] ?? 30;
 
   const modifiers: Record<string, number> = {};
-  for (const [ability, score] of Object.entries(input.abilities)) {
+  for (const [ability, score] of Object.entries(finalAbilities)) {
     modifiers[ability] = abilityModifier(score);
   }
 
@@ -2754,15 +2877,15 @@ function buildCharacter(input: {
     race: input.race,
     class: input.charClass,
     level: 1,
-    abilities: input.abilities,
+    abilities: finalAbilities,
     modifiers,
     hp: maxHp,
     max_hp: maxHp,
     temp_hp: 0,
     ac: 10 + dexMod,
-    speed: 30,
+    speed,
     proficiency_bonus: 2,
-    skill_proficiencies: [],
+    skill_proficiencies: input.skillProficiencies,
     conditions: [],
     inventory: buildStarterInventory(input.charId, classKey),
     spell_slots: profile.slots,
@@ -2776,7 +2899,8 @@ function buildCharacter(input: {
     rules_version: "2024",
     spellcasting_mode: profile.mode,
     player_id: input.playerId,
-    background: "",
+    background: input.background,
+    alignment: input.alignment,
     inspiration: false,
     death_saves: { successes: 0, failures: 0 },
     hit_dice_used: 0,
@@ -2808,6 +2932,8 @@ async function actionGetSpellOptions(body: Record<string, unknown>) {
     spellcasting_mode: profile.mode,
     known_limit: profile.knownLimit,
     prepared_limit: profile.preparedLimit,
+    cantrip_limit: profile.cantripLimit,
+    skill_choices: CLASS_SKILL_CHOICES[toClassKey(charClass)] ?? { count: 0, options: [] },
     level: Number.isFinite(level) ? Math.max(1, level) : 1,
     spells,
   };
@@ -2830,6 +2956,16 @@ async function actionCreateCharacter(body: Record<string, unknown>) {
 
   const knownSpells = asStringArray(body.known_spells);
   const preparedSpells = asStringArray(body.prepared_spells);
+  const background = typeof body.background === "string" ? body.background.trim() : "";
+  const alignment = typeof body.alignment === "string" ? body.alignment.trim() : "";
+  const racialAbilityChoices =
+    body.racial_ability_choices && typeof body.racial_ability_choices === "object" && !Array.isArray(body.racial_ability_choices)
+      ? (body.racial_ability_choices as Record<string, number>)
+      : undefined;
+  const skillProficiencies = [
+    ...(BACKGROUND_SKILL_PROFS[background] ?? []),
+    ...asStringArray(body.class_skill_choices),
+  ];
   const requestedSpriteId =
     typeof body.sprite_id === "string" ? body.sprite_id.trim() : "";
   const spriteId = pickCharacterSpriteId(race, charClass, requestedSpriteId);
@@ -2849,6 +2985,10 @@ async function actionCreateCharacter(body: Record<string, unknown>) {
     abilities,
     knownSpells,
     preparedSpells,
+    background,
+    skillProficiencies,
+    alignment,
+    racialAbilityChoices,
   });
 
   const nextSnapshotBase: SnapshotState = {

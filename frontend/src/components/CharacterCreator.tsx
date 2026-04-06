@@ -52,6 +52,45 @@ const POINT_BUY_COST: Record<number, number> = {
 };
 const POINT_BUY_BUDGET = 27;
 
+const RACE_ABILITY_BONUSES: Record<string, Record<string, number>> = {
+  Human:      { STR: 1, DEX: 1, CON: 1, INT: 1, WIS: 1, CHA: 1 },
+  Elf:        { DEX: 2 },
+  Dwarf:      { CON: 2 },
+  Halfling:   { DEX: 2 },
+  Dragonborn: { STR: 2, CHA: 1 },
+  Gnome:      { INT: 2 },
+  "Half-Elf": { CHA: 2 },
+  "Half-Orc": { STR: 2, CON: 1 },
+  Tiefling:   { CHA: 2, INT: 1 },
+};
+
+const CLASS_HIT_DICE: Record<string, number> = {
+  Barbarian: 12,
+  Bard: 8,
+  Cleric: 8,
+  Druid: 8,
+  Fighter: 10,
+  Monk: 8,
+  Paladin: 10,
+  Ranger: 10,
+  Rogue: 8,
+  Sorcerer: 6,
+  Warlock: 8,
+  Wizard: 6,
+};
+
+const RACE_SPEEDS: Record<string, number> = {
+  Human: 30,
+  Elf: 30,
+  Dwarf: 25,
+  Halfling: 25,
+  Dragonborn: 30,
+  Gnome: 25,
+  "Half-Elf": 30,
+  "Half-Orc": 30,
+  Tiefling: 30,
+};
+
 const CLASS_HINTS: Record<string, string> = {
   Barbarian: "Rage-fuelled melee warrior — thrives on STR & CON.",
   Bard: "Arcane performer who inspires allies — relies on CHA.",
@@ -313,16 +352,40 @@ export default function CharacterCreator() {
   >("none");
   const [knownLimit, setKnownLimit] = useState(0);
   const [preparedLimit, setPreparedLimit] = useState(0);
+  const [cantripLimit, setCantripLimit] = useState(0);
   const [availableSpells, setAvailableSpells] = useState<SpellOption[]>([]);
   const [selectedKnownSpells, setSelectedKnownSpells] = useState<string[]>([]);
   const [selectedPreparedSpells, setSelectedPreparedSpells] = useState<
     string[]
   >([]);
+  const [selectedCantrips, setSelectedCantrips] = useState<string[]>([]);
   const [error, setError] = useState("");
   const [scoringMethod, setScoringMethod] = useState<
     "standard" | "pointbuy" | "roll"
   >("standard");
   const [selectedBackground, setSelectedBackground] = useState("");
+  const [alignment, setAlignment] = useState("");
+  const [skillChoices, setSkillChoices] = useState<{
+    count: number;
+    options: string[];
+  } | null>(null);
+  const [selectedClassSkills, setSelectedClassSkills] = useState<string[]>([]);
+  const [halfElfChoices, setHalfElfChoices] = useState<string[]>([]);
+
+  // Derived: base + racial bonuses (used for display and stat preview)
+  const finalAbilities = ABILITIES.reduce(
+    (acc, ab) => {
+      acc[ab] = abilities[ab] + (RACE_ABILITY_BONUSES[race]?.[ab] ?? 0);
+      return acc;
+    },
+    {} as Record<string, number>,
+  );
+  const abilityMod = (score: number) => Math.floor((score - 10) / 2);
+
+  const previewHP =
+    (CLASS_HIT_DICE[charClass] ?? 8) + abilityMod(finalAbilities.CON ?? 10);
+  const previewAC = 10 + abilityMod(finalAbilities.DEX ?? 10);
+  const previewSpeed = RACE_SPEEDS[race] ?? 30;
 
   const pointBuySpent =
     scoringMethod === "pointbuy"
@@ -398,11 +461,24 @@ export default function CharacterCreator() {
       );
       setKnownLimit(Number(payload.known_limit || 0));
       setPreparedLimit(Number(payload.prepared_limit || 0));
+      setCantripLimit(Number(payload.cantrip_limit || 0));
       setAvailableSpells((payload.spells || []) as SpellOption[]);
+      const sc = payload.skill_choices as { count: number; options: string[] } | null | undefined;
+      setSkillChoices(sc && sc.count > 0 ? sc : null);
+      setSelectedClassSkills([]);
       setError("");
+      const allSpells = (payload.spells || []) as SpellOption[];
+      const cantripLimit = Number(payload.cantrip_limit || 0);
+      // Auto-select default cantrips (first N cantrips in the list)
+      setSelectedCantrips(
+        allSpells
+          .filter((s) => s.level === 0)
+          .slice(0, cantripLimit)
+          .map((s) => s.name),
+      );
       if ((payload.spellcasting_mode || "none") === "known") {
         setSelectedKnownSpells(
-          ((payload.spells || []) as SpellOption[])
+          allSpells
             .filter((s) => s.level > 0)
             .slice(0, Number(payload.known_limit || 0))
             .map((s) => s.name),
@@ -410,7 +486,7 @@ export default function CharacterCreator() {
         setSelectedPreparedSpells([]);
       } else if ((payload.spellcasting_mode || "none") === "prepared") {
         setSelectedPreparedSpells(
-          ((payload.spells || []) as SpellOption[])
+          allSpells
             .filter((s) => s.level > 0)
             .slice(0, Number(payload.prepared_limit || 0))
             .map((s) => s.name),
@@ -424,9 +500,13 @@ export default function CharacterCreator() {
       setSpellcastingMode("none");
       setKnownLimit(0);
       setPreparedLimit(0);
+      setCantripLimit(0);
       setAvailableSpells([]);
       setSelectedKnownSpells([]);
       setSelectedPreparedSpells([]);
+      setSelectedCantrips([]);
+      setSkillChoices(null);
+      setSelectedClassSkills([]);
       setError(
         err instanceof Error
           ? err.message
@@ -457,8 +537,37 @@ export default function CharacterCreator() {
     }
   };
 
+  const toggleCantrip = (spellName: string) => {
+    setSelectedCantrips((prev) =>
+      prev.includes(spellName)
+        ? prev.filter((s) => s !== spellName)
+        : prev.length >= cantripLimit
+          ? prev
+          : [...prev, spellName],
+    );
+  };
+
+  const toggleClassSkill = (skill: string) => {
+    setSelectedClassSkills((prev) =>
+      prev.includes(skill)
+        ? prev.filter((s) => s !== skill)
+        : skillChoices && prev.length >= skillChoices.count
+          ? prev
+          : [...prev, skill],
+    );
+  };
+
   const handleCreate = async () => {
-    if (!name.trim() || !roomCode || !playerId) return;
+    if (name.trim().length < 2 || !roomCode || !playerId) return;
+    if (
+      spellcastingMode !== "none" &&
+      selectedSpells.length < spellLimit &&
+      !window.confirm(
+        `You've only selected ${selectedSpells.length} of ${spellLimit} starting spells. Continue anyway?`,
+      )
+    ) {
+      return;
+    }
     setCreating(true);
     setError("");
     const resolvedSpriteId = getCharacterSpriteId(charClass, race) ?? spriteId;
@@ -476,13 +585,21 @@ export default function CharacterCreator() {
           sprite_id: resolvedSpriteId,
           abilities,
           known_spells:
-            spellcastingMode === "known" ? selectedKnownSpells : undefined,
+            spellcastingMode === "known"
+              ? [...selectedCantrips, ...selectedKnownSpells]
+              : selectedCantrips.length > 0 ? selectedCantrips : undefined,
           prepared_spells:
             spellcastingMode === "prepared"
               ? selectedPreparedSpells
               : undefined,
           mock_mode: mockMode,
           background: selectedBackground,
+          alignment,
+          class_skill_choices: selectedClassSkills.length > 0 ? selectedClassSkills : undefined,
+          racial_ability_choices:
+            race === "Half-Elf" && halfElfChoices.length > 0
+              ? Object.fromEntries(halfElfChoices.map((ab) => [ab, 1]))
+              : undefined,
         },
         { authMode: "anon" },
       );
@@ -726,6 +843,9 @@ export default function CharacterCreator() {
                 autoFocus
                 className="bg-[rgba(26,26,62,0.85)] text-[#e0e0e0] placeholder:text-[#a0a0b0]/50"
               />
+              {name.trim().length === 1 && (
+                <p className="text-[0.7rem] text-[#a0a0b0] italic m-0">At least 2 characters required.</p>
+              )}
             </div>
 
             <div className="grid grid-cols-2 gap-3">
@@ -739,9 +859,10 @@ export default function CharacterCreator() {
                 <ThemedSelect
                   id="cc-race"
                   value={race}
-                  onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
-                    setRace(e.target.value)
-                  }
+                  onChange={(e: React.ChangeEvent<HTMLSelectElement>) => {
+                    setRace(e.target.value);
+                    setHalfElfChoices([]);
+                  }}
                 >
                   {RACES.map((r) => (
                     <option key={r} value={r} style={{ background: "#16213e" }}>
@@ -775,6 +896,47 @@ export default function CharacterCreator() {
               </div>
             </div>
 
+            {/* Half-Elf flexible +1/+1 bonus picker */}
+            {race === "Half-Elf" && (
+              <>
+                <p className="text-[0.72rem] text-[#c8a85a] leading-tight">
+                  Half-Elf: choose 2 ability scores to each receive +1 (other than CHA)
+                </p>
+                <div className="grid grid-cols-3 gap-1.5">
+                  {["STR", "DEX", "CON", "INT", "WIS"].map((ab) => {
+                    const selected = halfElfChoices.includes(ab);
+                    const disabled = !selected && halfElfChoices.length >= 2;
+                    return (
+                      <button
+                        key={ab}
+                        type="button"
+                        disabled={disabled}
+                        onClick={() =>
+                          setHalfElfChoices((prev) =>
+                            prev.includes(ab)
+                              ? prev.filter((x) => x !== ab)
+                              : prev.length >= 2
+                                ? prev
+                                : [...prev, ab],
+                          )
+                        }
+                        className={cn(
+                          "rounded-lg px-2 py-2 text-[0.75rem] font-semibold transition-all border",
+                          selected
+                            ? "bg-[rgba(228,168,83,0.12)] border-[rgba(228,168,83,0.5)] text-[#e4a853]"
+                            : disabled
+                              ? "bg-white/2 border-[#1e1e3a] text-[#555570] cursor-not-allowed"
+                              : "bg-white/3 border-[#2a2a4a] text-[#a0a0b0] hover:border-[rgba(228,168,83,0.3)] hover:text-[#e0e0e0]",
+                        )}
+                      >
+                        {ab} +1
+                      </button>
+                    );
+                  })}
+                </div>
+              </>
+            )}
+
             {/* Class hint */}
             {CLASS_HINTS[charClass] && (
               <p className="text-[0.72rem] text-[#a0a0b0] italic -mt-2 m-0 leading-snug">
@@ -792,23 +954,30 @@ export default function CharacterCreator() {
               >
                 Sprite
               </label>
-              <ThemedSelect
-                id="cc-sprite"
-                value={spriteId}
-                onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
-                  setSpriteId(e.target.value)
-                }
-              >
-                {spriteOptions.map((opt) => (
-                  <option
-                    key={opt.id}
-                    value={opt.id}
-                    style={{ background: "#16213e" }}
-                  >
-                    {opt.label}
-                  </option>
-                ))}
-              </ThemedSelect>
+              <div className="flex items-center gap-3">
+                <img
+                  src={`/sprites/manifest/${spriteId}.svg`}
+                  alt={spriteId}
+                  className="w-10 h-10 rounded-lg border border-[#2a2a4a] bg-white/5 object-contain shrink-0 p-0.5"
+                />
+                <ThemedSelect
+                  id="cc-sprite"
+                  value={spriteId}
+                  onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
+                    setSpriteId(e.target.value)
+                  }
+                >
+                  {spriteOptions.map((opt) => (
+                    <option
+                      key={opt.id}
+                      value={opt.id}
+                      style={{ background: "#16213e" }}
+                    >
+                      {opt.label}
+                    </option>
+                  ))}
+                </ThemedSelect>
+              </div>
               <p className="text-[0.72rem] text-[#a0a0b0] italic m-0">
                 Filtered by your race &amp; class selection.
               </p>
@@ -816,7 +985,7 @@ export default function CharacterCreator() {
 
             {/* Starting Spells */}
             <AnimatePresence>
-              {spellcastingMode !== "none" && (
+              {(spellcastingMode !== "none" || cantripLimit > 0) && (
                 <motion.div
                   key="spells"
                   initial={{ opacity: 0, height: 0 }}
@@ -826,56 +995,106 @@ export default function CharacterCreator() {
                   className="flex flex-col gap-4 overflow-hidden"
                 >
                   <SectionHeading icon="✦" label="Starting Spells" />
-                  <div className="flex flex-col gap-1.5">
-                    <div className="flex items-center justify-between">
-                      <span className="text-[0.7rem] uppercase tracking-[0.07em] text-[#a0a0b0]">
-                        {spellcastingMode === "known"
-                          ? "Known Spells"
-                          : "Prepared Spells"}
-                      </span>
-                      <span className="text-[0.72rem] text-[#a0a0b0] bg-white/[0.06] px-2 py-0.5 rounded-lg border border-[#2a2a4a]">
-                        {selectedSpells.length} / {spellLimit}
-                      </span>
+
+                  {/* Cantrips */}
+                  {cantripLimit > 0 && (
+                    <div className="flex flex-col gap-1.5">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[0.7rem] uppercase tracking-[0.07em] text-[#a0a0b0]">
+                          Cantrips
+                        </span>
+                        <span className="text-[0.72rem] text-[#a0a0b0] bg-white/[0.06] px-2 py-0.5 rounded-lg border border-[#2a2a4a]">
+                          {selectedCantrips.length} / {cantripLimit}
+                        </span>
+                      </div>
+                      <div className="border border-[#2a2a4a] rounded-lg bg-white/[0.02]">
+                        {availableSpells
+                          .filter((s) => s.level === 0)
+                          .map((spell, idx, arr) => {
+                            const selected = selectedCantrips.includes(spell.name);
+                            const disabled = !selected && selectedCantrips.length >= cantripLimit;
+                            return (
+                              <label
+                                key={spell.name}
+                                className={cn(
+                                  "flex items-center gap-2 px-2.5 py-1.5 text-[0.85rem] cursor-pointer transition-colors",
+                                  idx < arr.length - 1 && "border-b border-white/[0.04]",
+                                  selected && "bg-[rgba(228,168,83,0.07)] text-[#e4a853]",
+                                  !selected && !disabled && "text-[#e0e0e0] hover:bg-[rgba(228,168,83,0.05)]",
+                                  disabled && "opacity-40 cursor-default text-[#e0e0e0]",
+                                )}
+                              >
+                                <input
+                                  type="checkbox"
+                                  checked={selected}
+                                  disabled={disabled}
+                                  onChange={() => toggleCantrip(spell.name)}
+                                  className="accent-[#e4a853] w-3.5 h-3.5 shrink-0"
+                                />
+                                <span className="flex-1">{spell.name}</span>
+                                <span className="text-[0.72rem] text-[#a0a0b0] bg-white/[0.06] px-1.5 py-0.5 rounded shrink-0">
+                                  Cantrip
+                                </span>
+                              </label>
+                            );
+                          })}
+                      </div>
                     </div>
-                    <div className="max-h-[180px] overflow-y-auto border border-[#2a2a4a] rounded-lg bg-white/[0.02]">
-                      {availableSpells
-                        .filter((s) => s.level > 0)
-                        .map((spell, idx, arr) => {
-                          const selected = selectedSpells.includes(spell.name);
-                          const disabled =
-                            !selected && selectedSpells.length >= spellLimit;
-                          return (
-                            <label
-                              key={spell.name}
-                              className={cn(
-                                "flex items-center gap-2 px-2.5 py-1.5 text-[0.85rem] cursor-pointer transition-colors",
-                                idx < arr.length - 1 &&
-                                  "border-b border-white/[0.04]",
-                                selected &&
-                                  "bg-[rgba(228,168,83,0.07)] text-[#e4a853]",
-                                !selected &&
-                                  !disabled &&
-                                  "text-[#e0e0e0] hover:bg-[rgba(228,168,83,0.05)]",
-                                disabled &&
-                                  "opacity-40 cursor-default text-[#e0e0e0]",
-                              )}
-                            >
-                              <input
-                                type="checkbox"
-                                checked={selected}
-                                disabled={disabled}
-                                onChange={() => toggleSpell(spell.name)}
-                                className="accent-[#e4a853] w-3.5 h-3.5 shrink-0"
-                              />
-                              <span className="flex-1">{spell.name}</span>
-                              <span className="text-[0.72rem] text-[#a0a0b0] bg-white/[0.06] px-1.5 py-0.5 rounded shrink-0">
-                                L{spell.level}
-                              </span>
-                            </label>
-                          );
-                        })}
+                  )}
+
+                  {/* Leveled Spells */}
+                  {spellcastingMode !== "none" && (
+                    <div className="flex flex-col gap-1.5">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[0.7rem] uppercase tracking-[0.07em] text-[#a0a0b0]">
+                          {spellcastingMode === "known"
+                            ? "Known Spells"
+                            : "Prepared Spells"}
+                        </span>
+                        <span className="text-[0.72rem] text-[#a0a0b0] bg-white/[0.06] px-2 py-0.5 rounded-lg border border-[#2a2a4a]">
+                          {selectedSpells.length} / {spellLimit}
+                        </span>
+                      </div>
+                      <div className="max-h-[180px] overflow-y-auto border border-[#2a2a4a] rounded-lg bg-white/[0.02]">
+                        {availableSpells
+                          .filter((s) => s.level > 0)
+                          .map((spell, idx, arr) => {
+                            const selected = selectedSpells.includes(spell.name);
+                            const disabled =
+                              !selected && selectedSpells.length >= spellLimit;
+                            return (
+                              <label
+                                key={spell.name}
+                                className={cn(
+                                  "flex items-center gap-2 px-2.5 py-1.5 text-[0.85rem] cursor-pointer transition-colors",
+                                  idx < arr.length - 1 &&
+                                    "border-b border-white/[0.04]",
+                                  selected &&
+                                    "bg-[rgba(228,168,83,0.07)] text-[#e4a853]",
+                                  !selected &&
+                                    !disabled &&
+                                    "text-[#e0e0e0] hover:bg-[rgba(228,168,83,0.05)]",
+                                  disabled &&
+                                    "opacity-40 cursor-default text-[#e0e0e0]",
+                                )}
+                              >
+                                <input
+                                  type="checkbox"
+                                  checked={selected}
+                                  disabled={disabled}
+                                  onChange={() => toggleSpell(spell.name)}
+                                  className="accent-[#e4a853] w-3.5 h-3.5 shrink-0"
+                                />
+                                <span className="flex-1">{spell.name}</span>
+                                <span className="text-[0.72rem] text-[#a0a0b0] bg-white/[0.06] px-1.5 py-0.5 rounded shrink-0">
+                                  L{spell.level}
+                                </span>
+                              </label>
+                            );
+                          })}
+                      </div>
                     </div>
-                  </div>
+                  )}
                 </motion.div>
               )}
             </AnimatePresence>
@@ -946,7 +1165,9 @@ export default function CharacterCreator() {
 
             <div className="grid grid-cols-3 gap-2.5 max-sm:grid-cols-2">
               {ABILITIES.map((ab) => {
-                const mod = Math.floor((abilities[ab] - 10) / 2);
+                const raceBonus = RACE_ABILITY_BONUSES[race]?.[ab] ?? 0;
+                const finalVal = abilities[ab] + raceBonus;
+                const mod = Math.floor((finalVal - 10) / 2);
                 const isPrimary = (
                   CLASS_PRIMARY_STATS[charClass] ?? []
                 ).includes(ab);
@@ -1007,6 +1228,11 @@ export default function CharacterCreator() {
                         🎲
                       </button>
                     )}
+                    {raceBonus !== 0 && (
+                      <span className="text-[0.6rem] text-[#e4a853] leading-none">
+                        {abilities[ab]} +{raceBonus}
+                      </span>
+                    )}
                     <span
                       className={cn(
                         "text-[0.82rem] font-bold leading-none",
@@ -1058,10 +1284,80 @@ export default function CharacterCreator() {
                     <span className="text-[0.7rem] text-[#a0a0b0] leading-tight">
                       {bg.skills.join(" · ")}
                     </span>
+                    {selected && (
+                      <span className="text-[0.65rem] text-[#c8a85a] leading-tight italic mt-0.5">
+                        {bg.desc}
+                      </span>
+                    )}
                   </button>
                 );
               })}
             </div>
+
+            {/* Alignment */}
+            <SectionHeading icon="⚖" label="Alignment" />
+            <div className="grid grid-cols-3 gap-1.5">
+              {(
+                [
+                  "Lawful Good", "Neutral Good", "Chaotic Good",
+                  "Lawful Neutral", "True Neutral", "Chaotic Neutral",
+                  "Lawful Evil", "Neutral Evil", "Chaotic Evil",
+                ] as const
+              ).map((al) => (
+                <button
+                  key={al}
+                  type="button"
+                  onClick={() => setAlignment((prev) => (prev === al ? "" : al))}
+                  className={cn(
+                    "rounded-lg px-2 py-2 text-[0.7rem] font-medium leading-tight text-center transition-all border",
+                    alignment === al
+                      ? "bg-[rgba(228,168,83,0.12)] border-[rgba(228,168,83,0.5)] text-[#e4a853]"
+                      : "bg-white/3 border-[#2a2a4a] text-[#a0a0b0] hover:border-[rgba(228,168,83,0.3)] hover:text-[#e0e0e0]",
+                  )}
+                >
+                  {al}
+                </button>
+              ))}
+            </div>
+
+            {/* Class Skill Choices */}
+            {skillChoices && skillChoices.count > 0 && (
+              <>
+                <SectionHeading
+                  icon="🎯"
+                  label={`Class Skills (choose ${skillChoices.count})`}
+                />
+                <div className="grid grid-cols-2 gap-1.5">
+                  {skillChoices.options.map((skill) => {
+                    const selected = selectedClassSkills.includes(skill);
+                    const disabled =
+                      !selected &&
+                      selectedClassSkills.length >= skillChoices.count;
+                    return (
+                      <button
+                        key={skill}
+                        type="button"
+                        onClick={() => toggleClassSkill(skill)}
+                        disabled={disabled}
+                        className={cn(
+                          "rounded-lg px-3 py-2 text-[0.78rem] font-medium text-left transition-all border",
+                          selected
+                            ? "bg-[rgba(228,168,83,0.1)] border-[rgba(228,168,83,0.5)] text-[#e4a853]"
+                            : disabled
+                              ? "bg-white/2 border-[#1e1e3a] text-[#555570] cursor-not-allowed"
+                              : "bg-white/3 border-[#2a2a4a] text-[#e0e0e0] hover:border-[rgba(228,168,83,0.3)]",
+                        )}
+                      >
+                        {skill}
+                      </button>
+                    );
+                  })}
+                </div>
+                <p className="text-[0.68rem] text-[#a0a0b0] text-right">
+                  {selectedClassSkills.length} / {skillChoices.count} selected
+                </p>
+              </>
+            )}
 
             {/* Error */}
             <AnimatePresence>
@@ -1079,10 +1375,32 @@ export default function CharacterCreator() {
               )}
             </AnimatePresence>
 
+            {/* Stat Preview Strip */}
+            <div
+              className="grid grid-cols-4 gap-1.5 rounded-xl px-3 py-2.5 border border-[rgba(228,168,83,0.2)]"
+              style={{ background: "rgba(228,168,83,0.04)" }}
+            >
+              {[
+                { label: "HP", value: Math.max(1, previewHP) },
+                { label: "AC", value: previewAC },
+                { label: "Speed", value: `${previewSpeed}ft` },
+                { label: "Prof", value: "+2" },
+              ].map(({ label, value }) => (
+                <div key={label} className="flex flex-col items-center gap-0.5">
+                  <span className="text-[0.6rem] uppercase tracking-[0.08em] text-[#a0a0b0]">
+                    {label}
+                  </span>
+                  <span className="text-[0.95rem] font-bold text-[#e4a853]">
+                    {value}
+                  </span>
+                </div>
+              ))}
+            </div>
+
             {/* Submit */}
             <Button
               onClick={handleCreate}
-              disabled={!name.trim() || creating}
+              disabled={name.trim().length < 2 || creating}
               className="mt-2 min-h-[48px] text-base font-bold bg-linear-to-br from-[#e4a853] to-[#c8882a] text-[#1a1a2e] border-none hover:opacity-90 hover:-translate-y-px active:translate-y-0 disabled:opacity-40 tracking-[0.01em]"
               style={{ boxShadow: "0 4px 16px rgba(228,168,83,0.25)" }}
             >
