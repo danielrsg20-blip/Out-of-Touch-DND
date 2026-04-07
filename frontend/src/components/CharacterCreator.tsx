@@ -183,7 +183,7 @@ const PARTICLES = Array.from({ length: 16 }, (_, i) => ({
   key: i,
   left: (Math.sin(i * 3.1) * 0.5 + 0.5) * 100,
   top: (Math.cos(i * 1.9) * 0.5 + 0.5) * 100,
-  size: 1.2 + Math.abs(Math.sin(i * 4.7)) * 2.0,
+  size: 1.2 + Math.abs(Math.sin(i * 4.7)) * 2,
   duration: 8 + Math.abs(Math.cos(i * 1.3)) * 10,
   delay: -(Math.abs(Math.sin(i * 1.2 + 0.7)) * 8),
   opacity: 0.08 + Math.abs(Math.sin(i * 2.5 + 1)) * 0.22,
@@ -249,7 +249,7 @@ const BACKGROUNDS_FE = [
   },
 ] as const;
 
-function SectionHeading({ icon, label }: { icon: string; label: string }) {
+function SectionHeading({ icon, label }: Readonly<{ icon: string; label: string }>) {
   return (
     <div className="flex items-center gap-2 mt-1">
       <span className="text-[0.72rem] text-[#e4a853] shrink-0">{icon}</span>
@@ -273,12 +273,12 @@ function ThemedSelect({
   value,
   onChange,
   children,
-}: {
+}: Readonly<{
   id?: string;
   value: string;
   onChange: (e: React.ChangeEvent<HTMLSelectElement>) => void;
   children: React.ReactNode;
-}) {
+}>) {
   return (
     <select
       id={id}
@@ -322,6 +322,81 @@ function getSpriteOptionsFor(
   return filtered.length > 0 ? filtered : CHARACTER_SPRITES;
 }
 
+function applyCreatedCharacter(params: {
+  created: CharacterData | undefined;
+  payload: Record<string, unknown>;
+  playerId: string;
+  resolvedSpriteId: string | undefined;
+  roomCode: string;
+  campaignTitle: string | undefined;
+  token: string | null;
+}): void {
+  const { created, payload, playerId, resolvedSpriteId, roomCode, campaignTitle, token } = params;
+
+  if (created?.id && typeof created.id === "string") {
+    useGameStore.getState().setCharacters({
+      ...useGameStore.getState().characters,
+      [created.id]: created,
+    });
+    const sessionState = useSessionStore.getState();
+    sessionState.setPlayers(
+      sessionState.players.map((p) =>
+        p.id === playerId ? { ...p, character_id: created.id } : p,
+      ),
+    );
+  }
+
+  // Sync characters from snapshot without touching the map.
+  if (payload.state && typeof payload.state === "object") {
+    const stateObj = payload.state as Record<string, unknown>;
+    if (stateObj.characters && typeof stateObj.characters === "object") {
+      useGameStore.getState().setCharacters(stateObj.characters as Record<string, CharacterData>);
+    }
+  }
+
+  // Place the PC token on whichever map is currently rendered in the store.
+  if (created?.id && typeof created.id === "string") {
+    const store = useGameStore.getState();
+    if (store.map) {
+      const spawnX = Math.max(1, Math.floor((store.map.width ?? 20) / 2));
+      const spawnY = Math.max(1, Math.floor((store.map.height ?? 14) / 2));
+      store.addEntity({
+        id: created.id,
+        name: created.name ?? "Adventurer",
+        x: spawnX,
+        y: spawnY,
+        type: "pc",
+        sprite: resolvedSpriteId ?? "default",
+      });
+    }
+  }
+
+  if (roomCode && token && created) {
+    const allCharacters = useGameStore.getState().characters;
+    const map = useGameStore.getState().map;
+    callBackendApi("/api/campaign/direct-save", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}` },
+      body: {
+        room_code: roomCode,
+        campaign_name: campaignTitle ?? roomCode,
+        characters: allCharacters,
+        map,
+        conversation: [],
+        my_character_id: created.id,
+      },
+    }).catch(() => { /* non-critical */ });
+  }
+
+  useSessionStore.getState().setPhase("playing");
+}
+
+function roll4d6DropLowest(): number {
+  const rolls = Array.from({ length: 4 }, () => Math.floor(Math.random() * 6) + 1);
+  rolls.sort((a, b) => a - b);
+  return rolls.slice(1).reduce((s, n) => s + n, 0);
+}
+
 export default function CharacterCreator() {
   const {
     roomCode,
@@ -332,7 +407,6 @@ export default function CharacterCreator() {
     campaignTitle,
     reset,
   } = useSessionStore();
-  const setCharacters = useGameStore((s) => s.setCharacters);
   const token = useAuthStore((s) => s.token);
 
   const [name, setName] = useState("");
@@ -398,15 +472,6 @@ export default function CharacterCreator() {
       : 0;
   const pointBuyRemaining = POINT_BUY_BUDGET - pointBuySpent;
 
-  const roll4d6DropLowest = (): number => {
-    const rolls = Array.from(
-      { length: 4 },
-      () => Math.floor(Math.random() * 6) + 1,
-    );
-    rolls.sort((a, b) => a - b);
-    return rolls.slice(1).reduce((s, n) => s + n, 0);
-  };
-
   const handleScoringMethodChange = (
     method: "standard" | "pointbuy" | "roll",
   ) => {
@@ -426,10 +491,6 @@ export default function CharacterCreator() {
       });
     }
     setAbilities(obj);
-  };
-
-  const rollSingleAbility = (ability: string) => {
-    setAbilities((prev) => ({ ...prev, [ability]: roll4d6DropLowest() }));
   };
 
   const handleAbilityChange = (ability: string, value: number) => {
@@ -453,7 +514,7 @@ export default function CharacterCreator() {
       );
 
       if (typeof payload.error === "string") {
-        throw new Error(payload.error);
+        throw new TypeError(payload.error);
       }
 
       setSpellcastingMode(
@@ -517,44 +578,44 @@ export default function CharacterCreator() {
 
   const toggleSpell = (spellName: string) => {
     if (spellcastingMode === "known") {
-      setSelectedKnownSpells((prev) =>
-        prev.includes(spellName)
-          ? prev.filter((s) => s !== spellName)
-          : prev.length >= knownLimit
-            ? prev
-            : [...prev, spellName],
-      );
+      setSelectedKnownSpells((prev) => {
+        if (prev.includes(spellName)) return prev.filter((s) => s !== spellName);
+        if (prev.length >= knownLimit) return prev;
+        return [...prev, spellName];
+      });
       return;
     }
     if (spellcastingMode === "prepared") {
-      setSelectedPreparedSpells((prev) =>
-        prev.includes(spellName)
-          ? prev.filter((s) => s !== spellName)
-          : prev.length >= preparedLimit
-            ? prev
-            : [...prev, spellName],
-      );
+      setSelectedPreparedSpells((prev) => {
+        if (prev.includes(spellName)) return prev.filter((s) => s !== spellName);
+        if (prev.length >= preparedLimit) return prev;
+        return [...prev, spellName];
+      });
     }
   };
 
   const toggleCantrip = (spellName: string) => {
-    setSelectedCantrips((prev) =>
-      prev.includes(spellName)
-        ? prev.filter((s) => s !== spellName)
-        : prev.length >= cantripLimit
-          ? prev
-          : [...prev, spellName],
-    );
+    setSelectedCantrips((prev) => {
+      if (prev.includes(spellName)) return prev.filter((s) => s !== spellName);
+      if (prev.length >= cantripLimit) return prev;
+      return [...prev, spellName];
+    });
   };
 
   const toggleClassSkill = (skill: string) => {
-    setSelectedClassSkills((prev) =>
-      prev.includes(skill)
-        ? prev.filter((s) => s !== skill)
-        : skillChoices && prev.length >= skillChoices.count
-          ? prev
-          : [...prev, skill],
-    );
+    setSelectedClassSkills((prev) => {
+      if (prev.includes(skill)) return prev.filter((s) => s !== skill);
+      if (skillChoices && prev.length >= skillChoices.count) return prev;
+      return [...prev, skill];
+    });
+  };
+
+  const toggleHalfElfChoice = (ab: string) => {
+    setHalfElfChoices((prev) => {
+      if (prev.includes(ab)) return prev.filter((x) => x !== ab);
+      if (prev.length >= 2) return prev;
+      return [...prev, ab];
+    });
   };
 
   const handleCreate = async () => {
@@ -562,7 +623,7 @@ export default function CharacterCreator() {
     if (
       spellcastingMode !== "none" &&
       selectedSpells.length < spellLimit &&
-      !window.confirm(
+      !globalThis.confirm(
         `You've only selected ${selectedSpells.length} of ${spellLimit} starting spells. Continue anyway?`,
       )
     ) {
@@ -572,8 +633,15 @@ export default function CharacterCreator() {
     setError("");
     const resolvedSpriteId = getCharacterSpriteId(charClass, race) ?? spriteId;
 
-    const createViaEdge = async (): Promise<Record<string, unknown>> => {
-      return await invokeEdgeFunction<Record<string, unknown>>(
+    let knownSpells: string[] | undefined;
+    if (spellcastingMode === "known") {
+      knownSpells = [...selectedCantrips, ...selectedKnownSpells];
+    } else if (selectedCantrips.length > 0) {
+      knownSpells = selectedCantrips;
+    }
+
+    try {
+      const payload = await invokeEdgeFunction<Record<string, unknown>>(
         "dm-action",
         {
           action: "create_character",
@@ -584,14 +652,8 @@ export default function CharacterCreator() {
           char_class: charClass,
           sprite_id: resolvedSpriteId,
           abilities,
-          known_spells:
-            spellcastingMode === "known"
-              ? [...selectedCantrips, ...selectedKnownSpells]
-              : selectedCantrips.length > 0 ? selectedCantrips : undefined,
-          prepared_spells:
-            spellcastingMode === "prepared"
-              ? selectedPreparedSpells
-              : undefined,
+          known_spells: knownSpells,
+          prepared_spells: spellcastingMode === "prepared" ? selectedPreparedSpells : undefined,
           mock_mode: mockMode,
           background: selectedBackground,
           alignment,
@@ -603,77 +665,17 @@ export default function CharacterCreator() {
         },
         { authMode: "anon" },
       );
-    };
-
-    try {
-      const payload = await createViaEdge();
 
       if (typeof payload.error === "string") throw new Error(payload.error);
-      const created = payload.character as CharacterData | undefined;
-      if (created?.id && typeof created.id === "string") {
-        setCharacters({
-          ...useGameStore.getState().characters,
-          [created.id]: created,
-        });
-        const sessionState = useSessionStore.getState();
-        sessionState.setPlayers(
-          sessionState.players.map((p) =>
-            p.id === playerId
-              ? { ...p, character_id: created.id as string }
-              : p,
-          ),
-        );
-      }
-      // Sync characters from the snapshot without touching the map.
-      // The edge function returns a snapshot map that may lack image_url (since
-      // the AI battlemap asset is stored separately and not written back to the
-      // Supabase session_snapshots table by the ts-runtime). Replacing the map
-      // via syncState would wipe the AI dungeon image currently rendered.
-      if (payload.state && typeof payload.state === "object") {
-        const stateObj = payload.state as Record<string, unknown>;
-        if (stateObj.characters && typeof stateObj.characters === "object") {
-          useGameStore
-            .getState()
-            .setCharacters(
-              stateObj.characters as Record<string, CharacterData>,
-            );
-        }
-      }
-      // Place the PC token on whichever map is currently rendered in the store.
-      if (created?.id && typeof created.id === "string") {
-        const store = useGameStore.getState();
-        if (store.map) {
-          const spawnX = Math.max(1, Math.floor((store.map.width ?? 20) / 2));
-          const spawnY = Math.max(1, Math.floor((store.map.height ?? 14) / 2));
-          store.addEntity({
-            id: created.id,
-            name: (created.name as string | undefined) ?? "Adventurer",
-            x: spawnX,
-            y: spawnY,
-            type: "pc",
-            sprite: resolvedSpriteId ?? "default",
-          });
-        }
-      }
-      if (roomCode && token && created) {
-        const allCharacters = useGameStore.getState().characters;
-        const map = useGameStore.getState().map;
-        callBackendApi("/api/campaign/direct-save", {
-          method: "POST",
-          headers: { Authorization: `Bearer ${token}` },
-          body: {
-            room_code: roomCode,
-            campaign_name: campaignTitle ?? roomCode,
-            characters: allCharacters,
-            map,
-            conversation: [],
-            my_character_id: created.id,
-          },
-        }).catch(() => {
-          /* non-critical */
-        });
-      }
-      useSessionStore.getState().setPhase("playing");
+      applyCreatedCharacter({
+        created: payload.character as CharacterData | undefined,
+        payload,
+        playerId,
+        resolvedSpriteId,
+        roomCode,
+        campaignTitle,
+        token,
+      });
     } catch (err: unknown) {
       const msg =
         err instanceof Error
@@ -709,6 +711,24 @@ export default function CharacterCreator() {
   const selectedSpells =
     spellcastingMode === "known" ? selectedKnownSpells : selectedPreparedSpells;
   const spellLimit = spellcastingMode === "known" ? knownLimit : preparedLimit;
+
+  // Helper to avoid nested ternaries in JSX for scoring method hint
+  const renderScoringMethodHint = () => {
+    if (scoringMethod === "pointbuy") {
+      let pointBuyClass: string | undefined;
+      if (pointBuyRemaining < 0) pointBuyClass = "text-[#e74c3c]";
+      else if (pointBuyRemaining === 0) pointBuyClass = "text-[#2ecc71]";
+      return (
+        <span className={pointBuyClass}>
+          {pointBuyRemaining} / {POINT_BUY_BUDGET} pts remaining
+        </span>
+      );
+    }
+    if (scoringMethod === "roll") {
+      return <span>Roll 4d6, drop lowest — click ⬢ to re-roll any score</span>;
+    }
+    return "Standard Array: 15, 14, 13, 12, 10, 8";
+  };
 
   return (
     <div
@@ -768,7 +788,7 @@ export default function CharacterCreator() {
 
       {/* Card */}
       <motion.div
-        className="relative z-10 w-full max-w-[540px] mb-6"
+        className="relative z-10 w-full max-w-135 mb-6"
         initial={{ opacity: 0, y: 24, scale: 0.97 }}
         animate={{ opacity: 1, y: 0, scale: 1 }}
         transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
@@ -906,27 +926,19 @@ export default function CharacterCreator() {
                   {["STR", "DEX", "CON", "INT", "WIS"].map((ab) => {
                     const selected = halfElfChoices.includes(ab);
                     const disabled = !selected && halfElfChoices.length >= 2;
+                    let abBtnClass: string;
+                    if (selected) abBtnClass = "bg-[rgba(228,168,83,0.12)] border-[rgba(228,168,83,0.5)] text-[#e4a853]";
+                    else if (disabled) abBtnClass = "bg-white/2 border-[#1e1e3a] text-[#555570] cursor-not-allowed";
+                    else abBtnClass = "bg-white/3 border-[#2a2a4a] text-[#a0a0b0] hover:border-[rgba(228,168,83,0.3)] hover:text-[#e0e0e0]";
                     return (
                       <button
                         key={ab}
                         type="button"
                         disabled={disabled}
-                        onClick={() =>
-                          setHalfElfChoices((prev) =>
-                            prev.includes(ab)
-                              ? prev.filter((x) => x !== ab)
-                              : prev.length >= 2
-                                ? prev
-                                : [...prev, ab],
-                          )
-                        }
+                        onClick={() => toggleHalfElfChoice(ab)}
                         className={cn(
                           "rounded-lg px-2 py-2 text-[0.75rem] font-semibold transition-all border",
-                          selected
-                            ? "bg-[rgba(228,168,83,0.12)] border-[rgba(228,168,83,0.5)] text-[#e4a853]"
-                            : disabled
-                              ? "bg-white/2 border-[#1e1e3a] text-[#555570] cursor-not-allowed"
-                              : "bg-white/3 border-[#2a2a4a] text-[#a0a0b0] hover:border-[rgba(228,168,83,0.3)] hover:text-[#e0e0e0]",
+                          abBtnClass,
                         )}
                       >
                         {ab} +1
@@ -1003,11 +1015,11 @@ export default function CharacterCreator() {
                         <span className="text-[0.7rem] uppercase tracking-[0.07em] text-[#a0a0b0]">
                           Cantrips
                         </span>
-                        <span className="text-[0.72rem] text-[#a0a0b0] bg-white/[0.06] px-2 py-0.5 rounded-lg border border-[#2a2a4a]">
+                        <span className="text-[0.72rem] text-[#a0a0b0] bg-white/6 px-2 py-0.5 rounded-lg border border-[#2a2a4a]">
                           {selectedCantrips.length} / {cantripLimit}
                         </span>
                       </div>
-                      <div className="border border-[#2a2a4a] rounded-lg bg-white/[0.02]">
+                      <div className="border border-[#2a2a4a] rounded-lg bg-white/2">
                         {availableSpells
                           .filter((s) => s.level === 0)
                           .map((spell, idx, arr) => {
@@ -1018,7 +1030,7 @@ export default function CharacterCreator() {
                                 key={spell.name}
                                 className={cn(
                                   "flex items-center gap-2 px-2.5 py-1.5 text-[0.85rem] cursor-pointer transition-colors",
-                                  idx < arr.length - 1 && "border-b border-white/[0.04]",
+                                  idx < arr.length - 1 && "border-b border-white/4",
                                   selected && "bg-[rgba(228,168,83,0.07)] text-[#e4a853]",
                                   !selected && !disabled && "text-[#e0e0e0] hover:bg-[rgba(228,168,83,0.05)]",
                                   disabled && "opacity-40 cursor-default text-[#e0e0e0]",
@@ -1032,7 +1044,7 @@ export default function CharacterCreator() {
                                   className="accent-[#e4a853] w-3.5 h-3.5 shrink-0"
                                 />
                                 <span className="flex-1">{spell.name}</span>
-                                <span className="text-[0.72rem] text-[#a0a0b0] bg-white/[0.06] px-1.5 py-0.5 rounded shrink-0">
+                                <span className="text-[0.72rem] text-[#a0a0b0] bg-white/6 px-1.5 py-0.5 rounded shrink-0">
                                   Cantrip
                                 </span>
                               </label>
@@ -1051,11 +1063,11 @@ export default function CharacterCreator() {
                             ? "Known Spells"
                             : "Prepared Spells"}
                         </span>
-                        <span className="text-[0.72rem] text-[#a0a0b0] bg-white/[0.06] px-2 py-0.5 rounded-lg border border-[#2a2a4a]">
+                        <span className="text-[0.72rem] text-[#a0a0b0] bg-white/6 px-2 py-0.5 rounded-lg border border-[#2a2a4a]">
                           {selectedSpells.length} / {spellLimit}
                         </span>
                       </div>
-                      <div className="max-h-[180px] overflow-y-auto border border-[#2a2a4a] rounded-lg bg-white/[0.02]">
+                      <div className="max-h-45 overflow-y-auto border border-[#2a2a4a] rounded-lg bg-white/2">
                         {availableSpells
                           .filter((s) => s.level > 0)
                           .map((spell, idx, arr) => {
@@ -1068,7 +1080,7 @@ export default function CharacterCreator() {
                                 className={cn(
                                   "flex items-center gap-2 px-2.5 py-1.5 text-[0.85rem] cursor-pointer transition-colors",
                                   idx < arr.length - 1 &&
-                                    "border-b border-white/[0.04]",
+                                    "border-b border-white/4",
                                   selected &&
                                     "bg-[rgba(228,168,83,0.07)] text-[#e4a853]",
                                   !selected &&
@@ -1086,7 +1098,7 @@ export default function CharacterCreator() {
                                   className="accent-[#e4a853] w-3.5 h-3.5 shrink-0"
                                 />
                                 <span className="flex-1">{spell.name}</span>
-                                <span className="text-[0.72rem] text-[#a0a0b0] bg-white/[0.06] px-1.5 py-0.5 rounded shrink-0">
+                                <span className="text-[0.72rem] text-[#a0a0b0] bg-white/6 px-1.5 py-0.5 rounded shrink-0">
                                   L{spell.level}
                                 </span>
                               </label>
@@ -1103,25 +1115,7 @@ export default function CharacterCreator() {
             <SectionHeading icon="◈" label="Ability Scores" />
             <div className="flex items-center justify-between -mt-2 gap-2">
               <p className="text-[0.72rem] text-[#a0a0b0] italic m-0">
-                {scoringMethod === "pointbuy" ? (
-                  <span
-                    className={
-                      pointBuyRemaining < 0
-                        ? "text-[#e74c3c]"
-                        : pointBuyRemaining === 0
-                          ? "text-[#2ecc71]"
-                          : undefined
-                    }
-                  >
-                    {pointBuyRemaining} / {POINT_BUY_BUDGET} pts remaining
-                  </span>
-                ) : scoringMethod === "roll" ? (
-                  <span>
-                    Roll 4d6, drop lowest — click ⬢ to re-roll any score
-                  </span>
-                ) : (
-                  "Standard Array: 15, 14, 13, 12, 10, 8"
-                )}
+                {renderScoringMethodHint()}
               </p>
               <div className="flex rounded-md overflow-hidden border border-[#2a2a4a] shrink-0">
                 <button
@@ -1198,7 +1192,7 @@ export default function CharacterCreator() {
                       value={abilities[ab]}
                       onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
                         if (scoringMethod === "roll") return;
-                        const val = parseInt(e.target.value) || 8;
+                        const val = Number.parseInt(e.target.value) || 8;
                         if (scoringMethod === "pointbuy") {
                           const clamped = Math.min(15, Math.max(8, val));
                           const newCost = POINT_BUY_COST[clamped] ?? 9;
@@ -1216,12 +1210,12 @@ export default function CharacterCreator() {
                           handleAbilityChange(ab, val);
                         }
                       }}
-                      className="w-[52px] bg-[rgba(26,26,62,0.8)] border border-[#2a2a4a] text-[#e0e0e0] text-center py-1 rounded-md text-[1.15rem] font-bold outline-none transition-colors focus:border-[#e4a853] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                      className="w-13 bg-[rgba(26,26,62,0.8)] border border-[#2a2a4a] text-[#e0e0e0] text-center py-1 rounded-md text-[1.15rem] font-bold outline-none transition-colors focus:border-[#e4a853] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                     />
                     {scoringMethod === "roll" && (
                       <button
                         type="button"
-                        onClick={() => rollSingleAbility(ab)}
+                        onClick={() => setAbilities((prev) => ({ ...prev, [ab]: roll4d6DropLowest() }))}
                         className="text-[0.75rem] w-6 h-6 flex items-center justify-center rounded bg-[rgba(228,168,83,0.1)] border border-[rgba(228,168,83,0.3)] text-[#e4a853] hover:bg-[rgba(228,168,83,0.2)] transition-colors leading-none"
                         title="Re-roll this ability (4d6 drop lowest)"
                       >
@@ -1333,19 +1327,19 @@ export default function CharacterCreator() {
                     const disabled =
                       !selected &&
                       selectedClassSkills.length >= skillChoices.count;
+                    let skillBtnClass: string;
+                    if (selected) skillBtnClass = "bg-[rgba(228,168,83,0.1)] border-[rgba(228,168,83,0.5)] text-[#e4a853]";
+                    else if (disabled) skillBtnClass = "bg-white/2 border-[#1e1e3a] text-[#555570] cursor-not-allowed";
+                    else skillBtnClass = "bg-white/3 border-[#2a2a4a] text-[#e0e0e0] hover:border-[rgba(228,168,83,0.3)]";
                     return (
                       <button
                         key={skill}
                         type="button"
                         onClick={() => toggleClassSkill(skill)}
                         disabled={disabled}
-                        className={cn(
+                      className={cn(
                           "rounded-lg px-3 py-2 text-[0.78rem] font-medium text-left transition-all border",
-                          selected
-                            ? "bg-[rgba(228,168,83,0.1)] border-[rgba(228,168,83,0.5)] text-[#e4a853]"
-                            : disabled
-                              ? "bg-white/2 border-[#1e1e3a] text-[#555570] cursor-not-allowed"
-                              : "bg-white/3 border-[#2a2a4a] text-[#e0e0e0] hover:border-[rgba(228,168,83,0.3)]",
+                          skillBtnClass,
                         )}
                       >
                         {skill}
@@ -1401,12 +1395,12 @@ export default function CharacterCreator() {
             <Button
               onClick={handleCreate}
               disabled={name.trim().length < 2 || creating}
-              className="mt-2 min-h-[48px] text-base font-bold bg-linear-to-br from-[#e4a853] to-[#c8882a] text-[#1a1a2e] border-none hover:opacity-90 hover:-translate-y-px active:translate-y-0 disabled:opacity-40 tracking-[0.01em]"
+              className="mt-2 min-h-12 text-base font-bold bg-linear-to-br from-[#e4a853] to-[#c8882a] text-[#1a1a2e] border-none hover:opacity-90 hover:-translate-y-px active:translate-y-0 disabled:opacity-40 tracking-[0.01em]"
               style={{ boxShadow: "0 4px 16px rgba(228,168,83,0.25)" }}
             >
               {creating ? (
                 <>
-                  <span className="inline-block w-4 h-4 border-2 border-[rgba(26,26,46,0.3)] border-t-[#1a1a2e] rounded-full animate-spin mr-2" />
+                  <span className="inline-block w-4 h-4 border-2 border-[rgba(26,26,46,0.3)] border-t-[#1a1a2e] rounded-full animate-spin mr-2" aria-hidden="true" />{" "}
                   Creating…
                 </>
               ) : (
@@ -1419,3 +1413,4 @@ export default function CharacterCreator() {
     </div>
   );
 }
+

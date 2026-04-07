@@ -102,9 +102,11 @@ class LocationMemory:
     region: str = ""
     visited: bool = False
     notes: list[str] = field(default_factory=list)
+    map_seed: int | None = None
+    map_params: dict[str, Any] | None = None
 
     def to_dict(self) -> dict:
-        return {
+        d = {
             "id": self.id,
             "name": self.name,
             "description": self.description,
@@ -112,6 +114,11 @@ class LocationMemory:
             "visited": self.visited,
             "notes": self.notes,
         }
+        if self.map_seed is not None:
+            d["map_seed"] = self.map_seed
+        if self.map_params is not None:
+            d["map_params"] = self.map_params
+        return d
 
 
 @dataclass

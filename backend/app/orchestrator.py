@@ -55,6 +55,24 @@ biome (temperate/tropical/arctic/underground/urban/magical), mood_style \
 (up to 6 key visual landmarks like 'fallen stone columns' or 'glowing runes'), and \
 encounter_type (ambush/siege/chase/investigation/diplomacy/exploration). \
 These fields control how the battlemap image looks, so they must match your narration.
+- TACTICAL MAP PLANNING: Before calling generate_map, consider the tactical situation: \
+What advantage does each side have in this terrain? Where should chokepoints, cover, and \
+sight lines be? How does the terrain enhance or complicate the encounter? \
+Write the description and layout_hints to match those tactical goals. \
+After a map is generated, narrate the terrain tactically so players understand their \
+options — mention cover positions, escape routes, high ground, and hazards.
+- DYNAMIC TERRAIN: When narrative events alter the map (explosions, collapses, flooding, \
+freezing water, magical barriers, opening secret passages), use modify_terrain to update \
+the affected tiles. Always provide a reason so the change is narrated to players.
+- REINFORCEMENTS: When enemies call for backup or new foes arrive narratively, use \
+spawn_reinforcements to place them at a logical entry point (map edge or nearest door) \
+rather than placing entities one by one.
+- ENCOUNTER SETUP: When setting up a combat encounter with multiple enemies, prefer \
+populate_encounter over calling place_entity repeatedly. Choose a placement strategy: \
+"tactical" positions enemies behind cover and at chokepoints, "guarding" positions them \
+near doors/stairs/treasure, "scattered" distributes them evenly.
+- MAP PERSISTENCE: When generating a map for a location the party has visited before, \
+include the location_name field so the same layout is restored from memory.
 - Place PC tokens on the map when generating a new map. Use entity type "pc" for \
 player characters and "enemy" for monsters.
 - Track HP, conditions, and spell slots through the tools. Do not invent values.
@@ -175,10 +193,7 @@ class Orchestrator:
                 state_parts.append("CONCENTRATION:\n" + "\n".join(conc_lines))
 
         if self.game_map:
-            state_parts.append(
-                f"MAP: {self.game_map.width}x{self.game_map.height}, "
-                f"{len(self.game_map.entities)} entities"
-            )
+            state_parts.append(self.game_map.build_spatial_summary())
 
         memory_block = self.memory.build_context_block()
         if memory_block:

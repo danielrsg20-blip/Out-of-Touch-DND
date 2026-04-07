@@ -6,11 +6,11 @@ const target = path.resolve(process.cwd(), 'supabase', 'functions', 'dm-action',
 const requiredPatterns = [
   {
     name: 'feature flag wiring',
-    pattern: /vector_grid_authoritative_enabled:\s*parseEnvFlag\('VECTOR_GRID_AUTHORITATIVE_ENABLED',\s*false\)/,
+    pattern: /vector_grid_authoritative_enabled:\s*parseEnvFlag\(\s*["']VECTOR_GRID_AUTHORITATIVE_ENABLED["'],\s*false,?\s*\)/,
   },
   {
     name: 'grid derivation flag wiring',
-    pattern: /vector_grid_derivation_enabled:\s*parseEnvFlag\('VECTOR_GRID_DERIVATION_ENABLED',\s*true\)/,
+    pattern: /vector_grid_derivation_enabled:\s*parseEnvFlag\(\s*["']VECTOR_GRID_DERIVATION_ENABLED["'],\s*true,?\s*\)/,
   },
   {
     name: 'traversal grid extractor',

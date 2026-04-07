@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto'
 import { generateVectorMap } from './vectorMap/generateVectorMap.js'
 import { getVectorMapFeatureFlags } from './vectorMap/featureFlags.js'
+import type { GenerateVectorMapRequest } from './vectorMap/types.js'
 import type { SessionSnapshot } from './sessionStore.js'
 
 type JsonRecord = Record<string, unknown>
@@ -139,6 +140,9 @@ function buildMapFromVector(snapshot: SessionSnapshot, content: string): {
       corridor_width_cells: 2,
       obstacle_density: 0.1,
       hazard_density: 0.08,
+      ...((snapshot.game_state.map?.metadata as Record<string, unknown> | undefined)?.layout_hints
+        ? { layout_hints: (snapshot.game_state.map!.metadata as Record<string, unknown>).layout_hints as NonNullable<GenerateVectorMapRequest['generation_params']>['layout_hints'] }
+        : {}),
     },
     grid_config: {
       base_cell_size_world: 5,

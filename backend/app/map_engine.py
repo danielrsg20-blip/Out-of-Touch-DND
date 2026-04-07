@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import math
+from collections import deque
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -195,6 +196,165 @@ class GameMap:
             "metadata": dict(self.metadata),
             "traversal_grid": dict(self.traversal_grid) if isinstance(self.traversal_grid, dict) else self.traversal_grid,
         }
+
+    # ------------------------------------------------------------------
+    # Spatial analysis for DM system prompt
+    # ------------------------------------------------------------------
+
+    def _find_rooms(self) -> list[list[tuple[int, int]]]:
+        """Flood-fill walkable tiles into connected components (rooms)."""
+        visited: set[tuple[int, int]] = set()
+        components: list[list[tuple[int, int]]] = []
+
+        for (x, y), tile in self.tiles.items():
+            if tile.blocks_movement or (x, y) in visited:
+                continue
+            queue: deque[tuple[int, int]] = deque([(x, y)])
+            visited.add((x, y))
+            comp: list[tuple[int, int]] = []
+            while queue:
+                cx, cy = queue.popleft()
+                comp.append((cx, cy))
+                for nx, ny in ((cx + 1, cy), (cx - 1, cy), (cx, cy + 1), (cx, cy - 1)):
+                    if (nx, ny) in visited:
+                        continue
+                    nt = self.tiles.get((nx, ny))
+                    if nt and not nt.blocks_movement:
+                        visited.add((nx, ny))
+                        queue.append((nx, ny))
+            if len(comp) >= 4:
+                components.append(comp)
+
+        components.sort(key=len, reverse=True)
+        return components
+
+    def _find_chokepoints(self) -> list[tuple[int, int]]:
+        """Walkable tiles with exactly 2 walkable orthogonal neighbors (narrow passages)."""
+        chokepoints: list[tuple[int, int]] = []
+        for (x, y), tile in self.tiles.items():
+            if tile.blocks_movement:
+                continue
+            walkable_neighbors = sum(
+                1 for nx, ny in ((x + 1, y), (x - 1, y), (x, y + 1), (x, y - 1))
+                if self.is_walkable(nx, ny)
+            )
+            if walkable_neighbors == 2:
+                # Only count as chokepoint if the two neighbors are collinear (corridor)
+                n = [(nx, ny) for nx, ny in ((x + 1, y), (x - 1, y), (x, y + 1), (x, y - 1))
+                     if self.is_walkable(nx, ny)]
+                if len(n) == 2:
+                    dx = abs(n[0][0] - n[1][0])
+                    dy = abs(n[0][1] - n[1][1])
+                    if dx == 2 or dy == 2:
+                        chokepoints.append((x, y))
+        return chokepoints
+
+    def _find_cover(self) -> list[tuple[int, int, str]]:
+        """Blocking tiles (pillars, rubble) adjacent to walkable tiles — usable as cover."""
+        cover: list[tuple[int, int, str]] = []
+        for (x, y), tile in self.tiles.items():
+            if tile.tile_type not in ("pillar", "rubble"):
+                continue
+            has_adjacent_floor = any(
+                self.is_walkable(nx, ny)
+                for nx, ny in ((x + 1, y), (x - 1, y), (x, y + 1), (x, y - 1))
+            )
+            if has_adjacent_floor:
+                cover.append((x, y, tile.tile_type))
+        return cover
+
+    def _find_hazards(self) -> list[tuple[int, int, str]]:
+        """Hazardous tiles: pits, water, rubble."""
+        hazards: list[tuple[int, int, str]] = []
+        for (x, y), tile in self.tiles.items():
+            if tile.tile_type in ("pit", "water"):
+                hazards.append((x, y, tile.tile_type))
+        return hazards
+
+    def _find_doors(self) -> list[tuple[int, int, str]]:
+        """Door tiles with their state."""
+        doors: list[tuple[int, int, str]] = []
+        for (x, y), tile in self.tiles.items():
+            if tile.tile_type == "door":
+                doors.append((x, y, tile.state or "open"))
+        return doors
+
+    @staticmethod
+    def _quadrant(x: int, y: int, w: int, h: int) -> str:
+        col = "W" if x < w // 2 else "E"
+        row = "N" if y < h // 2 else "S"
+        return f"{row}{col}"
+
+    @staticmethod
+    def _cluster_positions(positions: list[tuple[int, int]], w: int, h: int) -> str:
+        """Summarise a list of positions as quadrant counts."""
+        if not positions:
+            return ""
+        quads: dict[str, int] = {}
+        for x, y in positions:
+            q = GameMap._quadrant(x, y, w, h)
+            quads[q] = quads.get(q, 0) + 1
+        return ", ".join(f"{cnt} in {q}" for q, cnt in sorted(quads.items()))
+
+    def build_spatial_summary(self) -> str:
+        """Compact text summary of map layout for the AI DM system prompt."""
+        parts: list[str] = []
+
+        env = self.metadata.get("location") or self.metadata.get("environment", "")
+        theme = self.metadata.get("terrain_theme", "")
+        header = f"MAP: {self.width}x{self.height}"
+        if env:
+            header += f", {env}"
+        if theme:
+            header += f" ({theme})"
+        parts.append(header)
+
+        # Rooms
+        rooms = self._find_rooms()
+        if rooms:
+            parts.append(f"Rooms: {len(rooms)} connected areas (largest {len(rooms[0])} tiles, smallest {len(rooms[-1])} tiles)")
+
+        # Chokepoints
+        chokes = self._find_chokepoints()
+        if chokes:
+            cluster = self._cluster_positions(chokes, self.width, self.height)
+            parts.append(f"Chokepoints: {len(chokes)} narrow passages ({cluster})")
+
+        # Cover
+        cover = self._find_cover()
+        if cover:
+            cluster = self._cluster_positions([(x, y) for x, y, _ in cover], self.width, self.height)
+            parts.append(f"Cover: {len(cover)} ({cluster})")
+
+        # Hazards
+        hazards = self._find_hazards()
+        if hazards:
+            by_type: dict[str, int] = {}
+            for _, _, ht in hazards:
+                by_type[ht] = by_type.get(ht, 0) + 1
+            hz_desc = ", ".join(f"{cnt} {t}" for t, cnt in by_type.items())
+            parts.append(f"Hazards: {hz_desc}")
+
+        # Doors
+        doors = self._find_doors()
+        if doors:
+            parts.append(f"Doors: {len(doors)}")
+
+        # Entities by type
+        by_type: dict[str, list[str]] = {}
+        for e in self.entities.values():
+            by_type.setdefault(e.entity_type, []).append(f"{e.name}@({e.x},{e.y})")
+        for etype in ("pc", "enemy", "npc", "object"):
+            group = by_type.get(etype)
+            if group:
+                parts.append(f"{etype.upper()}s: {', '.join(group)}")
+
+        # Notable features from metadata
+        features = self.metadata.get("notable_features")
+        if features:
+            parts.append(f"Features: {', '.join(str(f) for f in features[:4])}")
+
+        return "\n".join(parts)
 
 
 def build_map_from_data(data: dict) -> GameMap:

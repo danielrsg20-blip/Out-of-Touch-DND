@@ -17,7 +17,7 @@ export function useAmbientSound(
   biome: string | undefined,
 ) {
   const [enabled, setEnabled] = useState(true)
-  const [volume, setVolumeState] = useState(() => getAmbientVolume())
+  const [volume, setVolume] = useState(() => getAmbientVolume())
   const prevKey = useRef<string>('')
 
   useEffect(() => {
@@ -37,10 +37,10 @@ export function useAmbientSound(
 
   const toggle = () => setEnabled(prev => !prev)
 
-  const setVolume = (vol: number) => {
+  const applyVolume = (vol: number) => {
     setAmbientVolume(vol)
-    setVolumeState(vol)
+    setVolume(vol)
   }
 
-  return { enabled, toggle, volume, setVolume }
+  return { enabled, toggle, volume, setVolume: applyVolume }
 }

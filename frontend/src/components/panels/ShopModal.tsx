@@ -1,3 +1,4 @@
+import { useEffect, useRef } from "react";
 import { useGameStore } from "../../stores/gameStore";
 import { useSessionStore } from "../../stores/sessionStore";
 import { invokeEdgeFunction } from "../../lib/supabaseClient";
@@ -8,11 +9,25 @@ export default function ShopModal() {
   const setShopData = useGameStore((s) => s.setShopData);
   const addNarrative = useGameStore((s) => s.addNarrative);
   const { roomCode, playerId, mockMode } = useSessionStore();
+  const dialogRef = useRef<HTMLDialogElement>(null);
+
+  useEffect(() => {
+    const dialog = dialogRef.current;
+    if (!dialog || !shopData) return;
+    dialog.showModal();
+    const handleClose = () => setShopData(null);
+    dialog.addEventListener("close", handleClose);
+    return () => {
+      dialog.removeEventListener("close", handleClose);
+      if (dialog.open) dialog.close();
+    };
+  }, [shopData, setShopData]);
 
   if (!shopData) return null;
 
   const handleBuy = async (item: ShopItem) => {
-    const msg = `I want to buy ${item.name}${item.quantity && item.quantity > 1 ? ` (${item.quantity} available)` : ""} from ${shopData.shop_name} for ${item.price_gp} gold.`;
+    const quantityNote = item.quantity && item.quantity > 1 ? ` (${item.quantity} available)` : "";
+    const msg = `I want to buy ${item.name}${quantityNote} from ${shopData.shop_name} for ${item.price_gp} gold.`;
     try {
       if (mockMode) {
         addNarrative("system", `[Mock] Purchase: ${item.name}`);
@@ -25,13 +40,17 @@ export default function ShopModal() {
         player_id: playerId,
       });
     } catch (err) {
-      addNarrative("system", `Could not purchase ${item.name}.`);
+      addNarrative("system", `Could not purchase ${item.name}: ${err instanceof Error ? err.message : String(err)}`);
     }
   };
 
   return (
-    <div className="shop-overlay" onClick={() => setShopData(null)}>
-      <div className="shop-modal" onClick={(e) => e.stopPropagation()}>
+    <dialog
+      ref={dialogRef}
+      className="shop-overlay"
+      aria-label={shopData.shop_name}
+    >
+      <div className="shop-modal">
         <div className="shop-modal-header">
           <h2 className="shop-modal-title">{shopData.shop_name}</h2>
           {shopData.shopkeeper && (
@@ -51,8 +70,8 @@ export default function ShopModal() {
           {shopData.items.length === 0 ? (
             <p className="shop-empty">The shelves are bare.</p>
           ) : (
-            shopData.items.map((item, i) => (
-              <div key={i} className="shop-item-row">
+            shopData.items.map((item) => (
+              <div key={item.name} className="shop-item-row">
                 <div className="shop-item-info">
                   <span className="shop-item-name">{item.name}</span>
                   {item.description && (
@@ -77,6 +96,6 @@ export default function ShopModal() {
           )}
         </div>
       </div>
-    </div>
+    </dialog>
   );
 }

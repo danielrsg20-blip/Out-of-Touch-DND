@@ -17,16 +17,19 @@ CLAUDE_MODEL: str = os.getenv("CLAUDE_MODEL", "claude-sonnet-4-20250514")
 MAX_SESSION_COST_USD: float = float(os.getenv("MAX_SESSION_COST_USD", "20.0"))
 MONTHLY_SPEND_CAP_USD: float = float(os.getenv("MONTHLY_SPEND_CAP_USD", "80.0"))
 
+_ASYNCPG_PREFIX = "postgresql+asyncpg://"
+
+
 def _normalize_database_url(url: str) -> str:
 	u = (url or "").strip()
 	if not u:
 		return "sqlite+aiosqlite:///./campaign.db"
 
 	if u.startswith("postgres://"):
-		return "postgresql+asyncpg://" + u.removeprefix("postgres://")
+		return _ASYNCPG_PREFIX + u.removeprefix("postgres://")
 
-	if u.startswith("postgresql://") and not u.startswith("postgresql+asyncpg://"):
-		return "postgresql+asyncpg://" + u.removeprefix("postgresql://")
+	if u.startswith("postgresql://") and not u.startswith(_ASYNCPG_PREFIX):
+		return _ASYNCPG_PREFIX + u.removeprefix("postgresql://")
 
 	return u
 

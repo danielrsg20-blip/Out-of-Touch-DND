@@ -91,6 +91,7 @@ export function parseGenerateVectorMapApiRequest(body: JsonRecord, gridResolutio
       corridor_width_cells: asNumber(genRaw.corridor_width_cells, preset.generationDefaults.corridor_width_cells ?? 2),
       obstacle_density: asNumber(genRaw.obstacle_density, preset.generationDefaults.obstacle_density ?? 0.1),
       hazard_density: asNumber(genRaw.hazard_density, preset.generationDefaults.hazard_density ?? 0.1),
+      ...(genRaw.layout_hints && typeof genRaw.layout_hints === 'object' ? { layout_hints: genRaw.layout_hints as NonNullable<GenerateVectorMapRequest['generation_params']>['layout_hints'] } : {}),
     },
     grid_config: {
       base_cell_size_world: asNumber(gridRaw.base_cell_size_world, 5),

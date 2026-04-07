@@ -77,6 +77,8 @@ _LEGACY_SPRITE_PIPELINE_ENABLED = str(os.getenv("OTDND_ENABLE_LEGACY_SPRITES", "
     "1", "true", "yes", "on",
 }
 
+_ERR_NO_MAP = "No map loaded"
+
 
 def _map_data_from_vector_payload(payload: dict[str, Any], description: str, override_entities: list[dict[str, Any]] | None = None) -> dict[str, Any]:
     compatibility = payload.get("compatibility") if isinstance(payload.get("compatibility"), dict) else {}
@@ -365,6 +367,54 @@ TOOL_DEFINITIONS: list[dict[str, Any]] = [
                             "sprite": {"type": "string"},
                         },
                         "required": ["id", "name", "x", "y", "type"],
+                    },
+                },
+                "location_name": {
+                    "type": "string",
+                    "description": (
+                        "Canonical name of this location (e.g. 'Riverside Tavern', 'Goblin Caves Level 1'). "
+                        "If the party has visited before, setting this restores the same map layout from memory."
+                    ),
+                },
+                "layout_hints": {
+                    "type": "object",
+                    "description": "Optional hints to guide procedural map layout. Soft constraints — invalid hints are ignored.",
+                    "properties": {
+                        "rooms": {
+                            "type": "array",
+                            "description": "Desired rooms with hints for size and position",
+                            "items": {
+                                "type": "object",
+                                "properties": {
+                                    "label": {"type": "string", "description": "Room name, e.g. 'throne room'"},
+                                    "size": {"type": "string", "enum": ["small", "medium", "large"]},
+                                    "position_hint": {
+                                        "type": "string",
+                                        "enum": ["center", "north", "south", "east", "west"],
+                                        "description": "Approximate position on the map",
+                                    },
+                                },
+                                "required": ["label"],
+                            },
+                        },
+                        "key_features": {
+                            "type": "array",
+                            "description": "Important terrain features to place",
+                            "items": {
+                                "type": "object",
+                                "properties": {
+                                    "type": {"type": "string", "description": "Feature type (pit/water/pillar/chest/rubble)"},
+                                    "near_room": {"type": "string", "description": "Label of room to place near"},
+                                    "placement": {"type": "string", "enum": ["entrance", "center", "corner"]},
+                                },
+                                "required": ["type"],
+                            },
+                        },
+                        "connectivity": {
+                            "type": "string",
+                            "enum": ["linear", "hub_and_spoke", "loop"],
+                            "description": "How rooms connect to each other",
+                        },
                     },
                 },
             },
@@ -787,6 +837,99 @@ TOOL_DEFINITIONS: list[dict[str, Any]] = [
             "required": ["reason"],
         },
     },
+    {
+        "name": "modify_terrain",
+        "description": (
+            "Change terrain when narrative events alter the map: explosions, collapses, "
+            "flooding, freezing water, magical effects, opening secret doors, etc. "
+            "Provide a reason so the change is narrated to players."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "x": {"type": "integer", "description": "Tile X coordinate"},
+                "y": {"type": "integer", "description": "Tile Y coordinate"},
+                "new_type": {
+                    "type": "string",
+                    "enum": ["floor", "wall", "door", "water", "pit", "pillar", "rubble",
+                             "stairs_up", "stairs_down", "chest"],
+                    "description": "New tile type",
+                },
+                "reason": {
+                    "type": "string",
+                    "description": "Narrative reason for the change, e.g. 'The floor collapses into a pit'",
+                },
+            },
+            "required": ["x", "y", "new_type", "reason"],
+        },
+    },
+    {
+        "name": "spawn_reinforcements",
+        "description": (
+            "Spawn enemy reinforcements at a logical entry point on the map. "
+            "Use when enemies call for backup, reinforcements arrive narratively, "
+            "or a new wave of foes appears. Entities are placed near the specified "
+            "edge or nearest door."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "creatures": {
+                    "type": "array",
+                    "description": "List of creatures to spawn",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "name": {"type": "string", "description": "Creature name, e.g. 'Goblin Archer'"},
+                            "id": {"type": "string", "description": "Unique entity ID, e.g. 'goblin_archer_3'"},
+                        },
+                        "required": ["name", "id"],
+                    },
+                },
+                "entry_direction": {
+                    "type": "string",
+                    "enum": ["N", "S", "E", "W", "nearest_door"],
+                    "description": "Where reinforcements enter from",
+                },
+            },
+            "required": ["creatures", "entry_direction"],
+        },
+    },
+    {
+        "name": "populate_encounter",
+        "description": (
+            "Place enemies tactically on the current map for a combat encounter. "
+            "Uses map analysis to position enemies at cover, chokepoints, or guard "
+            "positions. Prefer this over placing entities one-by-one for combat setup."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "enemies": {
+                    "type": "array",
+                    "description": "Enemies to place on the map",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "id": {"type": "string", "description": "Unique entity ID"},
+                            "name": {"type": "string", "description": "Creature name"},
+                        },
+                        "required": ["id", "name"],
+                    },
+                },
+                "placement_strategy": {
+                    "type": "string",
+                    "enum": ["tactical", "scattered", "guarding"],
+                    "description": (
+                        "tactical: place behind cover and at chokepoints. "
+                        "scattered: distribute evenly across the map. "
+                        "guarding: place near doors, stairs, and chests."
+                    ),
+                },
+            },
+            "required": ["enemies", "placement_strategy"],
+        },
+    },
 ]
 
 
@@ -958,6 +1101,45 @@ class ToolDispatcher:
             return {"error": "No active combat"}
         return next_turn(self.combat)
 
+    def _apply_concentration(
+        self, caster_id: str, caster: "Character", spell_name: str, result: dict,
+    ) -> None:
+        """Update concentration tracking on caster and combat participant."""
+        participant = self._get_participant(caster_id)
+        if participant:
+            if participant.concentrating_on:
+                result["concentration_dropped"] = participant.concentrating_on
+            participant.concentrating_on = spell_name
+        caster.concentration_spell = spell_name
+        result["concentration"] = True
+        result["concentration_spell"] = spell_name
+
+    def _update_existing_npc(self, existing: "NPCMemory", inp: dict) -> None:
+        """Apply partial updates from inp onto an existing NPC record."""
+        if "location" in inp: existing.location = inp["location"]
+        if "disposition" in inp: existing.disposition = inp["disposition"]
+        if "role" in inp: existing.role = inp["role"]
+        if "note" in inp: existing.notes.append(inp["note"])
+        if "tts_voice" in inp: existing.tts_voice = inp["tts_voice"]
+        if "secret" in inp: existing.secrets.append(inp["secret"])
+        if "relationship" in inp:
+            rel = inp["relationship"]
+            existing.relationships[rel["target"]] = rel["description"]
+        if "last_spoke_session" in inp: existing.last_spoke_session = inp["last_spoke_session"]
+
+    def _award_loot_to_character(
+        self, char: "Character", gold: int, loot_items: list[dict],
+    ) -> None:
+        """Add gold and loot items directly to a character's inventory."""
+        char.gold_gp = getattr(char, "gold_gp", 0) + gold
+        for li in loot_items:
+            item = lookup_catalog_item(li["id"])
+            if item:
+                entry = item.to_dict()
+                entry["quantity"] = 1
+                entry["notes"] = "Found as loot"
+                char.inventory.append(entry)
+
     def _tool_end_combat(self, _inp: dict) -> dict:
         if self.combat:
             self.combat.is_active = False
@@ -1005,14 +1187,7 @@ class ToolDispatcher:
             # Concentration tracking: set concentrating_on if spell requires it
             spell_def = get_spell_definition(spell_name)
             if spell_def and spell_def.get("concentration", False):
-                participant = self._get_participant(inp["caster_id"])
-                if participant:
-                    if participant.concentrating_on:
-                        result["concentration_dropped"] = participant.concentrating_on
-                    participant.concentrating_on = spell_name
-                caster.concentration_spell = spell_name
-                result["concentration"] = True
-                result["concentration_spell"] = spell_name
+                self._apply_concentration(inp["caster_id"], caster, spell_name, result)
         return result
 
     def _tool_long_rest(self, inp: dict) -> dict:
@@ -1040,44 +1215,16 @@ class ToolDispatcher:
             return {"error": f"Character {inp['character_id']} not found"}
         return char.to_dict()
 
-    def _tool_generate_map(self, inp: dict) -> dict:
-        user_tiles = inp.get("tiles") or []
-        if user_tiles:
-            tiles = [dict(tile) for tile in user_tiles]
-            has_sprite_assignments = any(isinstance(t.get("sprite"), str) and bool(str(t.get("sprite", "")).strip()) for t in tiles)
-            if not has_sprite_assignments and _LEGACY_SPRITE_PIPELINE_ENABLED:
-                tiles = assign_terrain_atlas_sprites(
-                    {
-                        "description": str(inp.get("description", "")),
-                        "environment": str(inp.get("environment", "")).strip().lower(),
-                        "terrain_theme": str(inp.get("terrain_theme", "")).strip().lower(),
-                        "encounter_type": str(inp.get("encounter_type", "")).strip().lower(),
-                        "encounter_scale": str(inp.get("encounter_scale", "")).strip().lower(),
-                        "tactical_tags": [str(t) for t in inp.get("tactical_tags", [])],
-                        "width": int(inp.get("width", 30)),
-                        "height": int(inp.get("height", 21)),
-                        "seed": int(inp.get("seed")) if inp.get("seed") is not None else None,
-                    },
-                    tiles,
-                )
-
-            map_data = {
-                "width": inp.get("width", 30),
-                "height": inp.get("height", 21),
-                "tiles": tiles,
-                "entities": inp.get("entities", []),
-                "metadata": {
-                    "map_source": "manual",
-                    "map_id": "manual_input",
-                    "grid_size": 5,
-                    "grid_units": "ft",
-                    "tile_size_px": 32,
-                    "cache_hit": False,
-                },
-            }
-        else:
-            try:
-                map_data = build_automated_map({
+    def _build_user_provided_map_data(self, inp: dict, user_tiles: list) -> dict:
+        """Build map data dict from caller-supplied tile array."""
+        tiles = [dict(tile) for tile in user_tiles]
+        has_sprite_assignments = any(
+            isinstance(t.get("sprite"), str) and bool(str(t.get("sprite", "")).strip())
+            for t in tiles
+        )
+        if not has_sprite_assignments and _LEGACY_SPRITE_PIPELINE_ENABLED:
+            tiles = assign_terrain_atlas_sprites(
+                {
                     "description": str(inp.get("description", "")),
                     "environment": str(inp.get("environment", "")).strip().lower(),
                     "terrain_theme": str(inp.get("terrain_theme", "")).strip().lower(),
@@ -1087,65 +1234,82 @@ class ToolDispatcher:
                     "width": int(inp.get("width", 30)),
                     "height": int(inp.get("height", 21)),
                     "seed": int(inp.get("seed")) if inp.get("seed") is not None else None,
-                })
-            except Exception as map_err:
-                import logging as _logging
-                _logging.getLogger(__name__).warning("Map generation failed (%s) — using fallback 10×10 floor grid", map_err)
-                w, h = 10, 10
-                fallback_tiles = []
-                for fy in range(h):
-                    for fx in range(w):
-                        is_wall = fx == 0 or fx == w - 1 or fy == 0 or fy == h - 1
-                        fallback_tiles.append({"x": fx, "y": fy, "type": "wall" if is_wall else "floor", "sprite": ""})
-                map_data = {
-                    "width": w,
-                    "height": h,
-                    "tiles": fallback_tiles,
-                    "entities": [],
-                    "metadata": {
-                        "map_source": "fallback",
-                        "map_id": "fallback",
-                        "grid_size": 5,
-                        "grid_units": "ft",
-                        "tile_size_px": 32,
-                        "cache_hit": False,
-                        "generation_error": str(map_err),
-                    },
-                }
+                },
+                tiles,
+            )
+        return {
+            "width": inp.get("width", 30),
+            "height": inp.get("height", 21),
+            "tiles": tiles,
+            "entities": inp.get("entities", []),
+            "metadata": {
+                "map_source": "manual",
+                "map_id": "manual_input",
+                "grid_size": 5,
+                "grid_units": "ft",
+                "tile_size_px": 32,
+                "cache_hit": False,
+            },
+        }
 
-            if inp.get("entities"):
-                map_data["entities"] = inp.get("entities", [])
+    @staticmethod
+    def _build_auto_generated_map_data(inp: dict) -> dict:
+        """Auto-generate map via the catalog pipeline, with fallback on error."""
+        params = {
+            "description": str(inp.get("description", "")),
+            "environment": str(inp.get("environment", "")).strip().lower(),
+            "terrain_theme": str(inp.get("terrain_theme", "")).strip().lower(),
+            "encounter_type": str(inp.get("encounter_type", "")).strip().lower(),
+            "encounter_scale": str(inp.get("encounter_scale", "")).strip().lower(),
+            "tactical_tags": [str(t) for t in inp.get("tactical_tags", [])],
+            "width": int(inp.get("width", 30)),
+            "height": int(inp.get("height", 21)),
+            "seed": int(inp.get("seed")) if inp.get("seed") is not None else None,
+        }
+        try:
+            map_data = build_automated_map(params)
+        except Exception as map_err:
+            import logging as _logging
+            _logging.getLogger(__name__).warning(
+                "Map generation failed (%s) — using fallback 10×10 floor grid", map_err,
+            )
+            w, h = 10, 10
+            fallback_tiles = [
+                {"x": fx, "y": fy, "type": "wall" if (fx == 0 or fx == w - 1 or fy == 0 or fy == h - 1) else "floor", "sprite": ""}
+                for fy in range(h) for fx in range(w)
+            ]
+            map_data = {
+                "width": w, "height": h, "tiles": fallback_tiles, "entities": [],
+                "metadata": {
+                    "map_source": "fallback", "map_id": "fallback",
+                    "grid_size": 5, "grid_units": "ft", "tile_size_px": 32,
+                    "cache_hit": False, "generation_error": str(map_err),
+                },
+            }
+        if inp.get("entities"):
+            map_data["entities"] = inp.get("entities", [])
+        return map_data
 
-        map_metadata = map_data.setdefault("metadata", {})
-
-        # Persist SceneSpec-compatible fields in metadata for the frontend battlemap pipeline.
-        # Normalize environment → location if Claude used the deprecated field.
+    @staticmethod
+    def _apply_scene_metadata(inp: dict, map_data: dict, map_metadata: dict) -> None:
+        """Persist SceneSpec-compatible fields in map metadata."""
         _ENV_TO_LOCATION = {
-            "cave": "dungeon",
-            "city": "city_alley",
-            "forest": "forest",
-            "dungeon": "dungeon",
-            "tavern": "tavern",
+            "cave": "dungeon", "city": "city_alley", "forest": "forest",
+            "dungeon": "dungeon", "tavern": "tavern",
         }
         _THEME_TO_BIOME = {
-            "frozen": "arctic",
-            "volcanic": "underground",
-            "arcane": "magical",
-            "overgrown": "tropical",
-            "flooded": "temperate",
-            "ancient": "underground",
-            "ruined": "temperate",
+            "frozen": "arctic", "volcanic": "underground", "arcane": "magical",
+            "overgrown": "tropical", "flooded": "temperate",
+            "ancient": "underground", "ruined": "temperate",
         }
         raw_location = str(inp.get("location", "")).strip().lower()
         raw_env = str(inp.get("environment", "")).strip().lower()
-        resolved_location = raw_location if raw_location else _ENV_TO_LOCATION.get(raw_env, "ruins")
-        map_metadata["location"] = resolved_location
+        map_metadata["location"] = raw_location if raw_location else _ENV_TO_LOCATION.get(raw_env, "ruins")
         map_metadata["description"] = str(inp.get("description", ""))
 
         raw_biome = str(inp.get("biome", "")).strip().lower()
         if not raw_biome:
-            raw_theme = str(inp.get("terrain_theme", "")).strip().lower()
-            raw_biome = _THEME_TO_BIOME.get(raw_theme, "")
+            raw_biome = _THEME_TO_BIOME.get(str(inp.get("terrain_theme", "")).strip().lower(), "")
         if raw_biome:
             map_metadata["biome"] = raw_biome
 
@@ -1173,14 +1337,75 @@ class ToolDispatcher:
             if any(removed.values()):
                 logger.info("Sprite payload stripped during map generation: %s", removed)
 
+    def _tool_generate_map(self, inp: dict) -> dict:
+        # Phase 5: Recall map seed from location memory for revisited locations
+        location_name = str(inp.get("location_name", "")).strip()
+        if location_name and inp.get("seed") is None:
+            loc_id = location_name.lower().replace(" ", "_")
+            saved_loc = self.memory.locations.get(loc_id)
+            if saved_loc and saved_loc.map_seed is not None:
+                inp["seed"] = saved_loc.map_seed
+                if saved_loc.map_params:
+                    for key in ("environment", "terrain_theme", "encounter_type", "width", "height"):
+                        if key not in inp or not inp[key]:
+                            inp[key] = saved_loc.map_params.get(key, inp.get(key))
+                logger.info("Restored map seed %s for location '%s'", saved_loc.map_seed, location_name)
+
+        user_tiles = inp.get("tiles") or []
+        if user_tiles:
+            map_data = self._build_user_provided_map_data(inp, user_tiles)
+        else:
+            map_data = self._build_auto_generated_map_data(inp)
+
+        map_metadata = map_data.setdefault("metadata", {})
+        self._apply_scene_metadata(inp, map_data, map_metadata)
+
+        # Store layout_hints in metadata for downstream consumption (Phase 4)
+        layout_hints = inp.get("layout_hints")
+        if isinstance(layout_hints, dict):
+            map_metadata["layout_hints"] = layout_hints
+
         self.game_map = build_map_from_data(map_data)
+
+        # Phase 2: Signal frontend to auto-trigger battlemap image generation
+        if _parse_env_flag("OTDND_AUTO_BATTLEMAP_ENABLED", False):
+            map_metadata["auto_battlemap_requested"] = True
+
+        # Phase 5: Persist map seed to location memory
+        if location_name:
+            loc_id = location_name.lower().replace(" ", "_")
+            seed = map_metadata.get("seed") or inp.get("seed")
+            map_params = {
+                "environment": str(inp.get("environment", "")),
+                "terrain_theme": str(inp.get("terrain_theme", "")),
+                "encounter_type": str(inp.get("encounter_type", "")),
+                "width": int(inp.get("width", 30)),
+                "height": int(inp.get("height", 21)),
+            }
+            existing_loc = self.memory.locations.get(loc_id)
+            if existing_loc:
+                existing_loc.visited = True
+                if seed is not None:
+                    existing_loc.map_seed = int(seed)
+                existing_loc.map_params = map_params
+            else:
+                from .memory import LocationMemory as _LocMem
+                self.memory.add_location(_LocMem(
+                    id=loc_id,
+                    name=location_name,
+                    description=str(inp.get("description", ""))[:200],
+                    visited=True,
+                    map_seed=int(seed) if seed is not None else None,
+                    map_params=map_params,
+                ))
+
         result = self.game_map.to_dict()
         result["description"] = inp["description"]
         return result
 
     def _tool_place_entity(self, inp: dict) -> dict:
         if not self.game_map:
-            return {"error": "No map loaded"}
+            return {"error": _ERR_NO_MAP}
         
         x = inp["x"]
         y = inp["y"]
@@ -1204,7 +1429,7 @@ class ToolDispatcher:
 
     def _tool_move_entity(self, inp: dict) -> dict:
         if not self.game_map:
-            return {"error": "No map loaded"}
+            return {"error": _ERR_NO_MAP}
         entity_id = inp["entity_id"]
         x = int(inp["x"])
         y = int(inp["y"])
@@ -1217,7 +1442,7 @@ class ToolDispatcher:
 
     def _tool_remove_entity(self, inp: dict) -> dict:
         if not self.game_map:
-            return {"error": "No map loaded"}
+            return {"error": _ERR_NO_MAP}
         ok = self.game_map.remove_entity(inp["entity_id"])
         return {"removed": ok, "entity_id": inp["entity_id"]}
 
@@ -1225,16 +1450,7 @@ class ToolDispatcher:
         npc_id = inp["id"]
         existing = self.memory.npcs.get(npc_id)
         if existing:
-            if "location" in inp: existing.location = inp["location"]
-            if "disposition" in inp: existing.disposition = inp["disposition"]
-            if "role" in inp: existing.role = inp["role"]
-            if "note" in inp: existing.notes.append(inp["note"])
-            if "tts_voice" in inp: existing.tts_voice = inp["tts_voice"]
-            if "secret" in inp: existing.secrets.append(inp["secret"])
-            if "relationship" in inp:
-                rel = inp["relationship"]
-                existing.relationships[rel["target"]] = rel["description"]
-            if "last_spoke_session" in inp: existing.last_spoke_session = inp["last_spoke_session"]
+            self._update_existing_npc(existing, inp)
             return {"updated": existing.to_dict()}
         else:
             npc = NPCMemory(
@@ -1434,7 +1650,7 @@ class ToolDispatcher:
 
     def _tool_update_tile(self, inp: dict) -> dict:
         if not self.game_map:
-            return {"error": "No map loaded"}
+            return {"error": _ERR_NO_MAP}
         tile = self.game_map.set_tile(inp["x"], inp["y"], inp["tile_type"], inp.get("state"), inp.get("sprite"))
         return {"updated": tile.to_dict()}
 
@@ -1495,7 +1711,7 @@ class ToolDispatcher:
         else:
             msg += f" Already at full HP ({char.hp}/{char.max_hp})."
         if pact_slots_recovered:
-            msg += f" Pact Magic slots restored."
+            msg += " Pact Magic slots restored."
 
         return {
             "character": char.name,
@@ -1603,7 +1819,7 @@ class ToolDispatcher:
 
     def _tool_reveal_area(self, inp: dict) -> dict:
         if not self.game_map:
-            return {"error": "No map loaded"}
+            return {"error": _ERR_NO_MAP}
 
         radius = int(inp.get("vision_radius", 8))
 
@@ -1653,14 +1869,7 @@ class ToolDispatcher:
         if award_to:
             char = self.characters.get(award_to)
             if char:
-                char.gold_gp = getattr(char, "gold_gp", 0) + gold
-                for li in loot_items:
-                    item = lookup_catalog_item(li["id"])
-                    if item:
-                        entry = item.to_dict()
-                        entry["quantity"] = 1
-                        entry["notes"] = "Found as loot"
-                        char.inventory.append(entry)
+                self._award_loot_to_character(char, gold, loot_items)
 
         awarded_to_name: str | None = None
         if award_to:
@@ -1739,3 +1948,167 @@ class ToolDispatcher:
                 f"before {self.skill_challenge.failure_threshold} failures."
             ),
         }
+
+    # ------------------------------------------------------------------
+    # Phase 3: Dynamic map mutation tools
+    # ------------------------------------------------------------------
+
+    def _tool_modify_terrain(self, inp: dict) -> dict:
+        if not self.game_map:
+            return {"error": _ERR_NO_MAP}
+        x, y = int(inp["x"]), int(inp["y"])
+        if x < 0 or x >= self.game_map.width or y < 0 or y >= self.game_map.height:
+            return {"error": f"Coordinates ({x}, {y}) out of bounds"}
+        new_type = str(inp["new_type"])
+        reason = str(inp.get("reason", ""))
+        tile = self.game_map.set_tile(x, y, new_type)
+        return {"modified": tile.to_dict(), "reason": reason}
+
+    def _tool_spawn_reinforcements(self, inp: dict) -> dict:
+        if not self.game_map:
+            return {"error": _ERR_NO_MAP}
+        creatures = inp.get("creatures", [])
+        if not creatures:
+            return {"error": "No creatures specified"}
+        direction = str(inp.get("entry_direction", "N")).upper()
+
+        # Find candidate spawn tiles near requested edge or nearest door
+        candidates: list[tuple[int, int]] = []
+
+        if direction == "NEAREST_DOOR":
+            for (tx, ty), tile in self.game_map.tiles.items():
+                if tile.tile_type == "door" and self.game_map.can_occupy(tx, ty):
+                    candidates.append((tx, ty))
+                    # Also add adjacent walkable tiles
+                    for nx, ny in ((tx + 1, ty), (tx - 1, ty), (tx, ty + 1), (tx, ty - 1)):
+                        if self.game_map.can_occupy(nx, ny):
+                            candidates.append((nx, ny))
+
+        if not candidates:
+            # Fall back to edge-based placement
+            w, h = self.game_map.width, self.game_map.height
+            if direction in ("N", "NEAREST_DOOR"):
+                rows = range(1, min(4, h))
+                cols = range(1, w - 1)
+            elif direction == "S":
+                rows = range(max(0, h - 4), h - 1)
+                cols = range(1, w - 1)
+            elif direction == "E":
+                rows = range(1, h - 1)
+                cols = range(max(0, w - 4), w - 1)
+            else:  # W
+                rows = range(1, h - 1)
+                cols = range(1, min(4, w))
+            for ry in rows:
+                for cx in cols:
+                    if self.game_map.can_occupy(cx, ry):
+                        candidates.append((cx, ry))
+
+        if not candidates:
+            return {"error": "No walkable spawn locations found"}
+
+        import random as _rng
+        placed: list[dict] = []
+        used: set[tuple[int, int]] = set()
+        for creature in creatures:
+            available = [c for c in candidates if c not in used]
+            if not available:
+                break
+            pos = _rng.choice(available)
+            used.add(pos)
+            entity = MapEntity(
+                id=str(creature["id"]),
+                name=str(creature["name"]),
+                x=pos[0],
+                y=pos[1],
+                entity_type="enemy",
+                blocks_movement=True,
+            )
+            self.game_map.place_entity(entity)
+            placed.append(entity.to_dict())
+
+        return {"spawned": placed, "count": len(placed), "direction": direction}
+
+    # ------------------------------------------------------------------
+    # Phase 6: AI-driven tactical entity placement
+    # ------------------------------------------------------------------
+
+    def _tool_populate_encounter(self, inp: dict) -> dict:
+        if not self.game_map:
+            return {"error": _ERR_NO_MAP}
+        enemies = inp.get("enemies", [])
+        if not enemies:
+            return {"error": "No enemies specified"}
+        strategy = str(inp.get("placement_strategy", "scattered"))
+
+        gm = self.game_map
+        # Collect candidate positions based on strategy
+        cover_tiles = gm._find_cover()
+        chokepoints = gm._find_chokepoints()
+
+        # Build priority lists based on strategy
+        priority: list[tuple[int, int]] = []
+        fallback: list[tuple[int, int]] = []
+
+        if strategy == "tactical":
+            # Prefer tiles adjacent to cover, then chokepoints
+            for cx, cy, _ in cover_tiles:
+                for nx, ny in ((cx + 1, cy), (cx - 1, cy), (cx, cy + 1), (cx, cy - 1)):
+                    if gm.can_occupy(nx, ny):
+                        priority.append((nx, ny))
+            priority.extend(c for c in chokepoints if gm.can_occupy(c[0], c[1]))
+        elif strategy == "guarding":
+            # Prefer tiles near doors, stairs, chests
+            for (tx, ty), tile in gm.tiles.items():
+                if tile.tile_type in ("door", "stairs_up", "stairs_down", "chest"):
+                    for nx, ny in ((tx + 1, ty), (tx - 1, ty), (tx, ty + 1), (tx, ty - 1)):
+                        if gm.can_occupy(nx, ny):
+                            priority.append((nx, ny))
+        # "scattered" uses only fallback — distributed across walkable tiles
+
+        # Build fallback: all occupiable tiles
+        for (tx, ty), tile in gm.tiles.items():
+            if gm.can_occupy(tx, ty):
+                fallback.append((tx, ty))
+
+        # Deduplicate priority and remove from fallback
+        seen_priority = set(priority)
+        priority_deduped = list(dict.fromkeys(priority))
+        fallback = [f for f in fallback if f not in seen_priority]
+
+        if strategy == "scattered":
+            # Distribute evenly by spatial hashing
+            import random as _rng
+            _rng.shuffle(fallback)
+            combined = fallback
+        else:
+            combined = priority_deduped + fallback
+
+        if not combined:
+            return {"error": "No valid placement positions found"}
+
+        placed: list[dict] = []
+        used: set[tuple[int, int]] = set()
+        for enemy in enemies:
+            available = [c for c in combined if c not in used]
+            if not available:
+                break
+            pos = available[0]
+            used.add(pos)
+            entity = MapEntity(
+                id=str(enemy["id"]),
+                name=str(enemy["name"]),
+                x=pos[0],
+                y=pos[1],
+                entity_type="enemy",
+                blocks_movement=True,
+            )
+            gm.place_entity(entity)
+            placed.append(entity.to_dict())
+
+        return {
+            "placed": placed,
+            "count": len(placed),
+            "strategy": strategy,
+        }
+

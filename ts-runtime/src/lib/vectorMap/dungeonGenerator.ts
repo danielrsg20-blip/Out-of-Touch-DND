@@ -155,6 +155,8 @@ function buildHubAndSpokeLayout(
   const oy = bounds.origin_y
   const inset = 4 // world-unit margin from canvas edge
 
+  const hints = req.generation_params?.layout_hints
+
   const cellSize = (req.grid_config?.base_cell_size_world ?? 5)
   const corridorW = clamp(
     (req.generation_params?.corridor_width_cells ?? 2) * cellSize,
@@ -175,25 +177,37 @@ function buildHubAndSpokeLayout(
   const hubId = deterministicId('room', [rootSeed, 'hub'])
   rooms.push({ id: hubId, type: 'hub', x: hubX, y: hubY, w: hubW, h: hubH })
 
-  const roomCount = Math.max(3, Math.floor(req.generation_params?.room_count ?? 8))
+  // If layout_hints.rooms provided, derive room_count from hint count (+1 for hub)
+  const hintRooms = hints?.rooms
+  const baseRoomCount = hintRooms && hintRooms.length > 0
+    ? hintRooms.length + 1
+    : Math.max(3, Math.floor(req.generation_params?.room_count ?? 8))
+  const roomCount = Math.max(3, baseRoomCount)
 
   // Determine which directions get corridors+chambers.
   // With room_count 3: N+S only. 4+: all four. 5–9: some alcoves.
   const directions: Direction[] = roomCount >= 4 ? ['N', 'S', 'E', 'W'] : ['N', 'S']
   const alcoveCount = Math.max(0, roomCount - directions.length - 1)
 
+  // Build a size→multiplier map for hint-driven sizing
+  const sizeMultiplier: Record<string, number> = { small: 0.6, medium: 1.0, large: 1.4 }
+
   // -- Corridor + chamber per direction --
   const chamberIds: string[] = []
-  for (const dir of directions) {
+  for (let di = 0; di < directions.length; di++) {
+    const dir = directions[di]!
+    const hint = hintRooms?.[di]
+    const sizeMul = sizeMultiplier[hint?.size ?? 'medium'] ?? 1.0
+
     const corrId = deterministicId('room', [rootSeed, 'corr', dir])
     const chamId = deterministicId('room', [rootSeed, 'cham', dir])
 
     let corrX: number, corrY: number, corrW: number, corrH: number
     let chamX: number, chamY: number, chamW: number, chamH: number
 
-    // Chamber size: ~60% of hub with small seeded variation
-    const chamW0 = hubW * (0.55 + rand() * 0.15)
-    const chamH0 = hubH * (0.55 + rand() * 0.15)
+    // Chamber size: ~60% of hub with small seeded variation, scaled by hint size
+    const chamW0 = hubW * (0.55 + rand() * 0.15) * sizeMul
+    const chamH0 = hubH * (0.55 + rand() * 0.15) * sizeMul
 
     if (dir === 'N') {
       // Corridor runs upward from hub top edge
@@ -292,6 +306,20 @@ function buildHubAndSpokeLayout(
     }
 
     rooms.push({ id: alcId, type: 'alcove', x: ax, y: ay, w: alcW, h: alcH, parentId: parentCham.id })
+  }
+
+  // -- Loop connectivity: add a passage connecting last chamber back to first --
+  if (hints?.connectivity === 'loop' && chamberIds.length >= 2) {
+    const first = rooms.find(r => r.id === chamberIds[0])!
+    const last = rooms.find(r => r.id === chamberIds[chamberIds.length - 1])!
+    const midX = (first.x + first.w / 2 + last.x + last.w / 2) / 2
+    const midY = (first.y + first.h / 2 + last.y + last.h / 2) / 2
+    // Horizontal or vertical passage depending on orientation
+    if (Math.abs(first.x - last.x) > Math.abs(first.y - last.y)) {
+      passages.push({ roomId: first.id, axis: 'V', wallCoord: midX, gapStart: midY - corridorW / 2, gapEnd: midY + corridorW / 2 })
+    } else {
+      passages.push({ roomId: first.id, axis: 'H', wallCoord: midY, gapStart: midX - corridorW / 2, gapEnd: midX + corridorW / 2 })
+    }
   }
 
   return { rooms, passages }
@@ -1408,7 +1436,8 @@ function buildDungeonLayers(
   )
   featureLayer.elements.push(...sigFeatures)
 
-  // 9. Room labels
+  // 9. Room labels — use layout_hints labels if available
+  const hintRooms = req.generation_params?.layout_hints?.rooms
   const roomTypeNames: Record<string, string[]> = {
     hub:      ['Grand Hall', 'Main Chamber', 'Central Vault', 'Great Hall', 'Inner Sanctum'],
     chamber:  ['Guard Room', 'Burial Chamber', 'Treasure Room', 'Barracks', 'Ritual Chamber', 'Study'],
@@ -1416,12 +1445,21 @@ function buildDungeonLayers(
     corridor: [],
   }
   const usedNames: Record<string, number> = {}
+  let chamberIdx = 0
   layout.rooms.forEach((room, i) => {
     if (room.type === 'corridor') return // corridors are passages, not named spaces
-    const pool = roomTypeNames[room.type] ?? ['Room']
-    const nameIdx = usedNames[room.type] ?? 0
-    const label = pool[nameIdx % pool.length] ?? `Room ${i + 1}`
-    usedNames[room.type] = nameIdx + 1
+    // Use hint label for chambers if available
+    let label: string | undefined
+    if (room.type === 'chamber' && hintRooms && chamberIdx < hintRooms.length) {
+      label = hintRooms[chamberIdx]?.label
+      chamberIdx++
+    }
+    if (!label) {
+      const pool = roomTypeNames[room.type] ?? ['Room']
+      const nameIdx = usedNames[room.type] ?? 0
+      label = pool[nameIdx % pool.length] ?? `Room ${i + 1}`
+      usedNames[room.type] = nameIdx + 1
+    }
     labelLayer.elements.push(emitLabel(room, label, palette, rootSeed))
   })
 

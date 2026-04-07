@@ -8,9 +8,11 @@ import {
   invokeEdgeFunctionWithAnon,
 } from "../lib/supabaseClient";
 import {
+  applyBattlemapResponseToMap,
   extractTraversalGridFromPayload,
   mergeBattlemapAssetIntoMap,
 } from "../lib/battlemapState";
+import { callBackendApi } from "../lib/backendApi";
 import { playTTSAudio } from "../components/VoiceControl";
 import { narrationOrchestrator } from "../lib/narrationOrchestrator";
 import type { RealtimeChannel } from "@supabase/supabase-js";
@@ -500,9 +502,54 @@ export function useWebSocket() {
           }
           break;
 
-        case "map_update":
-          setMap(msg.map as Parameters<typeof setMap>[0]);
+        case "map_update": {
+          const incomingMap = msg.map as Parameters<typeof setMap>[0];
+          setMap(incomingMap);
+
+          // Phase 2: Auto-trigger battlemap when the DM signals it
+          const meta = incomingMap?.metadata as Record<string, unknown> | undefined;
+          if (meta?.auto_battlemap_requested && roomCode) {
+            // Clear the flag to prevent re-triggering on future state syncs
+            delete meta.auto_battlemap_requested;
+            void (async () => {
+              try {
+                const widthFeet = Math.max(20, ((incomingMap as any)?.width ?? 30) * 5);
+                const heightFeet = Math.max(20, ((incomingMap as any)?.height ?? 21) * 5);
+                const resp = await callBackendApi("/api/tools/generate_battlemap", {
+                  method: "POST",
+                  body: {
+                    campaign_id: roomCode,
+                    quality_mode: "fast",
+                    scene_spec: {
+                      location: String(meta.location ?? meta.environment ?? "dungeon"),
+                      biome: String(meta.biome ?? "temperate"),
+                      encounter_type: String(meta.encounter_type ?? "exploration"),
+                      mood_style: String(meta.mood_style ?? "hand-drawn"),
+                      map_width_feet: widthFeet,
+                      map_height_feet: heightFeet,
+                      notable_features: Array.isArray(meta.notable_features) ? (meta.notable_features as string[]).slice(0, 6) : [],
+                      description: String(meta.description ?? ""),
+                    },
+                    seed: meta.seed,
+                  },
+                });
+                if (resp.ok && resp.data) {
+                  const currentMap = useGameStore.getState().map;
+                  const merged = applyBattlemapResponseToMap(currentMap, resp.data as Record<string, unknown>);
+                  if (merged) {
+                    setMap(merged);
+                    const tg = extractTraversalGridFromPayload(resp.data as Record<string, unknown>);
+                    if (tg) useOverlayStore.getState().setTraversalGrid(tg);
+                    addNarrative("system", "Battlemap image auto-generated.");
+                  }
+                }
+              } catch {
+                // Non-critical — map still works without battlemap image
+              }
+            })();
+          }
           break;
+        }
 
         case "overlay_update":
           if (msg.overlay && typeof msg.overlay === "object") {

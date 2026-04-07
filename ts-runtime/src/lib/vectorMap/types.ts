@@ -163,6 +163,19 @@ export type GenerateVectorMapRequest = {
     corridor_width_cells?: number
     obstacle_density?: number
     hazard_density?: number
+    layout_hints?: {
+      rooms?: Array<{
+        label: string
+        size?: 'small' | 'medium' | 'large'
+        position_hint?: 'center' | 'north' | 'south' | 'east' | 'west'
+      }>
+      key_features?: Array<{
+        type: string
+        near_room?: string
+        placement?: 'entrance' | 'center' | 'corner'
+      }>
+      connectivity?: 'linear' | 'hub_and_spoke' | 'loop'
+    }
   }
   grid_config?: GridConfig
   validation_mode?: 'strict' | 'fixup'
