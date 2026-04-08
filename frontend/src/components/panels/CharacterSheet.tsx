@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { motion, AnimatePresence } from "motion/react";
 import { useGameStore } from "../../stores/gameStore";
 import { useSessionStore } from "../../stores/sessionStore";
 import { invokeEdgeFunction } from "../../lib/supabaseClient";
@@ -9,6 +10,9 @@ import {
   getCharacterSpriteCell,
   getCharacterSpritesheetUrl,
 } from "../../config/characterSprites";
+import { ItemCard } from "./ItemCard";
+import { StatCard } from "../ui/StatCard";
+import { getRarityConfig, type RarityTier } from "../ui/RarityBorder";
 import type { ItemData, SpellOption } from "../../types";
 import "./panels.css";
 
@@ -76,6 +80,21 @@ function fmtMod(n: number) {
   return n >= 0 ? `+${n}` : `${n}`;
 }
 
+// ── Condition → color class mapping ───────────────────────────────────────────
+function conditionColorClass(condition: string): string {
+  const c = condition.toLowerCase();
+  if (c === "poisoned" || c === "diseased") return "condition-green";
+  if (c === "frightened" || c === "charmed") return "condition-purple";
+  if (c === "stunned" || c === "paralyzed" || c === "petrified")
+    return "condition-amber";
+  if (c === "blinded" || c === "deafened") return "condition-gray";
+  if (c === "prone" || c === "restrained" || c === "grappled")
+    return "condition-orange";
+  if (c.startsWith("exhaustion")) return "condition-darkred";
+  if (c === "incapacitated" || c === "unconscious") return "condition-darkred";
+  return "";
+}
+
 // ── 5e cantrip names (for known-spell splitting) ───────────────────────────
 const CANTRIP_NAMES = new Set([
   "acid splash",
@@ -129,14 +148,22 @@ function DeathSaves({
 }) {
   const s = saves?.successes ?? 0;
   const f = saves?.failures ?? 0;
+  const critical = f >= 2;
   return (
-    <div className="death-saves-row">
+    <div className={`death-saves-row${critical ? " death-saves-critical" : ""}`}>
       <span className="death-saves-label">Death Saves</span>
       <div className="death-saves-group">
         <span className="death-saves-sublabel success">✓</span>
         {[0, 1, 2].map((i) => (
-          <span
+          <motion.span
             key={i}
+            initial={false}
+            animate={
+              i < s
+                ? { scale: [1, 1.3, 1], boxShadow: "0 0 6px #2ecc71" }
+                : { scale: 1, boxShadow: "none" }
+            }
+            transition={{ duration: 0.3 }}
             className={`death-save-pip${i < s ? " filled success" : ""}`}
           />
         ))}
@@ -144,8 +171,15 @@ function DeathSaves({
       <div className="death-saves-group">
         <span className="death-saves-sublabel failure">✗</span>
         {[0, 1, 2].map((i) => (
-          <span
+          <motion.span
             key={i}
+            initial={false}
+            animate={
+              i < f
+                ? { scale: [1, 1.3, 1], boxShadow: "0 0 6px #e74c3c" }
+                : { scale: 1, boxShadow: "none" }
+            }
+            transition={{ duration: 0.3 }}
             className={`death-save-pip${i < f ? " filled failure" : ""}`}
           />
         ))}
@@ -251,7 +285,7 @@ function ItemRow({
     item.description || item.notes || item.properties?.length > 0;
 
   return (
-    <div className="inv-item-row">
+    <div className={`inv-item-row${item.magical ? " inv-item-magical" : ""}`}>
       <div
         className="inv-item-row-main"
         onClick={() => hasDetail && setExpanded((e) => !e)}
@@ -306,18 +340,34 @@ function ItemRow({
         </div>
       )}
 
-      {/* Feature #2: expanded description */}
-      {expanded && (
-        <div className="inv-expand">
-          {item.description && <p>{item.description}</p>}
-          {item.notes && <p className="inv-item-notes">{item.notes}</p>}
-          {item.weight_lb > 0 && (
-            <p className="inv-detail-meta">
-              {item.weight_lb} lb · {item.cost_gp} gp
-            </p>
-          )}
-        </div>
-      )}
+      {/* Feature #2: expanded — ItemCard for magical, plain text for mundane */}
+      <AnimatePresence>
+        {expanded && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            style={{ overflow: "hidden" }}
+          >
+            {item.magical ? (
+              <div className="inv-expand-card">
+                <ItemCard item={item} compact />
+              </div>
+            ) : (
+              <div className="inv-expand">
+                {item.description && <p>{item.description}</p>}
+                {item.notes && <p className="inv-item-notes">{item.notes}</p>}
+                {item.weight_lb > 0 && (
+                  <p className="inv-detail-meta">
+                    {item.weight_lb} lb · {item.cost_gp} gp
+                  </p>
+                )}
+              </div>
+            )}
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
@@ -338,7 +388,7 @@ function CharacterSprite({
   const y = (cell.row / (CHARACTER_SPRITESHEET_ROWS - 1)) * 100;
   return (
     <div
-      className="paper-doll-sprite"
+      className="paper-doll-sprite paper-doll-sprite-enhanced"
       style={{
         backgroundImage: `url(${url})`,
         backgroundSize: `${CHARACTER_SPRITESHEET_COLUMNS * 100}% ${CHARACTER_SPRITESHEET_ROWS * 100}%`,
@@ -373,8 +423,16 @@ function PaperDollSlot({
     stat = "+2 AC";
   }
 
+  const rarityTier = (item?.rarity as RarityTier) || "common";
+  const isMagical = item?.magical ?? false;
+  const rarityClass = isMagical ? ` rarity-${rarityTier}` : "";
+
   return (
-    <div className={`paper-doll-slot${item ? " filled" : ""}`}>
+    <motion.div
+      whileHover={{ y: -2, scale: 1.03 }}
+      transition={{ type: "spring", stiffness: 400, damping: 25 }}
+      className={`paper-doll-slot${item ? " filled" : ""}${rarityClass}`}
+    >
       {item ? (
         <>
           <div className="paper-doll-slot-icon-wrap">
@@ -410,7 +468,7 @@ function PaperDollSlot({
           <span className="paper-doll-slot-label">{label}</span>
         </>
       )}
-    </div>
+    </motion.div>
   );
 }
 
@@ -670,11 +728,12 @@ function InventoryPanel({
       {inventory.length === 0 && <p className="panel-empty">No items.</p>}
 
       {/* Feature #3: carry weight bar */}
-      <div className="inv-weight-section">
+      <div className={`inv-weight-section${weightState === "encumbered" ? " inv-weight-encumbered" : ""}`}>
         <div className="inv-weight-bar-track">
-          <div
+          <motion.div
             className={`inv-weight-bar-fill${weightState ? ` ${weightState}` : ""}`}
-            style={{ width: `${weightPct}%` }}
+            animate={{ width: `${weightPct}%` }}
+            transition={{ type: "spring", stiffness: 300, damping: 30 }}
           />
         </div>
         <span className="inv-weight-label">
@@ -941,9 +1000,23 @@ export default function CharacterSheet() {
         </div>
       </div>
 
-      <div className="char-hp-section">
+      <div className={`char-hp-section${hpPercent <= 25 ? " hp-critical" : ""}`}>
         <div className="char-hp-bar">
-          <div className="char-hp-fill" style={{ width: `${hpPercent}%` }} />
+          <motion.div
+            className={`char-hp-fill${hpPercent <= 25 ? " hp-low" : hpPercent <= 50 ? " hp-warning" : ""}`}
+            animate={{ width: `${hpPercent}%` }}
+            transition={{ type: "spring", stiffness: 300, damping: 30 }}
+          />
+          {char.temp_hp > 0 && (
+            <motion.div
+              className="char-hp-temp"
+              animate={{
+                width: `${Math.min(100 - hpPercent, (char.temp_hp / char.max_hp) * 100)}%`,
+              }}
+              transition={{ type: "spring", stiffness: 300, damping: 30 }}
+              style={{ left: `${hpPercent}%` }}
+            />
+          )}
         </div>
         <span className="char-hp-text">
           HP: {char.hp}/{char.max_hp}
@@ -959,32 +1032,16 @@ export default function CharacterSheet() {
 
           {/* Quick stats */}
           <div className="char-stats-row">
-            <div className="char-stat">
-              <span className="stat-label">AC</span>
-              <span className="stat-value">{char.ac}</span>
-            </div>
-            <div className="char-stat">
-              <span className="stat-label">Init</span>
-              <span className="stat-value">{fmtMod(dexMod)}</span>
-            </div>
-            <div className="char-stat">
-              <span className="stat-label">Speed</span>
-              <span className="stat-value">{char.speed}ft</span>
-            </div>
-            <div className="char-stat">
-              <span className="stat-label">Prof</span>
-              <span className="stat-value">+{char.proficiency_bonus}</span>
-            </div>
-            <div className="char-stat">
-              <span className="stat-label">Pass. Perc</span>
-              <span className="stat-value">{passivePerception}</span>
-            </div>
-            <div className="char-stat">
-              <span className="stat-label">Hit Die</span>
-              <span className="stat-value">
-                {char.hit_dice_available ?? char.level}/{char.level}d{hitDie}
-              </span>
-            </div>
+            <StatCard label="AC" value={char.ac} icon="🛡" />
+            <StatCard label="Init" value={fmtMod(dexMod)} icon="⚡" />
+            <StatCard label="Speed" value={`${char.speed}ft`} icon="🥾" />
+            <StatCard label="Prof" value={`+${char.proficiency_bonus}`} icon="★" />
+            <StatCard label="Pass. Perc" value={passivePerception} icon="👁" />
+            <StatCard
+              label="Hit Die"
+              value={`${char.hit_dice_available ?? char.level}/${char.level}d${hitDie}`}
+              icon="🎲"
+            />
           </div>
 
           {/* Concentration badge */}
@@ -1049,13 +1106,14 @@ export default function CharacterSheet() {
           {/* Ability scores */}
           <div className="char-abilities">
             {Object.entries(char.abilities).map(([ab, score]) => (
-              <div key={ab} className="ability-box">
-                <span className="ability-name">{ab}</span>
-                <span className="ability-score">{score}</span>
-                <span className="ability-mod">
-                  {fmtMod(char.modifiers[ab] ?? 0)}
-                </span>
-              </div>
+              <StatCard
+                key={ab}
+                label={ab}
+                value={fmtMod(char.modifiers[ab] ?? 0)}
+                subValue={score}
+                highlight
+                className="ability-card"
+              />
             ))}
           </div>
 
@@ -1077,7 +1135,10 @@ export default function CharacterSheet() {
           {char.conditions.length > 0 && (
             <div className="char-conditions">
               {char.conditions.map((c) => (
-                <span key={c} className="condition-tag">
+                <span
+                  key={c}
+                  className={`condition-tag ${conditionColorClass(c)}`}
+                >
                   {c}
                 </span>
               ))}
@@ -1102,9 +1163,16 @@ export default function CharacterSheet() {
               <h4>Spell Slots</h4>
               {slotRows.map((s) => (
                 <div key={s.level} className={`slot-row slot-row-${s.state}`}>
-                  <span>Level {s.level}</span>
-                  <span>
-                    {s.remaining}/{s.total}
+                  <span className="slot-row-level">Lvl {s.level}</span>
+                  <span className="slot-row-pips">
+                    {Array.from({ length: Number(s.total) }).map((_, i) => (
+                      <span
+                        key={i}
+                        className={`spell-pip${i < s.remaining ? " filled" : " used"}`}
+                      >
+                        {i < s.remaining ? "◆" : "◇"}
+                      </span>
+                    ))}
                   </span>
                 </div>
               ))}

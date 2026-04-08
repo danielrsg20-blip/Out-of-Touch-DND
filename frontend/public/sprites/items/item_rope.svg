@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32">
+  <!-- coiled rope - outer loops -->
+  <ellipse cx="16" cy="18" rx="11" ry="8" fill="none" stroke="#b08840" stroke-width="3" stroke-linecap="round"/>
+  <ellipse cx="16" cy="16" rx="10" ry="7" fill="none" stroke="#c49848" stroke-width="3" stroke-linecap="round"/>
+  <ellipse cx="16" cy="14" rx="9" ry="6" fill="none" stroke="#b08840" stroke-width="3" stroke-linecap="round"/>
+  <!-- inner coil (fills the hole) -->
+  <ellipse cx="16" cy="15" rx="5" ry="3.5" fill="#a08038"/>
+  <ellipse cx="16" cy="14" rx="5" ry="3.5" fill="none" stroke="#c49848" stroke-width="1.5"/>
+  <!-- rope texture lines -->
+  <line x1="6" y1="16" x2="7" y2="18" stroke="#8a6828" stroke-width="0.5" opacity="0.5"/>
+  <line x1="25" y1="15" x2="26" y2="17" stroke="#8a6828" stroke-width="0.5" opacity="0.5"/>
+  <!-- loose end -->
+  <path d="M22 22 Q26 26 24 30" stroke="#b08840" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+  <!-- rope twist detail on loose end -->
+  <path d="M22 22 Q26 26 24 30" stroke="#c49848" stroke-width="0.8" fill="none" stroke-linecap="round" stroke-dasharray="1.5 2"/>
+</svg>

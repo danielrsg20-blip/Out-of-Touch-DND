@@ -6,6 +6,7 @@ import { invokeEdgeFunction } from "../lib/supabaseClient";
 import { callBackendApi } from "../lib/backendApi";
 import { useAuthStore } from "../stores/authStore";
 import { getCharacterSpriteId } from "../config/characterSprites";
+import { StatCard } from "./ui/StatCard";
 import type { CharacterData, SpellOption } from "../types";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -967,10 +968,13 @@ export default function CharacterCreator() {
                 Sprite
               </label>
               <div className="flex items-center gap-3">
-                <img
+                <motion.img
+                  key={spriteId}
                   src={`/sprites/manifest/${spriteId}.svg`}
                   alt={spriteId}
-                  className="w-10 h-10 rounded-lg border border-[#2a2a4a] bg-white/5 object-contain shrink-0 p-0.5"
+                  layoutId="creator-sprite"
+                  className="w-20 h-20 rounded-xl border-2 border-[rgba(228,168,83,0.3)] bg-white/5 object-contain shrink-0 p-1"
+                  style={{ boxShadow: "0 0 16px rgba(228,168,83,0.15)" }}
                 />
                 <ThemedSelect
                   id="cc-sprite"
@@ -1223,8 +1227,8 @@ export default function CharacterCreator() {
                       </button>
                     )}
                     {raceBonus !== 0 && (
-                      <span className="text-[0.6rem] text-[#e4a853] leading-none">
-                        {abilities[ab]} +{raceBonus}
+                      <span className="text-[0.6rem] text-[#2ecc71] font-semibold leading-none px-1.5 py-0.5 rounded bg-[rgba(46,204,113,0.12)] border border-[rgba(46,204,113,0.3)]">
+                        +{raceBonus}
                       </span>
                     )}
                     <span
@@ -1374,29 +1378,22 @@ export default function CharacterCreator() {
               className="grid grid-cols-4 gap-1.5 rounded-xl px-3 py-2.5 border border-[rgba(228,168,83,0.2)]"
               style={{ background: "rgba(228,168,83,0.04)" }}
             >
-              {[
-                { label: "HP", value: Math.max(1, previewHP) },
-                { label: "AC", value: previewAC },
-                { label: "Speed", value: `${previewSpeed}ft` },
-                { label: "Prof", value: "+2" },
-              ].map(({ label, value }) => (
-                <div key={label} className="flex flex-col items-center gap-0.5">
-                  <span className="text-[0.6rem] uppercase tracking-[0.08em] text-[#a0a0b0]">
-                    {label}
-                  </span>
-                  <span className="text-[0.95rem] font-bold text-[#e4a853]">
-                    {value}
-                  </span>
-                </div>
-              ))}
+              <StatCard label="HP" value={Math.max(1, previewHP)} icon="❤" highlight />
+              <StatCard label="AC" value={previewAC} icon="🛡" highlight />
+              <StatCard label="Speed" value={`${previewSpeed}ft`} icon="🥾" highlight />
+              <StatCard label="Prof" value="+2" icon="★" highlight />
             </div>
 
             {/* Submit */}
             <Button
               onClick={handleCreate}
               disabled={name.trim().length < 2 || creating}
-              className="mt-2 min-h-12 text-base font-bold bg-linear-to-br from-[#e4a853] to-[#c8882a] text-[#1a1a2e] border-none hover:opacity-90 hover:-translate-y-px active:translate-y-0 disabled:opacity-40 tracking-[0.01em]"
-              style={{ boxShadow: "0 4px 16px rgba(228,168,83,0.25)" }}
+              className="mt-2 min-h-12 text-base font-bold bg-linear-to-br from-[#e4a853] to-[#c8882a] text-[#1a1a2e] border-none hover:opacity-90 hover:-translate-y-px active:translate-y-0 disabled:opacity-40 tracking-[0.01em] transition-shadow"
+              style={{
+                boxShadow: name.trim().length >= 2 && !creating
+                  ? "0 4px 20px rgba(228,168,83,0.35), 0 0 40px rgba(228,168,83,0.12)"
+                  : "0 4px 16px rgba(228,168,83,0.25)",
+              }}
             >
               {creating ? (
                 <>

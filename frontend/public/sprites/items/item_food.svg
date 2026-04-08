@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32">
+  <!-- bread loaf -->
+  <ellipse cx="16" cy="20" rx="12" ry="7" fill="#c8944a"/>
+  <!-- bread top crust (rounded) -->
+  <ellipse cx="16" cy="17" rx="11" ry="8" fill="#d4a458"/>
+  <!-- score marks on bread -->
+  <path d="M10 14 Q13 12 16 14" stroke="#b08038" stroke-width="0.8" fill="none" opacity="0.6"/>
+  <path d="M16 14 Q19 12 22 14" stroke="#b08038" stroke-width="0.8" fill="none" opacity="0.6"/>
+  <!-- bread highlight -->
+  <ellipse cx="14" cy="13" rx="4" ry="2.5" fill="#e0b868" opacity="0.3"/>
+  <!-- cheese wedge -->
+  <polygon points="24,12 30,24 20,24" fill="#e8c840"/>
+  <polygon points="24,12 30,24 27,18" fill="#d4b430" opacity="0.6"/>
+  <!-- cheese holes -->
+  <circle cx="25" cy="20" r="1" fill="#c8a828" opacity="0.5"/>
+  <circle cx="23" cy="22" r="0.7" fill="#c8a828" opacity="0.5"/>
+  <!-- apple -->
+  <circle cx="6" cy="12" r="4" fill="#c03030"/>
+  <circle cx="5" cy="11" r="1.5" fill="#d04848" opacity="0.3"/>
+  <!-- apple stem -->
+  <line x1="6" y1="8" x2="7" y2="6" stroke="#5a3a10" stroke-width="1" stroke-linecap="round"/>
+</svg>

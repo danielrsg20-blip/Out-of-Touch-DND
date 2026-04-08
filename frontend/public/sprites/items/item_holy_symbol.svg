@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32">
+  <!-- chain -->
+  <path d="M6 2 Q6 8 10 12" stroke="#d4a843" stroke-width="1.2" fill="none" stroke-linecap="round"/>
+  <path d="M26 2 Q26 8 22 12" stroke="#d4a843" stroke-width="1.2" fill="none" stroke-linecap="round"/>
+  <!-- radiance circle behind -->
+  <circle cx="16" cy="18" r="10" fill="#d4a843" opacity="0.06"/>
+  <circle cx="16" cy="18" r="7" fill="#d4a843" opacity="0.08"/>
+  <!-- cross / holy symbol body -->
+  <!-- vertical bar -->
+  <rect x="14" y="8" width="4" height="20" rx="1" fill="#d4a843"/>
+  <!-- horizontal bar -->
+  <rect x="8" y="14" width="16" height="4" rx="1" fill="#d4a843"/>
+  <!-- inner detail (darker inset) -->
+  <rect x="15" y="9" width="2" height="18" rx="0.5" fill="#e8c060" opacity="0.3"/>
+  <rect x="9" y="15" width="14" height="2" rx="0.5" fill="#e8c060" opacity="0.3"/>
+  <!-- center jewel -->
+  <circle cx="16" cy="16" r="2" fill="#ffffff" opacity="0.3"/>
+  <circle cx="16" cy="16" r="1.2" fill="#ffffff" opacity="0.5"/>
+  <!-- rays of light -->
+  <line x1="16" y1="6" x2="16" y2="4" stroke="#d4a843" stroke-width="0.6" opacity="0.4"/>
+  <line x1="22" y1="10" x2="24" y2="8" stroke="#d4a843" stroke-width="0.6" opacity="0.4"/>
+  <line x1="10" y1="10" x2="8" y2="8" stroke="#d4a843" stroke-width="0.6" opacity="0.4"/>
+</svg>

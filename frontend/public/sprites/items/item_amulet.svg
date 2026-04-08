@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32">
+  <!-- chain -->
+  <path d="M8 2 Q8 10 12 14" stroke="#d4a843" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+  <path d="M24 2 Q24 10 20 14" stroke="#d4a843" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+  <!-- chain links detail -->
+  <circle cx="9" cy="5" r="0.6" fill="#e8c060" opacity="0.5"/>
+  <circle cx="10" cy="8" r="0.6" fill="#e8c060" opacity="0.5"/>
+  <circle cx="23" cy="5" r="0.6" fill="#e8c060" opacity="0.5"/>
+  <circle cx="22" cy="8" r="0.6" fill="#e8c060" opacity="0.5"/>
+  <!-- pendant frame -->
+  <circle cx="16" cy="20" r="8" fill="#d4a843"/>
+  <circle cx="16" cy="20" r="6.5" fill="#1a2a4a"/>
+  <!-- inner symbol (eye motif) -->
+  <ellipse cx="16" cy="20" rx="4" ry="2.5" fill="none" stroke="#d4a843" stroke-width="1"/>
+  <circle cx="16" cy="20" r="1.5" fill="#d4a843"/>
+  <!-- glow -->
+  <circle cx="16" cy="20" r="9.5" fill="#d4a843" opacity="0.08"/>
+  <!-- pendant highlight -->
+  <path d="M12 15 Q14 13 16 14" stroke="#e8c860" stroke-width="0.6" fill="none" opacity="0.4"/>
+</svg>

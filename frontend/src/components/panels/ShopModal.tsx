@@ -1,8 +1,20 @@
 import { useEffect, useRef } from "react";
+import { motion, AnimatePresence } from "motion/react";
 import { useGameStore } from "../../stores/gameStore";
 import { useSessionStore } from "../../stores/sessionStore";
 import { invokeEdgeFunction } from "../../lib/supabaseClient";
+import { getItemSpriteKey, resolveSpriteUrl } from "../../data/spriteManifest";
 import type { ShopItem } from "../../stores/gameStore";
+
+function ShopItemIcon({ item }: { readonly item: ShopItem }) {
+  const fakeItem = {
+    name: item.name,
+    category: (item.type?.toLowerCase() ?? "gear") as "weapon" | "armor" | "shield" | "ammunition" | "tool" | "gear",
+  };
+  const url = resolveSpriteUrl(getItemSpriteKey(fakeItem as any));
+  if (!url) return <span className="shop-item-icon-fallback">📦</span>;
+  return <img className="shop-item-icon" src={url} alt={item.name} />;
+}
 
 export default function ShopModal() {
   const shopData = useGameStore((s) => s.shopData);
@@ -71,7 +83,13 @@ export default function ShopModal() {
             <p className="shop-empty">The shelves are bare.</p>
           ) : (
             shopData.items.map((item) => (
-              <div key={item.name} className="shop-item-row">
+              <motion.div
+                key={item.name}
+                className="shop-item-row"
+                whileHover={{ x: 2, backgroundColor: "rgba(228, 168, 83, 0.06)" }}
+                transition={{ duration: 0.15 }}
+              >
+                <ShopItemIcon item={item} />
                 <div className="shop-item-info">
                   <span className="shop-item-name">{item.name}</span>
                   {item.description && (
@@ -82,7 +100,9 @@ export default function ShopModal() {
                   )}
                 </div>
                 <div className="shop-item-right">
-                  <span className="shop-item-price">{item.price_gp} gp</span>
+                  <span className="shop-item-price">
+                    <span className="shop-gold-icon">◈</span> {item.price_gp} gp
+                  </span>
                   <button
                     type="button"
                     className="shop-buy-btn"
@@ -91,7 +111,7 @@ export default function ShopModal() {
                     Buy
                   </button>
                 </div>
-              </div>
+              </motion.div>
             ))
           )}
         </div>

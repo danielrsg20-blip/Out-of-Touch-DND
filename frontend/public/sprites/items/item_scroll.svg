@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32">
+  <!-- rolled parchment body -->
+  <rect x="8" y="6" width="16" height="20" rx="2" fill="#d4c4a0"/>
+  <!-- top roll -->
+  <ellipse cx="16" cy="6" rx="9" ry="3" fill="#e0d4b4"/>
+  <ellipse cx="16" cy="6" rx="9" ry="3" fill="none" stroke="#b0a080" stroke-width="0.8"/>
+  <!-- bottom roll -->
+  <ellipse cx="16" cy="26" rx="9" ry="3" fill="#c8b890"/>
+  <ellipse cx="16" cy="26" rx="9" ry="3" fill="none" stroke="#b0a080" stroke-width="0.8"/>
+  <!-- roll dowel ends -->
+  <circle cx="7" cy="6" r="1.5" fill="#8b5a2b"/>
+  <circle cx="25" cy="6" r="1.5" fill="#8b5a2b"/>
+  <circle cx="7" cy="26" r="1.5" fill="#8b5a2b"/>
+  <circle cx="25" cy="26" r="1.5" fill="#8b5a2b"/>
+  <!-- text lines -->
+  <line x1="11" y1="12" x2="21" y2="12" stroke="#8a7a60" stroke-width="0.8" opacity="0.5"/>
+  <line x1="11" y1="15" x2="21" y2="15" stroke="#8a7a60" stroke-width="0.8" opacity="0.5"/>
+  <line x1="11" y1="18" x2="18" y2="18" stroke="#8a7a60" stroke-width="0.8" opacity="0.5"/>
+  <!-- wax seal -->
+  <circle cx="16" cy="22" r="3" fill="#c03030"/>
+  <circle cx="16" cy="22" r="1.5" fill="#d04848" opacity="0.7"/>
+</svg>

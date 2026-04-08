@@ -65,6 +65,19 @@ const SPRITE_MANIFEST: Record<string, SpriteManifestRecord> = {
   item_tool:         { url: '/sprites/items/item_tool.svg',         source_asset_id: ITEM_PACK },
   item_gear:         { url: '/sprites/items/item_gear.svg',         source_asset_id: ITEM_PACK },
   item_ammunition:   { url: '/sprites/items/item_ammunition.svg',   source_asset_id: ITEM_PACK },
+  item_scroll:       { url: '/sprites/items/item_scroll.svg',       source_asset_id: ITEM_PACK },
+  item_ring:         { url: '/sprites/items/item_ring.svg',         source_asset_id: ITEM_PACK },
+  item_wand:         { url: '/sprites/items/item_wand.svg',         source_asset_id: ITEM_PACK },
+  item_robe:         { url: '/sprites/items/item_robe.svg',         source_asset_id: ITEM_PACK },
+  item_amulet:       { url: '/sprites/items/item_amulet.svg',       source_asset_id: ITEM_PACK },
+  item_gem:          { url: '/sprites/items/item_gem.svg',          source_asset_id: ITEM_PACK },
+  item_food:         { url: '/sprites/items/item_food.svg',         source_asset_id: ITEM_PACK },
+  item_book:         { url: '/sprites/items/item_book.svg',         source_asset_id: ITEM_PACK },
+  item_lantern:      { url: '/sprites/items/item_lantern.svg',      source_asset_id: ITEM_PACK },
+  item_rope:         { url: '/sprites/items/item_rope.svg',         source_asset_id: ITEM_PACK },
+  item_musical:      { url: '/sprites/items/item_musical.svg',      source_asset_id: ITEM_PACK },
+  item_holy_symbol:  { url: '/sprites/items/item_holy_symbol.svg',  source_asset_id: ITEM_PACK },
+  item_thieves_tools:{ url: '/sprites/items/item_thieves_tools.svg', source_asset_id: ITEM_PACK },
 }
 
 function isDirectUrl(value: string): boolean {
@@ -141,7 +154,26 @@ export function getItemSpriteKey(item: {
   if (item.category === 'armor') return ARMOR_SPRITE[item.subcategory ?? ''] ?? 'item_armor_heavy'
   if (item.category === 'ammunition') return 'item_ammunition'
   if (item.category === 'weapon') return resolveWeaponSprite(id, item.properties ?? [])
-  if (item.category === 'tool') return 'item_tool'
+  if (item.category === 'tool') {
+    if (name.includes('thieves') || name.includes('lockpick') || id.includes('thieves')) return 'item_thieves_tools'
+    if (name.includes('musical') || name.includes('lute') || name.includes('harp') || name.includes('drum') || name.includes('flute') || name.includes('horn') || name.includes('lyre') || name.includes('pan flute') || name.includes('shawm') || name.includes('viol')) return 'item_musical'
+    if (name.includes('holy symbol') || id.includes('holy_symbol')) return 'item_holy_symbol'
+    return 'item_tool'
+  }
   if (name.includes('potion') || id.includes('potion')) return 'item_potion'
+
+  // Name-based resolution for gear / miscellaneous items
+  if (name.includes('scroll') || id.includes('scroll')) return 'item_scroll'
+  if (name.includes('ring') || id.includes('ring')) return 'item_ring'
+  if (name.includes('wand') || id.includes('wand') || name.includes('rod')) return 'item_wand'
+  if (name.includes('robe') || name.includes('cloak') || name.includes('cape') || name.includes('mantle')) return 'item_robe'
+  if (name.includes('amulet') || name.includes('necklace') || name.includes('pendant') || name.includes('periapt') || name.includes('brooch')) return 'item_amulet'
+  if (name.includes('gem') || name.includes('jewel') || name.includes('diamond') || name.includes('ruby') || name.includes('sapphire') || name.includes('emerald') || name.includes('pearl')) return 'item_gem'
+  if (name.includes('ration') || name.includes('food') || name.includes('bread') || name.includes('meat') || name.includes('cheese') || name.includes('waterskin') || name.includes('ale')) return 'item_food'
+  if (name.includes('book') || name.includes('tome') || name.includes('spellbook') || name.includes('manual') || name.includes('grimoire') || name.includes('journal') || name.includes('codex')) return 'item_book'
+  if (name.includes('lantern') || name.includes('lamp') || name.includes('torch')) return 'item_lantern'
+  if (name.includes('rope') || name.includes('chain') || name.includes('cord') || name.includes('twine')) return 'item_rope'
+  if (name.includes('lute') || name.includes('harp') || name.includes('drum') || name.includes('flute') || name.includes('horn') || name.includes('instrument')) return 'item_musical'
+  if (name.includes('holy symbol') || name.includes('holy water')) return 'item_holy_symbol'
   return 'item_gear'
 }

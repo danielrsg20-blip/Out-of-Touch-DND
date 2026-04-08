@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32">
+  <!-- leather roll pouch -->
+  <rect x="4" y="10" width="24" height="18" rx="3" fill="#6b4a2a"/>
+  <rect x="4" y="10" width="24" height="18" rx="3" fill="none" stroke="#5a3a1a" stroke-width="0.8"/>
+  <!-- pouch fold flap -->
+  <rect x="4" y="8" width="24" height="5" rx="2" fill="#7a5a30"/>
+  <!-- tie strap -->
+  <line x1="16" y1="8" x2="16" y2="5" stroke="#8b5a2b" stroke-width="1.5" stroke-linecap="round"/>
+  <circle cx="16" cy="5" r="1.5" fill="none" stroke="#8b5a2b" stroke-width="1"/>
+  <!-- lockpick 1 (tension wrench) -->
+  <line x1="8" y1="13" x2="8" y2="26" stroke="#c0c8d0" stroke-width="1.5" stroke-linecap="round"/>
+  <path d="M8 13 L10 13 L10 15" stroke="#c0c8d0" stroke-width="1.2" fill="none" stroke-linecap="round"/>
+  <!-- lockpick 2 (hook pick) -->
+  <line x1="12" y1="13" x2="12" y2="26" stroke="#b0b8c0" stroke-width="1.2" stroke-linecap="round"/>
+  <path d="M12 13 Q14 11 14 13" stroke="#b0b8c0" stroke-width="1.2" fill="none" stroke-linecap="round"/>
+  <!-- lockpick 3 (rake) -->
+  <line x1="16" y1="14" x2="16" y2="26" stroke="#c0c8d0" stroke-width="1.2" stroke-linecap="round"/>
+  <path d="M16 14 L17 12 L18 14 L19 12" stroke="#c0c8d0" stroke-width="0.8" fill="none" stroke-linecap="round"/>
+  <!-- lockpick 4 (diamond) -->
+  <line x1="20" y1="13" x2="20" y2="26" stroke="#b0b8c0" stroke-width="1.2" stroke-linecap="round"/>
+  <polygon points="20,11 21.5,13 20,15 18.5,13" fill="#c0c8d0"/>
+  <!-- small file -->
+  <line x1="24" y1="13" x2="24" y2="26" stroke="#a0a8b0" stroke-width="1.5" stroke-linecap="round"/>
+  <rect x="23" y="12" width="2" height="4" rx="0.5" fill="#8a9aaa"/>
+</svg>

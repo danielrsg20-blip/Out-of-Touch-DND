@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32">
+  <!-- robe body -->
+  <path d="M10 8 L8 30 L24 30 L22 8 Z" fill="#3a3a6a"/>
+  <!-- collar / neckline -->
+  <path d="M12 8 Q16 4 20 8" fill="#4a4a7a"/>
+  <!-- front opening fold -->
+  <line x1="16" y1="8" x2="16" y2="30" stroke="#2a2a5a" stroke-width="1.2"/>
+  <!-- shoulder seams -->
+  <line x1="10" y1="8" x2="6" y2="16" stroke="#2a2a5a" stroke-width="0.8" opacity="0.6"/>
+  <line x1="22" y1="8" x2="26" y2="16" stroke="#2a2a5a" stroke-width="0.8" opacity="0.6"/>
+  <!-- left sleeve -->
+  <path d="M10 8 L6 16 L9 17 L12 10 Z" fill="#3a3a6a"/>
+  <!-- right sleeve -->
+  <path d="M22 8 L26 16 L23 17 L20 10 Z" fill="#3a3a6a"/>
+  <!-- trim at hem -->
+  <rect x="8" y="28" width="16" height="2" rx="1" fill="#d4a843"/>
+  <!-- trim at collar -->
+  <path d="M12 8 Q16 4.5 20 8" fill="none" stroke="#d4a843" stroke-width="1.2"/>
+  <!-- clasp -->
+  <circle cx="16" cy="10" r="1.5" fill="#d4a843"/>
+  <!-- fabric fold shadow -->
+  <line x1="12" y1="14" x2="13" y2="28" stroke="#2a2a5a" stroke-width="0.6" opacity="0.4"/>
+  <line x1="20" y1="14" x2="19" y2="28" stroke="#2a2a5a" stroke-width="0.6" opacity="0.4"/>
+</svg>

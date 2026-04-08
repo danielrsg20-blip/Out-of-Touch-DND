@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32">
+  <!-- lute body -->
+  <ellipse cx="16" cy="22" rx="10" ry="8" fill="#8b5a2b"/>
+  <!-- sound hole -->
+  <circle cx="16" cy="22" r="3.5" fill="#3a2010"/>
+  <!-- rosette ring -->
+  <circle cx="16" cy="22" r="3.5" fill="none" stroke="#d4a843" stroke-width="0.8"/>
+  <circle cx="16" cy="22" r="4.5" fill="none" stroke="#d4a843" stroke-width="0.4" opacity="0.5"/>
+  <!-- body highlight -->
+  <ellipse cx="13" cy="20" rx="3" ry="4" fill="#a06a30" opacity="0.3"/>
+  <!-- neck -->
+  <rect x="14.5" y="4" width="3" height="15" rx="1.5" fill="#6b3a1a"/>
+  <!-- frets -->
+  <line x1="14.5" y1="7" x2="17.5" y2="7" stroke="#d4a843" stroke-width="0.5" opacity="0.6"/>
+  <line x1="14.5" y1="9.5" x2="17.5" y2="9.5" stroke="#d4a843" stroke-width="0.5" opacity="0.6"/>
+  <line x1="14.5" y1="12" x2="17.5" y2="12" stroke="#d4a843" stroke-width="0.5" opacity="0.6"/>
+  <!-- headstock -->
+  <rect x="13" y="2" width="6" height="3" rx="1.5" fill="#5a3a10"/>
+  <!-- tuning pegs -->
+  <circle cx="14" cy="3" r="0.8" fill="#d4a843"/>
+  <circle cx="18" cy="3" r="0.8" fill="#d4a843"/>
+  <!-- strings -->
+  <line x1="15" y1="5" x2="15" y2="22" stroke="#e0d0b0" stroke-width="0.3" opacity="0.6"/>
+  <line x1="16" y1="5" x2="16" y2="22" stroke="#e0d0b0" stroke-width="0.3" opacity="0.6"/>
+  <line x1="17" y1="5" x2="17" y2="22" stroke="#e0d0b0" stroke-width="0.3" opacity="0.6"/>
+  <!-- bridge -->
+  <rect x="13" y="26" width="6" height="1.5" rx="0.75" fill="#5a3a10"/>
+</svg>
