@@ -88,7 +88,6 @@ class GameMap:
 
     def set_tile(self, x: int, y: int, tile_type: str, state: str | None = None, sprite: str | None = None, variant: str | None = None) -> Tile:
         props = TILE_PROPERTIES.get(tile_type, {})
-        effective_type = tile_type
         if tile_type == "door" and state == "closed":
             props = TILE_PROPERTIES.get("door_closed", {})
 

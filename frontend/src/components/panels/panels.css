@@ -2892,19 +2892,7 @@
   min-width: 3rem;
   text-align: right;
 }
-.shop-buy-btn {
-  padding: 0.15rem 0.5rem;
-  background: rgba(228, 168, 83, 0.15);
-  border: 1px solid rgba(228, 168, 83, 0.3);
-  color: var(--accent-gold);
-  border-radius: 3px;
-  font-size: 0.7rem;
-  cursor: pointer;
-  transition: background 0.15s;
-}
-.shop-buy-btn:hover {
-  background: rgba(228, 168, 83, 0.28);
-}
+
 .shop-close-btn {
   margin-top: 0.8rem;
   display: block;
@@ -3205,10 +3193,6 @@
   border-radius: 4px;
   padding: 0.25rem 0.4rem;
 }
-.inv-weight-bar-fill.warning {
-  background: var(--accent-gold, #e4a853);
-}
-
 /* ── Shop item sprites ─────────────────────────────────────────────────────── */
 .shop-item-icon {
   width: 24px;

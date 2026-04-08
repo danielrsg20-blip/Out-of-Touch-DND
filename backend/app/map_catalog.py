@@ -1286,14 +1286,6 @@ def _build_from_library(entry: MapLibraryEntry, request: NormalizedMapSelectionR
             deterministic_seed=deterministic_seed,
         )
 
-        # TEMP DEBUG: Track selected environment/theme and first floor sprite keys.
-        floor_sprites = [str(t.get("sprite", "")) for t in tiles if str(t.get("type", "")) == "floor" and t.get("sprite")]
-        logger.info(
-            "[terrain-debug] map_source=library env=%s theme=%s floor_sprites_first20=%s",
-            entry["environment"],
-            request.get("terrain_theme", ""),
-            floor_sprites[:20],
-        )
     else:
         tiles = [{k: v for k, v in dict(tile).items() if k not in {"sprite", "variant"}} for tile in tiles]
 
@@ -1378,14 +1370,6 @@ def _generate_dynamic(request: NormalizedMapSelectionRequest, rng: random.Random
             deterministic_seed=deterministic_seed,
         )
 
-        # TEMP DEBUG: Track selected environment/theme and first floor sprite keys.
-        floor_sprites = [str(t.get("sprite", "")) for t in best_tiles if str(t.get("type", "")) == "floor" and t.get("sprite")]
-        logger.info(
-            "[terrain-debug] map_source=generated env=%s theme=%s floor_sprites_first20=%s",
-            request["environment"],
-            request.get("terrain_theme", ""),
-            floor_sprites[:20],
-        )
     else:
         best_tiles = [{k: v for k, v in dict(tile).items() if k not in {"sprite", "variant"}} for tile in best_tiles]
 

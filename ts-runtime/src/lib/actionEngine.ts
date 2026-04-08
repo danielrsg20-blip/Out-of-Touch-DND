@@ -84,7 +84,7 @@ function buildPcPlacements(snapshot: SessionSnapshot, floorCells: Array<{ x: num
       continue
     }
 
-    const cell = floorCells[cursor] ?? floorCells[floorCells.length - 1] ?? { x: 0, y: 0 }
+    const cell = floorCells[cursor] ?? floorCells.at(-1) ?? { x: 0, y: 0 }
     cursor += 1
 
     entities.push({
@@ -343,7 +343,7 @@ function removeEntityFromMap(mapInput: JsonRecord | null, entityId: string): Jso
     return mapInput
   }
 
-  const out = JSON.parse(JSON.stringify(mapInput)) as JsonRecord
+  const out = structuredClone(mapInput) as JsonRecord
   if (Array.isArray(out.entities)) {
     out.entities = out.entities.filter((entry) => asString(asRecord(entry)?.id) !== entityId)
   }
@@ -388,7 +388,7 @@ function injectCombatEntitiesIntoMap(mapInput: JsonRecord | null, combat: JsonRe
     return mapInput
   }
 
-  const out = JSON.parse(JSON.stringify(mapInput)) as JsonRecord
+  const out = structuredClone(mapInput) as JsonRecord
   const order = Array.isArray(combat.initiative_order) ? combat.initiative_order : []
   const entitiesRaw = Array.isArray(out.entities) ? out.entities : []
   const entities = entitiesRaw
@@ -403,7 +403,7 @@ function injectCombatEntitiesIntoMap(mapInput: JsonRecord | null, combat: JsonRe
     }
 
     const id = asString(participant.id)
-    if (!id || !id.startsWith('enemy_')) {
+    if (!id?.startsWith('enemy_')) {
       continue
     }
 
@@ -439,7 +439,7 @@ function injectCombatEntitiesIntoMap(mapInput: JsonRecord | null, combat: JsonRe
 }
 
 function resolveAttackAction(snapshot: SessionSnapshot, player: SessionSnapshot['players'][number], content: string, combatInput: JsonRecord): ActionEngineResult {
-  const combat = JSON.parse(JSON.stringify(combatInput)) as JsonRecord
+  const combat = structuredClone(combatInput) as JsonRecord
   const order = Array.isArray(combat.initiative_order)
     ? combat.initiative_order.map((entry) => asRecord(entry)).filter(Boolean) as JsonRecord[]
     : []
@@ -484,7 +484,7 @@ function resolveAttackAction(snapshot: SessionSnapshot, player: SessionSnapshot[
   const targetName = asString(target.name) ?? targetId
   const targetAc = asNumber(target.ac) ?? asNumber(asRecord(snapshot.game_state.characters[targetId])?.ac) ?? 12
 
-  const attackSeed = stableSeed(snapshot.room_code, `${content}|${combat.round ?? 1}|${combat.turn_index ?? 0}|${actorId}|${targetId}`)
+  const attackSeed = stableSeed(snapshot.room_code, `${content}|${asNumber(combat.round) ?? 1}|${asNumber(combat.turn_index) ?? 0}|${actorId}|${targetId}`)
   const strMod = abilityMod(asNumber(asRecord(actorCharacter?.abilities)?.STR))
   const profBonus = 2
   const attackMod = strMod + profBonus
@@ -559,7 +559,7 @@ export function advanceCombatTurn(combatInput: JsonRecord | null, skipEnemyTurns
     return { error: 'No active combat' }
   }
 
-  const combat = JSON.parse(JSON.stringify(combatInput)) as JsonRecord
+  const combat = structuredClone(combatInput) as JsonRecord
   const order = Array.isArray(combat.initiative_order)
     ? combat.initiative_order
         .map((entry) => asRecord(entry))
@@ -594,7 +594,7 @@ export function advanceCombatTurn(combatInput: JsonRecord | null, skipEnemyTurns
     safety += 1
     const participant = order[turnIndex]
     const id = participant ? asString(participant.id) : null
-    if (!id || !id.startsWith('enemy_')) {
+    if (!id?.startsWith('enemy_')) {
       break
     }
     turnIndex += 1

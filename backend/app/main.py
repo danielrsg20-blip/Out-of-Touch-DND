@@ -46,6 +46,10 @@ from .auth import create_access_token, decode_token, hash_password, verify_passw
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+# ── Shared string constants ────────────────────────────────────────────────────
+BEARER_PREFIX = "Bearer "
+OVERLAY_NOT_FOUND = "Overlay not found"
+
 session_manager = SessionManager()
 
 
@@ -127,9 +131,9 @@ async def login(req: LoginRequest):
 @app.get("/api/auth/me")
 async def auth_me(request: Request):
     auth_header = request.headers.get("Authorization", "")
-    if not auth_header.startswith("Bearer "):
+    if not auth_header.startswith(BEARER_PREFIX):
         raise HTTPException(status_code=401, detail="Missing token")
-    token = auth_header.removeprefix("Bearer ")
+    token = auth_header.removeprefix(BEARER_PREFIX)
     try:
         payload = decode_token(token)
     except JWTError:
@@ -299,7 +303,7 @@ async def list_overlays():
 async def get_overlay(overlay_id: str):
     overlay = overlay_api.get_overlay(overlay_id)
     if not overlay:
-        return JSONResponse(status_code=404, content={"error": "Overlay not found"})
+        return JSONResponse(status_code=404, content={"error": OVERLAY_NOT_FOUND})
     return {"overlay": json.loads(overlay_api.save_overlay_to_json(overlay_id) or "{}")}
 
 
@@ -368,7 +372,7 @@ async def set_overlay_layer_visibility(req: OverlayLayerVisibilityRequest):
 async def export_overlay_json(overlay_id: str):
     payload = overlay_api.save_overlay_to_json(overlay_id)
     if not payload:
-        return JSONResponse(status_code=404, content={"error": "Overlay not found"})
+        return JSONResponse(status_code=404, content={"error": OVERLAY_NOT_FOUND})
     return Response(content=payload, media_type="application/json")
 
 
@@ -411,7 +415,7 @@ async def generate_overlay_from_narrative(req: OverlayGenerateRequest):
     )
 
     if not generated:
-        return JSONResponse(status_code=404, content={"error": "Overlay not found"})
+        return JSONResponse(status_code=404, content={"error": OVERLAY_NOT_FOUND})
 
     payload = overlay_api.save_overlay_to_json(resolved_overlay_id)
     return {
@@ -424,10 +428,10 @@ async def generate_overlay_from_narrative(req: OverlayGenerateRequest):
 def _extract_user_id(request: Request) -> str | None:
     """Extract user_id from optional Authorization header. Returns None if missing/invalid."""
     auth = request.headers.get("Authorization", "")
-    if not auth.startswith("Bearer "):
+    if not auth.startswith(BEARER_PREFIX):
         return None
     try:
-        payload = decode_token(auth.removeprefix("Bearer "))
+        payload = decode_token(auth.removeprefix(BEARER_PREFIX))
         return str(payload["sub"])
     except Exception:  # noqa: BLE001
         return None

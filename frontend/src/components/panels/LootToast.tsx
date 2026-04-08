@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { motion, AnimatePresence } from "motion/react";
+import { motion } from "motion/react";
 import { useGameStore } from "../../stores/gameStore";
 import { getItemSpriteKey, resolveSpriteUrl } from "../../data/spriteManifest";
 
@@ -46,6 +46,10 @@ export default function LootToast() {
     <motion.div
       className="loot-toast gold-glow-card"
       onClick={() => setLootData(null)}
+      role="button"
+      tabIndex={0}
+      aria-label="Dismiss loot notification"
+      onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setLootData(null); } }}
       initial={{ opacity: 0, y: 30, scale: 0.95 }}
       animate={{ opacity: 1, y: 0, scale: 1 }}
       exit={{ opacity: 0, y: -20 }}

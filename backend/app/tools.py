@@ -1964,49 +1964,39 @@ class ToolDispatcher:
         tile = self.game_map.set_tile(x, y, new_type)
         return {"modified": tile.to_dict(), "reason": reason}
 
-    def _tool_spawn_reinforcements(self, inp: dict) -> dict:
-        if not self.game_map:
-            return {"error": _ERR_NO_MAP}
-        creatures = inp.get("creatures", [])
-        if not creatures:
-            return {"error": "No creatures specified"}
-        direction = str(inp.get("entry_direction", "N")).upper()
+    # ------------------------------------------------------------------
+    # Spawn / placement helpers
+    # ------------------------------------------------------------------
 
-        # Find candidate spawn tiles near requested edge or nearest door
+    @staticmethod
+    def _find_door_spawn_candidates(gm: GameMap) -> list[tuple[int, int]]:
+        """Return walkable tiles on or adjacent to doors."""
         candidates: list[tuple[int, int]] = []
+        for (tx, ty), tile in gm.tiles.items():
+            if tile.tile_type == "door" and gm.can_occupy(tx, ty):
+                candidates.append((tx, ty))
+                for nx, ny in ((tx + 1, ty), (tx - 1, ty), (tx, ty + 1), (tx, ty - 1)):
+                    if gm.can_occupy(nx, ny):
+                        candidates.append((nx, ny))
+        return candidates
 
-        if direction == "NEAREST_DOOR":
-            for (tx, ty), tile in self.game_map.tiles.items():
-                if tile.tile_type == "door" and self.game_map.can_occupy(tx, ty):
-                    candidates.append((tx, ty))
-                    # Also add adjacent walkable tiles
-                    for nx, ny in ((tx + 1, ty), (tx - 1, ty), (tx, ty + 1), (tx, ty - 1)):
-                        if self.game_map.can_occupy(nx, ny):
-                            candidates.append((nx, ny))
+    @staticmethod
+    def _find_edge_spawn_candidates(gm: GameMap, direction: str) -> list[tuple[int, int]]:
+        """Return walkable tiles near the map edge for a given direction."""
+        w, h = gm.width, gm.height
+        if direction in ("N", "NEAREST_DOOR"):
+            rows, cols = range(1, min(4, h)), range(1, w - 1)
+        elif direction == "S":
+            rows, cols = range(max(0, h - 4), h - 1), range(1, w - 1)
+        elif direction == "E":
+            rows, cols = range(1, h - 1), range(max(0, w - 4), w - 1)
+        else:  # W
+            rows, cols = range(1, h - 1), range(1, min(4, w))
+        return [(cx, ry) for ry in rows for cx in cols if gm.can_occupy(cx, ry)]
 
-        if not candidates:
-            # Fall back to edge-based placement
-            w, h = self.game_map.width, self.game_map.height
-            if direction in ("N", "NEAREST_DOOR"):
-                rows = range(1, min(4, h))
-                cols = range(1, w - 1)
-            elif direction == "S":
-                rows = range(max(0, h - 4), h - 1)
-                cols = range(1, w - 1)
-            elif direction == "E":
-                rows = range(1, h - 1)
-                cols = range(max(0, w - 4), w - 1)
-            else:  # W
-                rows = range(1, h - 1)
-                cols = range(1, min(4, w))
-            for ry in rows:
-                for cx in cols:
-                    if self.game_map.can_occupy(cx, ry):
-                        candidates.append((cx, ry))
-
-        if not candidates:
-            return {"error": "No walkable spawn locations found"}
-
+    @staticmethod
+    def _place_entities(gm: GameMap, creatures: list[dict], candidates: list[tuple[int, int]], *, randomize: bool = False) -> list[dict]:
+        """Place a list of creature dicts onto candidate positions. Returns placed entity dicts."""
         import random as _rng
         placed: list[dict] = []
         used: set[tuple[int, int]] = set()
@@ -2014,7 +2004,7 @@ class ToolDispatcher:
             available = [c for c in candidates if c not in used]
             if not available:
                 break
-            pos = _rng.choice(available)
+            pos = _rng.choice(available) if randomize else available[0]
             used.add(pos)
             entity = MapEntity(
                 id=str(creature["id"]),
@@ -2024,14 +2014,63 @@ class ToolDispatcher:
                 entity_type="enemy",
                 blocks_movement=True,
             )
-            self.game_map.place_entity(entity)
+            gm.place_entity(entity)
             placed.append(entity.to_dict())
+        return placed
 
+    def _tool_spawn_reinforcements(self, inp: dict) -> dict:
+        if not self.game_map:
+            return {"error": _ERR_NO_MAP}
+        creatures = inp.get("creatures", [])
+        if not creatures:
+            return {"error": "No creatures specified"}
+        direction = str(inp.get("entry_direction", "N")).upper()
+
+        candidates = []
+        if direction == "NEAREST_DOOR":
+            candidates = self._find_door_spawn_candidates(self.game_map)
+        if not candidates:
+            candidates = self._find_edge_spawn_candidates(self.game_map, direction)
+        if not candidates:
+            return {"error": "No walkable spawn locations found"}
+
+        placed = self._place_entities(self.game_map, creatures, candidates, randomize=True)
         return {"spawned": placed, "count": len(placed), "direction": direction}
 
     # ------------------------------------------------------------------
     # Phase 6: AI-driven tactical entity placement
     # ------------------------------------------------------------------
+
+    @staticmethod
+    def _build_encounter_candidates(gm: GameMap, strategy: str) -> list[tuple[int, int]]:
+        """Build ordered candidate positions for an encounter placement strategy."""
+        import random as _rng
+
+        priority: list[tuple[int, int]] = []
+
+        if strategy == "tactical":
+            for cx, cy, _ in gm._find_cover():
+                for nx, ny in ((cx + 1, cy), (cx - 1, cy), (cx, cy + 1), (cx, cy - 1)):
+                    if gm.can_occupy(nx, ny):
+                        priority.append((nx, ny))
+            priority.extend(c for c in gm._find_chokepoints() if gm.can_occupy(c[0], c[1]))
+        elif strategy == "guarding":
+            for (tx, ty), tile in gm.tiles.items():
+                if tile.tile_type in ("door", "stairs_up", "stairs_down", "chest"):
+                    for nx, ny in ((tx + 1, ty), (tx - 1, ty), (tx, ty + 1), (tx, ty - 1)):
+                        if gm.can_occupy(nx, ny):
+                            priority.append((nx, ny))
+
+        fallback = [(tx, ty) for (tx, ty), tile in gm.tiles.items() if gm.can_occupy(tx, ty)]
+
+        seen_priority = set(priority)
+        priority_deduped = list(dict.fromkeys(priority))
+        fallback = [f for f in fallback if f not in seen_priority]
+
+        if strategy == "scattered":
+            _rng.shuffle(fallback)
+            return fallback
+        return priority_deduped + fallback
 
     def _tool_populate_encounter(self, inp: dict) -> dict:
         if not self.game_map:
@@ -2041,74 +2080,10 @@ class ToolDispatcher:
             return {"error": "No enemies specified"}
         strategy = str(inp.get("placement_strategy", "scattered"))
 
-        gm = self.game_map
-        # Collect candidate positions based on strategy
-        cover_tiles = gm._find_cover()
-        chokepoints = gm._find_chokepoints()
-
-        # Build priority lists based on strategy
-        priority: list[tuple[int, int]] = []
-        fallback: list[tuple[int, int]] = []
-
-        if strategy == "tactical":
-            # Prefer tiles adjacent to cover, then chokepoints
-            for cx, cy, _ in cover_tiles:
-                for nx, ny in ((cx + 1, cy), (cx - 1, cy), (cx, cy + 1), (cx, cy - 1)):
-                    if gm.can_occupy(nx, ny):
-                        priority.append((nx, ny))
-            priority.extend(c for c in chokepoints if gm.can_occupy(c[0], c[1]))
-        elif strategy == "guarding":
-            # Prefer tiles near doors, stairs, chests
-            for (tx, ty), tile in gm.tiles.items():
-                if tile.tile_type in ("door", "stairs_up", "stairs_down", "chest"):
-                    for nx, ny in ((tx + 1, ty), (tx - 1, ty), (tx, ty + 1), (tx, ty - 1)):
-                        if gm.can_occupy(nx, ny):
-                            priority.append((nx, ny))
-        # "scattered" uses only fallback — distributed across walkable tiles
-
-        # Build fallback: all occupiable tiles
-        for (tx, ty), tile in gm.tiles.items():
-            if gm.can_occupy(tx, ty):
-                fallback.append((tx, ty))
-
-        # Deduplicate priority and remove from fallback
-        seen_priority = set(priority)
-        priority_deduped = list(dict.fromkeys(priority))
-        fallback = [f for f in fallback if f not in seen_priority]
-
-        if strategy == "scattered":
-            # Distribute evenly by spatial hashing
-            import random as _rng
-            _rng.shuffle(fallback)
-            combined = fallback
-        else:
-            combined = priority_deduped + fallback
-
-        if not combined:
+        candidates = self._build_encounter_candidates(self.game_map, strategy)
+        if not candidates:
             return {"error": "No valid placement positions found"}
 
-        placed: list[dict] = []
-        used: set[tuple[int, int]] = set()
-        for enemy in enemies:
-            available = [c for c in combined if c not in used]
-            if not available:
-                break
-            pos = available[0]
-            used.add(pos)
-            entity = MapEntity(
-                id=str(enemy["id"]),
-                name=str(enemy["name"]),
-                x=pos[0],
-                y=pos[1],
-                entity_type="enemy",
-                blocks_movement=True,
-            )
-            gm.place_entity(entity)
-            placed.append(entity.to_dict())
-
-        return {
-            "placed": placed,
-            "count": len(placed),
-            "strategy": strategy,
-        }
+        placed = self._place_entities(self.game_map, enemies, candidates)
+        return {"placed": placed, "count": len(placed), "strategy": strategy}
 

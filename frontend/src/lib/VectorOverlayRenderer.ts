@@ -470,6 +470,25 @@ export function pointInPolygon(point: Point, polygon: Point[]): boolean {
 }
 
 /**
+ * Helper: check if a point is within `threshold` pixels of any segment in a polyline
+ */
+function pointNearPolyline(point: Point, polyline: Point[], threshold: number): boolean {
+  for (let i = 0; i < polyline.length - 1; i++) {
+    const a = polyline[i],
+      b = polyline[i + 1]
+    const dx = b.x - a.x,
+      dy = b.y - a.y
+    const lenSq = dx * dx + dy * dy
+    const t = lenSq === 0 ? 0 : Math.max(0, Math.min(1, ((point.x - a.x) * dx + (point.y - a.y) * dy) / lenSq))
+    const px = a.x + t * dx,
+      py = a.y + t * dy
+    const distSq = (point.x - px) ** 2 + (point.y - py) ** 2
+    if (distSq <= threshold * threshold) return true
+  }
+  return false
+}
+
+/**
  * Helper: get all tags at a position in the overlay
  * Used for gameplay queries (mud, ice, cursed, etc.)
  */
@@ -487,8 +506,28 @@ export function getTagsAtPoint(overlay: Overlay, point: Point): Set<string> {
             element.tags.forEach((tag) => tags.add(tag))
           }
         }
+      } else if (element.type === 'decal') {
+        const decal = element as Decal
+        const halfSize = ((decal.scale ?? 1) * 32) / 2
+        if (
+          point.x >= decal.position.x - halfSize &&
+          point.x <= decal.position.x + halfSize &&
+          point.y >= decal.position.y - halfSize &&
+          point.y <= decal.position.y + halfSize
+        ) {
+          if (decal.tags) {
+            decal.tags.forEach((tag) => tags.add(tag))
+          }
+        }
+      } else if (element.type === 'polyline') {
+        const path = element as Path
+        const hitWidth = (path.stroke?.width ?? 1) / 2 + 4
+        if (pointNearPolyline(point, path.points, hitWidth)) {
+          if (path.tags) {
+            path.tags.forEach((tag) => tags.add(tag))
+          }
+        }
       }
-      // TODO: decal bounding box hittest, path width hittest
     }
   }
 

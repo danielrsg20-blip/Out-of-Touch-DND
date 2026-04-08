@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import { motion, AnimatePresence } from "motion/react";
+import { motion } from "motion/react";
 import { useGameStore } from "../../stores/gameStore";
 import { useSessionStore } from "../../stores/sessionStore";
 import { invokeEdgeFunction } from "../../lib/supabaseClient";

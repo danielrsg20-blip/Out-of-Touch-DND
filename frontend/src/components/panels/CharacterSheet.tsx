@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { useGameStore } from "../../stores/gameStore";
 import { useSessionStore } from "../../stores/sessionStore";
@@ -11,9 +11,11 @@ import {
   getCharacterSpritesheetUrl,
 } from "../../config/characterSprites";
 import { ItemCard } from "./ItemCard";
+import { LevelUpBanner } from "./LevelUpBanner";
+import { SpellManager } from "./SpellManager";
 import { StatCard } from "../ui/StatCard";
-import { getRarityConfig, type RarityTier } from "../ui/RarityBorder";
-import type { ItemData, SpellOption } from "../../types";
+import { type RarityTier } from "../ui/RarityBorder";
+import type { ItemData } from "../../types";
 import "./panels.css";
 
 // ── 5e class → hit die size ───────────────────────────────────────────────────
@@ -94,52 +96,6 @@ function conditionColorClass(condition: string): string {
   if (c === "incapacitated" || c === "unconscious") return "condition-darkred";
   return "";
 }
-
-// ── 5e cantrip names (for known-spell splitting) ───────────────────────────
-const CANTRIP_NAMES = new Set([
-  "acid splash",
-  "blade ward",
-  "booming blade",
-  "chill touch",
-  "create bonfire",
-  "dancing lights",
-  "encode thoughts",
-  "friends",
-  "frostbite",
-  "green-flame blade",
-  "guidance",
-  "gust",
-  "infestation",
-  "light",
-  "lightning lure",
-  "mage hand",
-  "magic stone",
-  "mending",
-  "message",
-  "mind sliver",
-  "minor illusion",
-  "mold earth",
-  "poison spray",
-  "prestidigitation",
-  "primal savagery",
-  "produce flame",
-  "ray of frost",
-  "resistance",
-  "sacred flame",
-  "shapewater",
-  "shillelagh",
-  "shocking grasp",
-  "spare the dying",
-  "sword burst",
-  "thaumaturgy",
-  "thorn whip",
-  "thunderclap",
-  "toll the dead",
-  "true strike",
-  "vicious mockery",
-  "virtue",
-  "word of radiance",
-]);
 
 function DeathSaves({
   saves,
@@ -289,6 +245,10 @@ function ItemRow({
       <div
         className="inv-item-row-main"
         onClick={() => hasDetail && setExpanded((e) => !e)}
+        role={hasDetail ? "button" : undefined}
+        tabIndex={hasDetail ? 0 : undefined}
+        aria-expanded={hasDetail ? expanded : undefined}
+        onKeyDown={hasDetail ? (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setExpanded((prev) => !prev); } } : undefined}
       >
         <ItemIcon item={item} />
         <span className="inv-item-name">
@@ -754,18 +714,6 @@ export default function CharacterSheet() {
   const roomCode = useSessionStore((s) => s.roomCode);
   const mockMode = useSessionStore((s) => s.mockMode);
 
-  const [isManagingPrepared, setIsManagingPrepared] = useState(false);
-  const [loadingPreparedOptions, setLoadingPreparedOptions] = useState(false);
-  const [savingPreparedOptions, setSavingPreparedOptions] = useState(false);
-  const [preparedError, setPreparedError] = useState<string | null>(null);
-  const [preparedLimit, setPreparedLimit] = useState(0);
-  const [availablePreparedSpells, setAvailablePreparedSpells] = useState<
-    SpellOption[]
-  >([]);
-  const [selectedPreparedSpells, setSelectedPreparedSpells] = useState<
-    string[]
-  >([]);
-
   // Feature #8: player equip state
   const [equipError, setEquipError] = useState<string | null>(null);
   const [equipPending, setEquipPending] = useState(false);
@@ -785,116 +733,6 @@ export default function CharacterSheet() {
     !!char && char.spellcasting_mode === "prepared" && !!roomCode && !!playerId;
   // Player can self-equip when they have a character and a live room
   const canSelfEquip = !!char && !!roomCode && !!playerId;
-
-  useEffect(() => {
-    if (isInCombat && isManagingPrepared) {
-      setPreparedError("You cannot change prepared spells during combat.");
-      setIsManagingPrepared(false);
-    }
-  }, [isInCombat, isManagingPrepared]);
-
-  useEffect(() => {
-    if (!char || !isManagingPrepared) return;
-    setPreparedError(null);
-    setLoadingPreparedOptions(true);
-
-    const run = async () => {
-      try {
-        const payload = await invokeEdgeFunction<Record<string, unknown>>(
-          "dm-action",
-          {
-            action: "get_spell_options",
-            char_class: char.class,
-            level: char.level,
-            mock_mode: mockMode,
-          },
-        );
-        if (typeof payload.error === "string") {
-          setPreparedError(String(payload.error));
-          return;
-        }
-
-        const spells = ((payload.spells || []) as SpellOption[]).filter(
-          (s) => Number(s.level) > 0,
-        );
-        setAvailablePreparedSpells(spells);
-        setPreparedLimit(Number(payload.prepared_limit || 0));
-        setSelectedPreparedSpells(
-          Array.isArray(char.prepared_spells) ? [...char.prepared_spells] : [],
-        );
-      } catch (err: unknown) {
-        setPreparedError(
-          err instanceof Error
-            ? err.message
-            : "Unable to load spell options right now.",
-        );
-      } finally {
-        setLoadingPreparedOptions(false);
-      }
-    };
-
-    run();
-  }, [
-    isManagingPrepared,
-    char?.class,
-    char?.level,
-    char?.prepared_spells,
-    mockMode,
-  ]);
-
-  const togglePreparedSpell = (spellName: string) => {
-    setSelectedPreparedSpells((prev) => {
-      if (prev.includes(spellName)) return prev.filter((s) => s !== spellName);
-      if (prev.length >= preparedLimit) return prev;
-      return [...prev, spellName];
-    });
-  };
-
-  const savePreparedSpells = async () => {
-    if (!char || !roomCode || !playerId) return;
-    if (isInCombat) {
-      setPreparedError("You cannot change prepared spells during combat.");
-      return;
-    }
-    setPreparedError(null);
-    setSavingPreparedOptions(true);
-    try {
-      const payload = await invokeEdgeFunction<Record<string, unknown>>(
-        "dm-action",
-        {
-          action: "level_up_prepared_spells",
-          room_code: roomCode,
-          player_id: playerId,
-          new_level: char.level,
-          prepared_spells: selectedPreparedSpells,
-          mock_mode: mockMode,
-        },
-      );
-      if (typeof payload.error === "string") {
-        setPreparedError(String(payload.error));
-        return;
-      }
-
-      const state = useGameStore.getState();
-      const updated = {
-        ...state.characters,
-        [char.id]: {
-          ...state.characters[char.id],
-          prepared_spells: selectedPreparedSpells,
-        },
-      };
-      state.setCharacters(updated);
-      setIsManagingPrepared(false);
-    } catch (err: unknown) {
-      setPreparedError(
-        err instanceof Error
-          ? err.message
-          : "Unable to save prepared spells right now.",
-      );
-    } finally {
-      setSavingPreparedOptions(false);
-    }
-  };
 
   // Feature #8: equip/unequip handler
   const handleEquip = async (itemId: string, equip: boolean) => {
@@ -1070,38 +908,13 @@ export default function CharacterSheet() {
           <XPBar xp={char.xp} level={char.level} />
 
           {/* Level-up banner */}
-          {(() => {
-            const nextThreshold = XP_THRESHOLDS[char.level] ?? Infinity;
-            const canLevelUp = char.level < 20 && char.xp >= nextThreshold;
-            if (!canLevelUp) return null;
-            const handleLevelUp = async () => {
-              if (!roomCode || !playerId) return;
-              try {
-                await invokeEdgeFunction<Record<string, unknown>>(
-                  "dm-action",
-                  {
-                    action: "player_action",
-                    room_code: roomCode,
-                    player_id: playerId,
-                    content: `I have enough XP to reach level ${char.level + 1}. Please level me up.`,
-                    mock_mode: mockMode,
-                  },
-                  { authMode: "anon" },
-                );
-              } catch {
-                /* non-critical */
-              }
-            };
-            return (
-              <button
-                className="levelup-banner"
-                onClick={handleLevelUp}
-                title="Notify DM to level up"
-              >
-                ⚡ Level Up Available! → Level {char.level + 1}
-              </button>
-            );
-          })()}
+          <LevelUpBanner
+            charLevel={char.level}
+            charXp={char.xp}
+            roomCode={roomCode}
+            playerId={playerId}
+            mockMode={mockMode}
+          />
 
           {/* Ability scores */}
           <div className="char-abilities">
@@ -1157,164 +970,21 @@ export default function CharacterSheet() {
             </div>
           )}
 
-          {/* Spell slots */}
-          {slotRows.length > 0 && (
-            <div className="char-spell-slots">
-              <h4>Spell Slots</h4>
-              {slotRows.map((s) => (
-                <div key={s.level} className={`slot-row slot-row-${s.state}`}>
-                  <span className="slot-row-level">Lvl {s.level}</span>
-                  <span className="slot-row-pips">
-                    {Array.from({ length: Number(s.total) }).map((_, i) => (
-                      <span
-                        key={i}
-                        className={`spell-pip${i < s.remaining ? " filled" : " used"}`}
-                      >
-                        {i < s.remaining ? "◆" : "◇"}
-                      </span>
-                    ))}
-                  </span>
-                </div>
-              ))}
-            </div>
-          )}
-
-          {/* Prepared spells */}
-          {char.prepared_spells?.length > 0 && (
-            <div className="char-spells">
-              <h4>Prepared Spells</h4>
-              {char.prepared_spells.map((spell) => (
-                <span key={spell} className="spell-tag">
-                  {spell}
-                </span>
-              ))}
-            </div>
-          )}
-
-          {/* Manage prepared spells */}
-          {canManagePreparedSpells && (
-            <div className="prepared-manager">
-              {!isManagingPrepared ? (
-                <>
-                  <button
-                    className="prepared-manager-btn"
-                    onClick={() => setIsManagingPrepared(true)}
-                    disabled={isInCombat}
-                  >
-                    Manage Prepared Spells
-                  </button>
-                  {isInCombat && (
-                    <div className="prepared-manager-note">
-                      Prepared spells cannot be changed during combat.
-                    </div>
-                  )}
-                </>
-              ) : (
-                <div className="prepared-manager-editor">
-                  <div className="prepared-manager-header">
-                    <h4>Manage Prepared Spells</h4>
-                    <span>
-                      {selectedPreparedSpells.length}/{preparedLimit}
-                    </span>
-                  </div>
-                  {loadingPreparedOptions ? (
-                    <p className="panel-empty">Loading spell options...</p>
-                  ) : (
-                    <div className="prepared-manager-list">
-                      {availablePreparedSpells.map((spell) => {
-                        const selected = selectedPreparedSpells.includes(
-                          spell.name,
-                        );
-                        const disabled =
-                          !selected &&
-                          selectedPreparedSpells.length >= preparedLimit;
-                        return (
-                          <label
-                            key={spell.name}
-                            className={`prepared-manager-item ${disabled ? "disabled" : ""}`}
-                          >
-                            <input
-                              type="checkbox"
-                              checked={selected}
-                              disabled={disabled}
-                              onChange={() => togglePreparedSpell(spell.name)}
-                            />
-                            <span>{spell.name}</span>
-                            <span className="prepared-manager-level">
-                              L{spell.level}
-                            </span>
-                          </label>
-                        );
-                      })}
-                    </div>
-                  )}
-                  {preparedError && (
-                    <div className="prepared-manager-error">
-                      {preparedError}
-                    </div>
-                  )}
-                  <div className="prepared-manager-actions">
-                    <button
-                      className="prepared-manager-btn"
-                      onClick={savePreparedSpells}
-                      disabled={
-                        savingPreparedOptions ||
-                        loadingPreparedOptions ||
-                        isInCombat
-                      }
-                    >
-                      {savingPreparedOptions ? "Saving..." : "Save"}
-                    </button>
-                    <button
-                      className="prepared-manager-btn secondary"
-                      onClick={() => {
-                        setPreparedError(null);
-                        setIsManagingPrepared(false);
-                      }}
-                      disabled={savingPreparedOptions}
-                    >
-                      Cancel
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Known spells */}
-          {char.known_spells?.length > 0 &&
-            (() => {
-              const cantrips = char.known_spells.filter((s) =>
-                CANTRIP_NAMES.has(s.toLowerCase()),
-              );
-              const leveled = char.known_spells.filter(
-                (s) => !CANTRIP_NAMES.has(s.toLowerCase()),
-              );
-              return (
-                <div className="char-spells">
-                  {cantrips.length > 0 && (
-                    <>
-                      <h4>Cantrips</h4>
-                      {cantrips.map((spell) => (
-                        <span key={spell} className="spell-tag cantrip">
-                          {spell}
-                        </span>
-                      ))}
-                    </>
-                  )}
-                  {leveled.length > 0 && (
-                    <>
-                      <h4>Known Spells</h4>
-                      {leveled.map((spell) => (
-                        <span key={spell} className="spell-tag">
-                          {spell}
-                        </span>
-                      ))}
-                    </>
-                  )}
-                </div>
-              );
-            })()}
+          {/* Spell slots, prepared spells, spell manager, known spells */}
+          <SpellManager
+            charId={char.id}
+            charClass={char.class}
+            charLevel={char.level}
+            spellcastingMode={char.spellcasting_mode ?? null}
+            preparedSpells={char.prepared_spells ?? []}
+            knownSpells={char.known_spells ?? []}
+            slotRows={slotRows}
+            isInCombat={isInCombat}
+            canManage={canManagePreparedSpells}
+            roomCode={roomCode}
+            playerId={playerId}
+            mockMode={mockMode}
+          />
 
           {/* Class features */}
           {char.class_features?.length > 0 && (

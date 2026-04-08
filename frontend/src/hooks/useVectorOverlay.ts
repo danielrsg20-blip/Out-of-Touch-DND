@@ -205,6 +205,18 @@ export function useVectorOverlay(options: UseVectorOverlayOptions = {}) {
     (elementId: string) => {
       if (!overlay) return
 
+      // Capture element + layer index before deletion for undo
+      let removedElement: OverlayElement | null = null
+      let removedLayerIdx = -1
+      for (let i = 0; i < overlay.layers.length; i++) {
+        const el = overlay.layers[i].elements.find((e) => e.id === elementId)
+        if (el) {
+          removedElement = JSON.parse(JSON.stringify(el))
+          removedLayerIdx = i
+          break
+        }
+      }
+
       const command: OverlayCommand = {
         type: 'deleteElement',
         execute: () => {
@@ -223,7 +235,15 @@ export function useVectorOverlay(options: UseVectorOverlayOptions = {}) {
           setSelectedElementId(null)
         },
         undo: () => {
-          // TODO: store removed element for undo
+          if (!removedElement || removedLayerIdx < 0) return
+          setOverlay((prev) => {
+            if (!prev) return prev
+            const updated = JSON.parse(JSON.stringify(prev))
+            if (updated.layers[removedLayerIdx]) {
+              updated.layers[removedLayerIdx].elements.push(removedElement)
+            }
+            return updated
+          })
         },
       }
 
@@ -238,6 +258,16 @@ export function useVectorOverlay(options: UseVectorOverlayOptions = {}) {
   const updateElement = useCallback(
     (elementId: string, updates: Partial<OverlayElement>) => {
       if (!overlay) return
+
+      // Capture previous state before mutation for undo
+      let previousState: OverlayElement | null = null
+      for (const layer of overlay.layers) {
+        const el = layer.elements.find((e) => e.id === elementId)
+        if (el) {
+          previousState = JSON.parse(JSON.stringify(el))
+          break
+        }
+      }
 
       const command: OverlayCommand = {
         type: 'updateElement',
@@ -256,7 +286,19 @@ export function useVectorOverlay(options: UseVectorOverlayOptions = {}) {
           })
         },
         undo: () => {
-          // TODO: store previous state for undo
+          if (!previousState) return
+          setOverlay((prev) => {
+            if (!prev) return prev
+            const updated = JSON.parse(JSON.stringify(prev))
+            for (const layer of updated.layers) {
+              const idx = layer.elements.findIndex((e: OverlayElement) => e.id === elementId)
+              if (idx >= 0) {
+                layer.elements[idx] = JSON.parse(JSON.stringify(previousState))
+                break
+              }
+            }
+            return updated
+          })
         },
       }
 
