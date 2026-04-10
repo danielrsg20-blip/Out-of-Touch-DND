@@ -1,71 +1,70 @@
 [
   {
-    "id": "CASTLE-46",
-    "name": "The Hired Blade",
-    "updated_at": "2026-04-08T20:18:46.267Z",
+    "id": "PALADIN-84",
+    "name": "The Cursed Caravan",
+    "updated_at": "2026-04-10T03:32:59.394Z",
     "session_count": 1,
     "owner_id": "3d35e46e-84b3-4c4d-8ef1-7d51cebb0550",
     "player_characters": {
       "3d35e46e-84b3-4c4d-8ef1-7d51cebb0550": {
-        "name": "Renter",
-        "class": "Ranger",
+        "name": "Ret",
+        "class": "Sorcerer",
         "level": 1,
-        "char_id": "pc_6cc5a45a"
+        "char_id": "pc_37d31c06"
       }
     },
     "characters": {
-      "pc_6cc5a45a": {
-        "id": "pc_6cc5a45a",
-        "sprite_id": "pc_gnome_ranger",
-        "name": "Renter",
-        "race": "Gnome",
-        "class": "Ranger",
+      "pc_37d31c06": {
+        "id": "pc_37d31c06",
+        "sprite_id": "pc_elf_sorcerer",
+        "name": "Ret",
+        "race": "Elf",
+        "class": "Sorcerer",
         "level": 1,
         "abilities": {
           "STR": 15,
-          "DEX": 14,
+          "DEX": 16,
           "CON": 13,
-          "INT": 14,
+          "INT": 12,
           "WIS": 10,
           "CHA": 8
         },
         "modifiers": {
           "STR": 2,
-          "DEX": 2,
+          "DEX": 3,
           "CON": 1,
-          "INT": 2,
+          "INT": 1,
           "WIS": 0,
           "CHA": -1
         },
-        "hp": 11,
-        "max_hp": 11,
+        "hp": 7,
+        "max_hp": 7,
         "temp_hp": 0,
-        "ac": 12,
-        "speed": 25,
+        "ac": 13,
+        "speed": 30,
         "proficiency_bonus": 2,
         "skill_proficiencies": [
-          "Athletics",
-          "Intimidation",
-          "Athletics",
-          "Survival",
-          "Perception"
+          "Arcana",
+          "History",
+          "Arcana",
+          "Insight"
         ],
         "conditions": [],
         "inventory": [
           {
-            "id": "pc_6cc5a45a_weapon_main",
-            "name": "Longbow",
+            "id": "pc_37d31c06_weapon_main",
+            "name": "Light Crossbow",
             "category": "weapon",
-            "subcategory": "martial_ranged",
-            "cost_gp": 50,
-            "weight_lb": 2,
+            "subcategory": "simple_ranged",
+            "cost_gp": 25,
+            "weight_lb": 5,
             "description": "",
             "damage": "1d8",
             "damage_type": "piercing",
             "properties": [
               "ammunition",
-              "heavy",
-              "range(150/600)",
+              "loading",
+              "range(80/320)",
               "two-handed"
             ],
             "ac_base": null,
@@ -82,12 +81,12 @@
             "attuned": false
           },
           {
-            "id": "pc_6cc5a45a_ammo_arrows",
-            "name": "Arrows",
+            "id": "pc_37d31c06_ammo_bolts",
+            "name": "Bolts",
             "category": "ammunition",
-            "subcategory": "arrows",
+            "subcategory": "bolts",
             "cost_gp": 1,
-            "weight_lb": 1,
+            "weight_lb": 1.5,
             "description": "",
             "damage": null,
             "damage_type": null,
@@ -106,18 +105,19 @@
             "attuned": false
           },
           {
-            "id": "pc_6cc5a45a_weapon_backup",
-            "name": "Shortsword",
+            "id": "pc_37d31c06_weapon_backup",
+            "name": "Dagger",
             "category": "weapon",
-            "subcategory": "martial_melee",
-            "cost_gp": 10,
-            "weight_lb": 2,
+            "subcategory": "simple_melee",
+            "cost_gp": 2,
+            "weight_lb": 1,
             "description": "",
-            "damage": "1d6",
+            "damage": "1d4",
             "damage_type": "piercing",
             "properties": [
               "finesse",
-              "light"
+              "light",
+              "thrown(20/60)"
             ],
             "ac_base": null,
             "dex_mod": false,
@@ -133,22 +133,22 @@
             "attuned": false
           },
           {
-            "id": "pc_6cc5a45a_armor_main",
-            "name": "Leather Armor",
-            "category": "armor",
-            "subcategory": "light",
+            "id": "pc_37d31c06_focus_arcane",
+            "name": "Arcane Focus",
+            "category": "tool",
+            "subcategory": "focus",
             "cost_gp": 10,
-            "weight_lb": 10,
+            "weight_lb": 1,
             "description": "",
             "damage": null,
             "damage_type": null,
             "properties": [],
-            "ac_base": 11,
-            "dex_mod": true,
+            "ac_base": null,
+            "dex_mod": false,
             "max_dex": null,
             "str_req": null,
             "stealth_disadvantage": false,
-            "equipped": true,
+            "equipped": false,
             "quantity": 1,
             "notes": "",
             "magical": false,
@@ -157,11 +157,17 @@
             "attuned": false
           }
         ],
-        "spell_slots": {},
+        "spell_slots": {
+          "1": 2
+        },
         "spell_slots_used": {},
         "known_spells": [
-          "Ensnaring Strike",
-          "Hail of Thorns"
+          "Fire Bolt",
+          "Mage Hand",
+          "Minor Illusion",
+          "Prestidigitation",
+          "Magic Missile",
+          "Shield"
         ],
         "prepared_spells": [],
         "class_features": [],
@@ -170,9 +176,11 @@
         "is_alive": true,
         "rules_version": "2024",
         "spellcasting_mode": "known",
-        "player_id": "6cc5a45a",
-        "background": "Soldier",
+        "player_id": "37d31c06",
+        "background": "Sage",
         "alignment": "Lawful Good",
+        "subclass": "Wild Magic",
+        "class_resources": {},
         "inspiration": false,
         "death_saves": {
           "successes": 0,
@@ -190,23 +198,23 @@
       "visible": [],
       "entities": [
         {
-          "id": "pc_6cc5a45a",
-          "name": "Renter",
+          "id": "pc_37d31c06",
+          "name": "Ret",
           "x": 10,
           "y": 7,
           "type": "pc",
-          "sprite": "pc_gnome_ranger"
+          "sprite": "pc_elf_sorcerer"
         }
       ],
       "metadata": {
         "map_source": "generated",
         "cache_hit": false,
-        "map_id": "CASTLE-46",
+        "map_id": "PALADIN-84",
         "grid_size": 5,
-        "image_url": "https://dehcynjpsynvrajjyyrf.supabase.co/storage/v1/object/public/battlemap-images/CASTLE-46/b139dbf9-e13a-46a3-89e3-25f5fe8c8ff1.png",
+        "image_url": "https://dehcynjpsynvrajjyyrf.supabase.co/storage/v1/object/public/battlemap-images/PALADIN-84/a5b37fd2-ef29-4e17-839e-4a02a6a59dfc.png",
         "grid_units": "ft",
         "environment": "dungeon",
-        "battlemap_id": "b139dbf9-e13a-46a3-89e3-25f5fe8c8ff1",
+        "battlemap_id": "a5b37fd2-ef29-4e17-839e-4a02a6a59dfc",
         "image_opacity": 1,
         "generation_status": "ready"
       },
@@ -220,7 +228,7 @@
               "blocked",
               "wall"
             ],
-            "confidence": 0.99,
+            "confidence": 0.977,
             "traversable": false,
             "movement_cost": 9999,
             "movement_blocking_tags": [
@@ -235,7 +243,7 @@
               "blocked",
               "wall"
             ],
-            "confidence": 0.882,
+            "confidence": 0.99,
             "traversable": false,
             "movement_cost": 9999,
             "movement_blocking_tags": [
@@ -250,7 +258,7 @@
               "blocked",
               "wall"
             ],
-            "confidence": 0.83,
+            "confidence": 0.99,
             "traversable": false,
             "movement_cost": 9999,
             "movement_blocking_tags": [
@@ -265,7 +273,7 @@
               "blocked",
               "wall"
             ],
-            "confidence": 0.534,
+            "confidence": 0.99,
             "traversable": false,
             "movement_cost": 9999,
             "movement_blocking_tags": [
@@ -280,7 +288,7 @@
               "blocked",
               "wall"
             ],
-            "confidence": 0.909,
+            "confidence": 0.803,
             "traversable": false,
             "movement_cost": 9999,
             "movement_blocking_tags": [
@@ -295,7 +303,7 @@
               "blocked",
               "wall"
             ],
-            "confidence": 0.881,
+            "confidence": 0.67,
             "traversable": false,
             "movement_cost": 9999,
             "movement_blocking_tags": [
@@ -310,7 +318,7 @@
               "blocked",
               "wall"
             ],
-            "confidence": 0.862,
+            "confidence": 0.873,
             "traversable": false,
             "movement_cost": 9999,
             "movement_blocking_tags": [
@@ -325,7 +333,7 @@
               "blocked",
               "wall"
             ],
-            "confidence": 0.764,
+            "confidence": 0.99,
             "traversable": false,
             "movement_cost": 9999,
             "movement_blocking_tags": [
@@ -340,7 +348,7 @@
               "blocked",
               "wall"
             ],
-            "confidence": 0.95,
+            "confidence": 0.99,
             "traversable": false,
             "movement_cost": 9999,
             "movement_blocking_tags": [
@@ -355,7 +363,7 @@
               "blocked",
               "wall"
             ],
-            "confidence": 0.986,
+            "confidence": 0.99,
             "traversable": false,
             "movement_cost": 9999,
             "movement_blocking_tags": [
@@ -385,7 +393,7 @@
               "blocked",
               "wall"
             ],
-            "confidence": 0.901,
+            "confidence": 0.859,
             "traversable": false,
             "movement_cost": 9999,
             "movement_blocking_tags": [
@@ -397,29 +405,497 @@
             "x": 2,
             "y": 1,
             "tags": [
-              "open_ground",
-              "floor"
+              "blocked",
+              "wall"
             ],
-            "confidence": 0.104,
-            "traversable": true,
-            "movement_cost": 1.13,
-            "movement_blocking_tags": []
+            "confidence": 0.8,
+            "traversable": false,
+            "movement_cost": 9999,
+            "movement_blocking_tags": [
+              "blocked",
+              "wall"
+            ]
           },
           {
             "x": 3,
             "y": 1,
             "tags": [
-              "open_ground",
-              "floor"
+              "blocked",
+              "wall"
             ],
-            "confidence": 0.527,
-            "traversable": true,
-            "movement_cost": 1.13,
-            "movement_blocking_tags": []
+            "confidence": 0.585,
+            "traversable": false,
+            "movement_cost": 9999,
+            "movement_blocking_tags": [
+              "blocked",
+              "wall"
+            ]
           },
           {
             "x": 4,
             "y": 1,
+            "tags": [
+              "blocked",
+              "wall"
+            ],
+            "confidence": 0.664,
+            "traversable": false,
+            "movement_cost": 9999,
+            "movement_blocking_tags": [
+              "blocked",
+              "wall"
+            ]
+          },
+          {
+            "x": 5,
+            "y": 1,
+            "tags": [
+              "blocked",
+              "wall"
+            ],
+            "confidence": 0.664,
+            "traversable": false,
+            "movement_cost": 9999,
+            "movement_blocking_tags": [
+              "blocked",
+              "wall"
+            ]
+          },
+          {
+            "x": 6,
+            "y": 1,
+            "tags": [
+              "blocked",
+              "wall"
+            ],
+            "confidence": 0.745,
+            "traversable": false,
+            "movement_cost": 9999,
+            "movement_blocking_tags": [
+              "blocked",
+              "wall"
+            ]
+          },
+          {
+            "x": 7,
+            "y": 1,
+            "tags": [
+              "blocked",
+              "wall"
+            ],
+            "confidence": 0.641,
+            "traversable": false,
+            "movement_cost": 9999,
+            "movement_blocking_tags": [
+              "blocked",
+              "wall"
+            ]
+          },
+          {
+            "x": 8,
+            "y": 1,
+            "tags": [
+              "blocked",
+              "wall"
+            ],
+            "confidence": 0.883,
+            "traversable": false,
+            "movement_cost": 9999,
+            "movement_blocking_tags": [
+              "blocked",
+              "wall"
+            ]
+          },
+          {
+            "x": 9,
+            "y": 1,
+            "tags": [
+              "blocked",
+              "wall"
+            ],
+            "confidence": 0.99,
+            "traversable": false,
+            "movement_cost": 9999,
+            "movement_blocking_tags": [
+              "blocked",
+              "wall"
+            ]
+          },
+          {
+            "x": 0,
+            "y": 2,
+            "tags": [
+              "blocked",
+              "wall"
+            ],
+            "confidence": 0.99,
+            "traversable": false,
+            "movement_cost": 9999,
+            "movement_blocking_tags": [
+              "blocked",
+              "wall"
+            ]
+          },
+          {
+            "x": 1,
+            "y": 2,
+            "tags": [
+              "blocked",
+              "wall"
+            ],
+            "confidence": 0.857,
+            "traversable": false,
+            "movement_cost": 9999,
+            "movement_blocking_tags": [
+              "blocked",
+              "wall"
+            ]
+          },
+          {
+            "x": 2,
+            "y": 2,
+            "tags": [
+              "blocked",
+              "wall"
+            ],
+            "confidence": 0.786,
+            "traversable": false,
+            "movement_cost": 9999,
+            "movement_blocking_tags": [
+              "blocked",
+              "wall"
+            ]
+          },
+          {
+            "x": 3,
+            "y": 2,
+            "tags": [
+              "blocked",
+              "wall"
+            ],
+            "confidence": 0.115,
+            "traversable": false,
+            "movement_cost": 9999,
+            "movement_blocking_tags": [
+              "blocked",
+              "wall"
+            ]
+          },
+          {
+            "x": 4,
+            "y": 2,
+            "tags": [
+              "blocked",
+              "wall"
+            ],
+            "confidence": 0.606,
+            "traversable": false,
+            "movement_cost": 9999,
+            "movement_blocking_tags": [
+              "blocked",
+              "wall"
+            ]
+          },
+          {
+            "x": 5,
+            "y": 2,
+            "tags": [
+              "blocked",
+              "wall"
+            ],
+            "confidence": 0.436,
+            "traversable": false,
+            "movement_cost": 9999,
+            "movement_blocking_tags": [
+              "blocked",
+              "wall"
+            ]
+          },
+          {
+            "x": 6,
+            "y": 2,
+            "tags": [
+              "open_ground",
+              "floor"
+            ],
+            "confidence": 0.072,
+            "traversable": true,
+            "movement_cost": 1.11,
+            "movement_blocking_tags": []
+          },
+          {
+            "x": 7,
+            "y": 2,
+            "tags": [
+              "blocked",
+              "wall"
+            ],
+            "confidence": 0.635,
+            "traversable": false,
+            "movement_cost": 9999,
+            "movement_blocking_tags": [
+              "blocked",
+              "wall"
+            ]
+          },
+          {
+            "x": 8,
+            "y": 2,
+            "tags": [
+              "blocked",
+              "wall"
+            ],
+            "confidence": 0.85,
+            "traversable": false,
+            "movement_cost": 9999,
+            "movement_blocking_tags": [
+              "blocked",
+              "wall"
+            ]
+          },
+          {
+            "x": 9,
+            "y": 2,
+            "tags": [
+              "blocked",
+              "wall"
+            ],
+            "confidence": 0.99,
+            "traversable": false,
+            "movement_cost": 9999,
+            "movement_blocking_tags": [
+              "blocked",
+              "wall"
+            ]
+          },
+          {
+            "x": 0,
+            "y": 3,
+            "tags": [
+              "blocked",
+              "wall"
+            ],
+            "confidence": 0.914,
+            "traversable": false,
+            "movement_cost": 9999,
+            "movement_blocking_tags": [
+              "blocked",
+              "wall"
+            ]
+          },
+          {
+            "x": 1,
+            "y": 3,
+            "tags": [
+              "blocked",
+              "wall"
+            ],
+            "confidence": 0.389,
+            "traversable": false,
+            "movement_cost": 9999,
+            "movement_blocking_tags": [
+              "blocked",
+              "wall"
+            ]
+          },
+          {
+            "x": 2,
+            "y": 3,
+            "tags": [
+              "blocked",
+              "wall"
+            ],
+            "confidence": 0.41,
+            "traversable": false,
+            "movement_cost": 9999,
+            "movement_blocking_tags": [
+              "blocked",
+              "wall"
+            ]
+          },
+          {
+            "x": 3,
+            "y": 3,
+            "tags": [
+              "blocked",
+              "wall"
+            ],
+            "confidence": 0.861,
+            "traversable": false,
+            "movement_cost": 9999,
+            "movement_blocking_tags": [
+              "blocked",
+              "wall"
+            ]
+          },
+          {
+            "x": 4,
+            "y": 3,
+            "tags": [
+              "blocked",
+              "wall"
+            ],
+            "confidence": 0.05,
+            "traversable": false,
+            "movement_cost": 9999,
+            "movement_blocking_tags": [
+              "blocked",
+              "wall"
+            ]
+          },
+          {
+            "x": 5,
+            "y": 3,
+            "tags": [
+              "blocked",
+              "wall"
+            ],
+            "confidence": 0.221,
+            "traversable": false,
+            "movement_cost": 9999,
+            "movement_blocking_tags": [
+              "blocked",
+              "wall"
+            ]
+          },
+          {
+            "x": 6,
+            "y": 3,
+            "tags": [
+              "blocked",
+              "wall"
+            ],
+            "confidence": 0.848,
+            "traversable": false,
+            "movement_cost": 9999,
+            "movement_blocking_tags": [
+              "blocked",
+              "wall"
+            ]
+          },
+          {
+            "x": 7,
+            "y": 3,
+            "tags": [
+              "blocked",
+              "wall"
+            ],
+            "confidence": 0.394,
+            "traversable": false,
+            "movement_cost": 9999,
+            "movement_blocking_tags": [
+              "blocked",
+              "wall"
+            ]
+          },
+          {
+            "x": 8,
+            "y": 3,
+            "tags": [
+              "blocked",
+              "wall"
+            ],
+            "confidence": 0.459,
+            "traversable": false,
+            "movement_cost": 9999,
+            "movement_blocking_tags": [
+              "blocked",
+              "wall"
+            ]
+          },
+          {
+            "x": 9,
+            "y": 3,
+            "tags": [
+              "blocked",
+              "wall"
+            ],
+            "confidence": 0.99,
+            "traversable": false,
+            "movement_cost": 9999,
+            "movement_blocking_tags": [
+              "blocked",
+              "wall"
+            ]
+          },
+          {
+            "x": 0,
+            "y": 4,
+            "tags": [
+              "blocked",
+              "wall"
+            ],
+            "confidence": 0.989,
+            "traversable": false,
+            "movement_cost": 9999,
+            "movement_blocking_tags": [
+              "blocked",
+              "wall"
+            ]
+          },
+          {
+            "x": 1,
+            "y": 4,
+            "tags": [
+              "blocked",
+              "wall"
+            ],
+            "confidence": 0.822,
+            "traversable": false,
+            "movement_cost": 9999,
+            "movement_blocking_tags": [
+              "blocked",
+              "wall"
+            ]
+          },
+          {
+            "x": 2,
+            "y": 4,
+            "tags": [
+              "blocked",
+              "wall"
+            ],
+            "confidence": 0.818,
+            "traversable": false,
+            "movement_cost": 9999,
+            "movement_blocking_tags": [
+              "blocked",
+              "wall"
+            ]
+          },
+          {
+            "x": 3,
+            "y": 4,
+            "tags": [
+              "blocked",
+              "wall"
+            ],
+            "confidence": 0.128,
+            "traversable": false,
+            "movement_cost": 9999,
+            "movement_blocking_tags": [
+              "blocked",
+              "wall"
+            ]
+          },
+          {
+            "x": 4,
+            "y": 4,
+            "tags": [
+              "blocked",
+              "wall"
+            ],
+            "confidence": 0.638,
+            "traversable": false,
+            "movement_cost": 9999,
+            "movement_blocking_tags": [
+              "blocked",
+              "wall"
+            ]
+          },
+          {
+            "x": 5,
+            "y": 4,
             "tags": [
               "blocked",
               "wall"
@@ -433,13 +909,13 @@
             ]
           },
           {
-            "x": 5,
-            "y": 1,
+            "x": 6,
+            "y": 4,
             "tags": [
               "blocked",
               "wall"
             ],
-            "confidence": 0.789,
+            "confidence": 0.384,
             "traversable": false,
             "movement_cost": 9999,
             "movement_blocking_tags": [
@@ -448,37 +924,28 @@
             ]
           },
           {
-            "x": 6,
-            "y": 1,
-            "tags": [
-              "open_ground",
-              "floor"
-            ],
-            "confidence": 0.28,
-            "traversable": true,
-            "movement_cost": 1.13,
-            "movement_blocking_tags": []
-          },
-          {
             "x": 7,
-            "y": 1,
-            "tags": [
-              "open_ground",
-              "floor"
-            ],
-            "confidence": 0.905,
-            "traversable": true,
-            "movement_cost": 1.16,
-            "movement_blocking_tags": []
-          },
-          {
-            "x": 8,
-            "y": 1,
+            "y": 4,
             "tags": [
               "blocked",
               "wall"
             ],
-            "confidence": 0.308,
+            "confidence": 0.747,
+            "traversable": false,
+            "movement_cost": 9999,
+            "movement_blocking_tags": [
+              "blocked",
+              "wall"
+            ]
+          },
+          {
+            "x": 8,
+            "y": 4,
+            "tags": [
+              "blocked",
+              "wall"
+            ],
+            "confidence": 0.837,
             "traversable": false,
             "movement_cost": 9999,
             "movement_blocking_tags": [
@@ -488,12 +955,12 @@
           },
           {
             "x": 9,
-            "y": 1,
+            "y": 4,
             "tags": [
               "blocked",
               "wall"
             ],
-            "confidence": 0.892,
+            "confidence": 0.99,
             "traversable": false,
             "movement_cost": 9999,
             "movement_blocking_tags": [
@@ -503,717 +970,297 @@
           },
           {
             "x": 0,
-            "y": 2,
+            "y": 5,
+            "tags": [
+              "blocked",
+              "wall"
+            ],
+            "confidence": 0.99,
+            "traversable": false,
+            "movement_cost": 9999,
+            "movement_blocking_tags": [
+              "blocked",
+              "wall"
+            ]
+          },
+          {
+            "x": 1,
+            "y": 5,
+            "tags": [
+              "blocked",
+              "wall"
+            ],
+            "confidence": 0.779,
+            "traversable": false,
+            "movement_cost": 9999,
+            "movement_blocking_tags": [
+              "blocked",
+              "wall"
+            ]
+          },
+          {
+            "x": 2,
+            "y": 5,
+            "tags": [
+              "blocked",
+              "wall"
+            ],
+            "confidence": 0.82,
+            "traversable": false,
+            "movement_cost": 9999,
+            "movement_blocking_tags": [
+              "blocked",
+              "wall"
+            ]
+          },
+          {
+            "x": 3,
+            "y": 5,
+            "tags": [
+              "blocked",
+              "wall"
+            ],
+            "confidence": 0.869,
+            "traversable": false,
+            "movement_cost": 9999,
+            "movement_blocking_tags": [
+              "blocked",
+              "wall"
+            ]
+          },
+          {
+            "x": 4,
+            "y": 5,
+            "tags": [
+              "blocked",
+              "wall"
+            ],
+            "confidence": 0.591,
+            "traversable": false,
+            "movement_cost": 9999,
+            "movement_blocking_tags": [
+              "blocked",
+              "wall"
+            ]
+          },
+          {
+            "x": 5,
+            "y": 5,
+            "tags": [
+              "blocked",
+              "wall"
+            ],
+            "confidence": 0.179,
+            "traversable": false,
+            "movement_cost": 9999,
+            "movement_blocking_tags": [
+              "blocked",
+              "wall"
+            ]
+          },
+          {
+            "x": 6,
+            "y": 5,
+            "tags": [
+              "blocked",
+              "wall"
+            ],
+            "confidence": 0.238,
+            "traversable": false,
+            "movement_cost": 9999,
+            "movement_blocking_tags": [
+              "blocked",
+              "wall"
+            ]
+          },
+          {
+            "x": 7,
+            "y": 5,
+            "tags": [
+              "blocked",
+              "wall"
+            ],
+            "confidence": 0.732,
+            "traversable": false,
+            "movement_cost": 9999,
+            "movement_blocking_tags": [
+              "blocked",
+              "wall"
+            ]
+          },
+          {
+            "x": 8,
+            "y": 5,
+            "tags": [
+              "blocked",
+              "wall"
+            ],
+            "confidence": 0.908,
+            "traversable": false,
+            "movement_cost": 9999,
+            "movement_blocking_tags": [
+              "blocked",
+              "wall"
+            ]
+          },
+          {
+            "x": 9,
+            "y": 5,
+            "tags": [
+              "blocked",
+              "wall"
+            ],
+            "confidence": 0.99,
+            "traversable": false,
+            "movement_cost": 9999,
+            "movement_blocking_tags": [
+              "blocked",
+              "wall"
+            ]
+          },
+          {
+            "x": 0,
+            "y": 6,
+            "tags": [
+              "blocked",
+              "wall"
+            ],
+            "confidence": 0.99,
+            "traversable": false,
+            "movement_cost": 9999,
+            "movement_blocking_tags": [
+              "blocked",
+              "wall"
+            ]
+          },
+          {
+            "x": 1,
+            "y": 6,
+            "tags": [
+              "blocked",
+              "wall"
+            ],
+            "confidence": 0.99,
+            "traversable": false,
+            "movement_cost": 9999,
+            "movement_blocking_tags": [
+              "blocked",
+              "wall"
+            ]
+          },
+          {
+            "x": 2,
+            "y": 6,
+            "tags": [
+              "blocked",
+              "wall"
+            ],
+            "confidence": 0.99,
+            "traversable": false,
+            "movement_cost": 9999,
+            "movement_blocking_tags": [
+              "blocked",
+              "wall"
+            ]
+          },
+          {
+            "x": 3,
+            "y": 6,
+            "tags": [
+              "blocked",
+              "wall"
+            ],
+            "confidence": 0.99,
+            "traversable": false,
+            "movement_cost": 9999,
+            "movement_blocking_tags": [
+              "blocked",
+              "wall"
+            ]
+          },
+          {
+            "x": 4,
+            "y": 6,
+            "tags": [
+              "blocked",
+              "wall"
+            ],
+            "confidence": 0.928,
+            "traversable": false,
+            "movement_cost": 9999,
+            "movement_blocking_tags": [
+              "blocked",
+              "wall"
+            ]
+          },
+          {
+            "x": 5,
+            "y": 6,
+            "tags": [
+              "blocked",
+              "wall"
+            ],
+            "confidence": 0.785,
+            "traversable": false,
+            "movement_cost": 9999,
+            "movement_blocking_tags": [
+              "blocked",
+              "wall"
+            ]
+          },
+          {
+            "x": 6,
+            "y": 6,
+            "tags": [
+              "blocked",
+              "wall"
+            ],
+            "confidence": 0.788,
+            "traversable": false,
+            "movement_cost": 9999,
+            "movement_blocking_tags": [
+              "blocked",
+              "wall"
+            ]
+          },
+          {
+            "x": 7,
+            "y": 6,
+            "tags": [
+              "blocked",
+              "wall"
+            ],
+            "confidence": 0.99,
+            "traversable": false,
+            "movement_cost": 9999,
+            "movement_blocking_tags": [
+              "blocked",
+              "wall"
+            ]
+          },
+          {
+            "x": 8,
+            "y": 6,
+            "tags": [
+              "blocked",
+              "wall"
+            ],
+            "confidence": 0.99,
+            "traversable": false,
+            "movement_cost": 9999,
+            "movement_blocking_tags": [
+              "blocked",
+              "wall"
+            ]
+          },
+          {
+            "x": 9,
+            "y": 6,
             "tags": [
               "blocked",
               "wall"
             ],
             "confidence": 0.989,
-            "traversable": false,
-            "movement_cost": 9999,
-            "movement_blocking_tags": [
-              "blocked",
-              "wall"
-            ]
-          },
-          {
-            "x": 1,
-            "y": 2,
-            "tags": [
-              "blocked",
-              "wall"
-            ],
-            "confidence": 0.782,
-            "traversable": false,
-            "movement_cost": 9999,
-            "movement_blocking_tags": [
-              "blocked",
-              "wall"
-            ]
-          },
-          {
-            "x": 2,
-            "y": 2,
-            "tags": [
-              "open_ground",
-              "floor"
-            ],
-            "confidence": 0.088,
-            "traversable": true,
-            "movement_cost": 1.13,
-            "movement_blocking_tags": []
-          },
-          {
-            "x": 3,
-            "y": 2,
-            "tags": [
-              "open_ground",
-              "floor"
-            ],
-            "confidence": 0.323,
-            "traversable": true,
-            "movement_cost": 1.13,
-            "movement_blocking_tags": []
-          },
-          {
-            "x": 4,
-            "y": 2,
-            "tags": [
-              "blocked",
-              "wall"
-            ],
-            "confidence": 0.632,
-            "traversable": false,
-            "movement_cost": 9999,
-            "movement_blocking_tags": [
-              "blocked",
-              "wall"
-            ]
-          },
-          {
-            "x": 5,
-            "y": 2,
-            "tags": [
-              "open_ground",
-              "floor"
-            ],
-            "confidence": 0.237,
-            "traversable": true,
-            "movement_cost": 1.14,
-            "movement_blocking_tags": []
-          },
-          {
-            "x": 6,
-            "y": 2,
-            "tags": [
-              "blocked",
-              "wall"
-            ],
-            "confidence": 0.299,
-            "traversable": false,
-            "movement_cost": 9999,
-            "movement_blocking_tags": [
-              "blocked",
-              "wall"
-            ]
-          },
-          {
-            "x": 7,
-            "y": 2,
-            "tags": [
-              "open_ground",
-              "floor"
-            ],
-            "confidence": 0.157,
-            "traversable": true,
-            "movement_cost": 1.17,
-            "movement_blocking_tags": []
-          },
-          {
-            "x": 8,
-            "y": 2,
-            "tags": [
-              "blocked",
-              "wall"
-            ],
-            "confidence": 0.675,
-            "traversable": false,
-            "movement_cost": 9999,
-            "movement_blocking_tags": [
-              "blocked",
-              "wall"
-            ]
-          },
-          {
-            "x": 9,
-            "y": 2,
-            "tags": [
-              "blocked",
-              "wall"
-            ],
-            "confidence": 0.927,
-            "traversable": false,
-            "movement_cost": 9999,
-            "movement_blocking_tags": [
-              "blocked",
-              "wall"
-            ]
-          },
-          {
-            "x": 0,
-            "y": 3,
-            "tags": [
-              "blocked",
-              "wall"
-            ],
-            "confidence": 0.99,
-            "traversable": false,
-            "movement_cost": 9999,
-            "movement_blocking_tags": [
-              "blocked",
-              "wall"
-            ]
-          },
-          {
-            "x": 1,
-            "y": 3,
-            "tags": [
-              "blocked",
-              "wall"
-            ],
-            "confidence": 0.972,
-            "traversable": false,
-            "movement_cost": 9999,
-            "movement_blocking_tags": [
-              "blocked",
-              "wall"
-            ]
-          },
-          {
-            "x": 2,
-            "y": 3,
-            "tags": [
-              "blocked",
-              "wall"
-            ],
-            "confidence": 0.504,
-            "traversable": false,
-            "movement_cost": 9999,
-            "movement_blocking_tags": [
-              "blocked",
-              "wall"
-            ]
-          },
-          {
-            "x": 3,
-            "y": 3,
-            "tags": [
-              "open_ground",
-              "floor"
-            ],
-            "confidence": 0.309,
-            "traversable": true,
-            "movement_cost": 1.12,
-            "movement_blocking_tags": []
-          },
-          {
-            "x": 4,
-            "y": 3,
-            "tags": [
-              "blocked",
-              "wall"
-            ],
-            "confidence": 0.085,
-            "traversable": false,
-            "movement_cost": 9999,
-            "movement_blocking_tags": [
-              "blocked",
-              "wall"
-            ]
-          },
-          {
-            "x": 5,
-            "y": 3,
-            "tags": [
-              "open_ground",
-              "floor"
-            ],
-            "confidence": 0.239,
-            "traversable": true,
-            "movement_cost": 1.13,
-            "movement_blocking_tags": []
-          },
-          {
-            "x": 6,
-            "y": 3,
-            "tags": [
-              "blocked",
-              "wall"
-            ],
-            "confidence": 0.558,
-            "traversable": false,
-            "movement_cost": 9999,
-            "movement_blocking_tags": [
-              "blocked",
-              "wall"
-            ]
-          },
-          {
-            "x": 7,
-            "y": 3,
-            "tags": [
-              "open_ground",
-              "floor"
-            ],
-            "confidence": 0.397,
-            "traversable": true,
-            "movement_cost": 1.15,
-            "movement_blocking_tags": []
-          },
-          {
-            "x": 8,
-            "y": 3,
-            "tags": [
-              "blocked",
-              "wall"
-            ],
-            "confidence": 0.224,
-            "traversable": false,
-            "movement_cost": 9999,
-            "movement_blocking_tags": [
-              "blocked",
-              "wall"
-            ]
-          },
-          {
-            "x": 9,
-            "y": 3,
-            "tags": [
-              "blocked",
-              "wall"
-            ],
-            "confidence": 0.949,
-            "traversable": false,
-            "movement_cost": 9999,
-            "movement_blocking_tags": [
-              "blocked",
-              "wall"
-            ]
-          },
-          {
-            "x": 0,
-            "y": 4,
-            "tags": [
-              "blocked",
-              "wall"
-            ],
-            "confidence": 0.99,
-            "traversable": false,
-            "movement_cost": 9999,
-            "movement_blocking_tags": [
-              "blocked",
-              "wall"
-            ]
-          },
-          {
-            "x": 1,
-            "y": 4,
-            "tags": [
-              "blocked",
-              "wall"
-            ],
-            "confidence": 0.936,
-            "traversable": false,
-            "movement_cost": 9999,
-            "movement_blocking_tags": [
-              "blocked",
-              "wall"
-            ]
-          },
-          {
-            "x": 2,
-            "y": 4,
-            "tags": [
-              "blocked",
-              "wall"
-            ],
-            "confidence": 0.155,
-            "traversable": false,
-            "movement_cost": 9999,
-            "movement_blocking_tags": [
-              "blocked",
-              "wall"
-            ]
-          },
-          {
-            "x": 3,
-            "y": 4,
-            "tags": [
-              "open_ground",
-              "floor"
-            ],
-            "confidence": 0.263,
-            "traversable": true,
-            "movement_cost": 1.15,
-            "movement_blocking_tags": []
-          },
-          {
-            "x": 4,
-            "y": 4,
-            "tags": [
-              "blocked",
-              "wall"
-            ],
-            "confidence": 0.242,
-            "traversable": false,
-            "movement_cost": 9999,
-            "movement_blocking_tags": [
-              "blocked",
-              "wall"
-            ]
-          },
-          {
-            "x": 5,
-            "y": 4,
-            "tags": [
-              "blocked",
-              "wall"
-            ],
-            "confidence": 0.05,
-            "traversable": false,
-            "movement_cost": 9999,
-            "movement_blocking_tags": [
-              "blocked",
-              "wall"
-            ]
-          },
-          {
-            "x": 6,
-            "y": 4,
-            "tags": [
-              "blocked",
-              "wall"
-            ],
-            "confidence": 0.298,
-            "traversable": false,
-            "movement_cost": 9999,
-            "movement_blocking_tags": [
-              "blocked",
-              "wall"
-            ]
-          },
-          {
-            "x": 7,
-            "y": 4,
-            "tags": [
-              "blocked",
-              "wall"
-            ],
-            "confidence": 0.05,
-            "traversable": false,
-            "movement_cost": 9999,
-            "movement_blocking_tags": [
-              "blocked",
-              "wall"
-            ]
-          },
-          {
-            "x": 8,
-            "y": 4,
-            "tags": [
-              "blocked",
-              "wall"
-            ],
-            "confidence": 0.94,
-            "traversable": false,
-            "movement_cost": 9999,
-            "movement_blocking_tags": [
-              "blocked",
-              "wall"
-            ]
-          },
-          {
-            "x": 9,
-            "y": 4,
-            "tags": [
-              "blocked",
-              "wall"
-            ],
-            "confidence": 0.99,
-            "traversable": false,
-            "movement_cost": 9999,
-            "movement_blocking_tags": [
-              "blocked",
-              "wall"
-            ]
-          },
-          {
-            "x": 0,
-            "y": 5,
-            "tags": [
-              "blocked",
-              "wall"
-            ],
-            "confidence": 0.969,
-            "traversable": false,
-            "movement_cost": 9999,
-            "movement_blocking_tags": [
-              "blocked",
-              "wall"
-            ]
-          },
-          {
-            "x": 1,
-            "y": 5,
-            "tags": [
-              "blocked",
-              "wall"
-            ],
-            "confidence": 0.943,
-            "traversable": false,
-            "movement_cost": 9999,
-            "movement_blocking_tags": [
-              "blocked",
-              "wall"
-            ]
-          },
-          {
-            "x": 2,
-            "y": 5,
-            "tags": [
-              "blocked",
-              "wall"
-            ],
-            "confidence": 0.332,
-            "traversable": false,
-            "movement_cost": 9999,
-            "movement_blocking_tags": [
-              "blocked",
-              "wall"
-            ]
-          },
-          {
-            "x": 3,
-            "y": 5,
-            "tags": [
-              "open_ground",
-              "floor"
-            ],
-            "confidence": 0.723,
-            "traversable": true,
-            "movement_cost": 1.09,
-            "movement_blocking_tags": []
-          },
-          {
-            "x": 4,
-            "y": 5,
-            "tags": [
-              "open_ground",
-              "floor"
-            ],
-            "confidence": 0.104,
-            "traversable": true,
-            "movement_cost": 1.13,
-            "movement_blocking_tags": []
-          },
-          {
-            "x": 5,
-            "y": 5,
-            "tags": [
-              "blocked",
-              "wall"
-            ],
-            "confidence": 0.215,
-            "traversable": false,
-            "movement_cost": 9999,
-            "movement_blocking_tags": [
-              "blocked",
-              "wall"
-            ]
-          },
-          {
-            "x": 6,
-            "y": 5,
-            "tags": [
-              "blocked",
-              "wall"
-            ],
-            "confidence": 0.224,
-            "traversable": false,
-            "movement_cost": 9999,
-            "movement_blocking_tags": [
-              "blocked",
-              "wall"
-            ]
-          },
-          {
-            "x": 7,
-            "y": 5,
-            "tags": [
-              "blocked",
-              "wall"
-            ],
-            "confidence": 0.05,
-            "traversable": false,
-            "movement_cost": 9999,
-            "movement_blocking_tags": [
-              "blocked",
-              "wall"
-            ]
-          },
-          {
-            "x": 8,
-            "y": 5,
-            "tags": [
-              "blocked",
-              "wall"
-            ],
-            "confidence": 0.989,
-            "traversable": false,
-            "movement_cost": 9999,
-            "movement_blocking_tags": [
-              "blocked",
-              "wall"
-            ]
-          },
-          {
-            "x": 9,
-            "y": 5,
-            "tags": [
-              "blocked",
-              "wall"
-            ],
-            "confidence": 0.99,
-            "traversable": false,
-            "movement_cost": 9999,
-            "movement_blocking_tags": [
-              "blocked",
-              "wall"
-            ]
-          },
-          {
-            "x": 0,
-            "y": 6,
-            "tags": [
-              "blocked",
-              "wall"
-            ],
-            "confidence": 0.99,
-            "traversable": false,
-            "movement_cost": 9999,
-            "movement_blocking_tags": [
-              "blocked",
-              "wall"
-            ]
-          },
-          {
-            "x": 1,
-            "y": 6,
-            "tags": [
-              "blocked",
-              "wall"
-            ],
-            "confidence": 0.99,
-            "traversable": false,
-            "movement_cost": 9999,
-            "movement_blocking_tags": [
-              "blocked",
-              "wall"
-            ]
-          },
-          {
-            "x": 2,
-            "y": 6,
-            "tags": [
-              "blocked",
-              "wall"
-            ],
-            "confidence": 0.75,
-            "traversable": false,
-            "movement_cost": 9999,
-            "movement_blocking_tags": [
-              "blocked",
-              "wall"
-            ]
-          },
-          {
-            "x": 3,
-            "y": 6,
-            "tags": [
-              "blocked",
-              "wall"
-            ],
-            "confidence": 0.685,
-            "traversable": false,
-            "movement_cost": 9999,
-            "movement_blocking_tags": [
-              "blocked",
-              "wall"
-            ]
-          },
-          {
-            "x": 4,
-            "y": 6,
-            "tags": [
-              "blocked",
-              "wall"
-            ],
-            "confidence": 0.799,
-            "traversable": false,
-            "movement_cost": 9999,
-            "movement_blocking_tags": [
-              "blocked",
-              "wall"
-            ]
-          },
-          {
-            "x": 5,
-            "y": 6,
-            "tags": [
-              "blocked",
-              "wall"
-            ],
-            "confidence": 0.805,
-            "traversable": false,
-            "movement_cost": 9999,
-            "movement_blocking_tags": [
-              "blocked",
-              "wall"
-            ]
-          },
-          {
-            "x": 6,
-            "y": 6,
-            "tags": [
-              "blocked",
-              "wall"
-            ],
-            "confidence": 0.99,
-            "traversable": false,
-            "movement_cost": 9999,
-            "movement_blocking_tags": [
-              "blocked",
-              "wall"
-            ]
-          },
-          {
-            "x": 7,
-            "y": 6,
-            "tags": [
-              "blocked",
-              "wall"
-            ],
-            "confidence": 0.99,
-            "traversable": false,
-            "movement_cost": 9999,
-            "movement_blocking_tags": [
-              "blocked",
-              "wall"
-            ]
-          },
-          {
-            "x": 8,
-            "y": 6,
-            "tags": [
-              "blocked",
-              "wall"
-            ],
-            "confidence": 0.974,
-            "traversable": false,
-            "movement_cost": 9999,
-            "movement_blocking_tags": [
-              "blocked",
-              "wall"
-            ]
-          },
-          {
-            "x": 9,
-            "y": 6,
-            "tags": [
-              "blocked",
-              "wall"
-            ],
-            "confidence": 0.985,
             "traversable": false,
             "movement_cost": 9999,
             "movement_blocking_tags": [

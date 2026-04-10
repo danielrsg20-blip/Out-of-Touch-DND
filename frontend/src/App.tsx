@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useSessionStore } from "./stores/sessionStore";
 import { useAuthStore } from "./stores/authStore";
 import AuthScreen from "./components/AuthScreen";
@@ -6,6 +6,9 @@ import SessionLobby from "./components/SessionLobby";
 import CharacterCreator from "./components/CharacterCreator";
 import GameBoard from "./components/GameBoard";
 import TableModeView from "./components/TableModeView";
+import TutorialOverlay, {
+  shouldShowTutorial,
+} from "./components/TutorialOverlay";
 
 function isTableMode() {
   return new URLSearchParams(window.location.search).get("mode") === "table";
@@ -136,11 +139,25 @@ export default function App() {
   const phase = useSessionStore((s) => s.phase);
   const { isAuthenticated, isLoading, hydrateFromStorage } = useAuthStore();
   const hydrateSession = useSessionStore((s) => s.hydrateSession);
+  const [showTutorial, setShowTutorial] = useState(false);
 
   useEffect(() => {
     hydrateFromStorage();
     hydrateSession();
   }, [hydrateFromStorage, hydrateSession]);
+
+  useEffect(() => {
+    if (phase === "playing" && shouldShowTutorial()) {
+      setShowTutorial(true);
+    }
+  }, [phase]);
+
+  useEffect(() => {
+    const handleShowTutorial = () => setShowTutorial(true);
+    globalThis.addEventListener("otdnd:show-tutorial", handleShowTutorial);
+    return () =>
+      globalThis.removeEventListener("otdnd:show-tutorial", handleShowTutorial);
+  }, []);
 
   if (isLoading) {
     return <FantasyLoadingScreen />;
@@ -156,7 +173,14 @@ export default function App() {
     case "character_create":
       return <CharacterCreator />;
     case "playing":
-      return isTableMode() ? <TableModeView /> : <GameBoard />;
+      return (
+        <>
+          {showTutorial && (
+            <TutorialOverlay onClose={() => setShowTutorial(false)} />
+          )}
+          {isTableMode() ? <TableModeView /> : <GameBoard />}
+        </>
+      );
     default:
       return <SessionLobby />;
   }

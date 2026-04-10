@@ -95,6 +95,35 @@ export default function CombatTracker() {
               <span className="init-hp-text">
                 {entry.hp}/{entry.max_hp}
               </span>
+              {/* Active conditions */}
+              {(() => {
+                const charData = characters[entry.id];
+                const conditions: string[] = (charData?.conditions ?? []).map(
+                  (c: unknown) =>
+                    typeof c === "string" ? c : (c as { name?: string })?.name ?? "",
+                ).filter(Boolean);
+                if (conditions.length === 0) return null;
+                return (
+                  <div className="condition-badges" style={{ display: "flex", flexWrap: "wrap", gap: "2px", marginTop: "2px" }}>
+                    {conditions.map((cond: string) => (
+                      <span
+                        key={cond}
+                        style={{
+                          fontSize: "0.6rem",
+                          padding: "1px 4px",
+                          borderRadius: "4px",
+                          background: "rgba(228,100,60,0.2)",
+                          color: "#e4a853",
+                          border: "1px solid rgba(228,168,83,0.3)",
+                        }}
+                        title={cond}
+                      >
+                        {cond}
+                      </span>
+                    ))}
+                  </div>
+                );
+              })()}
               {entry.hp === 0 &&
                 (() => {
                   const saves = characters[entry.id]?.death_saves ?? {

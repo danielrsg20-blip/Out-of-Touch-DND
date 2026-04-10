@@ -1,26 +1,78 @@
 {
+  "Rat": {
+    "size": "Tiny", "type": "beast", "ac": 10, "hp": 1, "speed": 20,
+    "abilities": {"STR": 2, "DEX": 11, "CON": 9, "INT": 2, "WIS": 10, "CHA": 4},
+    "cr": 0, "xp": 10,
+    "attacks": [{"name": "Bite", "bonus": 0, "damage": "1", "type": "piercing"}],
+    "traits": ["Keen Smell"]
+  },
+  "Bat": {
+    "size": "Tiny", "type": "beast", "ac": 12, "hp": 1, "speed": 5,
+    "abilities": {"STR": 2, "DEX": 15, "CON": 8, "INT": 2, "WIS": 12, "CHA": 4},
+    "cr": 0, "xp": 10,
+    "attacks": [{"name": "Bite", "bonus": 0, "damage": "1", "type": "piercing"}],
+    "traits": ["Echolocation", "Keen Hearing"]
+  },
+  "Giant Rat": {
+    "size": "Small", "type": "beast", "ac": 12, "hp": 7, "speed": 30,
+    "abilities": {"STR": 7, "DEX": 15, "CON": 11, "INT": 2, "WIS": 10, "CHA": 4},
+    "cr": 0.125, "xp": 25,
+    "attacks": [{"name": "Bite", "bonus": 4, "damage": "1d4+2", "type": "piercing"}],
+    "traits": ["Keen Smell", "Pack Tactics"]
+  },
+  "Kobold": {
+    "size": "Small", "type": "humanoid", "ac": 12, "hp": 5, "speed": 30,
+    "abilities": {"STR": 7, "DEX": 15, "CON": 9, "INT": 8, "WIS": 7, "CHA": 8},
+    "cr": 0.125, "xp": 25,
+    "attacks": [
+      {"name": "Dagger", "bonus": 4, "damage": "1d4+2", "type": "piercing"},
+      {"name": "Sling", "bonus": 4, "damage": "1d4+2", "type": "bludgeoning"}
+    ],
+    "traits": ["Pack Tactics", "Sunlight Sensitivity"]
+  },
+  "Bandit": {
+    "size": "Medium", "type": "humanoid", "ac": 12, "hp": 11, "speed": 30,
+    "abilities": {"STR": 11, "DEX": 12, "CON": 12, "INT": 10, "WIS": 10, "CHA": 10},
+    "cr": 0.125, "xp": 25,
+    "attacks": [
+      {"name": "Scimitar", "bonus": 3, "damage": "1d6+1", "type": "slashing"},
+      {"name": "Light Crossbow", "bonus": 3, "damage": "1d8+1", "type": "piercing"}
+    ]
+  },
+  "Stirge": {
+    "size": "Tiny", "type": "beast", "ac": 14, "hp": 2, "speed": 10,
+    "abilities": {"STR": 4, "DEX": 16, "CON": 11, "INT": 2, "WIS": 8, "CHA": 6},
+    "cr": 0.125, "xp": 25,
+    "attacks": [{"name": "Blood Drain", "bonus": 5, "damage": "1d4+3", "type": "piercing"}]
+  },
   "Goblin": {
     "size": "Small", "type": "humanoid", "ac": 15, "hp": 7, "speed": 30,
     "abilities": {"STR": 8, "DEX": 14, "CON": 10, "INT": 10, "WIS": 8, "CHA": 8},
     "cr": 0.25, "xp": 50,
-    "attacks": [{"name": "Scimitar", "bonus": 4, "damage": "1d6+2", "type": "slashing"},
-                {"name": "Shortbow", "bonus": 4, "damage": "1d6+2", "type": "piercing"}],
+    "attacks": [
+      {"name": "Scimitar", "bonus": 4, "damage": "1d6+2", "type": "slashing"},
+      {"name": "Shortbow", "bonus": 4, "damage": "1d6+2", "type": "piercing"}
+    ],
     "traits": ["Nimble Escape"]
   },
   "Skeleton": {
     "size": "Medium", "type": "undead", "ac": 13, "hp": 13, "speed": 30,
     "abilities": {"STR": 10, "DEX": 14, "CON": 15, "INT": 6, "WIS": 8, "CHA": 5},
     "cr": 0.25, "xp": 50,
-    "attacks": [{"name": "Shortsword", "bonus": 4, "damage": "1d6+2", "type": "piercing"},
-                {"name": "Shortbow", "bonus": 4, "damage": "1d6+2", "type": "piercing"}],
-    "vulnerabilities": ["bludgeoning"], "immunities": ["poison"]
+    "attacks": [
+      {"name": "Shortsword", "bonus": 4, "damage": "1d6+2", "type": "piercing"},
+      {"name": "Shortbow", "bonus": 4, "damage": "1d6+2", "type": "piercing"}
+    ],
+    "vulnerabilities": ["bludgeoning"],
+    "immunities": ["poison"]
   },
   "Zombie": {
     "size": "Medium", "type": "undead", "ac": 8, "hp": 22, "speed": 20,
     "abilities": {"STR": 13, "DEX": 6, "CON": 16, "INT": 3, "WIS": 6, "CHA": 5},
     "cr": 0.25, "xp": 50,
     "attacks": [{"name": "Slam", "bonus": 3, "damage": "1d6+1", "type": "bludgeoning"}],
-    "traits": ["Undead Fortitude"], "immunities": ["poison"]
+    "traits": ["Undead Fortitude"],
+    "immunities": ["poison"]
   },
   "Wolf": {
     "size": "Medium", "type": "beast", "ac": 13, "hp": 11, "speed": 40,
@@ -29,28 +81,68 @@
     "attacks": [{"name": "Bite", "bonus": 4, "damage": "2d4+2", "type": "piercing"}],
     "traits": ["Pack Tactics", "Keen Hearing and Smell"]
   },
-  "Kobold": {
-    "size": "Small", "type": "humanoid", "ac": 12, "hp": 5, "speed": 30,
-    "abilities": {"STR": 7, "DEX": 15, "CON": 9, "INT": 8, "WIS": 7, "CHA": 8},
-    "cr": 0.125, "xp": 25,
-    "attacks": [{"name": "Dagger", "bonus": 4, "damage": "1d4+2", "type": "piercing"},
-                {"name": "Sling", "bonus": 4, "damage": "1d4+2", "type": "bludgeoning"}],
-    "traits": ["Pack Tactics", "Sunlight Sensitivity"]
+  "Cockatrice": {
+    "size": "Small", "type": "monstrosity", "ac": 11, "hp": 27, "speed": 20,
+    "abilities": {"STR": 6, "DEX": 12, "CON": 12, "INT": 2, "WIS": 13, "CHA": 5},
+    "cr": 0.5, "xp": 100,
+    "attacks": [{"name": "Bite", "bonus": 3, "damage": "1d4+1", "type": "piercing"}],
+    "traits": ["Petrifying Bite (DC 11 CON)"]
   },
   "Orc": {
     "size": "Medium", "type": "humanoid", "ac": 13, "hp": 15, "speed": 30,
     "abilities": {"STR": 16, "DEX": 12, "CON": 16, "INT": 7, "WIS": 11, "CHA": 10},
     "cr": 0.5, "xp": 100,
-    "attacks": [{"name": "Greataxe", "bonus": 5, "damage": "1d12+3", "type": "slashing"},
-                {"name": "Javelin", "bonus": 5, "damage": "1d6+3", "type": "piercing"}],
+    "attacks": [
+      {"name": "Greataxe", "bonus": 5, "damage": "1d12+3", "type": "slashing"},
+      {"name": "Javelin", "bonus": 5, "damage": "1d6+3", "type": "piercing"}
+    ],
     "traits": ["Aggressive"]
   },
-  "Ogre": {
-    "size": "Large", "type": "giant", "ac": 11, "hp": 59, "speed": 40,
-    "abilities": {"STR": 19, "DEX": 8, "CON": 16, "INT": 5, "WIS": 7, "CHA": 7},
-    "cr": 2, "xp": 450,
-    "attacks": [{"name": "Greatclub", "bonus": 6, "damage": "2d8+4", "type": "bludgeoning"},
-                {"name": "Javelin", "bonus": 6, "damage": "2d6+4", "type": "piercing"}]
+  "Hobgoblin": {
+    "size": "Medium", "type": "humanoid", "ac": 18, "hp": 11, "speed": 30,
+    "abilities": {"STR": 13, "DEX": 12, "CON": 12, "INT": 10, "WIS": 10, "CHA": 9},
+    "cr": 0.5, "xp": 100,
+    "attacks": [
+      {"name": "Longsword", "bonus": 3, "damage": "1d10+1", "type": "slashing"},
+      {"name": "Longbow", "bonus": 3, "damage": "1d8+1", "type": "piercing"}
+    ],
+    "traits": ["Martial Advantage"]
+  },
+  "Gnoll": {
+    "size": "Medium", "type": "humanoid", "ac": 15, "hp": 22, "speed": 30,
+    "abilities": {"STR": 14, "DEX": 12, "CON": 11, "INT": 6, "WIS": 10, "CHA": 7},
+    "cr": 0.5, "xp": 100,
+    "attacks": [
+      {"name": "Bite", "bonus": 4, "damage": "1d4+2", "type": "piercing"},
+      {"name": "Spear", "bonus": 4, "damage": "1d6+2", "type": "piercing"}
+    ],
+    "traits": ["Rampage"]
+  },
+  "Shadow": {
+    "size": "Medium", "type": "undead", "ac": 12, "hp": 16, "speed": 40,
+    "abilities": {"STR": 6, "DEX": 14, "CON": 13, "INT": 6, "WIS": 10, "CHA": 8},
+    "cr": 0.5, "xp": 100,
+    "attacks": [{"name": "Strength Drain", "bonus": 4, "damage": "2d6+2", "type": "necrotic"}],
+    "traits": ["Amorphous", "Shadow Stealth", "Sunlight Weakness"],
+    "vulnerabilities": ["radiant"],
+    "immunities": ["necrotic", "poison"]
+  },
+  "Worg": {
+    "size": "Large", "type": "monstrosity", "ac": 13, "hp": 26, "speed": 50,
+    "abilities": {"STR": 16, "DEX": 13, "CON": 13, "INT": 7, "WIS": 11, "CHA": 8},
+    "cr": 0.5, "xp": 100,
+    "attacks": [{"name": "Bite", "bonus": 5, "damage": "2d6+3", "type": "piercing"}],
+    "traits": ["Keen Hearing and Smell"]
+  },
+  "Bugbear": {
+    "size": "Medium", "type": "humanoid", "ac": 16, "hp": 27, "speed": 30,
+    "abilities": {"STR": 15, "DEX": 14, "CON": 13, "INT": 8, "WIS": 11, "CHA": 9},
+    "cr": 1, "xp": 200,
+    "attacks": [
+      {"name": "Morningstar", "bonus": 4, "damage": "2d8+2", "type": "piercing"},
+      {"name": "Javelin", "bonus": 4, "damage": "1d6+2", "type": "piercing"}
+    ],
+    "traits": ["Brute", "Surprise Attack"]
   },
   "Giant Spider": {
     "size": "Large", "type": "beast", "ac": 14, "hp": 26, "speed": 30,
@@ -59,19 +151,350 @@
     "attacks": [{"name": "Bite", "bonus": 5, "damage": "1d8+3", "type": "piercing"}],
     "traits": ["Spider Climb", "Web Sense", "Web Walker"]
   },
-  "Bandit": {
-    "size": "Medium", "type": "humanoid", "ac": 12, "hp": 11, "speed": 30,
-    "abilities": {"STR": 11, "DEX": 12, "CON": 12, "INT": 10, "WIS": 10, "CHA": 10},
-    "cr": 0.125, "xp": 25,
-    "attacks": [{"name": "Scimitar", "bonus": 3, "damage": "1d6+1", "type": "slashing"},
-                {"name": "Light Crossbow", "bonus": 3, "damage": "1d8+1", "type": "piercing"}]
+  "Dire Wolf": {
+    "size": "Large", "type": "beast", "ac": 14, "hp": 37, "speed": 50,
+    "abilities": {"STR": 17, "DEX": 15, "CON": 15, "INT": 3, "WIS": 12, "CHA": 7},
+    "cr": 1, "xp": 200,
+    "attacks": [{"name": "Bite", "bonus": 5, "damage": "2d6+3", "type": "piercing"}],
+    "traits": ["Keen Hearing and Smell", "Pack Tactics"]
+  },
+  "Ghoul": {
+    "size": "Medium", "type": "undead", "ac": 12, "hp": 22, "speed": 30,
+    "abilities": {"STR": 13, "DEX": 15, "CON": 10, "INT": 7, "WIS": 10, "CHA": 6},
+    "cr": 1, "xp": 200,
+    "attacks": [
+      {"name": "Bite", "bonus": 2, "damage": "2d6+2", "type": "piercing"},
+      {"name": "Claws", "bonus": 4, "damage": "2d4+2", "type": "slashing"}
+    ],
+    "traits": ["Paralyzing Touch"],
+    "immunities": ["poison"]
+  },
+  "Spy": {
+    "size": "Medium", "type": "humanoid", "ac": 12, "hp": 27, "speed": 30,
+    "abilities": {"STR": 10, "DEX": 15, "CON": 10, "INT": 12, "WIS": 14, "CHA": 16},
+    "cr": 1, "xp": 200,
+    "attacks": [
+      {"name": "Shortsword", "bonus": 4, "damage": "1d6+2", "type": "piercing"},
+      {"name": "Hand Crossbow", "bonus": 4, "damage": "1d6+2", "type": "piercing"}
+    ],
+    "traits": ["Cunning Action", "Sneak Attack (2d6)"]
+  },
+  "Specter": {
+    "size": "Medium", "type": "undead", "ac": 12, "hp": 22, "speed": 50,
+    "abilities": {"STR": 1, "DEX": 14, "CON": 11, "INT": 10, "WIS": 10, "CHA": 11},
+    "cr": 1, "xp": 200,
+    "attacks": [{"name": "Life Drain", "bonus": 4, "damage": "3d6", "type": "necrotic"}],
+    "traits": ["Incorporeal Movement", "Sunlight Sensitivity"],
+    "immunities": ["necrotic", "poison"]
+  },
+  "Harpy": {
+    "size": "Medium", "type": "monstrosity", "ac": 11, "hp": 38, "speed": 20,
+    "abilities": {"STR": 12, "DEX": 13, "CON": 12, "INT": 7, "WIS": 10, "CHA": 13},
+    "cr": 1, "xp": 200,
+    "attacks": [
+      {"name": "Claws", "bonus": 3, "damage": "2d4+1", "type": "slashing"},
+      {"name": "Club", "bonus": 3, "damage": "1d4+1", "type": "bludgeoning"}
+    ],
+    "traits": ["Luring Song"]
+  },
+  "Ogre": {
+    "size": "Large", "type": "giant", "ac": 11, "hp": 59, "speed": 40,
+    "abilities": {"STR": 19, "DEX": 8, "CON": 16, "INT": 5, "WIS": 7, "CHA": 7},
+    "cr": 2, "xp": 450,
+    "attacks": [
+      {"name": "Greatclub", "bonus": 6, "damage": "2d8+4", "type": "bludgeoning"},
+      {"name": "Javelin", "bonus": 6, "damage": "2d6+4", "type": "piercing"}
+    ]
   },
   "Mimic": {
     "size": "Medium", "type": "monstrosity", "ac": 12, "hp": 58, "speed": 15,
     "abilities": {"STR": 17, "DEX": 12, "CON": 15, "INT": 5, "WIS": 13, "CHA": 8},
     "cr": 2, "xp": 450,
-    "attacks": [{"name": "Pseudopod", "bonus": 5, "damage": "1d8+3", "type": "bludgeoning"},
-                {"name": "Bite", "bonus": 5, "damage": "1d8+3", "type": "piercing"}],
+    "attacks": [
+      {"name": "Pseudopod", "bonus": 5, "damage": "1d8+3", "type": "bludgeoning"},
+      {"name": "Bite", "bonus": 5, "damage": "1d8+3", "type": "piercing"}
+    ],
     "traits": ["Shapechanger", "Adhesive", "Grappler"]
+  },
+  "Ghast": {
+    "size": "Medium", "type": "undead", "ac": 13, "hp": 36, "speed": 30,
+    "abilities": {"STR": 16, "DEX": 17, "CON": 10, "INT": 11, "WIS": 10, "CHA": 8},
+    "cr": 2, "xp": 450,
+    "attacks": [
+      {"name": "Bite", "bonus": 3, "damage": "2d8+3", "type": "piercing"},
+      {"name": "Claws", "bonus": 5, "damage": "2d6+3", "type": "slashing"}
+    ],
+    "traits": ["Stench", "Turning Defiance"],
+    "immunities": ["poison"]
+  },
+  "Gargoyle": {
+    "size": "Medium", "type": "elemental", "ac": 15, "hp": 52, "speed": 30,
+    "abilities": {"STR": 15, "DEX": 11, "CON": 16, "INT": 6, "WIS": 11, "CHA": 7},
+    "cr": 2, "xp": 450,
+    "attacks": [
+      {"name": "Bite", "bonus": 4, "damage": "1d6+2", "type": "piercing"},
+      {"name": "Claws", "bonus": 4, "damage": "1d6+2", "type": "slashing"}
+    ],
+    "traits": ["False Appearance"]
+  },
+  "Gelatinous Cube": {
+    "size": "Large", "type": "ooze", "ac": 6, "hp": 84, "speed": 15,
+    "abilities": {"STR": 14, "DEX": 3, "CON": 20, "INT": 1, "WIS": 6, "CHA": 1},
+    "cr": 2, "xp": 450,
+    "attacks": [{"name": "Pseudopod", "bonus": 4, "damage": "3d6", "type": "acid"}],
+    "traits": ["Transparent", "Engulf (DC 12 DEX)"]
+  },
+  "Bandit Captain": {
+    "size": "Medium", "type": "humanoid", "ac": 15, "hp": 65, "speed": 30,
+    "abilities": {"STR": 15, "DEX": 16, "CON": 14, "INT": 14, "WIS": 11, "CHA": 14},
+    "cr": 2, "xp": 450,
+    "attacks": [
+      {"name": "Scimitar", "bonus": 5, "damage": "1d6+3", "type": "slashing"},
+      {"name": "Dagger", "bonus": 5, "damage": "1d4+3", "type": "piercing"}
+    ],
+    "traits": ["Multiattack (2 scimitars + dagger)"]
+  },
+  "Werewolf": {
+    "size": "Medium", "type": "humanoid", "ac": 12, "hp": 58, "speed": 30,
+    "abilities": {"STR": 15, "DEX": 13, "CON": 14, "INT": 10, "WIS": 11, "CHA": 10},
+    "cr": 3, "xp": 700,
+    "attacks": [
+      {"name": "Bite", "bonus": 4, "damage": "1d8+2", "type": "piercing"},
+      {"name": "Claws", "bonus": 4, "damage": "2d4+2", "type": "slashing"}
+    ],
+    "traits": ["Shapechanger", "Keen Hearing and Smell"]
+  },
+  "Owlbear": {
+    "size": "Large", "type": "monstrosity", "ac": 13, "hp": 59, "speed": 40,
+    "abilities": {"STR": 20, "DEX": 12, "CON": 17, "INT": 3, "WIS": 12, "CHA": 7},
+    "cr": 3, "xp": 700,
+    "attacks": [
+      {"name": "Beak", "bonus": 7, "damage": "1d10+5", "type": "piercing"},
+      {"name": "Claws", "bonus": 7, "damage": "2d8+5", "type": "slashing"}
+    ],
+    "traits": ["Keen Sight and Smell"]
+  },
+  "Minotaur": {
+    "size": "Large", "type": "monstrosity", "ac": 14, "hp": 76, "speed": 40,
+    "abilities": {"STR": 18, "DEX": 11, "CON": 16, "INT": 6, "WIS": 16, "CHA": 9},
+    "cr": 3, "xp": 700,
+    "attacks": [
+      {"name": "Greataxe", "bonus": 6, "damage": "2d12+4", "type": "slashing"},
+      {"name": "Gore", "bonus": 6, "damage": "2d8+4", "type": "piercing"}
+    ],
+    "traits": ["Charge", "Labyrinthine Recall", "Reckless"]
+  },
+  "Wight": {
+    "size": "Medium", "type": "undead", "ac": 14, "hp": 45, "speed": 30,
+    "abilities": {"STR": 15, "DEX": 14, "CON": 16, "INT": 10, "WIS": 13, "CHA": 15},
+    "cr": 3, "xp": 700,
+    "attacks": [
+      {"name": "Longsword", "bonus": 4, "damage": "1d10+2", "type": "slashing"},
+      {"name": "Life Drain", "bonus": 4, "damage": "1d6+2", "type": "necrotic"}
+    ],
+    "traits": ["Sunlight Sensitivity"],
+    "immunities": ["poison"]
+  },
+  "Green Hag": {
+    "size": "Medium", "type": "fey", "ac": 17, "hp": 82, "speed": 30,
+    "abilities": {"STR": 18, "DEX": 12, "CON": 16, "INT": 13, "WIS": 14, "CHA": 14},
+    "cr": 3, "xp": 700,
+    "attacks": [{"name": "Claws", "bonus": 6, "damage": "2d8+4", "type": "slashing"}],
+    "traits": ["Amphibious", "Illusory Appearance", "Mimicry"]
+  },
+  "Basilisk": {
+    "size": "Medium", "type": "monstrosity", "ac": 15, "hp": 52, "speed": 20,
+    "abilities": {"STR": 16, "DEX": 8, "CON": 15, "INT": 2, "WIS": 8, "CHA": 7},
+    "cr": 3, "xp": 700,
+    "attacks": [{"name": "Bite", "bonus": 5, "damage": "2d6+3", "type": "piercing"}],
+    "traits": ["Petrifying Gaze"]
+  },
+  "Manticore": {
+    "size": "Large", "type": "monstrosity", "ac": 14, "hp": 68, "speed": 30,
+    "abilities": {"STR": 17, "DEX": 16, "CON": 17, "INT": 7, "WIS": 12, "CHA": 8},
+    "cr": 3, "xp": 700,
+    "attacks": [
+      {"name": "Bite", "bonus": 5, "damage": "1d8+3", "type": "piercing"},
+      {"name": "Claw", "bonus": 5, "damage": "1d6+3", "type": "slashing"},
+      {"name": "Tail Spike", "bonus": 5, "damage": "1d8+3", "type": "piercing"}
+    ]
+  },
+  "Ghost": {
+    "size": "Medium", "type": "undead", "ac": 11, "hp": 45, "speed": 40,
+    "abilities": {"STR": 7, "DEX": 13, "CON": 10, "INT": 10, "WIS": 12, "CHA": 17},
+    "cr": 4, "xp": 1100,
+    "attacks": [{"name": "Withering Touch", "bonus": 5, "damage": "4d6+3", "type": "necrotic"}],
+    "traits": ["Ethereal Sight", "Incorporeal Movement", "Possession", "Horrifying Visage"],
+    "immunities": ["cold", "necrotic", "poison"]
+  },
+  "Ettin": {
+    "size": "Large", "type": "giant", "ac": 12, "hp": 85, "speed": 40,
+    "abilities": {"STR": 21, "DEX": 8, "CON": 17, "INT": 6, "WIS": 10, "CHA": 8},
+    "cr": 4, "xp": 1100,
+    "attacks": [
+      {"name": "Battleaxe", "bonus": 7, "damage": "2d8+5", "type": "slashing"},
+      {"name": "Morningstar", "bonus": 7, "damage": "2d8+5", "type": "piercing"}
+    ],
+    "traits": ["Two Heads", "Wakeful"]
+  },
+  "Black Pudding": {
+    "size": "Large", "type": "ooze", "ac": 7, "hp": 85, "speed": 20,
+    "abilities": {"STR": 16, "DEX": 5, "CON": 16, "INT": 1, "WIS": 6, "CHA": 1},
+    "cr": 4, "xp": 1100,
+    "attacks": [{"name": "Pseudopod", "bonus": 5, "damage": "1d6+3", "type": "bludgeoning"}],
+    "traits": ["Amorphous", "Corrosive Form", "Spider Climb"],
+    "immunities": ["acid", "cold", "lightning", "slashing"]
+  },
+  "Troll": {
+    "size": "Large", "type": "giant", "ac": 15, "hp": 84, "speed": 30,
+    "abilities": {"STR": 18, "DEX": 13, "CON": 20, "INT": 7, "WIS": 9, "CHA": 7},
+    "cr": 5, "xp": 1800,
+    "attacks": [
+      {"name": "Bite", "bonus": 7, "damage": "1d6+4", "type": "piercing"},
+      {"name": "Claw", "bonus": 7, "damage": "2d6+4", "type": "slashing"}
+    ],
+    "traits": ["Keen Smell", "Regeneration (10 hp/turn, stopped by acid or fire)"],
+    "vulnerabilities": ["acid", "fire"]
+  },
+  "Wraith": {
+    "size": "Medium", "type": "undead", "ac": 13, "hp": 67, "speed": 60,
+    "abilities": {"STR": 6, "DEX": 16, "CON": 16, "INT": 12, "WIS": 14, "CHA": 15},
+    "cr": 5, "xp": 1800,
+    "attacks": [{"name": "Life Drain", "bonus": 6, "damage": "4d8+3", "type": "necrotic"}],
+    "traits": ["Incorporeal Movement", "Sunlight Sensitivity", "Create Specter"],
+    "immunities": ["necrotic", "poison"]
+  },
+  "Salamander": {
+    "size": "Large", "type": "elemental", "ac": 15, "hp": 90, "speed": 30,
+    "abilities": {"STR": 18, "DEX": 14, "CON": 15, "INT": 11, "WIS": 10, "CHA": 12},
+    "cr": 5, "xp": 1800,
+    "attacks": [
+      {"name": "Spear", "bonus": 7, "damage": "2d6+4", "type": "piercing"},
+      {"name": "Tail", "bonus": 7, "damage": "2d6+4", "type": "bludgeoning"}
+    ],
+    "traits": ["Heated Body", "Heated Weapons"],
+    "immunities": ["fire"],
+    "vulnerabilities": ["cold"]
+  },
+  "Hill Giant": {
+    "size": "Huge", "type": "giant", "ac": 13, "hp": 105, "speed": 40,
+    "abilities": {"STR": 21, "DEX": 8, "CON": 19, "INT": 5, "WIS": 9, "CHA": 6},
+    "cr": 5, "xp": 1800,
+    "attacks": [
+      {"name": "Greatclub", "bonus": 8, "damage": "3d8+5", "type": "bludgeoning"},
+      {"name": "Rock", "bonus": 8, "damage": "3d10+5", "type": "bludgeoning"}
+    ]
+  },
+  "Wyvern": {
+    "size": "Large", "type": "dragon", "ac": 13, "hp": 110, "speed": 20,
+    "abilities": {"STR": 19, "DEX": 10, "CON": 16, "INT": 5, "WIS": 12, "CHA": 6},
+    "cr": 6, "xp": 2300,
+    "attacks": [
+      {"name": "Bite", "bonus": 7, "damage": "2d6+4", "type": "piercing"},
+      {"name": "Claws", "bonus": 7, "damage": "2d8+4", "type": "slashing"},
+      {"name": "Stinger", "bonus": 7, "damage": "2d6+4", "type": "piercing"}
+    ]
+  },
+  "Medusa": {
+    "size": "Medium", "type": "monstrosity", "ac": 15, "hp": 127, "speed": 30,
+    "abilities": {"STR": 10, "DEX": 15, "CON": 16, "INT": 12, "WIS": 13, "CHA": 15},
+    "cr": 6, "xp": 2300,
+    "attacks": [
+      {"name": "Shortsword", "bonus": 5, "damage": "1d6+2", "type": "piercing"},
+      {"name": "Snake Hair", "bonus": 5, "damage": "1d4+2", "type": "piercing"}
+    ],
+    "traits": ["Petrifying Gaze"]
+  },
+  "Young White Dragon": {
+    "size": "Large", "type": "dragon", "ac": 17, "hp": 133, "speed": 40,
+    "abilities": {"STR": 18, "DEX": 10, "CON": 18, "INT": 6, "WIS": 11, "CHA": 12},
+    "cr": 6, "xp": 2300,
+    "attacks": [
+      {"name": "Bite", "bonus": 7, "damage": "2d10+4", "type": "piercing"},
+      {"name": "Claw", "bonus": 7, "damage": "2d6+4", "type": "slashing"}
+    ],
+    "traits": ["Ice Walk", "Cold Breath (12d8 cold, DC 15 CON)"],
+    "immunities": ["cold"]
+  },
+  "Young Black Dragon": {
+    "size": "Large", "type": "dragon", "ac": 18, "hp": 127, "speed": 40,
+    "abilities": {"STR": 19, "DEX": 14, "CON": 17, "INT": 12, "WIS": 11, "CHA": 15},
+    "cr": 7, "xp": 2900,
+    "attacks": [
+      {"name": "Bite", "bonus": 7, "damage": "2d10+4", "type": "piercing"},
+      {"name": "Claw", "bonus": 7, "damage": "2d6+4", "type": "slashing"}
+    ],
+    "traits": ["Amphibious", "Acid Breath (11d8 acid, DC 14 DEX)"],
+    "immunities": ["acid"]
+  },
+  "Stone Giant": {
+    "size": "Huge", "type": "giant", "ac": 17, "hp": 126, "speed": 40,
+    "abilities": {"STR": 23, "DEX": 15, "CON": 20, "INT": 10, "WIS": 12, "CHA": 9},
+    "cr": 7, "xp": 2900,
+    "attacks": [
+      {"name": "Greatclub", "bonus": 9, "damage": "3d8+6", "type": "bludgeoning"},
+      {"name": "Rock", "bonus": 9, "damage": "4d10+6", "type": "bludgeoning"}
+    ]
+  },
+  "Young Green Dragon": {
+    "size": "Large", "type": "dragon", "ac": 18, "hp": 136, "speed": 40,
+    "abilities": {"STR": 19, "DEX": 12, "CON": 17, "INT": 16, "WIS": 13, "CHA": 15},
+    "cr": 8, "xp": 3900,
+    "attacks": [
+      {"name": "Bite", "bonus": 7, "damage": "2d10+4", "type": "piercing"},
+      {"name": "Claw", "bonus": 7, "damage": "2d6+4", "type": "slashing"}
+    ],
+    "traits": ["Amphibious", "Poison Breath (12d6 poison, DC 14 CON)"],
+    "immunities": ["poison"]
+  },
+  "Frost Giant": {
+    "size": "Huge", "type": "giant", "ac": 15, "hp": 138, "speed": 40,
+    "abilities": {"STR": 23, "DEX": 9, "CON": 21, "INT": 9, "WIS": 10, "CHA": 12},
+    "cr": 8, "xp": 3900,
+    "attacks": [
+      {"name": "Greataxe", "bonus": 9, "damage": "3d12+6", "type": "slashing"},
+      {"name": "Rock", "bonus": 9, "damage": "4d10+6", "type": "bludgeoning"}
+    ],
+    "immunities": ["cold"]
+  },
+  "Young Blue Dragon": {
+    "size": "Large", "type": "dragon", "ac": 18, "hp": 152, "speed": 40,
+    "abilities": {"STR": 21, "DEX": 10, "CON": 19, "INT": 14, "WIS": 13, "CHA": 17},
+    "cr": 9, "xp": 5000,
+    "attacks": [
+      {"name": "Bite", "bonus": 9, "damage": "2d10+5", "type": "piercing"},
+      {"name": "Claw", "bonus": 9, "damage": "2d6+5", "type": "slashing"}
+    ],
+    "traits": ["Lightning Breath (10d10 lightning, DC 16 DEX)"],
+    "immunities": ["lightning"]
+  },
+  "Fire Giant": {
+    "size": "Huge", "type": "giant", "ac": 18, "hp": 162, "speed": 30,
+    "abilities": {"STR": 25, "DEX": 9, "CON": 23, "INT": 10, "WIS": 14, "CHA": 13},
+    "cr": 9, "xp": 5000,
+    "attacks": [
+      {"name": "Greatsword", "bonus": 11, "damage": "6d6+7", "type": "slashing"},
+      {"name": "Rock", "bonus": 11, "damage": "4d10+7", "type": "bludgeoning"}
+    ],
+    "immunities": ["fire"]
+  },
+  "Young Red Dragon": {
+    "size": "Large", "type": "dragon", "ac": 18, "hp": 178, "speed": 40,
+    "abilities": {"STR": 23, "DEX": 10, "CON": 21, "INT": 14, "WIS": 11, "CHA": 19},
+    "cr": 10, "xp": 5900,
+    "attacks": [
+      {"name": "Bite", "bonus": 10, "damage": "2d10+6", "type": "piercing"},
+      {"name": "Claw", "bonus": 10, "damage": "2d6+6", "type": "slashing"}
+    ],
+    "traits": ["Fire Breath (16d6 fire, DC 17 DEX)"],
+    "immunities": ["fire"]
+  },
+  "Guardian Naga": {
+    "size": "Large", "type": "monstrosity", "ac": 18, "hp": 127, "speed": 40,
+    "abilities": {"STR": 19, "DEX": 18, "CON": 16, "INT": 16, "WIS": 19, "CHA": 18},
+    "cr": 10, "xp": 5900,
+    "attacks": [{"name": "Bite", "bonus": 8, "damage": "1d8+4", "type": "piercing"}],
+    "traits": ["Rejuvenation", "Spellcasting (11th-level)"],
+    "immunities": ["poison"]
   }
 }

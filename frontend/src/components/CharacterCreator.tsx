@@ -122,6 +122,23 @@ const CLASS_PRIMARY_STATS: Record<string, string[]> = {
   Wizard: ["INT"],
 };
 
+// Subclass options per class. subclass_level indicates when the subclass is chosen.
+// At character creation (level 1), only classes with subclass_level <= 1 show the picker.
+const CLASS_SUBCLASSES: Record<string, { subclass_level: number; options: { name: string; hint: string }[] }> = {
+  Barbarian:  { subclass_level: 3, options: [{ name: "Path of the Berserker", hint: "Frenzy for devastating bonus-action attacks." }, { name: "Path of the Totem Warrior", hint: "Channel animal spirits for versatile resistance and utility." }] },
+  Bard:       { subclass_level: 3, options: [{ name: "College of Lore", hint: "Extra skills and Cutting Words to debuff foes." }, { name: "College of Valor", hint: "Medium armor, shields, and Extra Attack." }] },
+  Cleric:     { subclass_level: 1, options: [{ name: "Life Domain", hint: "Superior healing and heavy armor proficiency." }, { name: "Light Domain", hint: "Fire-based offense and protective Warding Flare." }] },
+  Druid:      { subclass_level: 2, options: [{ name: "Circle of the Land", hint: "Extra spells and spell slot recovery." }, { name: "Circle of the Moon", hint: "Powerful Wild Shape combat forms." }] },
+  Fighter:    { subclass_level: 3, options: [{ name: "Champion", hint: "Improved critical hits and remarkable athleticism." }, { name: "Battle Master", hint: "Tactical superiority dice and combat maneuvers." }] },
+  Monk:       { subclass_level: 3, options: [{ name: "Way of the Open Hand", hint: "Enhanced unarmed strikes with knockback and stun." }, { name: "Way of Shadow", hint: "Stealth, darkness, and shadow teleportation." }] },
+  Paladin:    { subclass_level: 3, options: [{ name: "Oath of Devotion", hint: "Sacred Weapon and protection against fiends." }, { name: "Oath of the Ancients", hint: "Nature-themed auras and spell resistance." }] },
+  Ranger:     { subclass_level: 3, options: [{ name: "Hunter", hint: "Extra damage features against single or multiple foes." }, { name: "Beast Master", hint: "Animal companion that fights alongside you." }] },
+  Rogue:      { subclass_level: 3, options: [{ name: "Thief", hint: "Fast Hands and Second-Story Work for agility." }, { name: "Assassin", hint: "Surprise-round auto-crits and disguise mastery." }] },
+  Sorcerer:   { subclass_level: 1, options: [{ name: "Draconic Bloodline", hint: "Bonus HP, elemental affinity, and dragon resilience." }, { name: "Wild Magic", hint: "Unpredictable surges and Tides of Chaos." }] },
+  Warlock:    { subclass_level: 1, options: [{ name: "The Fiend", hint: "Temporary HP on kills and fire damage features." }, { name: "The Great Old One", hint: "Telepathy and mind-affecting abilities." }] },
+  Wizard:     { subclass_level: 2, options: [{ name: "School of Evocation", hint: "Sculpt Spells to protect allies from your AoE." }, { name: "School of Abjuration", hint: "Arcane Ward absorbs damage to protect you." }] },
+};
+
 type CharacterSpriteOption = {
   id: string;
   label: string;
@@ -413,6 +430,7 @@ export default function CharacterCreator() {
   const [name, setName] = useState("");
   const [race, setRace] = useState("Human");
   const [charClass, setCharClass] = useState("Fighter");
+  const [subclass, setSubclass] = useState("");
   const [spriteId, setSpriteId] = useState("pc_knight");
   const [abilities, setAbilities] = useState<Record<string, number>>(() => {
     const obj: Record<string, number> = {};
@@ -446,6 +464,55 @@ export default function CharacterCreator() {
   } | null>(null);
   const [selectedClassSkills, setSelectedClassSkills] = useState<string[]>([]);
   const [halfElfChoices, setHalfElfChoices] = useState<string[]>([]);
+
+  // Import mode state
+  const [importMode, setImportMode] = useState(false);
+  const [importJson, setImportJson] = useState("");
+  const [importing, setImporting] = useState(false);
+
+  const handleImport = async () => {
+    if (!roomCode || !playerId || importing) return;
+    setError("");
+    let parsed: Record<string, unknown>;
+    try {
+      parsed = JSON.parse(importJson);
+    } catch {
+      setError("Invalid JSON. Paste the exported character file contents.");
+      return;
+    }
+    setImporting(true);
+    try {
+      const res = await callBackendApi("/api/character/import", {
+        method: "POST",
+        body: {
+          room_code: roomCode,
+          player_id: playerId,
+          character_data: parsed,
+        },
+      });
+      if (res.error) {
+        setError(typeof res.error === "string" ? res.error : "Import failed");
+        return;
+      }
+      const charData = (res.data as Record<string, unknown>)?.character as CharacterData | undefined;
+      if (charData?.id) {
+        useGameStore.getState().setCharacters({
+          ...useGameStore.getState().characters,
+          [charData.id]: charData,
+        });
+        useSessionStore.getState().setPlayers(
+          useSessionStore.getState().players.map((p) =>
+            p.id === playerId ? { ...p, character_id: charData.id } : p,
+          ),
+        );
+      }
+      useSessionStore.getState().setPhase("playing");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Import failed");
+    } finally {
+      setImporting(false);
+    }
+  };
 
   // Derived: base + racial bonuses (used for display and stat preview)
   const finalAbilities = ABILITIES.reduce(
@@ -651,6 +718,7 @@ export default function CharacterCreator() {
           name: name.trim(),
           race,
           char_class: charClass,
+          subclass: subclass || undefined,
           sprite_id: resolvedSpriteId,
           abilities,
           known_spells: knownSpells,
@@ -839,8 +907,60 @@ export default function CharacterCreator() {
                   "linear-gradient(90deg, transparent, rgba(228,168,83,0.4), transparent)",
               }}
             />
+
+            {/* Import / Create toggle */}
+            <div className="flex justify-center gap-3 mb-2">
+              <button
+                type="button"
+                className={cn(
+                  "px-3 py-1.5 rounded text-sm font-medium transition-colors",
+                  importMode
+                    ? "text-[#a0a0b0] hover:text-[#e4a853]"
+                    : "bg-[rgba(228,168,83,0.2)] text-[#e4a853] border border-[rgba(228,168,83,0.4)]",
+                )}
+                onClick={() => setImportMode(false)}
+              >
+                Create New
+              </button>
+              <button
+                type="button"
+                className={cn(
+                  "px-3 py-1.5 rounded text-sm font-medium transition-colors",
+                  importMode
+                    ? "bg-[rgba(228,168,83,0.2)] text-[#e4a853] border border-[rgba(228,168,83,0.4)]"
+                    : "text-[#a0a0b0] hover:text-[#e4a853]",
+                )}
+                onClick={() => setImportMode(true)}
+              >
+                📥 Import Character
+              </button>
+            </div>
           </div>
 
+          {importMode ? (
+            <div className="flex flex-col gap-4">
+              <SectionHeading icon="📥" label="Import Character" />
+              <p className="text-[0.82rem] text-[#a0a0b0]">
+                Paste your exported character JSON below to import it.
+              </p>
+              <textarea
+                className="w-full min-h-40 rounded-lg bg-[rgba(16,24,48,0.7)] border border-[rgba(228,168,83,0.2)] text-[#c8c8d8] text-sm p-3 font-mono resize-y focus:outline-none focus:border-[rgba(228,168,83,0.5)]"
+                placeholder='{"name": "Thorin", "race": "Dwarf", "class": "Fighter", ...}'
+                value={importJson}
+                onChange={(e) => setImportJson(e.target.value)}
+              />
+              {error && (
+                <p className="text-red-400 text-sm">{error}</p>
+              )}
+              <Button
+                onClick={handleImport}
+                disabled={!importJson.trim() || importing}
+                className="min-h-12 text-base font-bold bg-linear-to-br from-[#e4a853] to-[#c8882a] text-[#1a1a2e] border-none hover:opacity-90 disabled:opacity-40 transition-shadow"
+              >
+                {importing ? "Importing…" : "⚔ Import & Begin"}
+              </Button>
+            </div>
+          ) : (
           <div className="flex flex-col gap-4">
             {/* Identity */}
             <SectionHeading icon="✦" label="Identity" />
@@ -905,6 +1025,7 @@ export default function CharacterCreator() {
                   onChange={(e: React.ChangeEvent<HTMLSelectElement>) => {
                     const nextClass = e.target.value;
                     setCharClass(nextClass);
+                    setSubclass("");
                     loadSpellOptions(nextClass);
                   }}
                 >
@@ -955,6 +1076,36 @@ export default function CharacterCreator() {
               <p className="text-[0.72rem] text-[#a0a0b0] italic -mt-2 m-0 leading-snug">
                 {CLASS_HINTS[charClass]}
               </p>
+            )}
+
+            {/* Subclass picker — only shown if subclass_level <= 1 */}
+            {CLASS_SUBCLASSES[charClass]?.subclass_level <= 1 && (
+              <div className="flex flex-col gap-1.5">
+                <span className="text-[0.7rem] uppercase tracking-[0.07em] text-[#a0a0b0]">
+                  Subclass
+                </span>
+                <div className="grid grid-cols-1 gap-2">
+                  {CLASS_SUBCLASSES[charClass].options.map((sc) => {
+                    const isSelected = subclass === sc.name;
+                    return (
+                      <button
+                        key={sc.name}
+                        type="button"
+                        onClick={() => setSubclass(sc.name)}
+                        className={cn(
+                          "rounded-lg px-3 py-2.5 text-left transition-all border",
+                          isSelected
+                            ? "bg-[rgba(228,168,83,0.12)] border-[rgba(228,168,83,0.5)] text-[#e4a853]"
+                            : "bg-white/3 border-[#2a2a4a] text-[#a0a0b0] hover:border-[rgba(228,168,83,0.3)] hover:text-[#e0e0e0]",
+                        )}
+                      >
+                        <span className="text-[0.82rem] font-semibold block">{sc.name}</span>
+                        <span className="text-[0.68rem] opacity-70">{sc.hint}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
             )}
 
             {/* Appearance */}
@@ -1405,6 +1556,7 @@ export default function CharacterCreator() {
               )}
             </Button>
           </div>
+          )}
         </Card>
       </motion.div>
     </div>

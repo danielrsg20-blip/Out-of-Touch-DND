@@ -64,9 +64,42 @@ def get_spell_slots(char_class: str, level: int) -> dict[int, int]:
     return dict(SPELL_SLOTS_BY_LEVEL.get(effective_level, {}))
 
 
+def get_multiclass_caster_level(class_levels: dict[str, int]) -> int:
+    """Calculate combined caster level for multiclass spell slot lookup.
+
+    Full casters contribute their full level, half casters half (round down),
+    third casters a third (round down).  Non-casters contribute nothing.
+    """
+    from .characters import CLASSES
+    total = 0
+    for cls_name, lvl in class_levels.items():
+        cls_data = CLASSES.get(cls_name, {})
+        if not cls_data.get("spellcaster"):
+            continue
+        if cls_name in HALF_CASTERS:
+            total += lvl // 2
+        elif cls_name in THIRD_CASTERS:
+            total += lvl // 3
+        else:
+            total += lvl
+    return max(1, total) if total > 0 else 0
+
+
+def get_multiclass_spell_slots(class_levels: dict[str, int]) -> dict[int, int]:
+    """Return spell slots for a multiclass character using the combined caster level."""
+    caster_level = get_multiclass_caster_level(class_levels)
+    if caster_level == 0:
+        return {}
+    return dict(SPELL_SLOTS_BY_LEVEL.get(caster_level, {}))
+
+
 def initialize_spell_slots(character: Character) -> None:
     """Set up spell slots on a character based on class and level."""
-    slots = get_spell_slots(character.char_class, character.level)
+    if character.class_levels and len(character.class_levels) > 1:
+        # Multiclass: use combined caster level
+        slots = get_multiclass_spell_slots(character.class_levels)
+    else:
+        slots = get_spell_slots(character.char_class, character.level)
     character.spell_slots = slots
     character.spell_slots_used = {k: 0 for k in slots}
 

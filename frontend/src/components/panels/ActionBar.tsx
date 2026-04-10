@@ -313,6 +313,17 @@ export default function ActionBar({
               {resting === "long" ? "Resting…" : "Long Rest"}
             </span>
           </button>
+          <button
+            className="action-btn"
+            onClick={() => {
+              localStorage.removeItem("otdnd_tutorial_completed");
+              globalThis.dispatchEvent(new CustomEvent("otdnd:show-tutorial"));
+            }}
+            title="Show tutorial"
+          >
+            <span className="action-icon">❓</span>
+            <span className="action-label">Help</span>
+          </button>
         </div>
       </div>
     );

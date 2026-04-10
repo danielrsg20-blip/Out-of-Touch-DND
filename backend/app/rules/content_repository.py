@@ -99,6 +99,24 @@ def _load_class_features(version: str) -> dict[str, list[dict[str, Any]]]:
     return out
 
 
+@lru_cache(maxsize=1)
+def _load_monsters() -> dict[str, dict[str, Any]]:
+    path = _DATA_DIR / "monsters.json"
+    raw = _load_json_file(path)
+    if not isinstance(raw, dict):
+        return {}
+    return raw
+
+
+@lru_cache(maxsize=1)
+def _load_subclasses() -> dict[str, dict[str, Any]]:
+    path = _DATA_DIR / "subclasses.json"
+    raw = _load_json_file(path)
+    if not isinstance(raw, dict):
+        return {}
+    return raw
+
+
 def get_spell(spell_name: str, rules_version: str | None = None) -> dict[str, Any] | None:
     version = rules_version or SRD_RULES_VERSION
     return _load_spells(version).get(_safe_key(spell_name))
@@ -127,6 +145,47 @@ def is_spell_available_to_class(spell_name: str, char_class: str, rules_version:
 def get_class_features(char_class: str, level: int | None = None, rules_version: str | None = None) -> list[dict[str, Any]]:
     version = rules_version or SRD_RULES_VERSION
     features = _load_class_features(version).get(char_class, [])
+    if level is None:
+        return list(features)
+    return [f for f in features if int(f.get("level", 0)) <= level]
+
+
+def get_monster_stat_block(monster_name: str) -> dict[str, Any] | None:
+    """Look up a monster by name (case-insensitive) from monsters.json."""
+    monsters = _load_monsters()
+    # Try exact match first
+    if monster_name in monsters:
+        return monsters[monster_name]
+    # Case-insensitive fallback
+    lower = monster_name.lower()
+    for name, block in monsters.items():
+        if name.lower() == lower:
+            return block
+    return None
+
+
+def list_monster_names() -> list[str]:
+    """Return all available monster names."""
+    return sorted(_load_monsters().keys())
+
+
+def get_subclass_level(char_class: str) -> int:
+    """Return the level at which a class picks its subclass."""
+    data = _load_subclasses().get(char_class, {})
+    return int(data.get("subclass_level", 3))
+
+
+def get_available_subclasses(char_class: str) -> list[str]:
+    """Return the list of subclass names for a class."""
+    data = _load_subclasses().get(char_class, {})
+    return sorted(data.get("subclasses", {}).keys())
+
+
+def get_subclass_features(char_class: str, subclass: str, level: int | None = None) -> list[dict[str, Any]]:
+    """Return subclass features, optionally filtered to those at or below a level."""
+    data = _load_subclasses().get(char_class, {})
+    subclass_data = data.get("subclasses", {}).get(subclass, {})
+    features = subclass_data.get("features", [])
     if level is None:
         return list(features)
     return [f for f in features if int(f.get("level", 0)) <= level]

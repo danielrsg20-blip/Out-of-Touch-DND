@@ -1,9 +1,9 @@
 import { useState, useMemo } from "react";
 import { useGameStore } from "../../stores/gameStore";
-import type { CodexNPC, CodexLocation, CodexQuest } from "../../types";
+import type { CodexNPC, CodexLocation, CodexQuest, CodexFaction } from "../../types";
 import "./panels.css";
 
-type CodexTab = "npcs" | "locations" | "quests";
+type CodexTab = "npcs" | "locations" | "quests" | "factions";
 
 const DISPOSITION_COLORS: Record<string, string> = {
   hostile: "var(--codex-hostile)",
@@ -238,6 +238,73 @@ function QuestCard({
   );
 }
 
+function FactionCard({
+  faction,
+  expanded,
+  onToggle,
+}: Readonly<{
+  faction: CodexFaction;
+  expanded: boolean;
+  onToggle: () => void;
+}>) {
+  const dispColor = DISPOSITION_COLORS[faction.disposition] ?? DISPOSITION_COLORS.neutral;
+  const repPercent = Math.max(0, Math.min(100, (faction.reputation + 100) / 2));
+
+  return (
+    <div className={`codex-card${expanded ? " codex-card--expanded" : ""}`}>
+      <button type="button" className="codex-card-header" onClick={onToggle}>
+        <span
+          className="codex-dot"
+          style={{ background: dispColor }}
+          title={faction.disposition}
+        />
+        <span className="codex-card-name">{faction.name}</span>
+        <span className="codex-card-meta" style={{ color: dispColor }}>
+          {faction.disposition} ({faction.reputation > 0 ? "+" : ""}{faction.reputation})
+        </span>
+      </button>
+      {expanded && (
+        <div className="codex-card-body">
+          {faction.description && (
+            <p className="codex-desc">{faction.description}</p>
+          )}
+          <div className="codex-field">
+            <span className="codex-field-label">Reputation</span>
+            <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", flex: 1 }}>
+              <div style={{
+                flex: 1, height: "6px", borderRadius: "3px",
+                background: "rgba(255,255,255,0.1)", overflow: "hidden",
+              }}>
+                <div style={{
+                  width: `${repPercent}%`, height: "100%",
+                  borderRadius: "3px", background: dispColor,
+                  transition: "width 0.3s ease",
+                }} />
+              </div>
+              <span style={{ fontSize: "0.7rem", opacity: 0.7 }}>
+                {faction.reputation}
+              </span>
+            </div>
+          </div>
+          {faction.known_members.length > 0 && (
+            <div className="codex-field">
+              <span className="codex-field-label">Known Members</span>
+              <span>{faction.known_members.join(", ")}</span>
+            </div>
+          )}
+          {faction.notes.length > 0 && (
+            <div className="codex-notes">
+              {faction.notes.map((n, i) => (
+                <p key={i} className="codex-note">• {n}</p>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function CodexPanel() {
   const codex = useGameStore((s) => s.codex);
   const [tab, setTab] = useState<CodexTab>("npcs");
@@ -250,6 +317,7 @@ export default function CodexPanel() {
     [codex],
   );
   const quests = useMemo(() => Object.values(codex?.quests ?? {}), [codex]);
+  const factions = useMemo(() => Object.values(codex?.factions ?? {}), [codex]);
 
   const q = search.trim().toLowerCase();
 
@@ -291,10 +359,24 @@ export default function CodexPanel() {
     [quests, q],
   );
 
+  const filteredFactions = useMemo(
+    () =>
+      q
+        ? factions.filter(
+            (f) =>
+              f.name.toLowerCase().includes(q) ||
+              f.description.toLowerCase().includes(q) ||
+              f.disposition.toLowerCase().includes(q),
+          )
+        : factions,
+    [factions, q],
+  );
+
   const counts: Record<CodexTab, number> = {
     npcs: npcs.length,
     locations: locations.length,
     quests: quests.length,
+    factions: factions.length,
   };
 
   const activeQuests = quests.filter((qst) => qst.status === "active").length;
@@ -304,7 +386,7 @@ export default function CodexPanel() {
   }
 
   const isEmpty =
-    npcs.length === 0 && locations.length === 0 && quests.length === 0;
+    npcs.length === 0 && locations.length === 0 && quests.length === 0 && factions.length === 0;
 
   return (
     <div className="codex-panel">
@@ -330,7 +412,7 @@ export default function CodexPanel() {
       ) : (
         <>
           <div className="codex-tabs">
-            {(["npcs", "locations", "quests"] as CodexTab[]).map((t) => (
+            {(["npcs", "locations", "quests", "factions"] as CodexTab[]).map((t) => (
               <button
                 key={t}
                 type="button"
@@ -340,11 +422,7 @@ export default function CodexPanel() {
                   setExpandedId(null);
                 }}
               >
-                {t === "npcs"
-                  ? "NPCs"
-                  : t === "locations"
-                    ? "Places"
-                    : "Quests"}
+                {{ npcs: "NPCs", locations: "Places", quests: "Quests", factions: "Factions" }[t]}
                 {counts[t] > 0 && (
                   <span className="codex-tab-count">{counts[t]}</span>
                 )}
@@ -403,6 +481,19 @@ export default function CodexPanel() {
                     quest={qst}
                     expanded={expandedId === qst.id}
                     onToggle={() => toggle(qst.id)}
+                  />
+                ))
+              ))}
+            {tab === "factions" &&
+              (filteredFactions.length === 0 ? (
+                <p className="codex-empty">No matches.</p>
+              ) : (
+                filteredFactions.map((f) => (
+                  <FactionCard
+                    key={f.id}
+                    faction={f}
+                    expanded={expandedId === f.id}
+                    onToggle={() => toggle(f.id)}
                   />
                 ))
               ))}

@@ -122,6 +122,31 @@ class LocationMemory:
 
 
 @dataclass
+class FactionMemory:
+    id: str
+    name: str
+    description: str = ""
+    reputation: int = 0  # -100 (hated) to +100 (revered)
+    disposition: str = "neutral"  # hostile / unfriendly / neutral / friendly / allied
+    known_members: list[str] = field(default_factory=list)
+    notes: list[str] = field(default_factory=list)
+
+    def summary(self) -> str:
+        return f"- {self.name} ({self.disposition}, rep {self.reputation}): {self.description}"
+
+    def to_dict(self) -> dict:
+        return {
+            "id": self.id,
+            "name": self.name,
+            "description": self.description,
+            "reputation": self.reputation,
+            "disposition": self.disposition,
+            "known_members": self.known_members,
+            "notes": self.notes,
+        }
+
+
+@dataclass
 class WorldEvent:
     session: int
     description: str
@@ -146,6 +171,8 @@ class CampaignMemory:
     campaign_difficulty: str = ""
     campaign_title: str = ""
     world_time: dict = field(default_factory=lambda: {"day": 1, "hour": 8, "minute": 0})
+    weather: str = "clear"
+    factions: dict[str, FactionMemory] = field(default_factory=dict)
 
     def add_npc(self, npc: NPCMemory) -> None:
         self.npcs[npc.id] = npc
@@ -155,6 +182,34 @@ class CampaignMemory:
 
     def add_location(self, loc: LocationMemory) -> None:
         self.locations[loc.id] = loc
+
+    def add_faction(self, faction: FactionMemory) -> None:
+        self.factions[faction.id] = faction
+
+    def adjust_reputation(self, faction_id: str, amount: int) -> dict:
+        """Adjust faction reputation and auto-update disposition. Returns result dict."""
+        faction = self.factions.get(faction_id)
+        if not faction:
+            return {"error": f"Unknown faction: {faction_id}"}
+        faction.reputation = max(-100, min(100, faction.reputation + amount))
+        # Auto-derive disposition from reputation
+        r = faction.reputation
+        if r <= -50:
+            faction.disposition = "hostile"
+        elif r <= -20:
+            faction.disposition = "unfriendly"
+        elif r <= 20:
+            faction.disposition = "neutral"
+        elif r <= 50:
+            faction.disposition = "friendly"
+        else:
+            faction.disposition = "allied"
+        return {
+            "faction": faction.name,
+            "reputation": faction.reputation,
+            "disposition": faction.disposition,
+            "change": amount,
+        }
 
     def record_event(self, description: str, importance: str = "minor") -> None:
         self.world_events.append(WorldEvent(
@@ -188,6 +243,13 @@ class CampaignMemory:
             f"CURRENT TIME: Day {wt.get('day', 1)}, "
             f"{hour:02d}:{wt.get('minute', 0):02d} ({time_of_day})"
         )
+
+        if self.weather and self.weather != "clear":
+            sections.append(f"WEATHER: {self.weather}")
+
+        if self.factions:
+            faction_lines = [f.summary() for f in self.factions.values()]
+            sections.append("FACTIONS:\n" + "\n".join(faction_lines))
 
         if self.campaign_premise:
             tone_line = f"\nTone: {self.campaign_tone}" if self.campaign_tone else ""
@@ -227,8 +289,10 @@ class CampaignMemory:
             "npcs": {k: v.to_dict() for k, v in self.npcs.items()},
             "locations": {k: v.to_dict() for k, v in self.locations.items()},
             "quests": {k: v.to_dict() for k, v in self.quests.items()},
+            "factions": {k: v.to_dict() for k, v in self.factions.items()},
             "world_events": [e.to_dict() for e in self.world_events if e.importance in ("major", "critical")],
             "world_time": self.world_time,
+            "weather": self.weather,
         }
 
     def to_dict(self) -> dict:
@@ -246,6 +310,8 @@ class CampaignMemory:
             "campaign_difficulty": self.campaign_difficulty,
             "campaign_title": self.campaign_title,
             "world_time": self.world_time,
+            "weather": self.weather,
+            "factions": {k: v.to_dict() for k, v in self.factions.items()},
         }
 
     @classmethod
@@ -260,6 +326,7 @@ class CampaignMemory:
         mem.campaign_difficulty = data.get("campaign_difficulty", "")
         mem.campaign_title = data.get("campaign_title", "")
         mem.world_time = data.get("world_time", {"day": 1, "hour": 8, "minute": 0})
+        mem.weather = data.get("weather", "clear")
 
         for npc_data in data.get("npcs", {}).values():
             mem.npcs[npc_data["id"]] = NPCMemory(**{k: v for k, v in npc_data.items() if k in NPCMemory.__dataclass_fields__})
@@ -272,5 +339,8 @@ class CampaignMemory:
 
         for e_data in data.get("world_events", []):
             mem.world_events.append(WorldEvent(**e_data))
+
+        for f_data in data.get("factions", {}).values():
+            mem.factions[f_data["id"]] = FactionMemory(**{k: v for k, v in f_data.items() if k in FactionMemory.__dataclass_fields__})
 
         return mem

@@ -2840,6 +2840,7 @@ function buildCharacter(input: {
   skillProficiencies: string[];
   alignment: string;
   racialAbilityChoices?: Record<string, number>;
+  subclass: string;
 }) {
   const classKey = toClassKey(input.charClass);
   const profile = getSpellcastingProfile(classKey);
@@ -2901,6 +2902,8 @@ function buildCharacter(input: {
     player_id: input.playerId,
     background: input.background,
     alignment: input.alignment,
+    subclass: input.subclass || "",
+    class_resources: {},
     inspiration: false,
     death_saves: { successes: 0, failures: 0 },
     hit_dice_used: 0,
@@ -2975,6 +2978,8 @@ async function actionCreateCharacter(body: Record<string, unknown>) {
   const { version, snapshot } = await loadSnapshot(sessionId);
 
   const charId = `pc_${playerId}`;
+  const subclass = typeof body.subclass === "string" ? body.subclass.trim() : "";
+
   const character = buildCharacter({
     charId,
     playerId,
@@ -2989,6 +2994,7 @@ async function actionCreateCharacter(body: Record<string, unknown>) {
     skillProficiencies,
     alignment,
     racialAbilityChoices,
+    subclass,
   });
 
   const nextSnapshotBase: SnapshotState = {

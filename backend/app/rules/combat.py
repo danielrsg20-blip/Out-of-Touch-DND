@@ -31,6 +31,7 @@ class CombatParticipant:
     def start_turn(self) -> None:
         self.has_action = True
         self.has_bonus_action = True
+        self.has_reaction = True
         self.movement_remaining = self.character.speed
 
     def to_dict(self) -> dict:

@@ -1,0 +1,197 @@
+{
+  "Alert": {
+    "name": "Alert",
+    "prerequisite": null,
+    "description": "You gain a +5 bonus to initiative. You can't be surprised while you are conscious. Other creatures don't gain advantage on attack rolls against you as a result of being unseen by you.",
+    "effects": {
+      "initiative_bonus": 5,
+      "surprise_immunity": true
+    }
+  },
+  "Athlete": {
+    "name": "Athlete",
+    "prerequisite": null,
+    "description": "You have undergone extensive physical training. Increase your STR or DEX by 1 (max 20). When prone, standing up uses only 5 feet. Climbing doesn't cost extra movement. Running jump distance increases with 1-square running start.",
+    "effects": {
+      "ability_choice": ["STR", "DEX"],
+      "ability_increase": 1
+    }
+  },
+  "Charger": {
+    "name": "Charger",
+    "prerequisite": null,
+    "description": "When you use your action to Dash, you can use a bonus action to make one melee weapon attack or to shove a creature. If you move at least 10 feet in a straight line before the attack, you gain +5 to the attack's damage roll.",
+    "effects": {
+      "dash_bonus_attack": true,
+      "charge_damage_bonus": 5
+    }
+  },
+  "Crossbow Expert": {
+    "name": "Crossbow Expert",
+    "prerequisite": null,
+    "description": "You ignore the loading property of crossbows. Being within 5 feet of a hostile creature doesn't impose disadvantage on ranged attack rolls. When you use the Attack action with a one-handed weapon, you can use a bonus action to attack with a hand crossbow you are holding.",
+    "effects": {
+      "ignore_loading": true,
+      "no_close_range_disadvantage": true
+    }
+  },
+  "Defensive Duelist": {
+    "name": "Defensive Duelist",
+    "prerequisite": "DEX 13",
+    "description": "When you are wielding a finesse weapon and another creature hits you with a melee attack, you can use your reaction to add your proficiency bonus to your AC for that attack.",
+    "effects": {
+      "reaction_ac_bonus": "proficiency"
+    }
+  },
+  "Dual Wielder": {
+    "name": "Dual Wielder",
+    "prerequisite": null,
+    "description": "You gain +1 AC while dual wielding. You can use two-weapon fighting even when the weapons aren't light. You can draw or stow two weapons at once.",
+    "effects": {
+      "dual_wield_ac_bonus": 1,
+      "dual_wield_any_one_handed": true
+    }
+  },
+  "Durable": {
+    "name": "Durable",
+    "prerequisite": null,
+    "description": "Increase your CON by 1 (max 20). When you roll a Hit Die to regain hit points, the minimum number of hit points you regain equals twice your CON modifier (minimum of 2).",
+    "effects": {
+      "ability_increase_con": 1,
+      "min_hit_die_heal": "2*CON_mod"
+    }
+  },
+  "Great Weapon Master": {
+    "name": "Great Weapon Master",
+    "prerequisite": null,
+    "description": "On your turn, when you score a critical hit or reduce a creature to 0 HP with a melee weapon, you can make one melee weapon attack as a bonus action. Before making a melee attack with a heavy weapon you are proficient with, you can choose to take -5 to the attack roll. If the attack hits, you deal +10 damage.",
+    "effects": {
+      "bonus_attack_on_crit_or_kill": true,
+      "power_attack_penalty": -5,
+      "power_attack_damage": 10
+    }
+  },
+  "Heavily Armored": {
+    "name": "Heavily Armored",
+    "prerequisite": "Medium armor proficiency",
+    "description": "Increase your STR by 1 (max 20). You gain proficiency with heavy armor.",
+    "effects": {
+      "ability_increase_str": 1,
+      "armor_proficiency": "heavy"
+    }
+  },
+  "Heavy Armor Master": {
+    "name": "Heavy Armor Master",
+    "prerequisite": "Heavy armor proficiency",
+    "description": "Increase your STR by 1 (max 20). While wearing heavy armor, bludgeoning, piercing, and slashing damage you take from nonmagical weapons is reduced by 3.",
+    "effects": {
+      "ability_increase_str": 1,
+      "nonmagical_damage_reduction": 3
+    }
+  },
+  "Inspiring Leader": {
+    "name": "Inspiring Leader",
+    "prerequisite": "CHA 13",
+    "description": "You can spend 10 minutes inspiring your companions. Up to 6 friendly creatures (including yourself) gain temporary hit points equal to your level + your CHA modifier.",
+    "effects": {
+      "temp_hp_grant": "level+CHA_mod"
+    }
+  },
+  "Lucky": {
+    "name": "Lucky",
+    "prerequisite": null,
+    "description": "You have 3 luck points. Whenever you make an attack roll, ability check, or saving throw, you can spend one luck point to roll an additional d20 and choose which to use. You regain luck points after a long rest.",
+    "effects": {
+      "luck_points": 3,
+      "resets_on": "long_rest"
+    }
+  },
+  "Mage Slayer": {
+    "name": "Mage Slayer",
+    "prerequisite": null,
+    "description": "When a creature within 5 feet casts a spell, you can use your reaction to make a melee weapon attack. When you damage a creature concentrating on a spell, it has disadvantage on the saving throw. You have advantage on saving throws against spells cast by creatures within 5 feet.",
+    "effects": {
+      "reaction_attack_on_cast": true,
+      "concentration_save_disadvantage": true,
+      "close_spell_save_advantage": true
+    }
+  },
+  "Mobile": {
+    "name": "Mobile",
+    "prerequisite": null,
+    "description": "Your speed increases by 10 feet. When you use the Dash action, difficult terrain doesn't cost extra movement. When you make a melee attack against a creature, you don't provoke opportunity attacks from that creature for the rest of the turn.",
+    "effects": {
+      "speed_bonus": 10,
+      "no_opportunity_attack_after_melee": true
+    }
+  },
+  "Observant": {
+    "name": "Observant",
+    "prerequisite": null,
+    "description": "Increase your INT or WIS by 1 (max 20). You gain +5 to passive Perception and passive Investigation scores. You can read lips if you can see a creature's mouth and it is speaking a language you understand.",
+    "effects": {
+      "ability_choice": ["INT", "WIS"],
+      "ability_increase": 1,
+      "passive_perception_bonus": 5,
+      "passive_investigation_bonus": 5
+    }
+  },
+  "Polearm Master": {
+    "name": "Polearm Master",
+    "prerequisite": null,
+    "description": "When you take the Attack action with a glaive, halberd, quarterstaff, or spear, you can use a bonus action to make a melee attack with the opposite end (1d4 bludgeoning). Creatures provoke an opportunity attack when they enter your reach.",
+    "effects": {
+      "bonus_action_butt_attack": true,
+      "opportunity_attack_on_enter": true
+    }
+  },
+  "Resilient": {
+    "name": "Resilient",
+    "prerequisite": null,
+    "description": "Choose one ability score. Increase it by 1 (max 20) and gain proficiency in saving throws using that ability.",
+    "effects": {
+      "ability_choice": ["STR", "DEX", "CON", "INT", "WIS", "CHA"],
+      "ability_increase": 1,
+      "saving_throw_proficiency": true
+    }
+  },
+  "Sentinel": {
+    "name": "Sentinel",
+    "prerequisite": null,
+    "description": "When you hit a creature with an opportunity attack, the creature's speed becomes 0. Creatures provoke opportunity attacks even if they take the Disengage action. When a creature within 5 feet makes an attack against someone other than you, you can use your reaction to make a melee weapon attack against that creature.",
+    "effects": {
+      "opportunity_attack_stops_movement": true,
+      "ignore_disengage": true,
+      "reaction_attack_on_ally_targeted": true
+    }
+  },
+  "Sharpshooter": {
+    "name": "Sharpshooter",
+    "prerequisite": null,
+    "description": "Attacking at long range doesn't impose disadvantage. Your ranged attacks ignore half cover and three-quarters cover. Before making a ranged attack with a proficient weapon, you can choose to take -5 to the attack roll. If the attack hits, you deal +10 damage.",
+    "effects": {
+      "no_long_range_disadvantage": true,
+      "ignore_cover": true,
+      "power_attack_penalty": -5,
+      "power_attack_damage": 10
+    }
+  },
+  "Tough": {
+    "name": "Tough",
+    "prerequisite": null,
+    "description": "Your hit point maximum increases by an amount equal to twice your level when you gain this feat. Each time you gain a level thereafter, your hit point maximum increases by an additional 2 hit points.",
+    "effects": {
+      "hp_bonus_per_level": 2
+    }
+  },
+  "War Caster": {
+    "name": "War Caster",
+    "prerequisite": "Spellcasting ability",
+    "description": "You have advantage on CON saving throws to maintain concentration. You can perform somatic components even with weapons/shield in both hands. When a creature provokes an opportunity attack, you can cast a spell at them instead of making a melee attack.",
+    "effects": {
+      "concentration_advantage": true,
+      "somatic_with_hands_full": true,
+      "spell_opportunity_attack": true
+    }
+  }
+}

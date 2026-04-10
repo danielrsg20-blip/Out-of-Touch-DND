@@ -1,8 +1,9 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { useGameStore } from "../../stores/gameStore";
 import { useSessionStore } from "../../stores/sessionStore";
 import { invokeEdgeFunction } from "../../lib/supabaseClient";
+import { callBackendApi } from "../../lib/backendApi";
 import { getItemSpriteKey, resolveSpriteUrl } from "../../data/spriteManifest";
 import {
   CHARACTER_SPRITESHEET_COLUMNS,
@@ -734,6 +735,28 @@ export default function CharacterSheet() {
   // Player can self-equip when they have a character and a live room
   const canSelfEquip = !!char && !!roomCode && !!playerId;
 
+  // Character export handler
+  const handleExport = useCallback(async () => {
+    if (!roomCode || !playerId || !charId) return;
+    try {
+      const res = await callBackendApi("/api/character/export", {
+        method: "POST",
+        body: { room_code: roomCode, player_id: playerId, character_id: charId },
+      });
+      if (res.error || !res.data) return;
+      const charData = (res.data as Record<string, unknown>).character;
+      const blob = new Blob([JSON.stringify(charData, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${char?.name ?? "character"}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      /* non-critical */
+    }
+  }, [roomCode, playerId, charId, char?.name]);
+
   // Feature #8: equip/unequip handler
   const handleEquip = async (itemId: string, equip: boolean) => {
     if (!roomCode || !playerId || equipPending) return;
@@ -806,6 +829,11 @@ export default function CharacterSheet() {
     10 + wisMod + (isPerceptionProf ? char.proficiency_bonus : 0);
   const hitDie = CLASS_HIT_DIE[char.class.toLowerCase()] ?? 8;
 
+  // Multiclass display
+  const classLevels = char.class_levels;
+  const isMulticlass = classLevels && Object.keys(classLevels).length > 1;
+  const classLabel = char.class_display ?? `${char.class} ${char.level}`;
+
   return (
     <div className="character-sheet parchment-panel">
       <div className="char-header-row">
@@ -814,7 +842,8 @@ export default function CharacterSheet() {
             {char.name}
           </h3>
           <div className="char-subtitle">
-            {char.race} {char.class} {char.level}
+            {char.race} {classLabel}
+            {char.subclass && !isMulticlass ? ` (${char.subclass})` : ""}
             {char.background ? ` · ${char.background}` : ""}
           </div>
         </div>
@@ -834,6 +863,14 @@ export default function CharacterSheet() {
             {itemCount > 0 && (
               <span className="inv-tab-badge">{itemCount}</span>
             )}
+          </button>
+          <button
+            className="char-tab"
+            onClick={handleExport}
+            title="Export character as JSON"
+            style={{ fontSize: "0.85em" }}
+          >
+            📤
           </button>
         </div>
       </div>
@@ -877,7 +914,13 @@ export default function CharacterSheet() {
             <StatCard label="Pass. Perc" value={passivePerception} icon="👁" />
             <StatCard
               label="Hit Die"
-              value={`${char.hit_dice_available ?? char.level}/${char.level}d${hitDie}`}
+              value={
+                isMulticlass
+                  ? Object.entries(classLevels)
+                      .map(([c, l]) => `${l}d${CLASS_HIT_DIE[c.toLowerCase()] ?? 8}`)
+                      .join("+")
+                  : `${char.hit_dice_available ?? char.level}/${char.level}d${hitDie}`
+              }
               icon="🎲"
             />
           </div>
@@ -985,6 +1028,56 @@ export default function CharacterSheet() {
             playerId={playerId}
             mockMode={mockMode}
           />
+
+          {/* Class resources (Rage, Ki, etc.) */}
+          {char.class_resources && Object.keys(char.class_resources).length > 0 && (
+            <div className="char-features">
+              <h4>Class Resources</h4>
+              {Object.entries(char.class_resources).map(([name, res]) => {
+                const resData = res as { max?: number; used?: number; resets_on?: string };
+                const max = resData.max ?? 0;
+                const used = resData.used ?? 0;
+                const remaining = Math.max(0, max - used);
+                return (
+                  <div key={name} className="feature-item" style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                    <strong>{name}</strong>
+                    <span style={{ display: "flex", gap: "3px" }}>
+                      {Array.from({ length: max }, (_, i) => (
+                        <span
+                          key={i}
+                          style={{
+                            width: "10px",
+                            height: "10px",
+                            borderRadius: "50%",
+                            border: "1.5px solid #e4a853",
+                            background: i < remaining ? "#e4a853" : "transparent",
+                            display: "inline-block",
+                          }}
+                        />
+                      ))}
+                    </span>
+                    <span style={{ fontSize: "0.7rem", opacity: 0.6 }}>
+                      {remaining}/{max}
+                      {resData.resets_on === "short_rest" ? " (SR)" : " (LR)"}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {/* Feats */}
+          {char.feats && char.feats.length > 0 && (
+            <div className="char-features">
+              <h4>Feats</h4>
+              {char.feats.map((feat: string) => (
+                <div key={feat} className="feature-item" style={{ display: "flex", alignItems: "center", gap: "0.4rem" }}>
+                  <span style={{ color: "#e4a853", fontSize: "0.75rem" }}>★</span>
+                  <span>{feat}</span>
+                </div>
+              ))}
+            </div>
+          )}
 
           {/* Class features */}
           {char.class_features?.length > 0 && (

@@ -42,6 +42,7 @@ from .models.user import User  # noqa: F401 — ensures table is created by init
 from jose import JWTError
 
 from .auth import create_access_token, decode_token, hash_password, verify_password
+from .character_io import export_character, import_character, validate_import
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -178,6 +179,20 @@ class CreateCharacterRequest(BaseModel):
     alignment: str = ""
     class_skill_choices: list[str] | None = None
     racial_ability_choices: dict[str, int] | None = None
+    subclass: str = ""
+
+
+class CharacterExportRequest(BaseModel):
+    room_code: str
+    player_id: str
+    character_id: str
+
+
+class CharacterImportRequest(BaseModel):
+    room_code: str
+    player_id: str
+    character_data: dict[str, Any]
+    sprite_id: str | None = None
 
 
 class CharacterSpellOptionsRequest(BaseModel):
@@ -736,6 +751,7 @@ async def create_character(req: CreateCharacterRequest, request: Request):
             alignment=req.alignment,
             class_skill_choices=req.class_skill_choices,
             racial_ability_choices=req.racial_ability_choices,
+            subclass=req.subclass,
         )
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -756,6 +772,60 @@ async def create_character(req: CreateCharacterRequest, request: Request):
     player = session.players.get(req.player_id)
     if user_id and player:
         player.user_id = user_id
+    if user_id:
+        await _auto_save_campaign(session, req.room_code, user_id)
+
+    return {"character": char.to_dict()}
+
+
+@app.post("/api/character/export")
+async def export_character_endpoint(req: CharacterExportRequest):
+    session = session_manager.get_session(req.room_code)
+    if not session:
+        raise HTTPException(status_code=404, detail="Session not found")
+
+    char = session.orchestrator.characters.get(req.character_id)
+    if not char:
+        raise HTTPException(status_code=404, detail="Character not found")
+
+    return {"character": export_character(char)}
+
+
+@app.post("/api/character/import")
+async def import_character_endpoint(req: CharacterImportRequest, request: Request):
+    session = session_manager.get_session(req.room_code)
+    if not session:
+        raise HTTPException(status_code=404, detail="Session not found")
+
+    # Validate first
+    validation = validate_import(req.character_data)
+    if not validation.get("valid"):
+        raise HTTPException(status_code=400, detail="; ".join(validation.get("errors", [])))
+
+    char_id = f"pc_{req.player_id}"
+    try:
+        char = import_character(req.character_data, char_id)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+    char.player_id = req.player_id
+    if req.sprite_id:
+        char.sprite_id = req.sprite_id
+
+    session.orchestrator.characters[char_id] = char
+
+    await session.broadcast({
+        "type": "character_created",
+        "character": char.to_dict(),
+    })
+
+    if _auto_place_unplaced_pcs(session):
+        await session.broadcast({
+            "type": "state_sync",
+            "state": session.orchestrator.get_full_state(),
+        })
+
+    user_id = _extract_user_id(request)
     if user_id:
         await _auto_save_campaign(session, req.room_code, user_id)
 
@@ -1063,22 +1133,12 @@ async def load_campaign(req: LoadCampaignRequest):
 
     chars_data = campaign.get_characters()
     for cid, cd in chars_data.items():
-        char = Character(
-            id=cd["id"], name=cd["name"], race=cd["race"], char_class=cd["class"],
-            level=cd["level"], abilities=cd["abilities"], hp=cd["hp"], max_hp=cd["max_hp"],
-            temp_hp=cd.get("temp_hp", 0), ac=cd["ac"], speed=cd["speed"],
-            skill_proficiencies=cd.get("skill_proficiencies", []),
-            conditions=cd.get("conditions", []),
-            inventory=cd.get("inventory", []),
-            spell_slots={int(k): int(v) for k, v in cd.get("spell_slots", {}).items()},
-            spell_slots_used={int(k): int(v) for k, v in cd.get("spell_slots_used", {}).items()},
-            known_spells=cd.get("known_spells", []),
-            prepared_spells=cd.get("prepared_spells", []),
-            class_features=cd.get("class_features", []),
-            traits=cd.get("traits", []), xp=cd.get("xp", 0),
-            gold_gp=cd.get("gold_gp", 0),
-            rules_version=cd.get("rules_version", "2024"),
-        )
+        # Normalize spell_slots keys to int
+        if "spell_slots" in cd:
+            cd["spell_slots"] = {int(k): int(v) for k, v in cd["spell_slots"].items()}
+        if "spell_slots_used" in cd:
+            cd["spell_slots_used"] = {int(k): int(v) for k, v in cd["spell_slots_used"].items()}
+        char = Character.from_dict(cd)
         if not char.class_features:
             char.class_features = get_class_features_for_level(char.char_class, char.level)
         session.orchestrator.characters[cid] = char
@@ -1167,22 +1227,12 @@ async def resume_campaign(req: ResumeCampaignRequest, request: Request):
 
     chars_data = campaign.get_characters()
     for cid, cd in chars_data.items():
-        char = Character(
-            id=cd["id"], name=cd["name"], race=cd["race"], char_class=cd["class"],
-            level=cd["level"], abilities=cd["abilities"], hp=cd["hp"], max_hp=cd["max_hp"],
-            temp_hp=cd.get("temp_hp", 0), ac=cd["ac"], speed=cd["speed"],
-            skill_proficiencies=cd.get("skill_proficiencies", []),
-            conditions=cd.get("conditions", []),
-            inventory=cd.get("inventory", []),
-            spell_slots={int(k): int(v) for k, v in cd.get("spell_slots", {}).items()},
-            spell_slots_used={int(k): int(v) for k, v in cd.get("spell_slots_used", {}).items()},
-            known_spells=cd.get("known_spells", []),
-            prepared_spells=cd.get("prepared_spells", []),
-            class_features=cd.get("class_features", []),
-            traits=cd.get("traits", []), xp=cd.get("xp", 0),
-            gold_gp=cd.get("gold_gp", 0),
-            rules_version=cd.get("rules_version", "2024"),
-        )
+        # Normalize spell_slots keys to int
+        if "spell_slots" in cd:
+            cd["spell_slots"] = {int(k): int(v) for k, v in cd["spell_slots"].items()}
+        if "spell_slots_used" in cd:
+            cd["spell_slots_used"] = {int(k): int(v) for k, v in cd["spell_slots_used"].items()}
+        char = Character.from_dict(cd)
         if not char.class_features:
             char.class_features = get_class_features_for_level(char.char_class, char.level)
         session.orchestrator.characters[cid] = char

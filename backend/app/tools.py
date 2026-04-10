@@ -17,6 +17,14 @@ from .rules.combat import (
     next_turn,
     roll_initiative,
 )
+from .rules.conditions import (
+    apply_condition,
+    get_attack_modifiers,
+    get_condition_names,
+    has_condition_effect,
+    remove_condition,
+    tick_conditions,
+)
 from .rules.dice import roll
 from .rules.items import (
     calculate_ac_from_inventory,
@@ -636,6 +644,18 @@ TOOL_DEFINITIONS: list[dict[str, Any]] = [
         },
     },
     {
+        "name": "use_class_resource",
+        "description": "Use one charge of a class resource (e.g. Rage, Ki, Channel Divinity, Bardic Inspiration, Wild Shape, Sorcery Points). The resource is restored on short or long rest depending on the resource type.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "character_id": {"type": "string"},
+                "resource_name": {"type": "string", "description": "Name of the class resource to spend (e.g. 'Rage', 'Ki', 'Channel Divinity')"},
+            },
+            "required": ["character_id", "resource_name"],
+        },
+    },
+    {
         "name": "give_xp",
         "description": "Award XP to a character. Use after defeating enemies or completing major objectives.",
         "input_schema": {
@@ -650,7 +670,7 @@ TOOL_DEFINITIONS: list[dict[str, Any]] = [
     },
     {
         "name": "level_up",
-        "description": "Level up a character after they've accumulated enough XP. Increases level, adds HP, updates spell slots and class features.",
+        "description": "Level up a character after they've accumulated enough XP. Increases level, adds HP, updates spell slots and class features. For multiclassing, pass class_name to level up in a different class.",
         "input_schema": {
             "type": "object",
             "properties": {
@@ -658,6 +678,10 @@ TOOL_DEFINITIONS: list[dict[str, Any]] = [
                 "use_average_hp": {
                     "type": "boolean",
                     "description": "If true, take the average HP increase instead of rolling. Defaults to true.",
+                },
+                "class_name": {
+                    "type": "string",
+                    "description": "Class to gain the level in. Omit to level up in the character's current/primary class. Set to a different class to multiclass.",
                 },
             },
             "required": ["character_id"],
@@ -930,6 +954,244 @@ TOOL_DEFINITIONS: list[dict[str, Any]] = [
             "required": ["enemies", "placement_strategy"],
         },
     },
+    {
+        "name": "apply_condition",
+        "description": "Apply a D&D 5e condition to a character (e.g. Blinded, Frightened, Stunned, Prone). Mechanical effects are automatically enforced on subsequent rolls.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "character_id": {"type": "string"},
+                "condition": {
+                    "type": "string",
+                    "enum": ["Blinded", "Charmed", "Deafened", "Frightened", "Grappled",
+                             "Incapacitated", "Invisible", "Paralyzed", "Petrified",
+                             "Poisoned", "Prone", "Restrained", "Stunned", "Unconscious"],
+                    "description": "The condition to apply",
+                },
+                "duration_rounds": {
+                    "type": "integer",
+                    "description": "Number of rounds the condition lasts. Omit for indefinite (until removed).",
+                },
+            },
+            "required": ["character_id", "condition"],
+        },
+    },
+    {
+        "name": "remove_condition",
+        "description": "Remove a condition from a character.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "character_id": {"type": "string"},
+                "condition": {"type": "string", "description": "The condition to remove"},
+            },
+            "required": ["character_id", "condition"],
+        },
+    },
+    {
+        "name": "resolve_aoe",
+        "description": "Determine which map entities fall within an area of effect. Returns entity IDs and names of all creatures in the area. Use before applying damage/effects to each target.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "origin_x": {"type": "integer", "description": "X coordinate of AoE origin/center"},
+                "origin_y": {"type": "integer", "description": "Y coordinate of AoE origin/center"},
+                "shape": {
+                    "type": "string",
+                    "enum": ["sphere", "circle", "cube", "cone", "line", "cylinder"],
+                    "description": "Shape of the area of effect",
+                },
+                "size": {
+                    "type": "integer",
+                    "description": "Size in feet (radius for sphere/circle/cylinder, side for cube, length for cone/line)",
+                },
+                "direction_x": {"type": "integer", "description": "X direction for cone/line (relative to origin). Optional."},
+                "direction_y": {"type": "integer", "description": "Y direction for cone/line (relative to origin). Optional."},
+                "exclude_ids": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": "Entity IDs to exclude (e.g. the caster for Fireball's Sculpt Spells)",
+                },
+            },
+            "required": ["origin_x", "origin_y", "shape", "size"],
+        },
+    },
+    {
+        "name": "choose_feat",
+        "description": "Grant a feat to a character at an ASI level (4, 8, 12, 16, 19). The feat's mechanical effects are applied automatically.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "character_id": {"type": "string"},
+                "feat_name": {"type": "string", "description": "Name of the feat to grant"},
+            },
+            "required": ["character_id", "feat_name"],
+        },
+    },
+    {
+        "name": "choose_asi",
+        "description": "Apply an Ability Score Improvement at an ASI level. Either +2 to one ability or +1 to two abilities.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "character_id": {"type": "string"},
+                "increases": {
+                    "type": "object",
+                    "description": "Map of ability name to increase amount. e.g. {\"STR\": 2} or {\"DEX\": 1, \"CON\": 1}",
+                    "additionalProperties": {"type": "integer"},
+                },
+            },
+            "required": ["character_id", "increases"],
+        },
+    },
+    {
+        "name": "use_reaction",
+        "description": "Consume a character's reaction for the round (e.g. for opportunity attack, Shield, Counterspell). The character cannot react again until their next turn.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "character_id": {"type": "string", "description": "ID of the character using their reaction"},
+                "reaction_type": {"type": "string", "description": "What the reaction is being used for (e.g. 'opportunity_attack', 'Shield', 'Counterspell')"},
+            },
+            "required": ["character_id"],
+        },
+    },
+    {
+        "name": "travel",
+        "description": (
+            "Resolve overland travel between locations. Automatically advances time, "
+            "rolls weather, checks for random encounters, and calculates distance. "
+            "Use this instead of advance_time when the party travels."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "destination": {"type": "string", "description": "Where the party is heading"},
+                "terrain": {
+                    "type": "string",
+                    "enum": ["road", "plains", "forest", "hills", "mountains", "swamp", "desert", "arctic", "coast", "jungle", "underdark"],
+                    "description": "Primary terrain type for the route",
+                },
+                "pace": {
+                    "type": "string",
+                    "enum": ["fast", "normal", "slow"],
+                    "description": "Travel pace. Fast: 30 mi/day (no stealth). Normal: 24 mi/day. Slow: 18 mi/day (can stealth).",
+                    "default": "normal",
+                },
+                "hours": {"type": "integer", "description": "Hours of travel (default 8)", "default": 8},
+                "climate": {
+                    "type": "string",
+                    "enum": ["temperate", "tropical", "arctic", "desert", "coastal", "mountain", "underground"],
+                    "description": "Climate for weather roll",
+                    "default": "temperate",
+                },
+            },
+            "required": ["destination", "terrain"],
+        },
+    },
+    {
+        "name": "forage",
+        "description": "A character forages for food and water. Makes a Survival check against the terrain DC.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "character_id": {"type": "string"},
+                "terrain": {
+                    "type": "string",
+                    "enum": ["road", "plains", "forest", "hills", "mountains", "swamp", "desert", "arctic", "coast", "jungle", "underdark"],
+                },
+            },
+            "required": ["character_id", "terrain"],
+        },
+    },
+    {
+        "name": "set_weather",
+        "description": "Manually set the current weather condition, or roll randomly for a climate.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "weather": {"type": "string", "description": "Weather condition to set (e.g. 'rain', 'storm', 'clear')"},
+                "climate": {
+                    "type": "string",
+                    "enum": ["temperate", "tropical", "arctic", "desert", "coastal", "mountain", "underground"],
+                    "description": "If provided without weather, rolls random weather for this climate",
+                },
+            },
+        },
+    },
+    {
+        "name": "record_faction",
+        "description": "Record or update a faction in the campaign codex. Tracks reputation and disposition.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "faction_id": {"type": "string", "description": "Unique ID (snake_case)"},
+                "name": {"type": "string"},
+                "description": {"type": "string"},
+                "reputation": {"type": "integer", "description": "Starting reputation (-100 to 100, default 0)"},
+                "known_members": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": "NPC names or IDs known to belong to this faction",
+                },
+            },
+            "required": ["faction_id", "name"],
+        },
+    },
+    {
+        "name": "adjust_reputation",
+        "description": "Change party reputation with a faction. Positive = improved standing, negative = worsened. Disposition auto-updates.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "faction_id": {"type": "string"},
+                "amount": {"type": "integer", "description": "Reputation change (-100 to 100)"},
+                "reason": {"type": "string", "description": "Why reputation changed"},
+            },
+            "required": ["faction_id", "amount", "reason"],
+        },
+    },
+    {
+        "name": "assess_encounter",
+        "description": (
+            "Calculate the difficulty of a planned encounter before spawning enemies. "
+            "Returns easy/medium/hard/deadly rating and XP analysis."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "monster_names": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": "List of monster names (repeat for multiples, e.g. ['Goblin', 'Goblin', 'Bugbear'])",
+                },
+            },
+            "required": ["monster_names"],
+        },
+    },
+    {
+        "name": "suggest_encounter",
+        "description": (
+            "Get a balanced monster roster suggestion for the current party. "
+            "Specify desired difficulty and optionally terrain for thematic monsters."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "difficulty": {
+                    "type": "string",
+                    "enum": ["easy", "medium", "hard", "deadly"],
+                    "description": "Desired encounter difficulty",
+                    "default": "medium",
+                },
+                "terrain": {
+                    "type": "string",
+                    "enum": ["forest", "plains", "mountains", "swamp", "desert", "underdark", "arctic", "coast"],
+                    "description": "Optional terrain for thematic monster selection",
+                },
+            },
+        },
+    },
 ]
 
 
@@ -1046,15 +1308,27 @@ class ToolDispatcher:
         if not target:
             return {"error": f"Target {inp['target_id']} not found"}
 
+        # Auto-compute advantage/disadvantage from conditions
+        is_melee = inp.get("ability", "STR") == "STR"
+        cond_adv, cond_disadv = get_attack_modifiers(attacker, target, is_melee=is_melee)
+        advantage = inp.get("advantage", False) or cond_adv
+        disadvantage = inp.get("disadvantage", False) or cond_disadv
+
         result = attack_roll(
             attacker=attacker,
             target=target,
             weapon_bonus=inp.get("weapon_bonus", 0),
             damage_notation=inp.get("damage_dice", "1d8"),
             ability=inp.get("ability", "STR"),
-            advantage=inp.get("advantage", False),
-            disadvantage=inp.get("disadvantage", False),
+            advantage=advantage,
+            disadvantage=disadvantage,
         )
+
+        # Note condition-derived modifiers in result
+        if cond_adv or cond_disadv:
+            result["condition_advantage"] = cond_adv
+            result["condition_disadvantage"] = cond_disadv
+
         dmg = result.get("damage") or 0
         if dmg > 0:
             conc = self._check_concentration_after_damage(inp["target_id"], dmg)
@@ -1074,6 +1348,13 @@ class ToolDispatcher:
             conc = self._check_concentration_after_damage(inp["target_id"], dmg)
             if conc:
                 result["concentration_check"] = conc
+        # Auto-break concentration if dropped to 0 HP
+        if target.hp <= 0 and target.concentration_spell:
+            result["concentration_broken"] = target.concentration_spell
+            target.concentration_spell = None
+            participant = self._get_participant(inp["target_id"])
+            if participant:
+                participant.concentrating_on = None
         return result
 
     def _tool_heal_character(self, inp: dict) -> dict:
@@ -1099,7 +1380,14 @@ class ToolDispatcher:
     def _tool_next_turn(self, _inp: dict) -> dict:
         if not self.combat or not self.combat.is_active:
             return {"error": "No active combat"}
-        return next_turn(self.combat)
+        result = next_turn(self.combat)
+        # Tick duration-based conditions on the new participant
+        current = self.combat.current_participant
+        if current:
+            expired = tick_conditions(current.character)
+            if expired:
+                result["expired_conditions"] = [c["name"] for c in expired]
+        return result
 
     def _apply_concentration(
         self, caster_id: str, caster: "Character", spell_name: str, result: dict,
@@ -1144,6 +1432,92 @@ class ToolDispatcher:
         if self.combat:
             self.combat.is_active = False
         return {"message": "Combat ended."}
+
+    def _tool_use_reaction(self, inp: dict) -> dict:
+        char_id = inp["character_id"]
+        participant = self._get_participant(char_id)
+        if not participant:
+            return {"error": f"Participant {char_id} not in combat"}
+        if not participant.has_reaction:
+            return {"error": f"{participant.character.name} has already used their reaction this round"}
+        participant.has_reaction = False
+        reaction_type = inp.get("reaction_type", "reaction")
+        return {
+            "character": participant.character.name,
+            "reaction_used": reaction_type,
+            "message": f"{participant.character.name} uses their reaction ({reaction_type}).",
+        }
+
+    def _tool_resolve_aoe(self, inp: dict) -> dict:
+        if not self.game_map:
+            return {"error": _ERR_NO_MAP}
+        from .rules.aoe import resolve_aoe
+        affected = resolve_aoe(
+            origin_x=int(inp["origin_x"]),
+            origin_y=int(inp["origin_y"]),
+            shape=inp["shape"],
+            size_feet=int(inp["size"]),
+            entities=self.game_map.entities,
+            direction_x=int(inp.get("direction_x", 0)),
+            direction_y=int(inp.get("direction_y", 1)),
+            exclude_ids=inp.get("exclude_ids"),
+        )
+        return {
+            "origin": {"x": inp["origin_x"], "y": inp["origin_y"]},
+            "shape": inp["shape"],
+            "size_feet": inp["size"],
+            "affected_count": len(affected),
+            "affected": affected,
+            "message": f"AoE affects {len(affected)} {'entity' if len(affected) == 1 else 'entities'}.",
+        }
+
+    def _tool_apply_condition(self, inp: dict) -> dict:
+        char = self.characters.get(inp["character_id"])
+        if not char:
+            return {"error": f"Character {inp['character_id']} not found"}
+        result = apply_condition(char, inp["condition"], inp.get("duration_rounds"))
+        result["character"] = char.name
+        # Also break concentration on the combat participant if needed
+        if result.get("concentration_broken"):
+            participant = self._get_participant(inp["character_id"])
+            if participant:
+                participant.concentrating_on = None
+        return result
+
+    def _tool_remove_condition(self, inp: dict) -> dict:
+        char = self.characters.get(inp["character_id"])
+        if not char:
+            return {"error": f"Character {inp['character_id']} not found"}
+        result = remove_condition(char, inp["condition"])
+        result["character"] = char.name
+        return result
+
+    def _tool_choose_feat(self, inp: dict) -> dict:
+        from .rules.feats import apply_feat, is_asi_level
+        char = self.characters.get(inp["character_id"])
+        if not char:
+            return {"error": f"Character {inp['character_id']} not found"}
+        # Check any class just reached an ASI level
+        asi_ok = any(
+            is_asi_level(char.level, char.class_levels, cls)
+            for cls in (char.class_levels or {char.char_class: char.level})
+        ) if char.class_levels else is_asi_level(char.level)
+        if not asi_ok:
+            return {"error": f"{char.name} has no pending ASI/Feat choice"}
+        return apply_feat(char, inp["feat_name"])
+
+    def _tool_choose_asi(self, inp: dict) -> dict:
+        from .rules.feats import apply_asi, is_asi_level
+        char = self.characters.get(inp["character_id"])
+        if not char:
+            return {"error": f"Character {inp['character_id']} not found"}
+        asi_ok = any(
+            is_asi_level(char.level, char.class_levels, cls)
+            for cls in (char.class_levels or {char.char_class: char.level})
+        ) if char.class_levels else is_asi_level(char.level)
+        if not asi_ok:
+            return {"error": f"{char.name} has no pending ASI/Feat choice"}
+        return apply_asi(char, inp["increases"])
 
     def _tool_cast_spell(self, inp: dict) -> dict:
         caster = self.characters.get(inp["caster_id"])
@@ -1203,10 +1577,22 @@ class ToolDispatcher:
         char.concentration_spell = None  # concentration spells end on long rest
         slot_result = restore_all_slots(char)
 
+        # Restore all class resources (both short_rest and long_rest)
+        restored_resources = []
+        for res_name, res_data in char.class_resources.items():
+            if res_data.get("used", 0) > 0:
+                restored_resources.append(res_name)
+                res_data["used"] = 0
+
+        msg = f"{char.name} completes a long rest. HP fully restored. {slot_result['message']}"
+        if restored_resources:
+            msg += f" Restored: {', '.join(restored_resources)}."
+
         return {
             "character": char.name,
             "hp_restored": char.max_hp,
-            "message": f"{char.name} completes a long rest. HP fully restored. {slot_result['message']}",
+            "restored_resources": restored_resources,
+            "message": msg,
         }
 
     def _tool_get_character(self, inp: dict) -> dict:
@@ -1425,6 +1811,11 @@ class ToolDispatcher:
             prop_category=inp.get("prop_category"),
         )
         self.game_map.place_entity(entity)
+
+        # Auto-create a Character stat block for enemies from monsters.json
+        if inp.get("entity_type") == "enemy" and inp["id"] not in self.characters:
+            self._try_create_monster_character(inp["id"], inp["name"])
+
         return {"placed": entity.to_dict()}
 
     def _tool_move_entity(self, inp: dict) -> dict:
@@ -1435,10 +1826,45 @@ class ToolDispatcher:
         y = int(inp["y"])
         if not self.game_map.can_occupy(x, y, entity_id=entity_id):
             return {"error": f"Destination ({x}, {y}) is blocked"}
+
+        # Check for opportunity attacks before moving
+        opportunity_attacks: list[dict[str, str]] = []
+        entity = self.game_map.entities.get(entity_id)
+        if entity and self.combat and self.combat.is_active:
+            old_x, old_y = entity.x, entity.y
+            # Determine which side the mover is on
+            mover_type = entity.entity_type  # "pc" or "enemy"
+            hostile_type = "enemy" if mover_type == "pc" else "pc"
+            for other_ent in self.game_map.entities.values():
+                if other_ent.id == entity_id or other_ent.entity_type != hostile_type:
+                    continue
+                # Check if mover was adjacent (within 1 tile) and is now leaving
+                was_adjacent = max(abs(old_x - other_ent.x), abs(old_y - other_ent.y)) <= 1
+                will_be_adjacent = max(abs(x - other_ent.x), abs(y - other_ent.y)) <= 1
+                if was_adjacent and not will_be_adjacent:
+                    # Check if the hostile has a reaction available
+                    participant = self._get_participant(other_ent.id)
+                    if participant and participant.has_reaction:
+                        # Check not incapacitated
+                        reactor_char = self.characters.get(other_ent.id)
+                        if reactor_char and not has_condition_effect(reactor_char, "incapacitated"):
+                            opportunity_attacks.append({
+                                "reactor_id": other_ent.id,
+                                "reactor_name": other_ent.name,
+                            })
+
         ok = self.game_map.move_entity(entity_id, x, y)
         if not ok:
             return {"error": f"Entity {entity_id} not found"}
-        return {"moved": entity_id, "to": {"x": x, "y": y}}
+        result: dict[str, Any] = {"moved": entity_id, "to": {"x": x, "y": y}}
+        if opportunity_attacks:
+            result["opportunity_attacks"] = opportunity_attacks
+            result["message"] = (
+                f"Movement provokes opportunity attacks from: "
+                f"{', '.join(oa['reactor_name'] for oa in opportunity_attacks)}. "
+                f"Resolve each with the attack tool before continuing."
+            )
+        return result
 
     def _tool_remove_entity(self, inp: dict) -> dict:
         if not self.game_map:
@@ -1518,6 +1944,193 @@ class ToolDispatcher:
             "reason": inp.get("reason", ""),
             "world_time": self.memory.world_time,
         }
+
+    def _tool_travel(self, inp: dict) -> dict:
+        from .rules.exploration import calculate_travel, roll_weather, check_random_encounter, WEATHER_EFFECTS
+
+        destination = inp["destination"]
+        terrain = inp.get("terrain", "plains")
+        pace = inp.get("pace", "normal")
+        hours = max(1, int(inp.get("hours", 8)))
+        climate = inp.get("climate", "temperate")
+
+        # Calculate travel distance
+        travel = calculate_travel(pace, terrain, hours)
+
+        # Advance time
+        wt = self.memory.world_time
+        total_minutes = wt.get("minute", 0) + (wt.get("hour", 8) + hours) * 60
+        new_day = wt.get("day", 1) + total_minutes // (24 * 60)
+        remaining = total_minutes % (24 * 60)
+        self.memory.world_time = {"day": new_day, "hour": remaining // 60, "minute": remaining % 60}
+
+        # Roll weather
+        weather = roll_weather(climate)
+        self.memory.weather = weather
+        weather_effects = WEATHER_EFFECTS.get(weather, {})
+
+        # Apply weather travel modifier
+        actual_miles = round(travel["miles_traveled"] * weather_effects.get("travel_modifier", 1.0), 1)
+
+        # Check for random encounter
+        avg_level = 1
+        if self.characters:
+            pc_levels = [c.level for c in self.characters.values() if not c.is_monster]
+            if pc_levels:
+                avg_level = sum(pc_levels) // len(pc_levels)
+        encounter = check_random_encounter(terrain, avg_level)
+
+        msg = f"The party travels toward {destination} at {pace} pace through {terrain}. "
+        msg += f"Distance: {actual_miles} miles in {hours} hours. Weather: {weather}."
+        if encounter:
+            msg += f" ENCOUNTER: {encounter['count']}x {encounter['monster']} spotted!"
+
+        result = {
+            "destination": destination,
+            "miles_traveled": actual_miles,
+            "hours": hours,
+            "pace": pace,
+            "terrain": terrain,
+            "weather": weather,
+            "weather_effects": weather_effects,
+            "nav_dc": travel["nav_dc"],
+            "world_time": self.memory.world_time,
+            "message": msg,
+        }
+        if encounter:
+            result["encounter"] = encounter
+        return result
+
+    def _tool_forage(self, inp: dict) -> dict:
+        from .rules.exploration import forage_dc
+
+        char = self.characters.get(inp["character_id"])
+        if not char:
+            return {"error": f"Character {inp['character_id']} not found"}
+
+        terrain = inp.get("terrain", "forest")
+        dc = forage_dc(terrain)
+        survival_mod = char.skill_modifier("Survival")
+        d20 = roll("1d20").total
+        total = d20 + survival_mod
+        success = total >= dc
+
+        if success:
+            rations_found = 1 if (total - dc) < 5 else 2
+            msg = f"{char.name} forages successfully (rolled {d20}+{survival_mod}={total} vs DC {dc}). Found {rations_found} day(s) of food and water."
+        else:
+            rations_found = 0
+            msg = f"{char.name} fails to find food (rolled {d20}+{survival_mod}={total} vs DC {dc})."
+
+        return {
+            "character": char.name,
+            "success": success,
+            "d20": d20,
+            "modifier": survival_mod,
+            "total": total,
+            "dc": dc,
+            "rations_found": rations_found,
+            "terrain": terrain,
+            "message": msg,
+        }
+
+    def _tool_set_weather(self, inp: dict) -> dict:
+        from .rules.exploration import roll_weather, WEATHER_EFFECTS
+
+        weather = inp.get("weather")
+        if not weather:
+            climate = inp.get("climate", "temperate")
+            weather = roll_weather(climate)
+
+        self.memory.weather = weather
+        effects = WEATHER_EFFECTS.get(weather, {})
+
+        return {
+            "weather": weather,
+            "effects": effects,
+            "message": f"Weather is now: {weather}.",
+        }
+
+    def _tool_record_faction(self, inp: dict) -> dict:
+        from .memory import FactionMemory
+        faction_id = inp["faction_id"]
+        existing = self.memory.factions.get(faction_id)
+        if existing:
+            if "description" in inp:
+                existing.description = inp["description"]
+            if "known_members" in inp:
+                for m in inp["known_members"]:
+                    if m not in existing.known_members:
+                        existing.known_members.append(m)
+            return {"updated": existing.to_dict()}
+        else:
+            faction = FactionMemory(
+                id=faction_id,
+                name=inp["name"],
+                description=inp.get("description", ""),
+                reputation=int(inp.get("reputation", 0)),
+                known_members=inp.get("known_members", []),
+            )
+            # Set initial disposition from reputation
+            self.memory.add_faction(faction)
+            self.memory.adjust_reputation(faction_id, 0)
+            return {"recorded": faction.to_dict()}
+
+    def _tool_adjust_reputation(self, inp: dict) -> dict:
+        result = self.memory.adjust_reputation(inp["faction_id"], int(inp["amount"]))
+        if "error" not in result:
+            result["reason"] = inp.get("reason", "")
+            result["message"] = f"Reputation with {result['faction']} changed by {inp['amount']} to {result['reputation']} ({result['disposition']})."
+        return result
+
+    def _tool_assess_encounter(self, inp: dict) -> dict:
+        from .rules.encounter_balance import calculate_encounter_difficulty, CR_XP
+        from .rules.content_repository import get_monster_stat_block
+
+        monster_names = inp.get("monster_names", [])
+        crs: list[float] = []
+        unknown: list[str] = []
+        for name in monster_names:
+            stats = get_monster_stat_block(name)
+            if stats:
+                crs.append(stats.get("challenge_rating", 0))
+            else:
+                unknown.append(name)
+
+        if unknown:
+            return {"error": f"Unknown monsters: {', '.join(unknown)}"}
+
+        party_levels = [c.level for c in self.characters.values() if not c.is_monster]
+        if not party_levels:
+            return {"error": "No player characters to assess against"}
+
+        result = calculate_encounter_difficulty(party_levels, crs)
+        result["monsters"] = monster_names
+        result["message"] = (
+            f"Encounter: {', '.join(monster_names)} — "
+            f"Difficulty: {result['difficulty'].upper()} "
+            f"({result['adjusted_xp']} adjusted XP vs "
+            f"{result['thresholds']['medium']} medium threshold)"
+        )
+        return result
+
+    def _tool_suggest_encounter(self, inp: dict) -> dict:
+        from .rules.encounter_balance import suggest_encounter
+
+        party_levels = [c.level for c in self.characters.values() if not c.is_monster]
+        if not party_levels:
+            return {"error": "No player characters to build encounter for"}
+
+        difficulty = inp.get("difficulty", "medium")
+        terrain = inp.get("terrain")
+        result = suggest_encounter(party_levels, difficulty, terrain)
+
+        roster_desc = ", ".join(f"{r['count']}x {r['name']} (CR {r['cr']})" for r in result["roster"])
+        result["message"] = (
+            f"Suggested {difficulty} encounter: {roster_desc}. "
+            f"Actual difficulty: {result['assessment']['difficulty']}."
+        )
+        return result
 
     def _tool_give_item(self, inp: dict) -> dict:
         char = self.characters.get(inp["character_id"])
@@ -1713,6 +2326,15 @@ class ToolDispatcher:
         if pact_slots_recovered:
             msg += " Pact Magic slots restored."
 
+        # Restore class resources that reset on short rest
+        restored_resources = []
+        for res_name, res_data in char.class_resources.items():
+            if res_data.get("resets_on") == "short_rest" and res_data.get("used", 0) > 0:
+                restored_resources.append(res_name)
+                res_data["used"] = 0
+        if restored_resources:
+            msg += f" Restored: {', '.join(restored_resources)}."
+
         return {
             "character": char.name,
             "hit_dice_spent": dice_to_spend,
@@ -1722,7 +2344,37 @@ class ToolDispatcher:
             "current_hp": char.hp,
             "max_hp": char.max_hp,
             "pact_slots_recovered": pact_slots_recovered,
+            "restored_resources": restored_resources,
             "message": msg,
+        }
+
+    def _tool_use_class_resource(self, inp: dict) -> dict:
+        char = self.characters.get(inp["character_id"])
+        if not char:
+            return {"error": f"Character {inp['character_id']} not found"}
+
+        resource_name = inp["resource_name"]
+        res = char.class_resources.get(resource_name)
+        if not res:
+            available = list(char.class_resources.keys()) if char.class_resources else []
+            return {"error": f"Unknown resource '{resource_name}'. Available: {available}"}
+
+        max_uses = res.get("max", 0)
+        used = res.get("used", 0)
+        if used >= max_uses:
+            return {
+                "error": f"{char.name} has no {resource_name} uses remaining (0/{max_uses}). "
+                         f"Restores on {res.get('resets_on', 'long_rest')} rest.",
+            }
+
+        res["used"] = used + 1
+        remaining = max_uses - res["used"]
+        return {
+            "character": char.name,
+            "resource": resource_name,
+            "remaining": remaining,
+            "max": max_uses,
+            "message": f"{char.name} uses {resource_name} ({remaining}/{max_uses} remaining).",
         }
 
     def _tool_give_xp(self, inp: dict) -> dict:
@@ -1756,8 +2408,9 @@ class ToolDispatcher:
         }
 
     def _tool_level_up(self, inp: dict) -> dict:
-        from .rules.characters import CLASSES, PROFICIENCY_BY_LEVEL
+        from .rules.characters import CLASSES, PROFICIENCY_BY_LEVEL, check_multiclass_eligible, get_class_resources_for
         from .rules.content_repository import get_class_features
+        from .rules.feats import is_asi_level, get_available_feats
 
         char = self.characters.get(inp["character_id"])
         if not char:
@@ -1766,14 +2419,34 @@ class ToolDispatcher:
         if char.level >= 20:
             return {"error": f"{char.name} is already at max level (20)"}
 
+        # Determine which class is being leveled
+        leveling_class = inp.get("class_name", char.char_class)
+        is_new_class = leveling_class not in (char.class_levels or {char.char_class: char.level})
+
+        # Validate multiclass prerequisites if taking a new class
+        if is_new_class:
+            eligibility = check_multiclass_eligible(char, leveling_class)
+            if not eligibility["eligible"]:
+                return {"error": f"Cannot multiclass into {leveling_class}: {eligibility['reason']}"}
+
+        # Ensure class_levels is populated (backwards compat)
+        if not char.class_levels:
+            char.class_levels = {char.char_class: char.level}
+
+        # Get hit die for the leveling class
         use_average = bool(inp.get("use_average_hp", True))
-        class_data = CLASSES.get(char.char_class, {})
+        class_data = CLASSES.get(leveling_class, {})
         hit_die = class_data.get("hit_die", 8)
         con_mod = char.ability_modifier("CON")
 
         old_level = char.level
         char.level += 1
 
+        # Update class_levels
+        char.class_levels[leveling_class] = char.class_levels.get(leveling_class, 0) + 1
+        class_level = char.class_levels[leveling_class]
+
+        # HP: use the leveling class's hit die
         if use_average:
             hp_roll = hit_die // 2 + 1
         else:
@@ -1783,10 +2456,12 @@ class ToolDispatcher:
         char.max_hp += hp_gain
         char.hp += hp_gain
 
+        # Spell slots: multiclass-aware
         initialize_spell_slots(char)
 
-        new_features = get_class_features(char.char_class, level=char.level)
-        level_specific = [f for f in new_features if f.get("level") == char.level]
+        # Class features: keyed to the leveling class at its class-specific level
+        new_features = get_class_features(leveling_class, level=class_level)
+        level_specific = [f for f in new_features if f.get("level") == class_level]
         existing_ids = {f.get("id") or f.get("name") for f in char.class_features}
         for feat in level_specific:
             fid = feat.get("id") or feat.get("name")
@@ -1794,28 +2469,63 @@ class ToolDispatcher:
                 char.class_features.append(feat)
                 existing_ids.add(fid)
 
+        # Update class resources from all classes
+        merged_resources: dict = {}
+        for cls_name, cls_lvl in char.class_levels.items():
+            for res_name, res_data in get_class_resources_for(cls_name, cls_lvl, char.abilities).items():
+                if res_name in merged_resources:
+                    # Keep the higher max (e.g. Channel Divinity from Cleric+Paladin)
+                    if res_data["max"] > merged_resources[res_name]["max"]:
+                        merged_resources[res_name]["max"] = res_data["max"]
+                else:
+                    # Preserve existing "used" count
+                    existing = char.class_resources.get(res_name, {})
+                    merged_resources[res_name] = {
+                        "max": res_data["max"],
+                        "used": existing.get("used", 0),
+                        "resets_on": res_data["resets_on"],
+                    }
+        char.class_resources = merged_resources
+
         new_prof = PROFICIENCY_BY_LEVEL.get(char.level, 2)
         old_prof = PROFICIENCY_BY_LEVEL.get(old_level, 2)
         feature_names = [f.get("name", "?") for f in level_specific]
 
-        msg = f"{char.name} advances to level {char.level}! HP +{hp_gain} (now {char.hp}/{char.max_hp})."
+        # Build message
+        if is_new_class:
+            msg = f"{char.name} multiclasses into {leveling_class}! Now {char.class_display()}."
+        else:
+            msg = f"{char.name} advances to {char.class_display()}!"
+        msg += f" HP +{hp_gain} (now {char.hp}/{char.max_hp})."
         if new_prof > old_prof:
             msg += f" Proficiency bonus increased to +{new_prof}."
         if feature_names:
             msg += f" New features: {', '.join(feature_names)}."
 
-        return {
+        # ASI: per-class level, not total level
+        asi_available = is_asi_level(char.level, char.class_levels, leveling_class)
+        if asi_available:
+            msg += " ASI/Feat choice available! Use choose_asi or choose_feat."
+
+        result = {
             "character": char.name,
             "old_level": old_level,
             "new_level": char.level,
+            "class_levels": char.class_levels,
+            "leveled_class": leveling_class,
+            "class_level": class_level,
             "hp_gain": hp_gain,
             "current_hp": char.hp,
             "max_hp": char.max_hp,
             "new_proficiency_bonus": new_prof,
             "new_features": feature_names,
             "spell_slots": char.spell_slots,
+            "asi_available": asi_available,
             "message": msg,
         }
+        if asi_available:
+            result["available_feats"] = [f["name"] for f in get_available_feats(char)]
+        return result
 
     def _tool_reveal_area(self, inp: dict) -> dict:
         if not self.game_map:
@@ -2018,6 +2728,25 @@ class ToolDispatcher:
             placed.append(entity.to_dict())
         return placed
 
+    def _place_entities_with_stats(self, gm: GameMap, creatures: list[dict], candidates: list[tuple[int, int]], *, randomize: bool = False) -> list[dict]:
+        """Place creatures and auto-create Character objects from monsters.json."""
+        placed = self._place_entities(gm, creatures, candidates, randomize=randomize)
+        for creature in creatures:
+            cid = str(creature["id"])
+            cname = str(creature["name"])
+            if cid not in self.characters:
+                self._try_create_monster_character(cid, cname)
+        return placed
+
+    def _try_create_monster_character(self, entity_id: str, monster_name: str) -> None:
+        """Attempt to create a Character stat block for a monster and add to self.characters."""
+        from .rules.characters import create_monster
+        try:
+            char = create_monster(monster_name, entity_id)
+            self.characters[entity_id] = char
+        except ValueError:
+            logger.debug("No stat block found for monster '%s', skipping Character creation", monster_name)
+
     def _tool_spawn_reinforcements(self, inp: dict) -> dict:
         if not self.game_map:
             return {"error": _ERR_NO_MAP}
@@ -2034,7 +2763,7 @@ class ToolDispatcher:
         if not candidates:
             return {"error": "No walkable spawn locations found"}
 
-        placed = self._place_entities(self.game_map, creatures, candidates, randomize=True)
+        placed = self._place_entities_with_stats(self.game_map, creatures, candidates, randomize=True)
         return {"spawned": placed, "count": len(placed), "direction": direction}
 
     # ------------------------------------------------------------------
@@ -2084,6 +2813,6 @@ class ToolDispatcher:
         if not candidates:
             return {"error": "No valid placement positions found"}
 
-        placed = self._place_entities(self.game_map, enemies, candidates)
+        placed = self._place_entities_with_stats(self.game_map, enemies, candidates)
         return {"placed": placed, "count": len(placed), "strategy": strategy}
 

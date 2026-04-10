@@ -71,6 +71,7 @@ class GameSession:
         alignment: str = "",
         class_skill_choices: list[str] | None = None,
         racial_ability_choices: dict[str, int] | None = None,
+        subclass: str = "",
     ) -> Character:
         char = create_character(
             char_id=char_id,
@@ -86,6 +87,7 @@ class GameSession:
             alignment=alignment,
             class_skill_choices=class_skill_choices,
             racial_ability_choices=racial_ability_choices,
+            subclass=subclass,
         )
         self.orchestrator.characters[char_id] = char
         self.players[player_id].character_id = char_id

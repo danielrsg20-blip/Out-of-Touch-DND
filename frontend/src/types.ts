@@ -144,6 +144,21 @@ export interface CharacterData {
   concentration_spell?: string | null;
   background?: string;
   inspiration?: boolean;
+  // Monster-specific fields
+  is_monster?: boolean;
+  monster_type?: string;
+  monster_attacks?: Array<{ name: string; bonus: number; damage: string; type: string }>;
+  damage_vulnerabilities?: string[];
+  damage_immunities?: string[];
+  challenge_rating?: number;
+  xp_value?: number;
+  monster_traits?: string[];
+  // Subclass and class resources
+  subclass?: string;
+  class_resources?: Record<string, { max: number; used: number; resets_on: string }>;
+  feats?: string[];
+  class_levels?: Record<string, number>;
+  class_display?: string;
 }
 
 export interface SpellOption {
@@ -307,6 +322,16 @@ export interface CodexWorldEvent {
   importance: "minor" | "major" | "critical";
 }
 
+export interface CodexFaction {
+  id: string;
+  name: string;
+  description: string;
+  reputation: number;
+  disposition: "hostile" | "unfriendly" | "neutral" | "friendly" | "allied";
+  known_members: string[];
+  notes: string[];
+}
+
 export interface WorldTime {
   day: number;
   hour: number;
@@ -317,8 +342,10 @@ export interface Codex {
   npcs: Record<string, CodexNPC>;
   locations: Record<string, CodexLocation>;
   quests: Record<string, CodexQuest>;
+  factions: Record<string, CodexFaction>;
   world_events: CodexWorldEvent[];
   world_time?: WorldTime;
+  weather?: string;
 }
 
 export interface CampaignSlot {
